@@ -14,6 +14,7 @@ import {
   formatAttendanceTime,
 } from '@/lib/attendanceUtils';
 import { getNetworkInfo, getWiFiNetworkDetails } from '@/lib/networkUtils';
+import { authFetch } from '@/lib/authFetch';
 import {
   isWebAuthnSupported,
   isPlatformAuthenticatorAvailable,
@@ -202,10 +203,10 @@ export default function AttendancePage() {
     
     // Fetch re-enrollment request status
     if (session?.user?.id) {
-      fetch('/api/attendance/request-re-enrollment')
-        .then(res => res.json())
+      authFetch('/api/attendance/request-re-enrollment')
+        .then(res => res?.json())
         .then(data => {
-          if (data.hasRequest) {
+          if (data && data.hasRequest) {
             setReEnrollmentStatus(data.status);
             console.log('📋 Re-enrollment status:', data.status);
           }
@@ -693,8 +694,8 @@ export default function AttendancePage() {
   // ===== 🔄 CHECK RE-ENROLLMENT REQUEST STATUS =====
   const checkReEnrollmentRequest = async () => {
     try {
-      const response = await fetch('/api/attendance/biometric/request-reenrollment');
-      if (response.ok) {
+      const response = await authFetch('/api/attendance/biometric/request-reenrollment');
+      if (response && response.ok) {
         const data = await response.json();
         if (data.hasRequest) {
           setReEnrollmentStatus(data.status);
@@ -717,7 +718,7 @@ export default function AttendancePage() {
     setLoading(true);
     
     try {
-      const response = await fetch('/api/attendance/biometric/request-reenrollment', {
+      const response = await authFetch('/api/attendance/biometric/request-reenrollment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -725,6 +726,11 @@ export default function AttendancePage() {
           newMethod: selectedMethod?.id || null,
         }),
       });
+
+      if (!response) {
+        toast.error('Gagal mengirim request. Silakan coba lagi.');
+        return;
+      }
 
       const data = await response.json();
 
@@ -764,7 +770,14 @@ export default function AttendancePage() {
     console.log('[Requirements] Checking biometric registration...');
     let biometricSetup = false;
     try {
-      const bioResponse = await fetch('/api/attendance/biometric/setup');
+      const bioResponse = await authFetch('/api/attendance/biometric/setup');
+      
+      if (!bioResponse) {
+        console.error('[Requirements] ❌ Failed to fetch biometric setup');
+        toast.error('Gagal mengecek status biometric. Silakan refresh halaman.');
+        return;
+      }
+      
       const bioData = await bioResponse.json();
       
       console.log('[Requirements] Biometric check result:', bioData);
@@ -918,7 +931,7 @@ export default function AttendancePage() {
         wifiSSID: wifiSSID.trim()
       });
       
-      const response = await fetch('/api/attendance/validate-security?v=' + Date.now(), {
+      const response = await authFetch('/api/attendance/validate-security?v=' + Date.now(), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -934,6 +947,13 @@ export default function AttendancePage() {
           timestamp: Date.now()
         }),
       });
+
+      if (!response) {
+        toast.dismiss(validationToast);
+        toast.error('❌ Gagal validasi keamanan. Silakan coba lagi.');
+        setValidating(false);
+        return false;
+      }
 
       const data = await response.json();
       
@@ -1543,11 +1563,16 @@ export default function AttendancePage() {
       
       console.log('[Setup] Setup payload:', setupPayload);
       
-      const response = await fetch('/api/attendance/biometric/setup', {
+      const response = await authFetch('/api/attendance/biometric/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(setupPayload),
       });
+
+      if (!response) {
+        console.error('[Setup] ❌ Failed to connect to server');
+        throw new Error('Gagal terhubung ke server. Silakan coba lagi.');
+      }
 
       console.log('[Setup] API response status:', response.status);
       
@@ -1694,7 +1719,7 @@ export default function AttendancePage() {
       // ===== 1. CHECK IF BIOMETRIC IS REGISTERED & VERIFY =====
       console.log('[Biometric Verify] Checking registration...');
       
-      const biometricResponse = await fetch('/api/attendance/biometric/verify', {
+      const biometricResponse = await authFetch('/api/attendance/biometric/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -1702,6 +1727,14 @@ export default function AttendancePage() {
           fingerprint: fingerprintHash, // ✅ REQUIRED!
         }),
       });
+      
+      if (!biometricResponse) {
+        toast.dismiss(verifyToast);
+        toast.error('❌ Gagal terhubung ke server. Silakan coba lagi.');
+        setLoading(false);
+        setStep('ready');
+        return false;
+      }
       
       const biometricData = await biometricResponse.json();
       
@@ -2088,7 +2121,12 @@ export default function AttendancePage() {
         
         // Get reference photo dari biometric
         setAiProgress('📸 Mengambil foto reference...');
-        const biometricResponse = await fetch('/api/attendance/biometric/setup');
+        const biometricResponse = await authFetch('/api/attendance/biometric/setup');
+        
+        if (!biometricResponse) {
+          throw new Error('Gagal mengambil data biometric. Silakan coba lagi.');
+        }
+        
         const { data: biometric } = await biometricResponse.json();
         
         // ✅ FIRST TIME ATTENDANCE: Save reference photo
@@ -2107,7 +2145,7 @@ export default function AttendancePage() {
           }
           
           // Save current photo as reference
-          const saveResponse = await fetch('/api/attendance/biometric/setup', {
+          const saveResponse = await authFetch('/api/attendance/biometric/setup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2116,6 +2154,11 @@ export default function AttendancePage() {
               userId: session!.user.id,
             }),
           });
+          
+          if (!saveResponse) {
+            toast.dismiss(saveReferenceToast);
+            throw new Error('Gagal menyimpan foto reference. Silakan coba lagi.');
+          }
           
           const saveData = await saveResponse.json();
           
@@ -2316,11 +2359,16 @@ export default function AttendancePage() {
         networkInfo: payload.networkInfo,
       });
       
-      const response = await fetch('/api/attendance/submit', {
+      const response = await authFetch('/api/attendance/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      if (!response) {
+        toast.dismiss(submitToast);
+        throw new Error('Gagal mengirim absensi. Silakan coba lagi.');
+      }
 
       const data = await response.json();
       

@@ -53,8 +53,19 @@ export function enableErrorLogging() {
           else if (first instanceof URL) url = first.href;
           else url = 'unknown';
           
+          // ✅ FIX: Skip logging 401 errors (session expiry is normal)
           // Skip logging for error logging endpoint itself
-          if (!url.includes('/api/admin/errors') && !url.includes('/api/log-error')) {
+          // Skip logging for expected authentication checks
+          const isExpectedAuth = response.status === 401 && (
+            url.includes('/api/attendance') ||
+            url.includes('/api/auth') ||
+            url.includes('/api/profile') ||
+            url.includes('/api/enroll')
+          );
+          
+          if (!url.includes('/api/admin/errors') && 
+              !url.includes('/api/log-error') && 
+              !isExpectedAuth) {
             logError({
               type: 'api_error',
               message: `HTTP ${response.status}: ${response.statusText}`,
