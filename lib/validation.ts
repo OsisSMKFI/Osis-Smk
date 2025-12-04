@@ -47,6 +47,7 @@ export const BiometricSetupSchema = z.object({
     'touch-id', 
     'fingerprint',
     'face-unlock',
+    'android-screen-lock', // ✅ ADD: Android screen lock PIN
     'windows-hello-face',
     'windows-hello-fingerprint',
     'windows-hello-pin',

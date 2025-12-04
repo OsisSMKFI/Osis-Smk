@@ -229,6 +229,21 @@ export default function BiometricSetupWizard({
                   Kami merekomendasikan metode yang ditandai dengan ⭐ <strong>RECOMMENDED</strong>.
                 </p>
               </div>
+              
+              {/* ✅ Android-specific info */}
+              {availableMethods.some(m => m.id === 'android-screen-lock' || m.id === 'fingerprint') && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-yellow-800 font-semibold mb-2">
+                    📱 Info untuk User Android:
+                  </p>
+                  <ul className="text-xs text-yellow-700 space-y-1 list-disc list-inside">
+                    <li>Jika pilih <strong>PIN/Fingerprint</strong>, dialog passkey akan muncul</li>
+                    <li>Klik <strong>"Use screen lock"</strong> atau <strong>"Gunakan kunci layar"</strong></li>
+                    <li>Lalu masukkan PIN device atau scan sidik jari Anda</li>
+                    <li><strong>Rekomendasi:</strong> Pilih Fingerprint untuk lebih cepat!</li>
+                  </ul>
+                </div>
+              )}
 
               {availableMethods.length === 0 && (
                 <div className="text-center py-8">
@@ -259,6 +274,13 @@ export default function BiometricSetupWizard({
                         )}
                       </div>
                       <p className="text-sm text-gray-600 mt-1">{method.description}</p>
+                      
+                      {/* ✅ Extra hint for android-screen-lock */}
+                      {method.id === 'android-screen-lock' && (
+                        <p className="text-xs text-yellow-600 mt-2 bg-yellow-50 px-2 py-1 rounded border border-yellow-200">
+                          💡 Klik "Use screen lock" saat dialog passkey muncul
+                        </p>
+                      )}
                     </div>
                     {selectedMethod?.id === method.id && (
                       <div className="text-blue-600 text-2xl">✓</div>

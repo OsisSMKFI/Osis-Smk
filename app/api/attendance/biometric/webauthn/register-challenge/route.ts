@@ -70,10 +70,10 @@ export async function POST(request: NextRequest) {
         { alg: -257, type: 'public-key' }, // RS256 (fallback)
       ],
       authenticatorSelection: {
-        authenticatorAttachment: 'platform', // ✅ FORCE built-in biometric (Face ID, Touch ID, Windows Hello)
-        requireResidentKey: true, // ✅ REQUIRED - Creates passkey stored on device
-        residentKey: 'required', // ✅ CRITICAL - Enables discoverable credentials
-        userVerification: 'required', // ✅ MUST use biometric/PIN - NO FALLBACK
+        authenticatorAttachment: 'platform', // ✅ FORCE built-in biometric (Face ID, Touch ID, Windows Hello, Android Screen Lock)
+        requireResidentKey: false, // ✅ CHANGED: false untuk support non-passkey authentication (screen lock PIN)
+        residentKey: 'preferred', // ✅ CHANGED: preferred (not required) - allows screen lock without passkey
+        userVerification: 'required', // ✅ MUST use biometric/PIN - this is what triggers device auth
       },
       timeout: 60000, // 60 seconds
       attestation: 'none', // Privacy-preserving

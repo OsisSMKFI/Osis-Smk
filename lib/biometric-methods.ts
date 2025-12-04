@@ -62,7 +62,7 @@ export async function detectBiometricMethods(): Promise<BiometricMethod[]> {
     });
   }
 
-  // Android - Fingerprint / Face Unlock
+  // Android - Fingerprint / Face Unlock  
   if (isAndroid && platformAuthenticatorAvailable) {
     methods.push({
       id: 'fingerprint',
@@ -70,7 +70,7 @@ export async function detectBiometricMethods(): Promise<BiometricMethod[]> {
       icon: '🔒',
       available: true,
       primary: true,
-      description: 'Gunakan sensor sidik jari'
+      description: 'Gunakan sensor sidik jari Android'
     });
 
     methods.push({
@@ -80,6 +80,30 @@ export async function detectBiometricMethods(): Promise<BiometricMethod[]> {
       available: true,
       primary: false,
       description: 'Scan wajah Android'
+    });
+    
+    // ✅ ADD: Android Screen Lock PIN/Pattern (EXPLICIT)
+    // NOTE: Di Android, saat pilih ini, akan muncul passkey selector
+    // User harus klik "Use screen lock" atau "Use PIN" di dialog passkey
+    methods.push({
+      id: 'android-screen-lock',
+      name: 'Screen Lock PIN',
+      icon: '🔢',
+      available: true,
+      primary: false,
+      description: 'Gunakan PIN/pattern lockscreen (pilih "Use screen lock" saat muncul dialog passkey)'
+    });
+  }
+  
+  // Universal Fingerprint (fallback for any platform)
+  if (!isAndroid && !isIOS && !isWindows && platformAuthenticatorAvailable) {
+    methods.push({
+      id: 'fingerprint',
+      name: 'Fingerprint',
+      icon: '🔒',
+      available: true,
+      primary: true,
+      description: 'Gunakan sensor sidik jari device'
     });
   }
 
@@ -109,7 +133,7 @@ export async function detectBiometricMethods(): Promise<BiometricMethod[]> {
       icon: '🔢',
       available: true,
       primary: false,
-      description: 'Gunakan PIN Windows'
+      description: 'Gunakan PIN Windows (password device Anda)'
     });
   }
 
@@ -149,14 +173,14 @@ export async function detectBiometricMethods(): Promise<BiometricMethod[]> {
     });
   }
 
-  // Fallback: PIN Code
+  // Fallback: PIN Code (Device Password/PIN)
   methods.push({
     id: 'pin-code',
     name: 'PIN Code',
     icon: '🔢',
     available: true,
     primary: methods.length === 0, // Only primary if nothing else available
-    description: 'Gunakan kode PIN 6 digit'
+    description: 'Gunakan PIN/password device Anda'
   });
 
   return methods;
@@ -195,24 +219,23 @@ export async function authenticateWithFallback(
 
       console.log(`🔐 Trying ${method.name}...`);
 
-      // Attempt WebAuthn authentication
-      if (method.id !== 'pin-code') {
-        const credential = await navigator.credentials.get({
-          publicKey: {
-            challenge: new Uint8Array(32), // Random challenge
-            timeout: 60000,
-            userVerification: 'required',
-          } as PublicKeyCredentialRequestOptions
-        });
+      // Attempt WebAuthn authentication (includes PIN Code via device)
+      // All methods use WebAuthn - even PIN code triggers device PIN/password prompt
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          challenge: new Uint8Array(32), // Random challenge
+          timeout: 60000,
+          userVerification: 'required', // Force biometric/PIN
+        } as PublicKeyCredentialRequestOptions
+      });
 
-        if (credential) {
-          console.log(`✅ ${method.name} authentication successful!`);
-          return {
-            success: true,
-            method: method.id,
-            credential
-          };
-        }
+      if (credential) {
+        console.log(`✅ ${method.name} authentication successful!`);
+        return {
+          success: true,
+          method: method.id,
+          credential
+        };
       }
 
     } catch (error: any) {
@@ -238,6 +261,7 @@ export function getMethodDisplay(methodId: string): { icon: string; label: strin
     'touch-id': { icon: '👆', label: 'Touch ID' },
     'fingerprint': { icon: '🔒', label: 'Fingerprint' },
     'face-unlock': { icon: '🤖', label: 'Face Unlock' },
+    'android-screen-lock': { icon: '🔢', label: 'Screen Lock PIN' },
     'windows-hello-face': { icon: '🪟', label: 'Windows Hello Face' },
     'windows-hello-fingerprint': { icon: '🖐️', label: 'Windows Hello Fingerprint' },
     'windows-hello-pin': { icon: '🔢', label: 'Windows Hello PIN' },
