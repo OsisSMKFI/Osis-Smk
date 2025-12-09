@@ -63,6 +63,7 @@ export default function InfoPage() {
   const [loading, setLoading] = useState(true);
   const [votedPolls, setVotedPolls] = useState<Set<string>>(new Set());
   const [votingPoll, setVotingPoll] = useState<string | null>(null);
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -294,6 +295,22 @@ export default function InfoPage() {
               <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                 {events.map((event, index) => {
                   const uniqueKey = event.id || `${event.title}-${event.event_date}-${index}`;
+                  const isExpanded = expandedEvents.has(uniqueKey);
+                  const descriptionLength = event.description?.length || 0;
+                  const shouldTruncate = descriptionLength > 150;
+                  
+                  const toggleExpanded = () => {
+                    setExpandedEvents(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(uniqueKey)) {
+                        newSet.delete(uniqueKey);
+                      } else {
+                        newSet.add(uniqueKey);
+                      }
+                      return newSet;
+                    });
+                  };
+                  
                   return (
                   <div
                     key={uniqueKey}
@@ -314,9 +331,27 @@ export default function InfoPage() {
                         {event.title}
                       </h3>
                       {event.description && (
-                        <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">
-                          {event.description}
-                        </p>
+                        <div className="mb-4">
+                          <p className={`text-gray-600 dark:text-gray-300 whitespace-pre-line ${!isExpanded && shouldTruncate ? 'line-clamp-3' : ''}`}>
+                            {event.description}
+                          </p>
+                          {shouldTruncate && (
+                            <button
+                              onClick={toggleExpanded}
+                              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium mt-2 inline-flex items-center gap-1"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  Tutup <span className="text-xs">▲</span>
+                                </>
+                              ) : (
+                                <>
+                                  Baca Selengkapnya <span className="text-xs">▼</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       )}
                       <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                         <p>
