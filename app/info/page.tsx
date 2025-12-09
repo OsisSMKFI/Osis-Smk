@@ -297,7 +297,7 @@ export default function InfoPage() {
                   const uniqueKey = event.id || `${event.title}-${event.event_date}-${index}`;
                   const isExpanded = expandedEvents.has(uniqueKey);
                   const descriptionLength = event.description?.length || 0;
-                  const shouldTruncate = descriptionLength > 100;
+                  const shouldTruncate = descriptionLength > 50;
                   
                   const toggleExpanded = () => {
                     setExpandedEvents(prev => {
@@ -338,7 +338,7 @@ export default function InfoPage() {
                           {shouldTruncate && (
                             <button
                               onClick={toggleExpanded}
-                              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm font-semibold mt-2 inline-flex items-center gap-1 transition-colors"
+                              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-base font-bold mt-2 inline-flex items-center gap-1 transition-colors underline"
                             >
                               {isExpanded ? (
                                 <>
