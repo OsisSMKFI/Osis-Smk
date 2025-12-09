@@ -297,7 +297,7 @@ export default function InfoPage() {
                   const uniqueKey = event.id || `${event.title}-${event.event_date}-${index}`;
                   const isExpanded = expandedEvents.has(uniqueKey);
                   const descriptionLength = event.description?.length || 0;
-                  const shouldTruncate = descriptionLength > 150;
+                  const shouldTruncate = descriptionLength > 100;
                   
                   const toggleExpanded = () => {
                     setExpandedEvents(prev => {
@@ -332,13 +332,13 @@ export default function InfoPage() {
                       </h3>
                       {event.description && (
                         <div className="mb-4">
-                          <p className={`text-gray-600 dark:text-gray-300 whitespace-pre-line ${!isExpanded && shouldTruncate ? 'line-clamp-3' : ''}`}>
+                          <p className={`text-gray-600 dark:text-gray-300 whitespace-pre-line ${!isExpanded && shouldTruncate ? 'line-clamp-2' : ''}`}>
                             {event.description}
                           </p>
                           {shouldTruncate && (
                             <button
                               onClick={toggleExpanded}
-                              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium mt-2 inline-flex items-center gap-1"
+                              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm font-semibold mt-2 inline-flex items-center gap-1 transition-colors"
                             >
                               {isExpanded ? (
                                 <>
