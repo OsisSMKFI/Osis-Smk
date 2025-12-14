@@ -146,6 +146,16 @@ export default function WebGLIntro({ onComplete, minDuration = 3000 }: WebGLIntr
     return () => clearInterval(interval);
   }, [minDuration]);
 
+  // Handle error state - auto-complete after timeout
+  useEffect(() => {
+    if (hasError) {
+      const timer = setTimeout(() => {
+        onComplete();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasError, onComplete]);
+
   useEffect(() => {
     if (progress >= 100) {
       setTimeout(() => {
@@ -168,13 +178,6 @@ export default function WebGLIntro({ onComplete, minDuration = 3000 }: WebGLIntr
 
   // If WebGL fails, show simple fallback
   if (hasError) {
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        onComplete();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }, [onComplete]);
-
     return (
       <div className="fixed inset-0 z-[9999] bg-slate-900 flex items-center justify-center">
         <div className="text-center">

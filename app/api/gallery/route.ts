@@ -2,10 +2,33 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { convertToSignedUrl } from '@/lib/signedUrls';
 
-// Supabase storage base URL
+// Supabase storage base URL - CURRENT PROJECT
+const CURRENT_SUPABASE_URL = 'https://mhefqwregrldvxtqqxbb.supabase.co';
 const SUPABASE_STORAGE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL 
   ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gallery`
-  : 'https://mhefqwregrldvxtqqxbb.supabase.co/storage/v1/object/public/gallery';
+  : `${CURRENT_SUPABASE_URL}/storage/v1/object/public/gallery`;
+
+// Old Supabase project URLs that need to be migrated
+const OLD_SUPABASE_DOMAINS = [
+  'eilrnslorvfrtwjwvbaw.supabase.co',
+  // Add any other old domains here
+];
+
+/**
+ * Replace old Supabase domain with new one
+ * Files are stored on the new project now
+ */
+function migrateSupabaseUrl(url: string): string {
+  if (!url) return url;
+  
+  for (const oldDomain of OLD_SUPABASE_DOMAINS) {
+    if (url.includes(oldDomain)) {
+      // Replace old domain with new domain
+      return url.replace(oldDomain, 'mhefqwregrldvxtqqxbb.supabase.co');
+    }
+  }
+  return url;
+}
 
 /**
  * Fix incomplete URLs that only contain filename
@@ -14,18 +37,21 @@ const SUPABASE_STORAGE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 function fixIncompleteUrl(url: string | null | undefined, folder: string = 'general'): string | null {
   if (!url) return null;
   
-  // Already a full URL
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
+  // First, migrate old domain URLs
+  let fixedUrl = migrateSupabaseUrl(url);
+  
+  // Already a full URL (with correct domain now)
+  if (fixedUrl.startsWith('http://') || fixedUrl.startsWith('https://')) {
+    return fixedUrl;
   }
   
   // Already a path starting with /
-  if (url.startsWith('/')) {
-    return `${SUPABASE_STORAGE_URL}${url}`;
+  if (fixedUrl.startsWith('/')) {
+    return `${SUPABASE_STORAGE_URL}${fixedUrl}`;
   }
   
   // Just a filename - construct full URL
-  return `${SUPABASE_STORAGE_URL}/${folder}/${url}`;
+  return `${SUPABASE_STORAGE_URL}/${folder}/${fixedUrl}`;
 }
 
 export async function GET() {

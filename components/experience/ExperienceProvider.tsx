@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Lazy load components with error handling
 const WebGLIntro = lazy(() => 
@@ -28,6 +28,7 @@ export default function ExperienceProvider({
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [webglSupported, setWebglSupported] = useState(true);
+  const [introError, setIntroError] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -60,57 +61,106 @@ export default function ExperienceProvider({
     };
     mediaQuery.addEventListener('change', handleChange);
 
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
+    // Auto-complete intro after timeout (failsafe)
+    const failsafeTimeout = setTimeout(() => {
+      if (!introComplete) {
+        console.warn('[ExperienceProvider] Failsafe: auto-completing intro');
+        setIntroComplete(true);
+        sessionStorage.setItem('seenIntro', 'true');
+      }
+    }, 8000); // 8 seconds max
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+      clearTimeout(failsafeTimeout);
+    };
+  }, [introComplete]);
 
   const handleIntroComplete = () => {
     setIntroComplete(true);
     sessionStorage.setItem('seenIntro', 'true');
   };
 
+  const handleIntroError = () => {
+    console.error('[ExperienceProvider] Intro error, skipping');
+    setIntroError(true);
+    setIntroComplete(true);
+    sessionStorage.setItem('seenIntro', 'true');
+  };
+
   // Skip effects for reduced motion, mobile, or no WebGL
-  const shouldShowEffects = !prefersReducedMotion && !isMobile && webglSupported;
-  const shouldShowIntro = showIntro && !hasSeenIntro && shouldShowEffects;
-  const shouldShowCursor = showCustomCursor && !isMobile;
-
-  // Server-side render children directly
-  if (!isClient) {
-    return <>{children}</>;
-  }
-
-  // If intro should show but hasn't completed, show it
-  if (shouldShowIntro && !introComplete) {
-    return (
-      <Suspense fallback={
-        <div className="fixed inset-0 z-[9999] bg-slate-900 flex items-center justify-center">
-          <div className="text-center">
-            <img src="/images/logo-2.png" alt="Logo" className="w-16 h-16 mx-auto mb-4 animate-pulse" />
-            <p className="text-yellow-400">Loading...</p>
-          </div>
-        </div>
-      }>
-        <WebGLIntro onComplete={handleIntroComplete} minDuration={3500} />
-      </Suspense>
-    );
-  }
+  const shouldShowEffects = !prefersReducedMotion && !isMobile && webglSupported && !introError;
+  const shouldShowIntro = showIntro && !hasSeenIntro && shouldShowEffects && !introComplete;
+  const shouldShowCursor = showCustomCursor && !isMobile && isClient;
 
   return (
     <>
+      {/* Children are ALWAYS rendered - never block content */}
+      <div 
+        className={shouldShowIntro ? 'opacity-0' : 'opacity-100'}
+        style={{ transition: 'opacity 0.5s ease-out' }}
+      >
+        {children}
+      </div>
+
+      {/* Intro overlay - renders on top, doesn't block children */}
+      <AnimatePresence>
+        {isClient && shouldShowIntro && (
+          <motion.div
+            className="fixed inset-0 z-[9999]"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Suspense fallback={
+              <div className="fixed inset-0 z-[9999] bg-slate-900 flex items-center justify-center">
+                <div className="text-center">
+                  <img src="/images/logo-2.png" alt="Logo" className="w-16 h-16 mx-auto mb-4 animate-pulse" />
+                  <p className="text-yellow-400">Loading...</p>
+                </div>
+              </div>
+            }>
+              <ErrorBoundary onError={handleIntroError}>
+                <WebGLIntro onComplete={handleIntroComplete} minDuration={3500} />
+              </ErrorBoundary>
+            </Suspense>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Custom Cursor - desktop only */}
       {shouldShowCursor && (
         <Suspense fallback={null}>
           <CustomCursor enabled={true} />
         </Suspense>
       )}
-
-      {/* Main content with fade in */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {children}
-      </motion.div>
     </>
   );
+}
+
+// Simple Error Boundary component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode; onError: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; onError: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ErrorBoundary] Caught error:', error, info);
+    this.props.onError();
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
 }
