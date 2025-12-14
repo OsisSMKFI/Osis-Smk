@@ -211,11 +211,11 @@ function StatsSection() {
     <section className="relative py-24 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500" />
-      <div className="absolute inset-0 bg-black/20" />
       
-      {/* Decorative elements */}
+      {/* Decorative blur elements */}
       <div className="absolute top-0 left-0 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-0 w-60 h-60 bg-amber-300/20 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-yellow-300/10 rounded-full blur-3xl" />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -405,10 +405,11 @@ export default function AboutPage() {
           sekbidId: m.sekbid_id,
         }));
 
-        // Tim Inti: HANYA anggota tanpa sekbid_id (null) - pengurus inti seperti Ketua, Wakil, Sekretaris, Bendahara
+        // Tim Inti: Filter berdasarkan posisi exact match
         const core = mapped.filter((m: any) => {
-          // Tim inti adalah anggota yang TIDAK memiliki sekbid_id
-          return m.sekbidId === null || m.sekbidId === undefined;
+          const pos = (m.position || '').toLowerCase();
+          // Hanya posisi Tim Inti yang spesifik
+          return ['ketua osis', 'wakil ketua', 'sekretaris', 'bendahara'].includes(pos);
         });
 
         // Koordinator Sekbid: anggota dengan sekbid_id 1-6 yang rolenya adalah koordinator
