@@ -24,8 +24,8 @@ const SymbolSection = dynamic(
   { ssr: false, loading: () => <SectionFallback /> }
 );
 
-const LogoReveal3D = dynamic(
-  () => import('@/components/about/LogoReveal3D'),
+const InteractiveLogo3D = dynamic(
+  () => import('@/components/about/InteractiveLogo3D'),
   { ssr: false, loading: () => <SectionFallback /> }
 );
 
@@ -509,9 +509,9 @@ export default function AboutPage() {
         {/* Values Section */}
         <ValuesSection />
 
-        {/* Logo Reveal 3D Section - Like igloo.inc */}
+        {/* Logo Reveal 3D Section - Interactive like igloo.inc */}
         {isClient && (
-          <LogoReveal3D
+          <InteractiveLogo3D
             logoSrc="/images/logo-2.png"
             logoAlt={t('navbar.logoAlt') || 'Logo OSIS SMK Informatika'}
             sectionTitle={t('about.symbolLogoTitle') || 'Filosofi Logo SMK Informatika'}
