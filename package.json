@@ -31,6 +31,9 @@
     "production:setup": "npm run migrate && npm run configure && npm run build"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.56",
+    "@ai-sdk/google": "^2.0.46",
+    "@ai-sdk/openai": "^2.0.86",
     "@anthropic-ai/sdk": "^0.71.0",
     "@auth/core": "^0.41.0",
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
@@ -39,6 +42,7 @@
     "@fortawesome/react-fontawesome": "^3.1.0",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
+    "@libsql/client": "^0.15.15",
     "@sendgrid/mail": "^8.0.0",
     "@simplewebauthn/server": "^9.0.3",
     "@simplewebauthn/types": "^12.0.0",
@@ -51,6 +55,9 @@
     "@tiptap/starter-kit": "^3.10.5",
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.35.7",
+    "@vercel/analytics": "^1.6.1",
+    "@vercel/blob": "^2.0.0",
+    "@vercel/edge-config": "^1.4.3",
     "@vercel/speed-insights": "^1.2.0",
     "ai": "^5.0.106",
     "bcryptjs": "^3.0.3",

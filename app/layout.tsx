@@ -10,6 +10,7 @@ import BackgroundSync from "../components/BackgroundSync";
 import AIMonitorClient from "../components/AIMonitorClient";
 import LocationPermissionPrompt from "../components/LocationPermissionPrompt";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import { auth } from "@/lib/auth";
 import { getAdminSettings, parseGlobalBackground } from '@/lib/adminSettings';
 import { headers } from 'next/headers';
@@ -174,6 +175,7 @@ export default async function RootLayout({
                         {children}
                         {!chatDisabled && <ClientRole role={role as any} />}
                         <SpeedInsights />
+                        <Analytics />
                         {/* Location Permission Prompt - shows after login */}
                         {typeof window !== 'undefined' && session?.user && (
                             <LocationPermissionPrompt />
