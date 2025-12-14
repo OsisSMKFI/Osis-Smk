@@ -24,7 +24,8 @@ export async function GET() {
           if (!achievementsMap[num]) {
             achievementsMap[num] = { id: parseInt(num) };
           }
-          achievementsMap[num][field] = item.content_value;
+          // Use 'content' column (actual table schema)
+          achievementsMap[num][field] = item.content;
         }
       }
       

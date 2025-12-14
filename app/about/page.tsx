@@ -385,10 +385,10 @@ function FooterCTASection() {
   const { t } = useTranslation();
 
   return (
-    <section className="relative py-32 overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black">
+    <section className="relative py-32 overflow-hidden bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Gradient orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/20 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-400/30 dark:bg-yellow-500/20 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-400/30 dark:bg-amber-500/20 rounded-full blur-3xl" />
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
         <motion.div
@@ -396,11 +396,11 @@ function FooterCTASection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
+          <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
             {t('about.ctaTitle') || 'Bergabung'}{' '}
-            <span className="text-yellow-400">{t('about.ctaTitleHighlight') || 'Bersama Kami'}</span>
+            <span className="text-yellow-600 dark:text-yellow-400">{t('about.ctaTitleHighlight') || 'Bersama Kami'}</span>
           </h2>
-          <p className="text-xl text-gray-300 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
             {t('about.ctaDescription') || 'Mari bersama-sama membangun organisasi yang lebih baik dan menciptakan dampak positif bagi sekolah dan masyarakat.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -415,7 +415,7 @@ function FooterCTASection() {
             </motion.a>
             <motion.a
               href="/info"
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-white border border-white/30 rounded-full hover:bg-white/10 transition-all duration-300"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-gray-800 dark:text-white border border-gray-300 dark:border-white/30 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-all duration-300"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
