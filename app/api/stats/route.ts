@@ -4,11 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 export async function GET() {
   try {
     // Fetch stats from database
-    const [membersResult, sekbidResult, postsResult, galleryResult] = await Promise.all([
+    const [membersResult, postsResult, galleryResult] = await Promise.all([
       // Count active members
       supabaseAdmin.from('members').select('id', { count: 'exact', head: true }).eq('is_active', true),
-      // Count sekbid (departments)
-      supabaseAdmin.from('sekbid').select('id', { count: 'exact', head: true }),
       // Count posts/activities
       supabaseAdmin.from('posts').select('id', { count: 'exact', head: true }),
       // Count gallery items
@@ -18,7 +16,7 @@ export async function GET() {
     const stats = {
       year: 2024, // Year established
       activeMembers: membersResult.count || 0,
-      departments: sekbidResult.count || 6,
+      departments: 6, // Fixed: 6 seksi bidang
       activities: postsResult.count || 0,
       galleryItems: galleryResult.count || 0,
     };

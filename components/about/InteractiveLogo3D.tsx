@@ -555,160 +555,106 @@ function DetailModal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.3 }}
         >
           {/* Backdrop */}
           <motion.div 
-            className="absolute inset-0 bg-black/80 dark:bg-[#0a0a0f]/95 backdrop-blur-xl"
+            className="absolute inset-0 bg-black/90 backdrop-blur-md"
             onClick={handleClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           />
           
-          {/* Close button */}
+          {/* Close button - always visible */}
           <motion.button
-            className="absolute top-4 right-4 md:top-8 md:right-8 z-10 w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+            className="fixed top-3 right-3 sm:top-4 sm:right-4 z-[10000] w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-all shadow-lg"
             onClick={handleClose}
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5 }}
             transition={{ delay: 0.1 }}
-            whileHover={{ rotate: 90, scale: 1.1 }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
             </svg>
           </motion.button>
           
-          {/* Content */}
+          {/* Content - Mobile optimized */}
           <motion.div
-            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="relative w-full max-w-lg sm:max-w-xl md:max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl sm:rounded-3xl"
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.97 }}
-            transition={{ 
-              duration: 0.5,
-              ease: [0.16, 1, 0.3, 1]
-            }}
+            exit={{ opacity: 0, y: 20, scale: 0.97 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-white dark:bg-[#12121a] rounded-3xl p-6 md:p-10 shadow-2xl">
-              <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-                {/* Icon */}
+            <div className="bg-white dark:bg-gray-900 p-4 sm:p-6 md:p-8 shadow-2xl">
+              {/* Mobile: Stack layout, Desktop: Grid layout */}
+              <div className="flex flex-col md:grid md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 items-center">
+                
+                {/* Icon - Smaller on mobile */}
                 <motion.div 
                   className="flex justify-center"
-                  initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ delay: 0.2, duration: 0.6 }}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.15, duration: 0.4 }}
                 >
-                  <motion.div 
-                    className={`
-                      w-48 h-48 md:w-56 md:h-56 rounded-3xl ${element.gradient}
-                      flex items-center justify-center shadow-2xl
-                    `}
-                    animate={{ 
-                      rotate: [0, 2, -2, 0],
-                      scale: [1, 1.02, 1]
-                    }}
-                    transition={{ 
-                      duration: 5, 
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    <motion.span 
-                      className="text-7xl md:text-8xl"
-                      animate={{ y: [0, -8, 0] }}
-                      transition={{ duration: 2.5, repeat: Infinity }}
-                    >
-                      {element.icon}
-                    </motion.span>
-                  </motion.div>
+                  <div className={`w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl sm:rounded-3xl ${element.gradient} flex items-center justify-center shadow-xl`}>
+                    <span className="text-5xl sm:text-6xl md:text-7xl">{element.icon}</span>
+                  </div>
                 </motion.div>
                 
                 {/* Details */}
                 <motion.div 
-                  className="text-center md:text-left"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
+                  className="text-center md:text-left w-full"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
                 >
                   {/* Label */}
-                  <motion.span 
-                    className="inline-flex items-center gap-2 text-yellow-500 dark:text-yellow-400 text-xs tracking-widest uppercase mb-4"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.35 }}
-                  >
-                    <span className="w-6 h-px bg-yellow-400" />
+                  <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-[10px] sm:text-xs tracking-widest uppercase mb-2 sm:mb-3">
+                    <span className="w-4 sm:w-6 h-px bg-yellow-400" />
                     Filosofi Logo
-                  </motion.span>
+                  </span>
                   
                   {/* Title */}
-                  <motion.h2 
-                    className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 md:mb-6"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-4">
                     {element.title}
-                  </motion.h2>
+                  </h2>
                   
                   {/* Divider */}
-                  <motion.div 
-                    className="w-16 h-1 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full mb-6 mx-auto md:mx-0"
-                    initial={{ width: 0 }}
-                    animate={{ width: 64 }}
-                    transition={{ delay: 0.45, duration: 0.4 }}
-                  />
+                  <div className="w-12 sm:w-16 h-1 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full mb-3 sm:mb-4 mx-auto md:mx-0" />
                   
                   {/* Description */}
-                  <motion.p 
-                    className="text-gray-600 dark:text-[#b6bac5] text-base md:text-lg leading-relaxed mb-6"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                  >
+                  <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed mb-4">
                     {element.description}
-                  </motion.p>
+                  </p>
                   
-                  {/* Extra info */}
-                  <motion.div 
-                    className="bg-gray-50 dark:bg-white/5 rounded-xl p-5 border border-gray-100 dark:border-white/5 text-left"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.55 }}
-                  >
-                    <h4 className="text-gray-900 dark:text-white font-semibold mb-2 flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-yellow-400/20 flex items-center justify-center">
-                        <span className="text-yellow-500 text-xs">✦</span>
+                  {/* Extra info - Hidden on very small screens */}
+                  <div className="hidden sm:block bg-gray-50 dark:bg-white/5 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 dark:border-white/10 text-left mb-4">
+                    <h4 className="text-gray-900 dark:text-white font-semibold text-sm mb-1.5 flex items-center gap-2">
+                      <span className="w-4 h-4 rounded-full bg-yellow-400/20 flex items-center justify-center">
+                        <span className="text-yellow-500 text-[10px]">✦</span>
                       </span>
                       Makna Mendalam
                     </h4>
-                    <p className="text-gray-500 dark:text-[#b6bac5]/70 text-sm leading-relaxed">
-                      Setiap elemen dalam logo OSIS SMK Informatika dirancang dengan cermat 
-                      untuk merepresentasikan nilai-nilai organisasi dan visi untuk 
-                      membentuk generasi pemimpin masa depan yang inovatif dan berkarakter.
+                    <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm leading-relaxed">
+                      Setiap elemen dalam logo OSIS dirancang dengan cermat untuk merepresentasikan nilai-nilai organisasi.
                     </p>
-                  </motion.div>
+                  </div>
                   
                   {/* Close button */}
-                  <motion.button
+                  <button
                     onClick={handleClose}
-                    className="mt-6 px-8 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-gray-900 font-bold rounded-xl hover:from-yellow-400 hover:to-amber-400 transition-all shadow-lg"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    className="w-full sm:w-auto px-6 py-2.5 sm:py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-gray-900 font-bold text-sm sm:text-base rounded-lg sm:rounded-xl hover:from-yellow-400 hover:to-amber-400 transition-all shadow-lg"
                   >
                     Tutup
-                  </motion.button>
+                  </button>
                 </motion.div>
               </div>
             </div>
