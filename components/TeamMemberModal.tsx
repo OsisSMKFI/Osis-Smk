@@ -55,72 +55,79 @@ const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-[100] overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
         {/* Background overlay */}
         <div 
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         ></div>
 
         {/* Modal panel */}
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
+              <h3 className="text-xl leading-6 font-bold text-gray-900 dark:text-white">
                 {member.name}
               </h3>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <FaTimes size={20} />
               </button>
             </div>
             
             <div className="mt-2">
-              <div className="text-center mb-4">
-                <img 
-                  src={member.image} 
-                  alt={member.name} 
-                  className="w-48 h-48 object-cover rounded-lg mx-auto"
-                />
+              <div className="text-center mb-6">
+                <div className="relative w-48 h-48 mx-auto rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
+                  <img 
+                    src={member.image} 
+                    alt={member.name} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/placeholder.svg';
+                    }}
+                  />
+                </div>
               </div>
               
-              <h6 className="font-bold text-blue-600 mb-4">{member.position}</h6>
+              <div className="inline-block px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-semibold mb-4">
+                {member.position}
+              </div>
               
-              <div className="space-y-3">
-                <div className="flex">
-                  <span className="font-bold w-32 flex-shrink-0">{t('memberModal.name')}</span>
-                  <span className="mx-2">:</span>
-                  <span>{member.name}</span>
+              <div className="space-y-3 text-sm">
+                <div className="flex p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <span className="font-semibold w-28 flex-shrink-0 text-gray-700 dark:text-gray-300">{t('memberModal.name') || 'Nama'}</span>
+                  <span className="mx-2 text-gray-400">:</span>
+                  <span className="text-gray-900 dark:text-white">{member.name}</span>
                 </div>
-                <div className="flex">
-                  <span className="font-bold w-32 flex-shrink-0">{t('memberModal.birthplace')}</span>
-                  <span className="mx-2">:</span>
-                  <span>{member.ttl}</span>
+                <div className="flex p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <span className="font-semibold w-28 flex-shrink-0 text-gray-700 dark:text-gray-300">{t('memberModal.birthplace') || 'TTL'}</span>
+                  <span className="mx-2 text-gray-400">:</span>
+                  <span className="text-gray-900 dark:text-white">{member.ttl || '-'}</span>
                 </div>
-                <div className="flex">
-                  <span className="font-bold w-32 flex-shrink-0">{t('memberModal.address')}</span>
-                  <span className="mx-2">:</span>
-                  <span>{member.alamat}</span>
+                <div className="flex p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <span className="font-semibold w-28 flex-shrink-0 text-gray-700 dark:text-gray-300">{t('memberModal.address') || 'Alamat'}</span>
+                  <span className="mx-2 text-gray-400">:</span>
+                  <span className="text-gray-900 dark:text-white">{member.alamat || '-'}</span>
                 </div>
-                <div className="flex">
-                  <span className="font-bold w-32 flex-shrink-0">{t('memberModal.motto')}</span>
-                  <span className="mx-2">:</span>
-                  <span>{member.motto}</span>
+                <div className="flex p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <span className="font-semibold w-28 flex-shrink-0 text-gray-700 dark:text-gray-300">{t('memberModal.motto') || 'Motto'}</span>
+                  <span className="mx-2 text-gray-400">:</span>
+                  <span className="text-gray-900 dark:text-white italic">{member.motto || '-'}</span>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div className="bg-gray-50 dark:bg-gray-700/30 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+              className="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-base font-bold text-gray-900 hover:from-yellow-400 hover:to-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm transition-all"
               onClick={onClose}
             >
-              {t('common.close')}
+              {t('common.close') || 'Tutup'}
             </button>
           </div>
         </div>

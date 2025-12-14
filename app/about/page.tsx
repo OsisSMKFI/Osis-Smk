@@ -177,15 +177,35 @@ function VisionMissionSection() {
   );
 }
 
-// Stats Section with animated counters
+// Stats Section with animated counters - fetches real data from API
 function StatsSection() {
   const { t } = useTranslation();
-  const stats = [
-    { number: '2024', label: t('about.statYear') || 'Tahun Berdiri', icon: '📅' },
-    { number: '50+', label: t('about.statMembers') || 'Anggota Aktif', icon: '👥' },
-    { number: '6', label: t('about.statDepartments') || 'Seksi Bidang', icon: '🏛️' },
-    { number: '20+', label: t('about.statEvents') || 'Kegiatan/Tahun', icon: '📋' },
-  ];
+  const [stats, setStats] = useState([
+    { number: '2024', label: 'Tahun Berdiri', icon: '📅' },
+    { number: '...', label: 'Anggota Aktif', icon: '👥' },
+    { number: '6', label: 'Seksi Bidang', icon: '🏛️' },
+    { number: '...', label: 'Kegiatan/Tahun', icon: '📋' },
+  ]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/stats');
+        const json = await res.json();
+        if (json.success && json.stats) {
+          const s = json.stats;
+          setStats([
+            { number: String(s.year), label: t('about.statYear') || 'Tahun Berdiri', icon: '📅' },
+            { number: s.activeMembers > 0 ? `${s.activeMembers}+` : '50+', label: t('about.statMembers') || 'Anggota Aktif', icon: '👥' },
+            { number: String(s.departments || 6), label: t('about.statDepartments') || 'Seksi Bidang', icon: '🏛️' },
+            { number: s.activities > 0 ? `${s.activities}+` : '20+', label: t('about.statEvents') || 'Kegiatan/Tahun', icon: '📋' },
+          ]);
+        }
+      } catch {
+        // Keep default values
+      }
+    })();
+  }, [t]);
 
   return (
     <section className="relative py-24 overflow-hidden">
@@ -389,16 +409,27 @@ export default function AboutPage() {
           ttl: m.ttl || '-',
           alamat: m.alamat || '-',
           motto: m.motto || '-',
+          sekbidId: m.sekbid_id,
         }));
 
+        // Tim Inti: anggota tanpa sekbid_id (null) - ini adalah pengurus inti
         const core = mapped.filter((m: any) => {
           const pos = (m.position || '').toLowerCase();
-          return ['ketua osis', 'wakil ketua', 'sekretaris', 'bendahara'].includes(pos);
+          // Anggota tanpa sekbid adalah tim inti
+          if (m.sekbidId === null || m.sekbidId === undefined) {
+            return true;
+          }
+          // Atau jika role mengandung kata-kata kunci
+          return pos.includes('ketua') || pos.includes('wakil') || 
+                 pos.includes('sekretaris') || pos.includes('bendahara');
         });
 
+        // Koordinator: anggota dengan sekbid_id 1-6 yang merupakan koordinator/kepala
         const koordinator = mapped.filter((m: any) => {
           const pos = (m.position || '').trim().toLowerCase();
-          return pos === 'koordinator sekbid' || pos === 'kepala departemen';
+          const hasSekbid = m.sekbidId !== null && m.sekbidId >= 1 && m.sekbidId <= 6;
+          // Hanya koordinator/kepala dari sekbid 1-6
+          return hasSekbid && (pos.includes('koordinator') || pos.includes('kepala') || pos.includes('ketua sekbid'));
         });
 
         if (mounted) {
