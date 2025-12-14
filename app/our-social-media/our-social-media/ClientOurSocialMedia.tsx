@@ -1,449 +1,604 @@
 'use client';
 
-import React from 'react';
-import AnimatedSection from '@/components/AnimatedSection';
-import PageEnterAnimation from '@/components/PageEnterAnimation';
-import SocialMediaCard from '@/components/SocialMediaCard';
-import SocialStats from '@/components/SocialStats';
-import SocialPerformanceChart from '@/components/SocialPerformanceChart';
-import TrendingNow from '@/components/TrendingNow';
-import TrendingModal from '@/components/TrendingModal';
-import InstagramPreview from '@/components/InstagramPreview';
-import YouTubePreview from '@/components/YouTubePreview';
-import SpotifyPreview from '@/components/SpotifyPreview';
-import TikTokPreview from '@/components/TikTokPreview';
-import SocialMediaAnalytics from '@/components/SocialMediaAnalytics';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
 import { useSocialMediaData } from '@/lib/hooks/useSocialMediaData';
-import { analyticsData } from '@/lib/analyticsData';
+import Image from 'next/image';
 
+// Floating social icons component
+const FloatingIcon = ({ icon, color, delay, className }: { icon: string; color: string; delay: number; className?: string }) => (
+  <motion.div
+    className={`absolute text-4xl md:text-6xl opacity-10 ${className}`}
+    initial={{ y: 0 }}
+    animate={{ y: [-10, 10, -10] }}
+    transition={{ duration: 4, repeat: Infinity, delay }}
+    style={{ color }}
+  >
+    <i className={icon} />
+  </motion.div>
+);
+
+// Platform card with hover effects
+const PlatformCard = ({ 
+  platform, 
+  icon, 
+  url, 
+  followers, 
+  gradient, 
+  description,
+  isActive,
+  index 
+}: {
+  platform: string;
+  icon: string;
+  url: string;
+  followers: string | number;
+  gradient: string;
+  description: string;
+  isActive: boolean;
+  index: number;
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <motion.a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group relative block"
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className={`
+        relative overflow-hidden rounded-3xl p-8 md:p-10 
+        bg-gradient-to-br ${gradient}
+        transform transition-all duration-500 ease-out
+        ${isHovered ? 'scale-[1.02] shadow-2xl' : 'shadow-lg'}
+      `}>
+        {/* Animated background circles */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div
+            className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full"
+            animate={{ scale: isHovered ? 1.5 : 1 }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div
+            className="absolute -left-10 -bottom-10 w-32 h-32 bg-white/5 rounded-full"
+            animate={{ scale: isHovered ? 1.3 : 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10">
+          {/* Icon */}
+          <motion.div
+            className="mb-6"
+            animate={{ rotate: isHovered ? 360 : 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <i className={`${icon} text-5xl md:text-6xl text-white drop-shadow-lg`} />
+          </motion.div>
+
+          {/* Platform name */}
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">{platform}</h3>
+          
+          {/* Description */}
+          <p className="text-white/80 text-sm md:text-base mb-6 line-clamp-2">{description}</p>
+
+          {/* Stats */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl md:text-4xl font-bold text-white">{followers}</div>
+              <div className="text-white/60 text-sm">
+                {platform === 'YouTube' ? 'Subscribers' : 'Followers'}
+              </div>
+            </div>
+            
+            {/* Arrow */}
+            <motion.div
+              className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center"
+              animate={{ x: isHovered ? 5 : 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <i className="fas fa-arrow-right text-white text-lg" />
+            </motion.div>
+          </div>
+
+          {/* Status badge */}
+          {!isActive && (
+            <div className="absolute top-4 right-4 px-3 py-1 bg-white/20 rounded-full text-xs text-white/80">
+              Coming Soon
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.a>
+  );
+};
+
+// Stat counter with animation
+const AnimatedCounter = ({ value, label, icon, color }: { value: string | number; label: string; icon: string; color: string }) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    
+    const numValue = typeof value === 'string' ? parseInt(value.replace(/\D/g, '')) || 0 : value;
+    const duration = 2000;
+    const steps = 60;
+    const increment = numValue / steps;
+    let current = 0;
+
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= numValue) {
+        setCount(numValue);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current));
+      }
+    }, duration / steps);
+
+    return () => clearInterval(timer);
+  }, [value, isVisible]);
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  };
+
+  return (
+    <motion.div
+      ref={ref}
+      className="text-center p-6"
+      initial={{ opacity: 0, scale: 0.5 }}
+      animate={isVisible ? { opacity: 1, scale: 1 } : {}}
+      transition={{ duration: 0.5 }}
+    >
+      <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 ${color}`}>
+        <i className={`${icon} text-2xl text-white`} />
+      </div>
+      <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
+        {typeof value === 'string' && value.includes('+') 
+          ? `${formatNumber(count)}+`
+          : formatNumber(count)
+        }
+      </div>
+      <div className="text-gray-500 dark:text-gray-400 text-sm font-medium">{label}</div>
+    </motion.div>
+  );
+};
+
+// Content preview card
+const ContentPreview = ({ 
+  title, 
+  platform, 
+  thumbnail, 
+  url,
+  metric 
+}: { 
+  title: string; 
+  platform: string; 
+  thumbnail?: string; 
+  url?: string;
+  metric?: string | number;
+}) => (
+  <motion.a
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="group block bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
+    whileHover={{ y: -5 }}
+  >
+    {/* Thumbnail */}
+    <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 overflow-hidden">
+      {thumbnail ? (
+        <Image
+          src={thumbnail}
+          alt={title}
+          fill
+          className="object-cover transition-transform duration-500 group-hover:scale-110"
+          unoptimized
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <i className={`fab fa-${platform.toLowerCase()} text-5xl text-gray-300 dark:text-gray-500`} />
+        </div>
+      )}
+      
+      {/* Platform badge */}
+      <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg">
+        <i className={`fab fa-${platform.toLowerCase()} text-white text-sm`} />
+      </div>
+
+      {/* Metric badge */}
+      {metric && (
+        <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-xs font-medium">
+          {typeof metric === 'number' ? metric.toLocaleString() : metric}
+        </div>
+      )}
+    </div>
+
+    {/* Title */}
+    <div className="p-4">
+      <p className="text-gray-900 dark:text-white font-medium text-sm line-clamp-2 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
+        {title}
+      </p>
+    </div>
+  </motion.a>
+);
+
+// Main component
 const ClientOurSocialMediaPage: React.FC = () => {
   const { t } = useTranslation();
-  const [showTrendingModal, setShowTrendingModal] = React.useState(false);
-
-  // Use hook to fetch data from API or fallback to static data
-  const { instagramPosts, youtubeVideos, spotifyContent, tiktokVideos, loading, error, apisConfigured, missingKeys } = useSocialMediaData();
+  const [activeTab, setActiveTab] = useState<'all' | 'instagram' | 'youtube' | 'tiktok' | 'spotify'>('all');
+  const { instagramPosts, youtubeVideos, spotifyContent, tiktokVideos, loading } = useSocialMediaData();
 
   const socialPlatforms = [
     {
-      name: 'Instagram',
-      icon: 'fab fa-instagram',
-      description: t('socialMediaPage.instagramDesc'),
-      url: SOCIAL_MEDIA_CONFIG.instagram.url,
-      gradient: 'from-purple-600 via-pink-600 to-red-500',
-      buttonColor: 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600',
-      followers: SOCIAL_MEDIA_CONFIG.instagram.followers,
-      available: SOCIAL_MEDIA_CONFIG.instagram.isActive
-    },
-    {
-      name: 'YouTube',
-      icon: 'fab fa-youtube',
-      description: t('socialMediaPage.youtubeDesc'),
-      url: SOCIAL_MEDIA_CONFIG.youtube.url,
-      gradient: 'from-red-600 to-red-500',
-      buttonColor: 'bg-red-500 hover:bg-red-600',
-      followers: SOCIAL_MEDIA_CONFIG.youtube.subscribers,
-      available: SOCIAL_MEDIA_CONFIG.youtube.isActive
-    },
-    {
-      name: 'TikTok',
-      icon: 'fab fa-tiktok',
-      description: t('socialMediaPage.tiktokDesc'),
-      url: SOCIAL_MEDIA_CONFIG.tiktok.url,
-      gradient: 'from-blue-900 to-pink-500',
-      buttonColor: 'bg-gradient-to-r from-gray-800 to-pink-500 hover:from-gray-900 hover:to-pink-600',
-      followers: SOCIAL_MEDIA_CONFIG.tiktok.followers,
-      available: SOCIAL_MEDIA_CONFIG.tiktok.isActive
-    },
-    {
-      name: 'Spotify',
-      icon: 'fab fa-spotify',
-      description: t('socialMediaPage.spotifyDesc'),
-      url: SOCIAL_MEDIA_CONFIG.spotify.url,
-      gradient: 'from-green-600 to-green-500',
-      buttonColor: 'bg-green-500 hover:bg-green-600',
-      followers: SOCIAL_MEDIA_CONFIG.spotify.followers,
-      available: SOCIAL_MEDIA_CONFIG.spotify.isActive
-    }
-  ];
-
-  const statsData = [
-    {
       platform: 'Instagram',
-      count: SOCIAL_MEDIA_CONFIG.instagram.followers,
-      label: t('socialMediaPage.followers'),
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/30',
       icon: 'fab fa-instagram',
-      target: SOCIAL_MEDIA_CONFIG.instagram.targetFollowers,
-      growth: 15
+      description: t('socialMediaPage.instagramDesc') || 'Follow our journey through photos and stories',
+      url: SOCIAL_MEDIA_CONFIG.instagram.url,
+      gradient: 'from-purple-600 via-pink-600 to-orange-500',
+      followers: SOCIAL_MEDIA_CONFIG.instagram.followers,
+      isActive: SOCIAL_MEDIA_CONFIG.instagram.isActive
     },
     {
       platform: 'YouTube',
-      count: SOCIAL_MEDIA_CONFIG.youtube.subscribers,
-      label: SOCIAL_MEDIA_CONFIG.youtube.isActive ? t('socialMediaPage.subscribers') : t('socialMediaPage.notAvailable'),
-      color: 'text-red-600',
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
       icon: 'fab fa-youtube',
-      target: SOCIAL_MEDIA_CONFIG.youtube.targetSubscribers,
-      growth: 7
+      description: t('socialMediaPage.youtubeDesc') || 'Watch our videos and subscribe for more',
+      url: SOCIAL_MEDIA_CONFIG.youtube.url,
+      gradient: 'from-red-600 to-red-500',
+      followers: SOCIAL_MEDIA_CONFIG.youtube.subscribers,
+      isActive: SOCIAL_MEDIA_CONFIG.youtube.isActive
     },
     {
       platform: 'TikTok',
-      count: SOCIAL_MEDIA_CONFIG.tiktok.followers,
-      label: SOCIAL_MEDIA_CONFIG.tiktok.isActive ? t('socialMediaPage.followers') : t('socialMediaPage.notAvailable'),
-      color: 'text-pink-600 dark:text-pink-400',
-      bgColor: 'bg-gradient-to-r from-gray-100 to-pink-100 dark:from-gray-700 dark:to-pink-900/30',
       icon: 'fab fa-tiktok',
-      target: SOCIAL_MEDIA_CONFIG.tiktok.targetFollowers,
-      growth: 24
+      description: t('socialMediaPage.tiktokDesc') || 'Short videos, big moments',
+      url: SOCIAL_MEDIA_CONFIG.tiktok.url,
+      gradient: 'from-gray-900 via-pink-600 to-cyan-400',
+      followers: SOCIAL_MEDIA_CONFIG.tiktok.followers,
+      isActive: SOCIAL_MEDIA_CONFIG.tiktok.isActive
     },
     {
       platform: 'Spotify',
-      count: SOCIAL_MEDIA_CONFIG.spotify.followers,
-      label: SOCIAL_MEDIA_CONFIG.spotify.isActive ? t('socialMediaPage.followers') : t('socialMediaPage.notAvailable'),
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
       icon: 'fab fa-spotify',
-      target: SOCIAL_MEDIA_CONFIG.spotify.targetFollowers,
-      growth: 19
+      description: t('socialMediaPage.spotifyDesc') || 'Listen to our podcasts and playlists',
+      url: SOCIAL_MEDIA_CONFIG.spotify.url,
+      gradient: 'from-green-600 to-green-500',
+      followers: SOCIAL_MEDIA_CONFIG.spotify.followers,
+      isActive: SOCIAL_MEDIA_CONFIG.spotify.isActive
     }
   ];
 
-  type TrendingItem = {
-    id: string;
-    platform: string;
-    title: string;
-    thumbnail?: string;
-    metricLabel: string;
-    metricValue: number;
-    url?: string;
-  };
+  // Combined content for previews
+  const allContent = React.useMemo(() => {
+    const items: any[] = [];
 
-  type UnknownRecord = Record<string, unknown>;
-  const asString = (v: unknown) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '');
-  const asNumber = (v: unknown) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const trendingItems = React.useMemo(() => {
-    const items: TrendingItem[] = [];
-
-    (instagramPosts || []).forEach((p: unknown) => {
-      const r = p as UnknownRecord;
-      const likes = asNumber(r.likes ?? r.like_count ?? r.likes_count ?? 0);
-      const comments = asNumber(r.comments ?? r.comments_count ?? 0);
+    (instagramPosts || []).forEach((p: any) => {
       items.push({
-        id: asString(r.id ?? r.pk ?? r.shortcode ?? r.url) || Math.random().toString(36).slice(2),
+        id: p.id || Math.random().toString(),
         platform: 'Instagram',
-        title: (asString(r.caption ?? r.title) || 'Instagram post').slice(0, 80),
-        thumbnail: asString(r.image ?? r.thumbnail ?? r.media_url ?? r.thumbnail_url ?? r.url) || undefined,
-        metricLabel: 'Engagement',
-        metricValue: likes + comments,
-        url: asString(r.url ?? r.permalink ?? r.link) || undefined,
+        title: p.caption || p.title || 'Instagram Post',
+        thumbnail: p.image || p.thumbnail || p.media_url,
+        url: p.url || p.permalink,
+        metric: (p.likes || 0) + (p.comments || 0)
       });
     });
 
-    (youtubeVideos || []).forEach((v: unknown) => {
-      const r = v as UnknownRecord;
-      const stats = r.statistics as UnknownRecord | undefined;
-      const views = asNumber(r.views ?? r.viewCount ?? stats?.viewCount ?? 0);
-      const title = asString(r.title ?? r.titleText) || 'YouTube video';
-      const thumbnailsVal = r.thumbnails as unknown;
-      let thumbnailsUrl: unknown = undefined;
-      if (Array.isArray(thumbnailsVal) && thumbnailsVal.length > 0) {
-        const first = thumbnailsVal[0] as UnknownRecord;
-        thumbnailsUrl = first.url;
-      }
-      const thumbnail = asString(r.thumbnail ?? thumbnailsUrl ?? (r as UnknownRecord).thumb) || undefined;
+    (youtubeVideos || []).forEach((v: any) => {
+      const thumb = v.thumbnail || (Array.isArray(v.thumbnails) ? v.thumbnails[0]?.url : undefined);
       items.push({
-        id: asString(r.id ?? r.videoId ?? r.ytId ?? r.url) || Math.random().toString(36).slice(2),
+        id: v.id || Math.random().toString(),
         platform: 'YouTube',
-        title: title.slice(0, 80),
-        thumbnail,
-        metricLabel: 'Views',
-        metricValue: views,
-        url: asString(r.url ?? r.watchUrl) || (asString(r.id) ? `https://www.youtube.com/watch?v=${asString(r.id)}` : undefined),
+        title: v.title || 'YouTube Video',
+        thumbnail: thumb,
+        url: v.url || (v.id ? `https://youtube.com/watch?v=${v.id}` : undefined),
+        metric: v.views || v.viewCount
       });
     });
 
-    (tiktokVideos || []).forEach((t: unknown) => {
-      const r = t as UnknownRecord;
-      const plays = asNumber(r.playCount ?? (r.stats as UnknownRecord | undefined)?.playCount ?? r.views ?? r.views_count ?? 0);
+    (tiktokVideos || []).forEach((t: any) => {
       items.push({
-        id: asString(r.id ?? r.videoId ?? r.url) || Math.random().toString(36).slice(2),
+        id: t.id || Math.random().toString(),
         platform: 'TikTok',
-        title: (asString(r.caption ?? r.title) || 'TikTok video').slice(0, 80),
-        thumbnail: asString(r.thumbnail ?? r.cover ?? r.image) || undefined,
-        metricLabel: 'Views',
-        metricValue: plays,
-        url: asString(r.url ?? r.shareUrl) || undefined,
+        title: t.caption || t.title || 'TikTok Video',
+        thumbnail: t.thumbnail || t.cover,
+        url: t.url || t.shareUrl,
+        metric: t.playCount || t.views
       });
     });
 
-    (Array.isArray(spotifyContent) ? spotifyContent : spotifyContent ? [spotifyContent] : []).forEach((s: unknown) => {
-      const r = s as UnknownRecord;
-      const plays = asNumber(r.plays ?? r.play_count ?? r.followers ?? 0);
-      items.push({
-        id: asString(r.id ?? r.uri) || Math.random().toString(36).slice(2),
-        platform: 'Spotify',
-        title: (asString(r.title ?? r.name) || 'Spotify item').slice(0, 80),
-        thumbnail: asString(r.image ?? r.cover) || undefined,
-        metricLabel: 'Plays/Followers',
-        metricValue: plays,
-        url: asString(r.url ?? (r.external_urls as UnknownRecord | undefined)?.spotify) || undefined,
-      });
-    });
+    return items.slice(0, 12);
+  }, [instagramPosts, youtubeVideos, tiktokVideos]);
 
-    const filtered = items.filter((i) => Number(i.metricValue) > 0);
-    const dedupMap = new Map<string, TrendingItem>();
-    for (const it of filtered) {
-      const key = `${it.platform}:${it.id || (it.title || '').slice(0, 80)}`;
-      const existing = dedupMap.get(key);
-      if (!existing || Number(it.metricValue) > Number(existing.metricValue)) {
-        dedupMap.set(key, it);
-      }
-    }
-
-    return Array.from(dedupMap.values()).sort((a, b) => b.metricValue - a.metricValue);
-  }, [instagramPosts, youtubeVideos, tiktokVideos, spotifyContent]);
+  const filteredContent = activeTab === 'all' 
+    ? allContent 
+    : allContent.filter(c => c.platform.toLowerCase() === activeTab);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Hero Section with Quick Links */}
-      <PageEnterAnimation animation="fade">
-        <section className="relative bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 text-white py-16 md:py-20">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-                {t('socialMediaPage.title') ?? 'Our Social Media'}
-              </h1>
-              <p className="text-lg md:text-xl text-yellow-100/90 mb-8">
-                {t('socialMediaPage.subtitle') ?? 'Connect with us across all platforms'}
-              </p>
-              
-              {/* Quick Links Bar */}
-              <div className="flex flex-wrap justify-center items-center gap-3 md:gap-4 mb-8">
-                <a
-                  href={SOCIAL_MEDIA_CONFIG.instagram.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 px-4 md:px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full transition-all duration-300 transform hover:scale-105"
-                >
-                  <i className="fab fa-instagram text-xl md:text-2xl" />
-                  <span className="font-semibold text-sm md:text-base">Instagram</span>
-                  <span className="hidden sm:inline text-xs bg-white/20 px-2 py-1 rounded-full">
-                    {SOCIAL_MEDIA_CONFIG.instagram.followers}
-                  </span>
-                </a>
-                
-                <a
-                  href={SOCIAL_MEDIA_CONFIG.youtube.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 px-4 md:px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full transition-all duration-300 transform hover:scale-105"
-                >
-                  <i className="fab fa-youtube text-xl md:text-2xl" />
-                  <span className="font-semibold text-sm md:text-base">YouTube</span>
-                  <span className="hidden sm:inline text-xs bg-white/20 px-2 py-1 rounded-full">
-                    {SOCIAL_MEDIA_CONFIG.youtube.subscribers}
-                  </span>
-                </a>
-                
-                <a
-                  href={SOCIAL_MEDIA_CONFIG.tiktok.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 px-4 md:px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full transition-all duration-300 transform hover:scale-105"
-                >
-                  <i className="fab fa-tiktok text-xl md:text-2xl" />
-                  <span className="font-semibold text-sm md:text-base">TikTok</span>
-                  <span className="hidden sm:inline text-xs bg-white/20 px-2 py-1 rounded-full">
-                    {SOCIAL_MEDIA_CONFIG.tiktok.followers}
-                  </span>
-                </a>
-                
-                <a
-                  href={SOCIAL_MEDIA_CONFIG.spotify.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2 px-4 md:px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full transition-all duration-300 transform hover:scale-105"
-                >
-                  <i className="fab fa-spotify text-xl md:text-2xl" />
-                  <span className="font-semibold text-sm md:text-base">Spotify</span>
-                  <span className="hidden sm:inline text-xs bg-white/20 px-2 py-1 rounded-full">
-                    {SOCIAL_MEDIA_CONFIG.spotify.followers}
-                  </span>
-                </a>
-              </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      {/* Hero Section */}
+      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden">
+        {/* Animated background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500">
+          {/* Floating icons */}
+          <FloatingIcon icon="fab fa-instagram" color="#E1306C" delay={0} className="top-[10%] left-[10%]" />
+          <FloatingIcon icon="fab fa-youtube" color="#FF0000" delay={0.5} className="top-[20%] right-[15%]" />
+          <FloatingIcon icon="fab fa-tiktok" color="#000000" delay={1} className="bottom-[30%] left-[20%]" />
+          <FloatingIcon icon="fab fa-spotify" color="#1DB954" delay={1.5} className="bottom-[20%] right-[10%]" />
+          
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900" />
+        </div>
 
-              {/* API Status Indicator */}
-              {!loading && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-sm" aria-label="Social media data status">
-                    <div className={`w-2 h-2 rounded-full ${apisConfigured ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`} />
-                    <span>
-                      {apisConfigured ? 'Live data synced' : 'Fallback sample data'}
-                    </span>
-                  </div>
-              )}
-            </div>
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <motion.div
+              className="inline-block mb-6"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto">
+                <i className="fas fa-hashtag text-4xl md:text-5xl text-white" />
+              </div>
+            </motion.div>
+
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight">
+              {t('socialMediaPage.title') || 'Connect With Us'}
+            </h1>
+            
+            <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-10">
+              {t('socialMediaPage.subtitle') || 'Follow our journey across all social platforms'}
+            </p>
+
+            {/* Quick follow buttons */}
+            <motion.div
+              className="flex flex-wrap justify-center gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              {socialPlatforms.map((p) => (
+                <motion.a
+                  key={p.platform}
+                  href={p.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full border border-white/20 transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <i className={`${p.icon} text-white text-xl`} />
+                  <span className="text-white font-medium hidden sm:inline">{p.platform}</span>
+                </motion.a>
+              ))}
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, y: [0, 10, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity, delay: 1 }}
+        >
+          <i className="fas fa-chevron-down text-white/60 text-2xl" />
+        </motion.div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 md:py-24 bg-white dark:bg-gray-800">
+        <div className="container mx-auto px-4">
+          <motion.div
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Our Community
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+              Growing every day with your support
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <AnimatedCounter 
+              value={SOCIAL_MEDIA_CONFIG.instagram.followers} 
+              label="Instagram" 
+              icon="fab fa-instagram"
+              color="bg-gradient-to-br from-purple-500 to-pink-500"
+            />
+            <AnimatedCounter 
+              value={SOCIAL_MEDIA_CONFIG.youtube.subscribers} 
+              label="YouTube" 
+              icon="fab fa-youtube"
+              color="bg-red-500"
+            />
+            <AnimatedCounter 
+              value={SOCIAL_MEDIA_CONFIG.tiktok.followers} 
+              label="TikTok" 
+              icon="fab fa-tiktok"
+              color="bg-gray-900 dark:bg-gray-700"
+            />
+            <AnimatedCounter 
+              value={SOCIAL_MEDIA_CONFIG.spotify.followers} 
+              label="Spotify" 
+              icon="fab fa-spotify"
+              color="bg-green-500"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Cards */}
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <motion.div
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Our Platforms
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+              Pick your favorite platform and follow along
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            {socialPlatforms.map((platform, index) => (
+              <PlatformCard key={platform.platform} {...platform} index={index} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Latest Content */}
+      {allContent.length > 0 && (
+        <section className="py-16 md:py-24 bg-white dark:bg-gray-800">
+          <div className="container mx-auto px-4">
+            <motion.div
+              className="text-center mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                Latest Content
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto mb-8">
+                Fresh posts from our social channels
+              </p>
+
+              {/* Tab filters */}
+              <div className="flex flex-wrap justify-center gap-2">
+                {['all', 'instagram', 'youtube', 'tiktok', 'spotify'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab as typeof activeTab)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                      activeTab === tab
+                        ? 'bg-yellow-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {filteredContent.map((content) => (
+                  <ContentPreview key={content.id} {...content} />
+                ))}
+              </motion.div>
+            </AnimatePresence>
+
+            {loading && (
+              <div className="flex justify-center py-12">
+                <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
           </div>
         </section>
-      </PageEnterAnimation>
+      )}
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 md:py-12">
-        {/* Loading State */}
-        {loading && (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-500 border-t-transparent" />
-          </div>
-        )}
+      {/* CTA Section */}
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <motion.div
+            className="relative max-w-4xl mx-auto bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 rounded-3xl p-10 md:p-16 text-center overflow-hidden"
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+          >
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
 
-        {/* Error State */}
-        {error && !loading && (
-          <div className="max-w-2xl mx-auto mb-8 p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-            <div className="flex items-start gap-3">
-              <i className="fas fa-exclamation-triangle text-red-500 text-xl mt-1" />
-              <div>
-                <h3 className="font-semibold text-red-900 dark:text-red-200 mb-1">Data Sync Error</h3>
-                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-                <p className="text-xs text-red-600 dark:text-red-400 mt-2">Showing fallback data. Please check API configuration.</p>
-              </div>
-            </div>
-          </div>
-        )}
+            <div className="relative z-10">
+              <motion.div
+                initial={{ scale: 0 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true }}
+                className="inline-block mb-6"
+              >
+                <i className="fas fa-heart text-5xl text-white" />
+              </motion.div>
 
-        {/* Stats */}
-        <AnimatedSection animation="slide-up">
-          <section className="mb-8 md:mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Platform Statistics
-            </h2>
-            <SocialStats stats={statsData} />
-          </section>
-        </AnimatedSection>
-
-        {/* Social Media Cards Grid */}
-        <AnimatedSection animation="slide-up" delay={100}>
-          <section className="mb-8 md:mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Our Channels
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {socialPlatforms.map((platform, idx) => (
-                <div key={platform.name} className="transform transition-all hover:scale-105">
-                  <SocialMediaCard {...platform} />
-                </div>
-              ))}
-            </div>
-          </section>
-        </AnimatedSection>
-
-        {/* Analytics */}
-        <AnimatedSection animation="slide-up" delay={200}>
-          <section className="mb-8 md:mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Performance Analytics
-            </h2>
-            <SocialMediaAnalytics data={analyticsData} />
-          </section>
-        </AnimatedSection>
-
-        {/* Trending */}
-        <AnimatedSection animation="slide-up" delay={300}>
-          <section className="mb-8 md:mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Trending Content
-            </h2>
-            <TrendingNow items={trendingItems} onOpenTrendingAction={() => setShowTrendingModal(true)} />
-            {showTrendingModal && (
-              <TrendingModal items={trendingItems} onCloseAction={() => setShowTrendingModal(false)} />
-            )}
-          </section>
-        </AnimatedSection>
-
-        {/* Platform Previews */}
-        <AnimatedSection animation="slide-up" delay={400}>
-          <section className="space-y-8 md:space-y-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-              Latest Posts
-            </h2>
-            
-            {/* Instagram */}
-            {instagramPosts && instagramPosts.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <i className="fab fa-instagram text-3xl text-purple-600" />
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Instagram</h3>
-                </div>
-                <InstagramPreview posts={instagramPosts.slice(0, 6)} />
-              </div>
-            )}
-
-            {/* YouTube */}
-            {youtubeVideos && youtubeVideos.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <i className="fab fa-youtube text-3xl text-red-600" />
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">YouTube</h3>
-                </div>
-                <YouTubePreview videos={youtubeVideos.slice(0, 6)} />
-              </div>
-            )}
-
-            {/* TikTok */}
-            {tiktokVideos && tiktokVideos.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <i className="fab fa-tiktok text-3xl text-pink-600" />
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">TikTok</h3>
-                </div>
-                <TikTokPreview videos={tiktokVideos.slice(0, 6)} />
-              </div>
-            )}
-
-            {/* Spotify */}
-            {spotifyContent && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <i className="fab fa-spotify text-3xl text-green-600" />
-                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Spotify</h3>
-                </div>
-                <SpotifyPreview content={Array.isArray(spotifyContent) ? spotifyContent.slice(0, 6) : [spotifyContent]} />
-              </div>
-            )}
-          </section>
-        </AnimatedSection>
-
-        {/* Footer CTA */}
-        <AnimatedSection animation="fade" delay={500}>
-          <section className="mt-12 md:mt-16 text-center">
-            <div className="max-w-2xl mx-auto bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 rounded-2xl p-8 md:p-12 text-white shadow-xl">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">Stay Connected!</h2>
-              <p className="text-yellow-100 mb-6 text-sm md:text-base">
-                Follow us on your favorite platform for daily updates, behind-the-scenes content, and exclusive announcements.
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                Be Part of Our Story
+              </h2>
+              <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
+                Join our growing community and never miss an update. Follow us on your favorite platform!
               </p>
+
               <div className="flex flex-wrap justify-center gap-3">
-                {socialPlatforms.map(platform => (
-                  <a
-                    key={platform.name}
-                    href={platform.url}
+                {socialPlatforms.map((p) => (
+                  <motion.a
+                    key={p.platform}
+                    href={p.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 md:px-6 py-2 md:py-3 bg-white text-yellow-600 rounded-full font-semibold hover:bg-yellow-50 transition-colors text-sm md:text-base"
+                    className="px-6 py-3 bg-white text-gray-900 rounded-full font-semibold hover:bg-yellow-50 transition-all duration-300 flex items-center gap-2"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <i className={`${platform.icon} mr-2`} />
-                    {platform.name}
-                  </a>
+                    <i className={p.icon} />
+                    <span>{p.platform}</span>
+                  </motion.a>
                 ))}
               </div>
             </div>
-          </section>
-        </AnimatedSection>
-      </main>
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 };
