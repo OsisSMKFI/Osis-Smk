@@ -66,13 +66,13 @@ const nextConfig = {
   allowedDevOrigins: [
     '192.168.101.33',
     '10.183.248.156',
-    'http://10.183.248.156:3001',
-    'http://192.168.100.101:3001',
+    'http://10.183.248.156:3002',
+    'http://192.168.100.101:3002',
     'http://localhost:3001',
     'http://127.0.0.1:3001',
     // Add current dev LAN IPs (observed from logs)
     '100.87.220.23',
-    'http://100.87.220.23:3000',
+    'http://100.87.220.23:3002',
     'http://100.87.220.23:3001',
     // ngrok domains
     'prolongedly-belletristic-kory.ngrok-free.dev',

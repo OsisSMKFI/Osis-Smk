@@ -636,19 +636,38 @@ export async function uploadAttendancePhoto(blob: Blob, userId: string): Promise
     const response = await fetch('/api/attendance/upload-selfie', {
       method: 'POST',
       body: formData,
+      credentials: 'include', // Important: include session cookies
     });
 
     console.log('[Upload] Response status:', response.status);
+    console.log('[Upload] Response headers:', {
+      contentType: response.headers.get('content-type'),
+      status: response.status,
+      statusText: response.statusText
+    });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('[Upload] Upload failed:', error);
-      throw new Error(error.error || 'Gagal upload foto');
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const textResponse = await response.text();
+      console.error('[Upload] ❌ Expected JSON, got:', contentType);
+      console.error('[Upload] Response preview:', textResponse.substring(0, 200));
+      
+      if (textResponse.includes('<!DOCTYPE')) {
+        throw new Error('Server returned HTML instead of JSON. Kemungkinan error: session expired atau route tidak ditemukan.');
+      }
+      
+      throw new Error(`Invalid response type: ${contentType}`);
     }
 
     const data = await response.json();
     
     console.log('[Upload] Response data:', data);
+
+    if (!response.ok) {
+      console.error('[Upload] Upload failed:', data);
+      throw new Error(data.error || `Upload failed with status ${response.status}`);
+    }
     
     if (!data.success || !data.url) {
       console.error('[Upload] Invalid response:', data);
@@ -658,7 +677,7 @@ export async function uploadAttendancePhoto(blob: Blob, userId: string): Promise
     console.log('[Upload] ✅ Upload successful, URL:', data.url);
     return data.url;
   } catch (error: any) {
-    console.error('[Upload] ❌ Upload error:', error.message);
+    console.error('[Upload] ❌ Upload error:', error);
     throw error;
   }
 }

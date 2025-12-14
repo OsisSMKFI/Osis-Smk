@@ -23,28 +23,59 @@ export interface ErrorLogData {
   context?: any; // component name, file path, etc.
 }
 
+// Schema detection cache
+let schemaChecked = false;
+let useErrorMessageColumn = true;
+
+async function checkSchema() {
+  if (schemaChecked) return;
+  try {
+    const { error } = await supabaseAdmin
+      .from('error_logs')
+      .select('error_message')
+      .limit(1);
+    if (error && error.message?.includes('error_message')) {
+      useErrorMessageColumn = false;
+    }
+    schemaChecked = true;
+  } catch {
+    schemaChecked = true;
+  }
+}
+
 /**
  * Log error to database for AI analysis
  */
 export async function logError(data: ErrorLogData): Promise<{ ok: boolean; id?: string }> {
   try {
+    await checkSchema();
+    
+    const insertData: Record<string, any> = {
+      error_type: data.errorType,
+      url: data.url,
+      method: data.method,
+      status_code: data.statusCode,
+      user_agent: data.userAgent,
+      ip_address: data.ipAddress,
+      user_id: data.userId || null,
+      request_body: data.requestBody || null,
+      response_body: data.responseBody || null,
+      headers: data.headers || null,
+      context: data.context || null,
+    };
+    
+    // Set message column berdasarkan schema
+    if (useErrorMessageColumn) {
+      insertData.error_message = data.errorMessage;
+      insertData.error_stack = data.errorStack;
+    } else {
+      insertData.message = data.errorMessage;
+      insertData.stack_trace = data.errorStack;
+    }
+    
     const { data: inserted, error } = await supabaseAdmin
       .from('error_logs')
-      .insert({
-        error_type: data.errorType,
-        url: data.url,
-        method: data.method,
-        status_code: data.statusCode,
-        error_message: data.errorMessage,
-        error_stack: data.errorStack,
-        user_agent: data.userAgent,
-        ip_address: data.ipAddress,
-        user_id: data.userId || null,
-        request_body: data.requestBody || null,
-        response_body: data.responseBody || null,
-        headers: data.headers || null,
-        context: data.context || null,
-      })
+      .insert(insertData)
       .select('id')
       .single();
 

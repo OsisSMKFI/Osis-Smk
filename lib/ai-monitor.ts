@@ -67,7 +67,7 @@ function monitorPerformance() {
 
           if (lcp > 2500) {
             reportToAI({
-              type: 'performance_issue',
+              type: 'client_error',
               severity: 'medium',
               message: `Slow LCP detected: ${lcp.toFixed(0)}ms`,
               data: { lcp, url: window.location.href }
@@ -84,7 +84,7 @@ function monitorPerformance() {
             
             if (fid > 100) {
               reportToAI({
-                type: 'performance_issue',
+                type: 'client_error',
                 severity: 'high',
                 message: `High FID detected: ${fid.toFixed(0)}ms`,
                 data: { fid, url: window.location.href }
@@ -105,7 +105,7 @@ function monitorPerformance() {
 
           if (clsValue > 0.1) {
             reportToAI({
-              type: 'performance_issue',
+              type: 'client_error',
               severity: 'medium',
               message: `High CLS detected: ${clsValue.toFixed(3)}`,
               data: { cls: clsValue, url: window.location.href }
@@ -118,7 +118,7 @@ function monitorPerformance() {
       // Report slow page load
       if (loadTime > 3000) {
         reportToAI({
-          type: 'performance_issue',
+          type: 'client_error',
           severity: loadTime > 5000 ? 'high' : 'medium',
           message: `Slow page load: ${loadTime}ms`,
           data: {
@@ -245,7 +245,7 @@ function monitorNetwork() {
       // Monitor slow API calls
       if (duration > 3000) {
         reportToAI({
-          type: 'performance_issue',
+          type: 'client_error',
           severity: 'medium',
           message: `Slow API call: ${duration}ms`,
           data: {
@@ -302,7 +302,7 @@ function monitorMemory() {
 
     if (usagePercent > 80) {
       reportToAI({
-        type: 'performance_issue',
+        type: 'client_error',
         severity: 'critical',
         message: `High memory usage: ${usagePercent.toFixed(1)}%`,
         data: {

@@ -49,7 +49,7 @@ export default function AttendancePage() {
   // 🔒 USE BACKGROUND SECURITY ANALYSIS (runs on login)
   const { result: backgroundAnalysis, isReady, isBlocked, blockReasons } = useSecurityAnalysis();
   
-  const [step, setStep] = useState<'check' | 'ready' | 'face-analytics' | 'capture' | 'submitting' | 'blocked'>('check');
+  const [step, setStep] = useState<'check' | 'ready' | 'capture' | 'submitting' | 'blocked'>('check');
   const [hasSetup, setHasSetup] = useState(false);
   const [requirements, setRequirements] = useState({
     role: false,
@@ -90,12 +90,14 @@ export default function AttendancePage() {
   const [showReEnrollmentForm, setShowReEnrollmentForm] = useState(false);
   const [reEnrollmentReason, setReEnrollmentReason] = useState('');
   
-  // REMOVED: Biometric methods detection (no longer needed)
-  // const [availableMethods, setAvailableMethods] = useState<BiometricMethod[]>([]);
-  // const [selectedMethod, setSelectedMethod] = useState<BiometricMethod | null>(null);
-  // const [showMethodSelection, setShowMethodSelection] = useState(false);
-  // const ['biometric', setSelectedBiometricType] = useState<string>('fingerprint');
-  // const [null, setSelectedDeviceInfo] = useState<any>(null);
+  // Biometric methods detection
+  const [availableMethods, setAvailableMethods] = useState<BiometricMethod[]>([]);
+  const [selectedMethod, setSelectedMethod] = useState<BiometricMethod | null>(null);
+  const [showMethodSelection, setShowMethodSelection] = useState(false);
+  
+  // ✅ NEW: Track selected biometric type from wizard
+  const [selectedBiometricType, setSelectedBiometricType] = useState<string>('fingerprint');
+  const [selectedDeviceInfo, setSelectedDeviceInfo] = useState<any>(null);
   
   // 🌐 BROWSER COMPATIBILITY
   const [webauthnSupported, setWebauthnSupported] = useState<boolean | null>(null);
@@ -212,8 +214,16 @@ export default function AttendancePage() {
         .catch(err => console.error('Failed to fetch re-enrollment status:', err));
     }
     
-    // REMOVED: Biometric detection (no longer needed)
-    // detectBiometricMethods().then(methods => { ... });
+    // Detect available biometric methods
+    detectBiometricMethods().then(methods => {
+      setAvailableMethods(methods);
+      const primaryMethod = methods.find(m => m.primary && m.available);
+      if (primaryMethod) {
+        setSelectedMethod(primaryMethod);
+        console.log('🔐 Primary biometric method:', primaryMethod.name);
+      }
+      console.log('🔐 Available biometric methods:', methods.filter(m => m.available).map(m => m.name));
+    });
   }, [status, session]);
 
   // 🔒 SYNC BACKGROUND ANALYSIS (ran on login) with page state
@@ -295,6 +305,9 @@ export default function AttendancePage() {
             biometric: requirements.biometric
           });
           break;
+        case 'setup':
+          console.log('🔐 Setup mode: User needs to enroll biometric');
+          break;
         case 'ready':
           console.log('✅ Ready to attend');
           console.log('📍 Location:', locationData ? `${locationData.latitude}, ${locationData.longitude}` : 'Not detected');
@@ -306,14 +319,14 @@ export default function AttendancePage() {
           console.log('❌ Violations:', securityValidation?.violations || []);
           console.log('📋 Details:', securityValidation?.details || {});
           break;
-        case 'face-analytics':
-          console.log('🧠 Face analytics integration mode');
-          break;
         case 'capture':
           console.log('📸 Photo capture mode');
           break;
         case 'submitting':
           console.log('⏳ Submitting attendance...');
+          break;
+        case 'verify-biometric':
+          console.log('🔐 Biometric verification mode');
           break;
       }
       
@@ -710,7 +723,7 @@ export default function AttendancePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reason: reEnrollmentReason.trim(),
-          newMethod: null, // Removed: 'biometric'
+          newMethod: selectedMethod?.id || null,
         }),
       });
 
@@ -775,7 +788,7 @@ export default function AttendancePage() {
 
       if (!bioData.hasSetup) {
         console.log('[Requirements] ❌ Biometric NOT registered - forcing setup step');
-        setStep('capture');
+        setStep('setup');
         toast.error(
           <div>
             <div className="font-bold">🔐 Biometric Belum Terdaftar</div>
@@ -790,7 +803,7 @@ export default function AttendancePage() {
     } catch (error) {
       console.error('[Requirements] ❌ Biometric check error:', error);
       // Force setup on error
-      setStep('capture');
+      setStep('setup');
       toast.error('Gagal cek biometric. Silakan setup ulang.');
       return;
     }
@@ -1292,7 +1305,7 @@ export default function AttendancePage() {
       console.log('[Setup] Available methods:', methods);
       
       // Set available methods for UI
-      // REMOVED: setAvailableMethods(methods);
+      setAvailableMethods(methods);
       
       // Auto-select primary method if only one available
       let selectedType = 'fingerprint'; // Default fallback
@@ -1300,8 +1313,8 @@ export default function AttendancePage() {
       
       if (methods.length === 1) {
         selectedType = methods[0].id;
-        // REMOVED: setSelectedBiometricType(selectedType);
-        // REMOVED: setSelectedMethod(methods[0]);
+        setSelectedBiometricType(selectedType);
+        setSelectedMethod(methods[0]);
         console.log('[Setup] ✅ Auto-selected:', methods[0].name);
         
         toast.success(
@@ -1316,8 +1329,8 @@ export default function AttendancePage() {
         console.log('[Setup] 🔀 Multiple methods available, using primary:', methods[0].name);
         selectedType = methods[0].id;
         selectedMethodObj = methods[0];
-        // REMOVED: setSelectedBiometricType(selectedType);
-        // REMOVED: setSelectedMethod(methods[0]);
+        setSelectedBiometricType(selectedType);
+        setSelectedMethod(methods[0]);
         
         toast.success(
           <div>
@@ -1351,7 +1364,7 @@ export default function AttendancePage() {
         biometricMethod: selectedMethodObj?.name || biometricTest.type
       };
       
-      // REMOVED: setSelectedDeviceInfo(detectedDeviceInfo);
+      setSelectedDeviceInfo(detectedDeviceInfo);
       console.log('[Setup] 📱 Device info collected:', detectedDeviceInfo);
       
       // Step 2: Upload photo
@@ -1374,13 +1387,13 @@ export default function AttendancePage() {
       toast.success('✅ Foto berhasil diupload!');
       
       // Step 3: Register WebAuthn credential (CONDITIONAL - based on selected method)
-      console.log('[Setup] 🔐 Selected Method:', 'biometric', '(', 'biometric', ')');
+      console.log('[Setup] 🔐 Selected Method:', selectedMethod?.name, '(', selectedBiometricType, ')');
       console.log('[Setup] Attempting WebAuthn credential registration...');
       
       const registerToast = toast.loading(
         <div>
-          <div className="font-bold">🔐 Setting up {'Biometric'}...</div>
-          <div className="text-sm mt-1">{'🔐'} Please authenticate with your device</div>
+          <div className="font-bold">🔐 Setting up {selectedMethod?.name || 'Biometric'}...</div>
+          <div className="text-sm mt-1">{selectedMethod?.icon || '🔐'} Please authenticate with your device</div>
         </div>
       );
       
@@ -1389,7 +1402,7 @@ export default function AttendancePage() {
       // ✅ ALWAYS TRY WebAuthn for ALL biometric methods
       // Face ID, Touch ID, Windows Hello, Android Fingerprint - ALL use WebAuthn!
       console.log('[Setup] 🔐 Attempting WebAuthn credential registration...');
-      console.log('[Setup] Selected method:', 'biometric', '(', 'biometric', ')');
+      console.log('[Setup] Selected method:', selectedMethod?.name, '(', selectedBiometricType, ')');
       
       // Check browser support before attempting
       if (webauthnSupported === false) {
@@ -1430,8 +1443,8 @@ export default function AttendancePage() {
             toast.dismiss(registerToast);
             toast.success(
               <div>
-                <div className="font-bold">✅ {'Biometric'} Registered!</div>
-                <div className="text-sm mt-1">{'🔐'} Device biometric berhasil didaftarkan</div>
+                <div className="font-bold">✅ {selectedMethod?.name || 'Biometric'} Registered!</div>
+                <div className="text-sm mt-1">{selectedMethod?.icon || '🔐'} Device biometric berhasil didaftarkan</div>
                 {webauthnResult.totalDevices && webauthnResult.totalDevices > 1 && (
                   <div className="text-xs mt-2 opacity-80">
                     📱 Total {webauthnResult.totalDevices} device terdaftar
@@ -1495,7 +1508,7 @@ export default function AttendancePage() {
             errorMessage = 'Permission ditolak atau biometric dibatalkan';
             helpText = 'Coba lagi dan izinkan akses biometric';
           } else if (webauthnError.name === 'NotSupportedError') {
-            errorMessage = 'Browser tidak mendukung biometric';
+            errorMessage = 'Browser tidak mendukung ' + (selectedMethod?.name || 'biometric');
             helpText = 'Gunakan browser terbaru atau pilih mode Fingerprint';
           } else if (webauthnError.name === 'SecurityError') {
             errorMessage = 'Security error - periksa koneksi HTTPS';
@@ -1510,7 +1523,7 @@ export default function AttendancePage() {
           
           toast.error(
             <div>
-              <div className="font-bold">❌ {'Biometric'} Error</div>
+              <div className="font-bold">❌ {selectedMethod?.name || 'Biometric'} Error</div>
               <div className="text-sm mt-1">{errorMessage}</div>
               <div className="text-xs mt-2 opacity-80">💡 {helpText}</div>
             </div>,
@@ -1529,7 +1542,7 @@ export default function AttendancePage() {
       console.log('[Setup] Mode:', webauthnCredentialId ? 'WebAuthn + AI' : 'AI-only');
       
       // ✅ Collect device info from wizard or detect manually
-      const deviceInfo = {
+      const deviceInfo = selectedDeviceInfo || {
         userAgent: navigator.userAgent,
         platform: navigator.platform,
         browser: /Chrome/.test(navigator.userAgent) ? 'Chrome' :
@@ -1544,7 +1557,7 @@ export default function AttendancePage() {
         referencePhotoUrl: photoUrl,
         fingerprintTemplate: fingerprintHash,
         webauthnCredentialId: webauthnCredentialId, // null = AI-only mode
-        biometricType: 'biometric', // ✅ Use wizard selection instead of hardcoded
+        biometricType: selectedBiometricType, // ✅ Use wizard selection instead of hardcoded
         deviceInfo: deviceInfo // ✅ Use device info from wizard or fallback
       };
       
@@ -1683,6 +1696,282 @@ export default function AttendancePage() {
   };
 
   // ===== 🔐 BIOMETRIC VERIFICATION (BEFORE PHOTO CAPTURE) =====
+  const handleBiometricVerification = async () => {
+    console.log('[Biometric Verify] 🔐 Starting pre-attendance biometric verification...');
+    setLoading(true);
+    setStep('verify-biometric');
+    
+    const verifyToast = toast.loading(
+      <div>
+        <div className="font-bold">🔐 Verifikasi Biometrik</div>
+        <div className="text-sm mt-1">Memverifikasi identitas...</div>
+      </div>
+    );
+    
+    try {
+      // ===== 0. GENERATE CURRENT FINGERPRINT =====
+      console.log('[Biometric Verify] Generating current device fingerprint...');
+      const currentFingerprint = await generateBrowserFingerprint();
+      const fingerprintHash = currentFingerprint.hash;
+      
+      console.log('[Biometric Verify] Current fingerprint:', fingerprintHash);
+      
+      // ===== 1. CHECK IF BIOMETRIC IS REGISTERED & VERIFY =====
+      console.log('[Biometric Verify] Checking registration...');
+      
+      const biometricResponse = await authFetch('/api/attendance/biometric/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: session!.user.id,
+          fingerprint: fingerprintHash, // ✅ REQUIRED!
+        }),
+      });
+      
+      if (!biometricResponse) {
+        toast.dismiss(verifyToast);
+        toast.error('❌ Gagal terhubung ke server. Silakan coba lagi.');
+        setLoading(false);
+        setStep('ready');
+        return false;
+      }
+      
+      const biometricData = await biometricResponse.json();
+      
+      if (!biometricResponse.ok) {
+        toast.dismiss(verifyToast);
+        
+        // Check if needs enrollment
+        if (biometricData.needsEnrollment || biometricData.isFirstTime) {
+          toast.error(
+            <div>
+              <div className="font-bold">❌ Biometrik Belum Terdaftar</div>
+              <div className="text-sm mt-1">Silakan setup biometric terlebih dahulu</div>
+            </div>,
+            { duration: 5000 }
+          );
+          setStep('setup'); // Force to setup
+        } else {
+          toast.error(`❌ Verifikasi gagal: ${biometricData.error || 'Unknown error'}`);
+          setStep('ready');
+        }
+        
+        setLoading(false);
+        return false;
+      }
+      
+      console.log('[Biometric Verify] ✅ Registration confirmed');
+      console.log('[Biometric Verify] Verification result:', biometricData);
+      
+      // ===== 2. GET ENROLLED BIOMETRIC TYPE FROM DATABASE =====
+      const enrolledBiometricType = biometricData.biometricData?.biometric_type || 'fingerprint';
+      const hasWebAuthn = biometricData.biometricData?.hasWebAuthn;
+      
+      console.log('[Biometric Verify] 📋 Enrolled method:', enrolledBiometricType);
+      console.log('[Biometric Verify] 📋 Has WebAuthn:', hasWebAuthn);
+      
+      // Find the method details
+      const enrolledMethod = availableMethods.find(m => m.id === enrolledBiometricType) || {
+        id: enrolledBiometricType,
+        name: enrolledBiometricType.toUpperCase(),
+        icon: '🔐',
+        description: 'Enrolled biometric method'
+      };
+      
+      toast.dismiss(verifyToast);
+      
+      // ===== 3. CHECK BROWSER FINGERPRINT (SILENT - NO UI) =====
+      // Browser fingerprint is INFO ONLY for backend logging
+      // NO user notification needed - WebAuthn is primary security
+      const fingerprintPassed = biometricData.checks?.fingerprint?.passed;
+      
+      if (!fingerprintPassed) {
+        console.log('[Biometric Verify] ℹ️ Browser fingerprint mismatch (INFO ONLY - non-blocking)');
+        console.log('[Biometric Verify] Reason: Browser updates/cache clear/settings change fingerprint');
+        console.log('[Biometric Verify] ▶️ Proceeding with WebAuthn (primary security)');
+      } else {
+        console.log('[Biometric Verify] ✅ Browser fingerprint matched (INFO ONLY)');
+      }
+      
+      // ✅ NO toast notification - proceed silently to WebAuthn
+      
+      // ✅ NO toast notification - proceed silently to WebAuthn
+      
+      // ===== 4. ALWAYS TRY WEBAUTHN VERIFICATION =====
+      // Even if hasWebAuthn is false from DB, we should still try to authenticate
+      // because user might have set it up but DB flag is not updated
+      console.log('[Biometric Verify] 🔐 Attempting WebAuthn authentication...');
+      console.log('[Biometric Verify] Method:', enrolledMethod.name);
+      console.log('[Biometric Verify] DB hasWebAuthn:', hasWebAuthn);
+      
+      const webauthnToast = toast.loading(
+        <div>
+          <div className="font-bold mb-2">👆 SCAN BIOMETRIC ANDA</div>
+          <div className="text-sm mb-1">{enrolledMethod.icon} {enrolledMethod.name}</div>
+          <div className="text-xs opacity-90 mt-2 p-2 bg-blue-50 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-700">
+            <div className="font-semibold mb-1">📱 Prompt native akan muncul:</div>
+            <div>• Android: Fingerprint prompt</div>
+            <div>• iPhone: Face ID / Touch ID</div>
+            <div>• Windows: Windows Hello</div>
+            <div>• macOS: Touch ID</div>
+          </div>
+        </div>
+      );
+      
+      try {
+        console.log('[Biometric Verify] 📲 Calling authenticateCredential()...');
+        const webauthnResult = await authenticateCredential(session!.user.id!);
+        
+        console.log('[Biometric Verify] 📥 WebAuthn result:', webauthnResult);
+        toast.dismiss(webauthnToast);
+        
+        if (webauthnResult.success) {
+          console.log('[Biometric Verify] ✅', enrolledMethod.name, 'verified!');
+          toast.success(
+            <div>
+              <div className="font-bold">✅ {enrolledMethod.name} Verified!</div>
+              <div className="text-sm mt-1">{enrolledMethod.icon} Biometric authentication successful</div>
+            </div>,
+            { duration: 3000 }
+          );
+        } else {
+          console.warn('[Biometric Verify] ⚠️', enrolledMethod.name, 'verification failed:', webauthnResult.error);
+          
+          // Enhanced error messages
+          let errorDetails = webauthnResult.error || 'Verifikasi gagal';
+          let helpText = 'Silakan coba lagi atau gunakan AI Face Recognition';
+          
+          if (webauthnResult.error?.includes('cancelled')) {
+            errorDetails = 'Biometric dibatalkan oleh user';
+            helpText = 'Tap tombol verifikasi lagi dan izinkan akses biometric';
+          } else if (webauthnResult.error?.includes('not supported')) {
+            errorDetails = 'Browser tidak mendukung WebAuthn';
+            helpText = 'Gunakan browser terbaru yang support WebAuthn';
+          } else if (webauthnResult.error?.includes('timeout')) {
+            errorDetails = 'Waktu habis - tidak ada respons';
+            helpText = 'Coba lagi dan pastikan sensor biometric aktif';
+          } else if (webauthnResult.error?.includes('No credentials found') || webauthnResult.error?.includes('not found')) {
+            errorDetails = 'Credential tidak ditemukan - belum setup biometric';
+            helpText = 'Lakukan Setup Biometric terlebih dahulu';
+            
+            // ✅ Auto-redirect to setup if no credentials
+            toast.dismiss(webauthnToast);
+            toast.error(
+              <div>
+                <div className="font-bold">❌ Biometric Belum Di-setup</div>
+                <div className="text-sm mt-1">Silakan setup biometric terlebih dahulu</div>
+                <div className="text-xs mt-2 opacity-80">💡 Klik tombol "Setup Biometric" di bawah</div>
+              </div>,
+              { duration: 8000 }
+            );
+            setStep('setup');
+            setLoading(false);
+            return false;
+          }
+          
+          toast.dismiss(webauthnToast);
+          toast(
+            <div>
+              <div className="font-bold">⚠️ {enrolledMethod.name} Gagal</div>
+              <div className="text-sm mt-1">{errorDetails}</div>
+              <div className="text-xs mt-2 opacity-80">💡 {helpText}</div>
+            </div>,
+            { duration: 6000, icon: '⚠️' }
+          );
+          // ✅ Don't block - continue to AI verification as fallback
+        }
+      } catch (webauthnError: any) {
+        toast.dismiss(webauthnToast);
+        console.error('[Biometric Verify] ❌ WebAuthn exception:', webauthnError);
+        console.error('[Biometric Verify] Error name:', webauthnError.name);
+        console.error('[Biometric Verify] Error message:', webauthnError.message);
+        
+        // User-friendly error handling
+        let errorMessage = webauthnError.message || 'Authentication failed';
+        let helpText = 'Akan melanjutkan dengan AI Face Recognition';
+        
+        if (webauthnError.name === 'NotAllowedError') {
+          errorMessage = '❌ Permission ditolak atau biometric dibatalkan';
+          helpText = 'Coba lagi dan izinkan akses biometric';
+        } else if (webauthnError.name === 'NotSupportedError') {
+          errorMessage = '❌ Browser tidak mendukung WebAuthn';
+          helpText = 'Gunakan browser yang support WebAuthn (Chrome 67+, Safari 13+, Edge 18+)';
+        } else if (webauthnError.name === 'SecurityError') {
+          errorMessage = '❌ Security error - periksa koneksi HTTPS';
+          helpText = 'Pastikan akses via https:// atau localhost';
+        } else if (webauthnError.name === 'AbortError') {
+          errorMessage = '⏱️ Timeout - tidak ada respons dari sensor';
+          helpText = 'Coba lagi dan pastikan sensor biometric aktif';
+        } else if (webauthnError.name === 'InvalidStateError') {
+          errorMessage = '🔄 Credential tidak valid atau expired';
+          helpText = 'Gunakan Re-enrollment untuk mendaftar ulang';
+        } else if (webauthnError.name === 'NotFoundError') {
+          errorMessage = '🔍 Credential tidak ditemukan - belum setup';
+          helpText = 'Lakukan Setup Biometric terlebih dahulu';
+          
+          // ✅ Auto-redirect to setup
+          toast.error(
+            <div>
+              <div className="font-bold">❌ Biometric Belum Di-setup</div>
+              <div className="text-sm mt-1">Silakan setup biometric terlebih dahulu</div>
+              <div className="text-xs mt-2 opacity-80">💡 Klik tombol "Setup Biometric" di bawah</div>
+            </div>,
+            { duration: 8000 }
+          );
+          setStep('setup');
+          setLoading(false);
+          return false;
+        }
+        
+        toast.error(
+          <div>
+            <div className="font-bold">❌ WebAuthn Error</div>
+            <div className="text-sm mt-1">{errorMessage}</div>
+            <div className="text-xs mt-2 opacity-80">💡 {helpText}</div>
+          </div>,
+          { duration: 7000 }
+        );
+        // ✅ Don't block - continue to AI verification
+      }
+      
+      // ===== 5. ALL VERIFICATIONS PASSED =====
+      console.log('[Biometric Verify] 🎉 Biometric verification complete!');
+      console.log('[Biometric Verify] Method used:', enrolledMethod.name);
+      
+      toast.success(
+        <div>
+          <div className="font-bold text-lg">🎉 Verifikasi Berhasil!</div>
+          <div className="text-sm mt-2 space-y-1">
+            <div>✅ {enrolledMethod.icon} {enrolledMethod.name}: Ready</div>
+            <div>✅ Device: Terdaftar</div>
+            <div>✅ Identitas: Terverifikasi</div>
+          </div>
+          <div className="text-xs mt-2 opacity-80">Silakan lanjut ambil foto untuk AI verification</div>
+        </div>,
+        { duration: 5000 }
+      );
+      
+      // Proceed to photo capture
+      setLoading(false);
+      return true;
+      
+    } catch (error: any) {
+      toast.dismiss(verifyToast);
+      console.error('[Biometric Verify] ❌ Verification error:', error);
+      
+      toast.error(
+        <div>
+          <div className="font-bold">❌ Verifikasi Gagal</div>
+          <div className="text-sm mt-1">{error.message || 'Terjadi kesalahan'}</div>
+        </div>,
+        { duration: 5000 }
+      );
+      
+      setStep('ready');
+      setLoading(false);
+      return false;
+    }
+  };
 
   const handleCapturePhoto = async () => {
     setLoading(true);
@@ -1790,17 +2079,10 @@ export default function AttendancePage() {
         
         // Get reference photo dari biometric
         setAiProgress('📸 Mengambil foto reference...');
-        const biometricResponse = await authFetch('/api/attendance/biometric/setup', {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        const biometricResponse = await authFetch('/api/attendance/biometric/setup');
         
-        if (!biometricResponse || !biometricResponse.ok) {
-          const errorText = biometricResponse ? await biometricResponse.text() : 'No response';
-          console.error('[AI Verify] ❌ Biometric API error:', errorText);
-          throw new Error('Gagal mengambil data biometric. Status: ' + (biometricResponse?.status || 'unknown'));
+        if (!biometricResponse) {
+          throw new Error('Gagal mengambil data biometric. Silakan coba lagi.');
         }
         
         const { data: biometric } = await biometricResponse.json();
@@ -1873,12 +2155,9 @@ export default function AttendancePage() {
           
           setAiProgress('🔬 Membandingkan dengan foto reference...');
           
-          const aiResponse = await authFetch('/api/ai/verify-face', {
+          const aiResponse = await fetch('/api/ai/verify-face', {
             method: 'POST',
-            credentials: 'include',
-            headers: { 
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               liveSelfieBase64: photoBase64,
               referencePhotoUrl: biometric.reference_photo_url,
@@ -1886,35 +2165,12 @@ export default function AttendancePage() {
             }),
           });
 
-          if (!aiResponse) {
-            throw new Error('AI verification API tidak merespon');
-          }
-
-          // Check if response is JSON
-          const contentType = aiResponse.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            const textResponse = await aiResponse.text();
-            console.error('[AI Verify] ❌ Expected JSON, got:', contentType);
-            console.error('[AI Verify] Response preview:', textResponse.substring(0, 200));
-            
-            if (textResponse.includes('<!DOCTYPE')) {
-              throw new Error('AI API error: Received HTML instead of JSON');
-            }
-            
-            throw new Error(`Invalid AI response type: ${contentType}`);
-          }
-
           const aiData = await aiResponse.json();
           
           toast.dismiss(aiToast);
           setAiVerifying(false);
           
           console.log('[AI Verify] 🤖 Gemini result:', aiData);
-
-          if (!aiResponse.ok) {
-            console.error('[AI Verify] ❌ API error:', aiResponse.status, aiData);
-            throw new Error(aiData.error || `AI verification API error (${aiResponse.status})`);
-          }
 
           if (!aiData.success || !aiData.verified) {
             console.error('[AI Verify] ❌ Face verification failed:', aiData.reasons || aiData.error);
@@ -2035,8 +2291,8 @@ export default function AttendancePage() {
           isFirstTime: isFirstTimeAttendance,
           timestamp: new Date().toISOString(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          biometricMethod: 'session', // Session-based auth (no biometric)
-          deviceInfo: null, // Removed: device binding
+          biometricMethod: selectedBiometricType || 'fingerprint', // ✅ Track which method user used
+          deviceInfo: selectedDeviceInfo, // ✅ Device info from setup
         },
         // Include AI verification result for dashboard sync
         aiVerification: aiVerification ? {
@@ -2065,27 +2321,11 @@ export default function AttendancePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        credentials: 'include',
       });
 
       if (!response) {
         toast.dismiss(submitToast);
         throw new Error('Gagal mengirim absensi. Silakan coba lagi.');
-      }
-
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        toast.dismiss(submitToast);
-        console.error('[Submit] ❌ Expected JSON, got:', contentType);
-        console.error('[Submit] Response preview:', textResponse.substring(0, 200));
-        
-        if (textResponse.includes('<!DOCTYPE')) {
-          throw new Error('Server error: Received HTML instead of JSON. Kemungkinan session expired atau API error.');
-        }
-        
-        throw new Error(`Invalid response type: ${contentType}`);
       }
 
       const data = await response.json();
@@ -2096,7 +2336,7 @@ export default function AttendancePage() {
 
       if (!response.ok) {
         if (data.requireSetup) {
-          setStep('capture');
+          setStep('setup');
           toast.error('Silakan setup biometric terlebih dahulu');
           return;
         }
@@ -2106,38 +2346,14 @@ export default function AttendancePage() {
 
       console.log('✅ Attendance submitted successfully!');
       
-      // Show success message with detailed info
-      toast.success(
-        <div>
-          <div className="font-bold text-lg mb-2">🎉 Absensi Berhasil!</div>
-          <div className="text-sm space-y-1">
-            <div>✅ Data tersimpan di database</div>
-            <div>✅ Tercatat di aktivitas Anda</div>
-            <div>✅ Admin dapat melihat di panel</div>
-            {aiVerification && (
-              <div className="mt-2 p-2 bg-green-100 rounded text-xs">
-                🤖 AI Verified: {(aiVerification.matchScore * 100).toFixed(0)}% match
-              </div>
-            )}
-          </div>
-        </div>,
-        {
-          duration: 6000,
-          icon: '✅',
-        }
-      );
+      toast.success(data.message || '🎉 Absensi berhasil!', {
+        duration: 5000,
+        icon: '✅',
+      });
       
       setTodayAttendance(data.data);
       setPhotoBlob(null);
       setPhotoPreview('');
-      
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        console.log('📍 Redirecting to dashboard...');
-        toast.success('Mengarahkan ke dashboard...', { duration: 2000 });
-        window.location.href = '/dashboard';
-      }, 2000);
-      
       setStep('ready');
     } catch (error: any) {
       console.error('❌ Submit attendance error:', error);
@@ -2286,6 +2502,149 @@ export default function AttendancePage() {
         )}
 
         {/* Biometric Setup */}
+        {step === 'setup' && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-orange-200 dark:border-orange-700">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Setup Biometric Pertama Kali</h2>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4 sm:mb-6">
+              Anda perlu mendaftarkan foto selfie dan biometric untuk verifikasi absensi.
+            </p>
+
+            {/* ✅ STEP 1: PILIH METODE BIOMETRIC */}
+            {!selectedMethod ? (
+              <div className="space-y-4">
+                <div className="bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-4">
+                  <h3 className="font-bold text-purple-900 dark:text-purple-100 mb-3 flex items-center gap-2">
+                    🔐 Pilih Metode Biometric
+                  </h3>
+                  <p className="text-sm text-purple-700 dark:text-purple-300 mb-4">
+                    Pilih metode yang tersedia di perangkat Anda:
+                  </p>
+                  
+                  <div className="space-y-2">
+                    {availableMethods.filter(m => m.available).map(method => (
+                      <button
+                        key={method.id}
+                        onClick={() => {
+                          setSelectedMethod(method);
+                          setSelectedBiometricType(method.id); // ✅ Set type from method ID
+                          console.log('[Setup] ✅ User selected:', method.name, '(', method.id, ')');
+                          toast.success(`Metode terpilih: ${method.name}`);
+                        }}
+                        className="w-full bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg p-4 border-2 border-purple-200 dark:border-purple-700 transition-all flex items-center gap-3 text-left hover:shadow-lg"
+                      >
+                        <span className="text-3xl">{method.icon}</span>
+                        <div className="flex-1">
+                          <div className="font-bold text-gray-900 dark:text-white">
+                            {method.name}
+                            {method.primary && (
+                              <span className="ml-2 text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full">
+                                Rekomendasi
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {method.description}
+                          </div>
+                        </div>
+                        <div className="text-purple-500 text-2xl">→</div>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {availableMethods.filter(m => m.available).length === 0 && (
+                    <div className="text-center text-red-600 dark:text-red-400 py-4">
+                      ❌ Tidak ada metode biometric yang tersedia di perangkat Anda.
+                      <br />
+                      <span className="text-sm">Gunakan browser yang mendukung WebAuthn (Chrome, Edge, Safari, Firefox)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : !photoPreview ? (
+              /* ✅ STEP 2: FOTO SELFIE */
+              <div className="space-y-4">
+                {/* Show selected method */}
+                <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{selectedMethod.icon}</span>
+                    <div>
+                      <div className="font-bold text-green-900 dark:text-green-100 text-sm">
+                        Metode Terpilih: {selectedMethod.name}
+                      </div>
+                      <div className="text-xs text-green-700 dark:text-green-300">
+                        {selectedMethod.description}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedMethod(null);
+                        setSelectedBiometricType('fingerprint');
+                        toast('Silakan pilih metode lagi', { icon: 'ℹ️' });
+                      }}
+                      className="ml-auto text-sm text-green-600 dark:text-green-400 underline hover:text-green-800"
+                    >
+                      Ganti
+                    </button>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handleCapturePhoto}
+                  disabled={loading}
+                  className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 sm:gap-3 disabled:opacity-50"
+                >
+                  <FaCamera className="text-lg sm:text-xl" />
+                  {loading ? 'Mengambil Foto...' : '📸 Ambil Foto Selfie'}
+                </button>
+              </div>
+            ) : (
+              /* ✅ STEP 3: KONFIRMASI & DAFTAR */
+              <div className="space-y-3 sm:space-y-4">
+                {/* Show selected method */}
+                <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-xl">{selectedMethod.icon}</span>
+                    <span className="font-bold text-green-900 dark:text-green-100">
+                      {selectedMethod.name}
+                    </span>
+                  </div>
+                </div>
+                
+                <img src={photoPreview} alt="Selfie" className="w-full rounded-xl shadow-lg" />
+                
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 text-xs">
+                  <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    ℹ️ Yang akan didaftarkan:
+                  </p>
+                  <ul className="text-blue-700 dark:text-blue-300 space-y-1 ml-4 list-disc">
+                    <li>Foto selfie untuk AI Face Recognition</li>
+                    <li>{selectedMethod.icon} {selectedMethod.name} untuk verifikasi cepat</li>
+                    <li>Browser fingerprint (opsional, tidak wajib cocok)</li>
+                  </ul>
+                </div>
+                
+                <div className="flex gap-2 sm:gap-3">
+                  <button
+                    onClick={() => {
+                      setPhotoBlob(null);
+                      setPhotoPreview('');
+                    }}
+                    className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm sm:text-base font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all active:scale-95"
+                  >
+                    Ambil Ulang
+                  </button>
+                  <button
+                    onClick={handleSetupBiometric}
+                    disabled={loading}
+                    className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:shadow-xl transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {loading ? 'Menyimpan...' : `🔐 Daftar ${selectedMethod.name}`}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Ready to Attend */}
         {step === 'ready' && !todayAttendance && (
@@ -2793,6 +3152,83 @@ export default function AttendancePage() {
             )}
             
             {/* Biometric Methods Selection */}
+            {availableMethods.length > 0 && (
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-4 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                    🔐 Metode Biometrik
+                  </h3>
+                  {availableMethods.filter(m => m.available).length > 1 && (
+                    <button
+                      onClick={() => setShowMethodSelection(!showMethodSelection)}
+                      className="text-xs text-purple-600 dark:text-purple-400 underline"
+                    >
+                      {showMethodSelection ? 'Sembunyikan' : 'Pilih Lainnya'}
+                    </button>
+                  )}
+                </div>
+                
+                {/* Selected/Primary Method Display */}
+                {selectedMethod && (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mb-2 border-2 border-purple-300 dark:border-purple-600">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{selectedMethod.icon}</span>
+                      <div className="flex-1">
+                        <div className="font-bold text-gray-900 dark:text-white">
+                          {selectedMethod.name}
+                          {selectedMethod.primary && (
+                            <span className="ml-2 text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full">
+                              Rekomendasi
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          {selectedMethod.description}
+                        </div>
+                      </div>
+                      <div className="text-green-500 text-xl">✓</div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Method Selection (when expanded) */}
+                {showMethodSelection && (
+                  <div className="space-y-2 mt-3">
+                    <div className="text-xs text-purple-700 dark:text-purple-300 font-semibold mb-2">
+                      Pilih metode lain:
+                    </div>
+                    {availableMethods
+                      .filter(m => m.available && m.id !== selectedMethod?.id)
+                      .map(method => (
+                        <button
+                          key={method.id}
+                          onClick={() => {
+                            setSelectedMethod(method);
+                            setSelectedBiometricType(method.id); // ✅ Save selected type
+                            setShowMethodSelection(false);
+                            toast.success(`Metode diubah ke: ${method.name}`);
+                          }}
+                          className="w-full bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg p-3 border border-purple-200 dark:border-purple-700 transition-all flex items-center gap-3 text-left"
+                        >
+                          <span className="text-2xl">{method.icon}</span>
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900 dark:text-white text-sm">
+                              {method.name}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              {method.description}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                )}
+                
+                <div className="mt-3 text-xs text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded p-2">
+                  💡 <strong>Auto-fallback:</strong> Jika metode ini gagal, sistem akan mencoba metode lain secara otomatis
+                </div>
+              </div>
+            )}
             
             <button
               onClick={async () => {
@@ -2804,7 +3240,7 @@ export default function AttendancePage() {
                 console.log('📍 Current Location:', locationData ? `${locationData.latitude}, ${locationData.longitude}` : 'Not detected');
                 console.log('📶 WiFi SSID:', wifiSSID || 'Not set');
                 console.log('🔐 Fingerprint:', fingerprintHash ? fingerprintHash.substring(0, 12) + '...' : 'Not generated');
-                console.log('🔒 Auth Method: Session (no biometric)');
+                console.log('🔒 Selected Biometric Method:', selectedMethod?.name || 'None');
                 console.log('\n--- Step 1: Security Validation ---');
                 
                 const isSecure = await validateSecurity();
@@ -2815,15 +3251,21 @@ export default function AttendancePage() {
                 }
                 
                 console.log('✅ Step 1 PASSED: Security validated');
-                console.log('\n--- Step 2: Session Authentication (Skip Biometric) ---');
-                console.log('✅ Session verified - User already authenticated');
+                console.log('\n--- Step 2: Biometric Verification ---');
                 
-                console.log('\n--- Step 3: Face Analytics Integration ---');
-                console.log('🧠 Proceeding to AI face analytics system');
-                console.log('🔓 UI State: Changing to FACE-ANALYTICS');
+                const isBiometricValid = await handleBiometricVerification();
+                if (!isBiometricValid) {
+                  console.error('❌ Step 2 FAILED: Biometric verification failed\n');
+                  return;
+                }
+                
+                console.log('✅ Step 2 PASSED: Biometric verified');
+                console.log('\n--- Step 3: Photo Capture ---');
+                console.log('📸 Proceeding to photo capture for AI face analysis');
+                console.log('🔓 UI State: Changing to CAPTURE');
                 console.log('=========================================\n');
                 
-                setStep('face-analytics');
+                setStep('capture');
               }}
               disabled={
                 validating || 
@@ -2851,8 +3293,8 @@ export default function AttendancePage() {
                 </>
               ) : (
                 <>
-                  <FaCamera className="text-xl sm:text-2xl" />
-                  📸 Mulai Analisis Wajah AI
+                  <FaFingerprint className="text-xl sm:text-2xl" />
+                  🔐 Verifikasi & Lanjut Absen
                 </>
               )}
             </button>
@@ -2885,7 +3327,7 @@ export default function AttendancePage() {
                     </p>
                     <button
                       onClick={() => {
-                        setStep('capture');
+                        setStep('setup');
                         setReEnrollmentStatus('none');
                       }}
                       className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
@@ -2920,7 +3362,7 @@ export default function AttendancePage() {
                               </div>,
                               { duration: 3000 }
                             );
-                            setStep('capture'); // Langsung ke setup
+                            setStep('setup'); // Langsung ke setup
                           }}
                           className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
                         >
@@ -3018,125 +3460,64 @@ export default function AttendancePage() {
         )}
 
         {/* 🔐 BIOMETRIC VERIFICATION STEP */}
-
-        {/* 🧠 FACE ANALYTICS INTEGRATION STEP */}
-        {step === 'face-analytics' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-indigo-200 dark:border-indigo-700">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
-                🧠
-              </div>
-              AI Face Analytics
+        {step === 'verify-biometric' && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border-2 border-purple-200 dark:border-purple-700">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-3">
+              <FaFingerprint className="text-purple-600" />
+              Verifikasi Biometrik
             </h2>
-            
+
             <div className="space-y-4">
-              {/* Info Card */}
-              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-2 border-indigo-300 dark:border-indigo-700 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <div className="text-3xl">🎯</div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-indigo-900 dark:text-indigo-100 mb-2">
-                      Sistem Pengenalan Wajah AI
-                    </h3>
-                    <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-3">
-                      Sistem akan menganalisis wajah Anda menggunakan AI untuk memastikan identitas Anda sebelum absensi.
-                    </p>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-indigo-700 dark:text-indigo-300">
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</div>
-                        <span><strong>Face Detection:</strong> Deteksi wajah otomatis</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-indigo-700 dark:text-indigo-300">
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</div>
-                        <span><strong>Face Recognition:</strong> Identifikasi wajah dengan database</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-indigo-700 dark:text-indigo-300">
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</div>
-                        <span><strong>Anti-Spoofing:</strong> Deteksi foto palsu</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-indigo-700 dark:text-indigo-300">
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">✓</div>
-                        <span><strong>8-Layer Verification:</strong> Keamanan maksimal</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Analytics Process Animation */}
-              <div className="bg-white dark:bg-gray-900 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl p-4">
-                <div className="text-center space-y-4">
-                  <div className="relative inline-block">
-                    <div className="absolute inset-0 animate-ping bg-indigo-400 rounded-full opacity-75"></div>
-                    <div className="relative bg-indigo-600 rounded-full p-6">
-                      <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+              {/* Loading Animation */}
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-2 border-purple-300 dark:border-purple-700 rounded-xl p-6">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="relative">
+                    <div className="animate-ping absolute inline-flex h-20 w-20 rounded-full bg-purple-400 opacity-75"></div>
+                    <div className="relative inline-flex rounded-full h-20 w-20 bg-purple-600 items-center justify-center">
+                      <FaFingerprint className="text-4xl text-white" />
                     </div>
                   </div>
                   
-                  <div>
-                    <div className="font-bold text-lg text-gray-900 dark:text-white mb-2">
-                      🧠 Sistem AI Siap
+                  <div className="space-y-2">
+                    <div className="font-bold text-lg text-purple-900 dark:text-purple-100">
+                      🔐 Memverifikasi Identitas
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Klik tombol dibawah untuk memulai analisis wajah
+                    <div className="text-sm text-purple-700 dark:text-purple-300">
+                      Mohon tunggu, sistem sedang memeriksa:
                     </div>
+                  </div>
+                  
+                  <div className="w-full bg-white dark:bg-gray-800 rounded-lg p-4 text-left space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                      <span>Browser fingerprint...</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                      <span>Device verification...</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span>Biometric authentication...</span>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-purple-600 dark:text-purple-400">
+                    ⏳ Proses ini memastikan hanya Anda yang dapat melakukan absensi
                   </div>
                 </div>
               </div>
               
-              {/* Privacy Notice */}
+              {/* Info */}
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
-                <div className="flex items-start gap-2">
-                  <div className="text-lg">🔒</div>
-                  <div className="text-xs text-blue-700 dark:text-blue-300">
-                    <strong>Privacy:</strong> Data wajah Anda diproses secara aman dan hanya digunakan untuk verifikasi absensi. 
-                    Tidak disimpan secara permanen dan tidak dibagikan kepada pihak ketiga.
-                  </div>
+                <div className="text-xs text-blue-700 dark:text-blue-300">
+                  <div className="font-bold mb-1">🔒 Keamanan Multi-Layer:</div>
+                  <ul className="space-y-1 ml-4 list-disc">
+                    <li>Fingerprint: Verifikasi device unik</li>
+                    <li>WebAuthn: Hardware security (jika tersedia)</li>
+                    <li>Face AI: Akan diverifikasi di step selanjutnya</li>
+                  </ul>
                 </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    console.log('[Face Analytics] 🧠 Starting AI face analysis workflow...');
-                    console.log('[Face Analytics] Step 1: Capture photo for AI verification');
-                    console.log('[Face Analytics] Step 2: AI will analyze face similarity');
-                    console.log('[Face Analytics] Step 3: Submit attendance if verified');
-                    console.log('[Face Analytics] → Proceeding to photo capture');
-                    
-                    toast(
-                      <div>
-                        <div className="font-bold">🧠 AI Face Analytics</div>
-                        <div className="text-sm mt-2 space-y-1">
-                          <div>✅ Sistem akan menganalisis wajah Anda</div>
-                          <div>✅ Membandingkan dengan foto referensi</div>
-                          <div>✅ Verifikasi identitas dengan AI</div>
-                        </div>
-                      </div>,
-                      { duration: 5000, icon: '🎯' }
-                    );
-                    
-                    setStep('capture');
-                  }}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Mulai Analisis Wajah AI
-                </button>
-                
-                <button
-                  onClick={() => setStep('ready')}
-                  className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
-                >
-                  ← Kembali
-                </button>
               </div>
             </div>
           </div>
