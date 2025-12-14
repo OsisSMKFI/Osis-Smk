@@ -7,6 +7,7 @@ import ImageUploadField from '@/components/ImageUploadField';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import { FaCog, FaRobot, FaDatabase, FaPalette, FaEye, FaSave, FaChevronDown, FaChevronUp, FaKey, FaTools, FaDownload, FaImage, FaTint, FaMagic, FaCopy, FaSun, FaMoon } from 'react-icons/fa';
 import AdminPageShell from '@/components/admin/AdminPageShell';
+import { FaInstagram, FaYoutube, FaTiktok, FaSpotify } from 'react-icons/fa';
 
 interface EnvSetting {
   key: string;
@@ -63,6 +64,25 @@ const SETTINGS_GROUPS = {
       { key: 'OPS_WEBHOOK_URL', label: 'Ops Webhook URL', secret: false, description: 'Webhook untuk notifikasi' },
     ]
   },
+  socialMedia: {
+    title: 'Social Media',
+    icon: <FaInstagram className="w-5 h-5" />,
+    color: 'from-pink-500 to-purple-600',
+    settings: [
+      { key: 'SOCIAL_INSTAGRAM_URL', label: 'Instagram URL', secret: false, description: 'URL profil Instagram OSIS' },
+      { key: 'SOCIAL_INSTAGRAM_USERNAME', label: 'Instagram Username', secret: false, description: '@username' },
+      { key: 'SOCIAL_INSTAGRAM_FOLLOWERS', label: 'Instagram Followers', secret: false, description: 'Jumlah followers (angka)' },
+      { key: 'SOCIAL_YOUTUBE_URL', label: 'YouTube URL', secret: false, description: 'URL channel YouTube OSIS' },
+      { key: 'SOCIAL_YOUTUBE_CHANNEL', label: 'YouTube Channel Name', secret: false, description: 'Nama channel' },
+      { key: 'SOCIAL_YOUTUBE_SUBSCRIBERS', label: 'YouTube Subscribers', secret: false, description: 'Jumlah subscribers (angka)' },
+      { key: 'SOCIAL_TIKTOK_URL', label: 'TikTok URL', secret: false, description: 'URL profil TikTok OSIS' },
+      { key: 'SOCIAL_TIKTOK_USERNAME', label: 'TikTok Username', secret: false, description: '@username' },
+      { key: 'SOCIAL_TIKTOK_FOLLOWERS', label: 'TikTok Followers', secret: false, description: 'Jumlah followers (angka)' },
+      { key: 'SOCIAL_SPOTIFY_URL', label: 'Spotify URL', secret: false, description: 'URL Spotify OSIS' },
+      { key: 'SOCIAL_SPOTIFY_NAME', label: 'Spotify Name', secret: false, description: 'Nama profil Spotify' },
+      { key: 'SOCIAL_SPOTIFY_FOLLOWERS', label: 'Spotify Followers', secret: false, description: 'Jumlah followers (angka)' },
+    ]
+  },
   theme: {
     title: 'Theme & Background',
     icon: <FaPalette className="w-5 h-5" />,
@@ -90,6 +110,7 @@ export default function AdminSettingsPage() {
     ai: true,
     admin: false,
     database: false,
+    socialMedia: false,
     theme: false
   });
   const [values, setValues] = useState<Record<string, string>>({});

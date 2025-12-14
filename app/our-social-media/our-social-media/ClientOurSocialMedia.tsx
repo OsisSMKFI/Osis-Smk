@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
+import { fetchSocialMediaConfig, type SocialMediaFullConfig } from '@/lib/socialMediaConfig.client';
 import { useSocialMediaData } from '@/lib/hooks/useSocialMediaData';
 import Image from 'next/image';
 
@@ -256,43 +257,64 @@ const ClientOurSocialMediaPage: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'all' | 'instagram' | 'youtube' | 'tiktok' | 'spotify'>('all');
   const { instagramPosts, youtubeVideos, spotifyContent, tiktokVideos, loading } = useSocialMediaData();
+  
+  // Dynamic config from admin settings
+  const [config, setConfig] = useState<SocialMediaFullConfig>(SOCIAL_MEDIA_CONFIG);
+  const [configLoading, setConfigLoading] = useState(true);
+
+  // Fetch dynamic config from database
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const dynamicConfig = await fetchSocialMediaConfig();
+        setConfig(dynamicConfig);
+      } catch (error) {
+        console.error('Failed to load social media config:', error);
+        // Fall back to static config
+        setConfig(SOCIAL_MEDIA_CONFIG);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    loadConfig();
+  }, []);
 
   const socialPlatforms = [
     {
       platform: 'Instagram',
       icon: 'fab fa-instagram',
       description: t('socialMediaPage.instagramDesc') || 'Follow our journey through photos and stories',
-      url: SOCIAL_MEDIA_CONFIG.instagram.url,
+      url: config.instagram.url,
       gradient: 'from-purple-600 via-pink-600 to-orange-500',
-      followers: SOCIAL_MEDIA_CONFIG.instagram.followers,
-      isActive: SOCIAL_MEDIA_CONFIG.instagram.isActive
+      followers: config.instagram.followers,
+      isActive: config.instagram.isActive
     },
     {
       platform: 'YouTube',
       icon: 'fab fa-youtube',
       description: t('socialMediaPage.youtubeDesc') || 'Watch our videos and subscribe for more',
-      url: SOCIAL_MEDIA_CONFIG.youtube.url,
+      url: config.youtube.url,
       gradient: 'from-red-600 to-red-500',
-      followers: SOCIAL_MEDIA_CONFIG.youtube.subscribers,
-      isActive: SOCIAL_MEDIA_CONFIG.youtube.isActive
+      followers: config.youtube.subscribers,
+      isActive: config.youtube.isActive
     },
     {
       platform: 'TikTok',
       icon: 'fab fa-tiktok',
       description: t('socialMediaPage.tiktokDesc') || 'Short videos, big moments',
-      url: SOCIAL_MEDIA_CONFIG.tiktok.url,
+      url: config.tiktok.url,
       gradient: 'from-gray-900 via-pink-600 to-cyan-400',
-      followers: SOCIAL_MEDIA_CONFIG.tiktok.followers,
-      isActive: SOCIAL_MEDIA_CONFIG.tiktok.isActive
+      followers: config.tiktok.followers,
+      isActive: config.tiktok.isActive
     },
     {
       platform: 'Spotify',
       icon: 'fab fa-spotify',
       description: t('socialMediaPage.spotifyDesc') || 'Listen to our podcasts and playlists',
-      url: SOCIAL_MEDIA_CONFIG.spotify.url,
+      url: config.spotify.url,
       gradient: 'from-green-600 to-green-500',
-      followers: SOCIAL_MEDIA_CONFIG.spotify.followers,
-      isActive: SOCIAL_MEDIA_CONFIG.spotify.isActive
+      followers: config.spotify.followers,
+      isActive: config.spotify.isActive
     }
   ];
 
@@ -438,25 +460,25 @@ const ClientOurSocialMediaPage: React.FC = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <AnimatedCounter 
-              value={SOCIAL_MEDIA_CONFIG.instagram.followers} 
+              value={config.instagram.followers} 
               label="Instagram" 
               icon="fab fa-instagram"
               color="bg-gradient-to-br from-purple-500 to-pink-500"
             />
             <AnimatedCounter 
-              value={SOCIAL_MEDIA_CONFIG.youtube.subscribers} 
+              value={config.youtube.subscribers} 
               label="YouTube" 
               icon="fab fa-youtube"
               color="bg-red-500"
             />
             <AnimatedCounter 
-              value={SOCIAL_MEDIA_CONFIG.tiktok.followers} 
+              value={config.tiktok.followers} 
               label="TikTok" 
               icon="fab fa-tiktok"
               color="bg-gray-900 dark:bg-gray-700"
             />
             <AnimatedCounter 
-              value={SOCIAL_MEDIA_CONFIG.spotify.followers} 
+              value={config.spotify.followers} 
               label="Spotify" 
               icon="fab fa-spotify"
               color="bg-green-500"
