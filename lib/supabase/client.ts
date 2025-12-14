@@ -4,6 +4,36 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+// Supabase storage base URL for fixing incomplete URLs
+const SUPABASE_STORAGE_URL = supabaseUrl 
+  ? `${supabaseUrl}/storage/v1/object/public/gallery`
+  : 'https://mhefqwregrldvxtqqxbb.supabase.co/storage/v1/object/public/gallery';
+
+/**
+ * Fix incomplete URLs that only contain filename
+ * e.g., "1762905236277-c19vyw.jpg" -> full Supabase URL
+ */
+function fixIncompleteUrl(url: string | null | undefined, folder: string = ''): string | null {
+  if (!url) return null;
+  
+  // Already a full URL
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // Already a path starting with /
+  if (url.startsWith('/')) {
+    if (url.startsWith('/images/')) return url; // Local images
+    return `${SUPABASE_STORAGE_URL}${url}`;
+  }
+  
+  // Just a filename - construct full URL
+  if (folder) {
+    return `${SUPABASE_STORAGE_URL}/${folder}/${url}`;
+  }
+  return `${SUPABASE_STORAGE_URL}/${url}`;
+}
+
 // Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -340,7 +370,14 @@ export async function getActiveMembers(sekbidId?: number) {
     return [];
   }
   const items = (data || []) as Array<Record<string, any>>;
-  return items.slice().sort((a, b) => {
+  
+  // Fix photo URLs
+  const fixedItems = items.map((m: any) => ({
+    ...m,
+    photo_url: fixIncompleteUrl(m.photo_url, 'members'),
+  }));
+  
+  return fixedItems.slice().sort((a, b) => {
     const aOrder = a.display_order ?? a.order_index ?? 0;
     const bOrder = b.display_order ?? b.order_index ?? 0;
     return aOrder - bOrder;
@@ -360,7 +397,14 @@ export async function getCoreMembers() {
     return [];
   }
   const items = (data || []) as Array<Record<string, any>>;
-  return items.slice().sort((a, b) => {
+  
+  // Fix photo URLs
+  const fixedItems = items.map((m: any) => ({
+    ...m,
+    photo_url: fixIncompleteUrl(m.photo_url, 'members'),
+  }));
+  
+  return fixedItems.slice().sort((a, b) => {
     const aOrder = a.display_order ?? a.order_index ?? 0;
     const bOrder = b.display_order ?? b.order_index ?? 0;
     return aOrder - bOrder;
@@ -386,7 +430,14 @@ export async function getGalleryItems(limit?: number) {
       return [];
     }
     
-    return data || [];
+    // Fix incomplete URLs for all items
+    const items = (data || []).map((item: any) => ({
+      ...item,
+      image_url: fixIncompleteUrl(item.image_url, item.category || item.folder || '') || item.image_url,
+      video_url: item.video_url ? fixIncompleteUrl(item.video_url, item.category || item.folder || '') : null,
+    }));
+    
+    return items;
   } catch (err) {
     console.error('Gallery fetch exception:', err);
     return [];
