@@ -1,12 +1,93 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence, useMotionValue, useSpring, useScroll, useTransform } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
 import { fetchSocialMediaConfig, type SocialMediaFullConfig } from '@/lib/socialMediaConfig.client';
 import { useSocialMediaData } from '@/lib/hooks/useSocialMediaData';
 import Image from 'next/image';
+
+// ============================================
+// SOUND EFFECTS HOOK
+// ============================================
+const useSoundEffects = () => {
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
+
+  const initAudioContext = useCallback(() => {
+    if (!audioContextRef.current && typeof window !== 'undefined') {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return audioContextRef.current;
+  }, []);
+
+  const playHoverSound = useCallback(() => {
+    if (!isSoundEnabled) return;
+    const ctx = initAudioContext();
+    if (!ctx) return;
+
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.setValueAtTime(800, ctx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.1);
+  }, [isSoundEnabled, initAudioContext]);
+
+  const playClickSound = useCallback(() => {
+    if (!isSoundEnabled) return;
+    const ctx = initAudioContext();
+    if (!ctx) return;
+
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.setValueAtTime(600, ctx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
+    
+    gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.15);
+  }, [isSoundEnabled, initAudioContext]);
+
+  const playSuccessSound = useCallback(() => {
+    if (!isSoundEnabled) return;
+    const ctx = initAudioContext();
+    if (!ctx) return;
+
+    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+    notes.forEach((freq, i) => {
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+      gainNode.gain.setValueAtTime(0.1, ctx.currentTime + i * 0.1);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.1 + 0.2);
+      
+      oscillator.start(ctx.currentTime + i * 0.1);
+      oscillator.stop(ctx.currentTime + i * 0.1 + 0.2);
+    });
+  }, [isSoundEnabled, initAudioContext]);
+
+  return { playHoverSound, playClickSound, playSuccessSound, isSoundEnabled, setIsSoundEnabled };
+};
 
 // ============================================
 // 3D TILT CARD COMPONENT
@@ -510,6 +591,14 @@ const ClientOurSocialMediaPage: React.FC = () => {
   
   const [config, setConfig] = useState<SocialMediaFullConfig>(SOCIAL_MEDIA_CONFIG);
   const [configLoading, setConfigLoading] = useState(true);
+  
+  // Sound effects
+  const { playHoverSound, playClickSound, playSuccessSound, isSoundEnabled, setIsSoundEnabled } = useSoundEffects();
+  
+  // Scroll progress for parallax
+  const { scrollYProgress } = useScroll();
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -624,8 +713,28 @@ const ClientOurSocialMediaPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+      {/* Sound Toggle Button */}
+      <motion.button
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-white dark:bg-gray-800 shadow-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:scale-110 transition-transform"
+        onClick={() => {
+          setIsSoundEnabled(!isSoundEnabled);
+          playClickSound();
+        }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1 }}
+        title={isSoundEnabled ? 'Mute sounds' : 'Enable sounds'}
+      >
+        <i className={`fas ${isSoundEnabled ? 'fa-volume-up text-yellow-500' : 'fa-volume-mute text-gray-400'} text-xl`} />
+      </motion.button>
+
       {/* HERO SECTION */}
-      <section className="relative min-h-[85vh] md:min-h-screen flex items-center justify-center overflow-hidden">
+      <motion.section 
+        className="relative min-h-[85vh] md:min-h-screen flex items-center justify-center overflow-hidden"
+        style={{ opacity: heroOpacity, scale: heroScale }}
+      >
         {/* Animated background */}
         <div className="absolute inset-0">
           <motion.div
@@ -770,7 +879,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
             </div>
           </div>
         </motion.div>
-      </section>
+      </motion.section>
 
       {/* STATS SECTION */}
       <section className="py-16 md:py-24 bg-white dark:bg-gray-800 relative overflow-hidden">
