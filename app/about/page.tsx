@@ -77,9 +77,9 @@ function VisionMissionSection() {
   const { t } = useTranslation();
   
   return (
-    <section className="relative py-32 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
+    <section className="relative py-32 overflow-hidden bg-gradient-to-b from-gray-100 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Background grid */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
+      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.03]" style={{
         backgroundImage: `linear-gradient(to right, rgba(251, 191, 36, 0.5) 1px, transparent 1px),
           linear-gradient(to bottom, rgba(251, 191, 36, 0.5) 1px, transparent 1px)`,
         backgroundSize: '60px 60px'
@@ -93,14 +93,14 @@ function VisionMissionSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <span className="inline-flex items-center gap-2 text-yellow-400 text-sm font-medium tracking-widest uppercase mb-4">
-            <span className="w-8 h-px bg-yellow-400" />
+          <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm font-medium tracking-widest uppercase mb-4">
+            <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
             {t('about.visionMissionLabel') || 'Visi & Misi'}
-            <span className="w-8 h-px bg-yellow-400" />
+            <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
           </span>
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-4">
+          <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4">
             {t('about.visionTitle') || 'Arah'}{' '}
-            <span className="text-yellow-400">{t('about.visionTitleHighlight') || 'Langkah Kami'}</span>
+            <span className="text-yellow-500 dark:text-yellow-400">{t('about.visionTitleHighlight') || 'Langkah Kami'}</span>
           </h2>
         </motion.div>
 
@@ -114,16 +114,16 @@ function VisionMissionSection() {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition duration-500" />
-            <div className="relative bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-yellow-500/20 h-full">
+            <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-yellow-500/20 h-full shadow-lg dark:shadow-none">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-yellow-500/30">
                   🎯
                 </div>
-                <h3 className="text-2xl md:text-3xl font-bold text-white">
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   {t('about.visionLabel') || 'Visi'}
                 </h3>
               </div>
-              <p className="text-gray-300 text-lg leading-relaxed">
+              <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
                 {t('about.visionContent') || 'Menjadi organisasi siswa yang unggul, inovatif, dan berkarakter islami dalam membentuk generasi pemimpin masa depan yang berwawasan teknologi dan berjiwa kepemimpinan.'}
               </p>
             </div>
@@ -138,12 +138,12 @@ function VisionMissionSection() {
             transition={{ duration: 0.6, delay: 0.4 }}
           >
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition duration-500" />
-            <div className="relative bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-blue-500/20 h-full">
+            <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-blue-500/20 h-full shadow-lg dark:shadow-none">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-blue-500/30">
                   🚀
                 </div>
-                <h3 className="text-2xl md:text-3xl font-bold text-white">
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   {t('about.missionLabel') || 'Misi'}
                 </h3>
               </div>
@@ -156,13 +156,13 @@ function VisionMissionSection() {
                 ].map((mission, index) => (
                   <motion.li 
                     key={index}
-                    className="flex items-start gap-3 text-gray-300"
+                    className="flex items-start gap-3 text-gray-600 dark:text-gray-300"
                     initial={{ opacity: 0, x: 20 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.5 + index * 0.1 }}
                   >
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 text-xs font-bold mt-0.5">
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold mt-0.5">
                       {index + 1}
                     </span>
                     <span>{mission}</span>
@@ -177,63 +177,121 @@ function VisionMissionSection() {
   );
 }
 
-// Stats Section with animated counters - fetches real data from API
-function StatsSection() {
+// Achievement item type
+interface AchievementItem {
+  year: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+// Achievements Section - replaces duplicate stats
+function AchievementsSection() {
   const { t } = useTranslation();
-  const [stats, setStats] = useState([
-    { number: '2024', label: 'Tahun Berdiri', icon: '📅' },
-    { number: '...', label: 'Anggota Aktif', icon: '👥' },
-    { number: '6', label: 'Seksi Bidang', icon: '🏛️' },
-    { number: '...', label: 'Kegiatan/Tahun', icon: '📋' },
-  ]);
+  const [achievements, setAchievements] = useState<AchievementItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Default achievements from translations
+  const defaultAchievements: AchievementItem[] = [
+    {
+      year: '2024',
+      title: t('about.achieve1Title'),
+      description: t('about.achieve1Desc'),
+      icon: '🚀',
+    },
+    {
+      year: '2024',
+      title: t('about.achieve2Title'),
+      description: t('about.achieve2Desc'),
+      icon: '💻',
+    },
+    {
+      year: '2025',
+      title: t('about.achieve3Title'),
+      description: t('about.achieve3Desc'),
+      icon: '🎯',
+    },
+  ];
 
   useEffect(() => {
-    (async () => {
+    async function fetchAchievements() {
       try {
-        const res = await fetch('/api/stats');
-        const json = await res.json();
-        if (json.success && json.stats) {
-          const s = json.stats;
-          setStats([
-            { number: String(s.year), label: t('about.statYear') || 'Tahun Berdiri', icon: '📅' },
-            { number: s.activeMembers > 0 ? `${s.activeMembers}+` : '50+', label: t('about.statMembers') || 'Anggota Aktif', icon: '👥' },
-            { number: String(s.departments || 6), label: t('about.statDepartments') || 'Seksi Bidang', icon: '🏛️' },
-            { number: s.activities > 0 ? `${s.activities}+` : '20+', label: t('about.statEvents') || 'Kegiatan/Tahun', icon: '📋' },
-          ]);
+        const res = await fetch('/api/public/achievements');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.achievements && data.achievements.length > 0 && data.source === 'database') {
+            setAchievements(data.achievements);
+          } else {
+            setAchievements(defaultAchievements);
+          }
+        } else {
+          setAchievements(defaultAchievements);
         }
       } catch {
-        // Keep default values
+        setAchievements(defaultAchievements);
+      } finally {
+        setLoading(false);
       }
-    })();
-  }, [t]);
+    }
+    fetchAchievements();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show default while loading
+  const displayAchievements = loading ? defaultAchievements : achievements;
 
   return (
-    <section className="relative py-24 overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500" />
+    <section className="relative py-20 md:py-28 overflow-hidden bg-gradient-to-br from-gray-100 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Background accents */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 dark:bg-yellow-500/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-3xl" />
       
-      {/* Decorative blur elements */}
-      <div className="absolute top-0 left-0 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-60 h-60 bg-amber-300/20 rounded-full blur-3xl" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-yellow-300/10 rounded-full blur-3xl" />
+      <div className="relative z-10 max-w-5xl mx-auto px-4">
+        {/* Section Header */}
+        <motion.div
+          className="text-center mb-12 md:mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-xs tracking-widest uppercase mb-4">
+            <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
+            {t('about.achievementsLabel')}
+            <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
+          </span>
+          <h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white">
+            {t('about.achievementsTitle')} <span className="text-yellow-500 dark:text-yellow-400">{t('about.achievementsTitleHighlight')}</span>
+          </h2>
+        </motion.div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {stats.map((stat, index) => (
+        {/* Timeline */}
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-yellow-500 via-amber-500 to-transparent dark:from-yellow-400 dark:via-amber-500" />
+          
+          {displayAchievements.map((item, index) => (
             <motion.div
               key={index}
-              className="text-center"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              className={`relative flex items-start mb-8 md:mb-12 ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}
+              initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.15 }}
             >
-              <div className="text-4xl mb-3">{stat.icon}</div>
-              <div className="text-4xl md:text-5xl font-bold text-white mb-2">
-                {stat.number}
-              </div>
-              <div className="text-white/80 text-sm uppercase tracking-wider">
-                {stat.label}
+              {/* Dot */}
+              <div className="absolute left-4 md:left-1/2 -translate-x-1/2 w-4 h-4 bg-yellow-500 dark:bg-yellow-400 rounded-full border-4 border-gray-100 dark:border-gray-900 z-10" />
+              
+              {/* Content */}
+              <div className={`ml-12 md:ml-0 md:w-[45%] ${index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}`}>
+                <span className="inline-block px-3 py-1 bg-yellow-500/10 dark:bg-yellow-400/10 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-full mb-2">
+                  {item.year}
+                </span>
+                <h3 className={`text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2 ${index % 2 === 0 ? 'md:justify-end' : ''}`}>
+                  <span className="text-2xl">{item.icon}</span>
+                  {item.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base leading-relaxed">
+                  {item.description}
+                </p>
               </div>
             </motion.div>
           ))}
@@ -327,7 +385,7 @@ function FooterCTASection() {
   const { t } = useTranslation();
 
   return (
-    <section className="relative py-32 overflow-hidden bg-gray-900">
+    <section className="relative py-32 overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black">
       {/* Gradient orbs */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/20 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl" />
@@ -342,7 +400,7 @@ function FooterCTASection() {
             {t('about.ctaTitle') || 'Bergabung'}{' '}
             <span className="text-yellow-400">{t('about.ctaTitleHighlight') || 'Bersama Kami'}</span>
           </h2>
-          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-300 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
             {t('about.ctaDescription') || 'Mari bersama-sama membangun organisasi yang lebih baik dan menciptakan dampak positif bagi sekolah dan masyarakat.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -498,8 +556,8 @@ export default function AboutPage() {
           />
         )}
 
-        {/* Stats Section */}
-        <StatsSection />
+        {/* Achievements Section */}
+        <AchievementsSection />
 
         {/* Story Section - Cerita Dirgantara */}
         {isClient && (

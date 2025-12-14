@@ -349,6 +349,26 @@ export const translations = {
       en: '⚠️ Coordinator Head data is still under verification'
     },
     
+    // Achievements Section
+    achievementsLabel: { id: 'Perjalanan Kami', en: 'Our Journey' },
+    achievementsTitle: { id: 'Pencapaian', en: 'Achievements of' },
+    achievementsTitleHighlight: { id: 'Dirgantara', en: 'Dirgantara' },
+    achieve1Title: { id: 'Terbentuknya OSIS Dirgantara', en: 'Formation of OSIS Dirgantara' },
+    achieve1Desc: { 
+      id: 'OSIS SMK Informatika resmi terbentuk dengan nama Dirgantara, membawa semangat baru dalam organisasi siswa.',
+      en: 'OSIS SMK Informatika officially formed with the name Dirgantara, bringing new spirit to the student organization.'
+    },
+    achieve2Title: { id: 'Peluncuran Website Resmi', en: 'Official Website Launch' },
+    achieve2Desc: { 
+      id: 'Website OSIS dengan fitur modern dan interaktif diluncurkan untuk memudahkan komunikasi dan informasi.',
+      en: 'OSIS website with modern and interactive features launched to facilitate communication and information.'
+    },
+    achieve3Title: { id: 'Program Kerja Inovatif', en: 'Innovative Work Programs' },
+    achieve3Desc: { 
+      id: 'Meluncurkan berbagai program kerja yang fokus pada pengembangan soft skill dan hard skill siswa.',
+      en: 'Launching various work programs focused on developing student soft skills and hard skills.'
+    },
+    
     // Old logo items - kept for compatibility
     logoItem5: { id: 'Visi Masa Depan', en: 'Future Vision' },
     logoItem5Desc: { 

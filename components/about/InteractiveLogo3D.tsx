@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, useScroll, useTransform, useInView, useSpring, AnimatePresence, useMotionValue } from 'framer-motion';
 import Image from 'next/image';
 
@@ -549,13 +550,20 @@ function DetailModal({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, handleClose]);
 
-  if (!element) return null;
+  // State to track if we're on client (for portal)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  return (
+  if (!element || !mounted) return null;
+
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 md:p-8"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -663,6 +671,9 @@ function DetailModal({
       )}
     </AnimatePresence>
   );
+
+  // Use portal to render modal at document body level - fixes mobile position issues
+  return createPortal(modalContent, document.body);
 }
 
 // ============ SECTION HEADER ============

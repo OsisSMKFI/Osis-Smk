@@ -35,6 +35,7 @@ interface HeroSection3DProps {
 
 export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menjelajahi' }: HeroSection3DProps) {
   const [isWebGLSupported, setIsWebGLSupported] = useState(true);
+  const [stats, setStats] = useState({ year: 2024, activeMembers: 50, departments: 6 });
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
   const scale = useTransform(scrollY, [0, 400], [1, 0.8]);
@@ -48,6 +49,26 @@ export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menj
     } catch {
       setIsWebGLSupported(false);
     }
+  }, []);
+
+  // Fetch real stats from API
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats');
+        if (res.ok) {
+          const data = await res.json();
+          setStats({
+            year: data.year || 2024,
+            activeMembers: data.activeMembers || 50,
+            departments: data.departments || 6
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      }
+    }
+    fetchStats();
   }, []);
 
   return (
@@ -98,7 +119,7 @@ export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menj
           <StaggerItem>
             <div className="text-center">
               <div className="text-4xl md:text-5xl font-bold text-yellow-400">
-                <Counter to={2024} suffix="" />
+                <Counter to={stats.year} suffix="" />
               </div>
               <div className="text-gray-400 mt-2">Tahun Berdiri</div>
             </div>
@@ -106,7 +127,7 @@ export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menj
           <StaggerItem>
             <div className="text-center">
               <div className="text-4xl md:text-5xl font-bold text-yellow-400">
-                <Counter to={50} suffix="+" />
+                <Counter to={stats.activeMembers} suffix="+" />
               </div>
               <div className="text-gray-400 mt-2">Anggota Aktif</div>
             </div>
@@ -114,7 +135,7 @@ export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menj
           <StaggerItem>
             <div className="text-center">
               <div className="text-4xl md:text-5xl font-bold text-yellow-400">
-                <Counter to={6} />
+                <Counter to={stats.departments} />
               </div>
               <div className="text-gray-400 mt-2">Seksi Bidang</div>
             </div>
