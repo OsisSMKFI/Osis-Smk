@@ -24,6 +24,11 @@ const SymbolSection = dynamic(
   { ssr: false, loading: () => <SectionFallback /> }
 );
 
+const LogoReveal3D = dynamic(
+  () => import('@/components/about/LogoReveal3D'),
+  { ssr: false, loading: () => <SectionFallback /> }
+);
+
 const TeamSection = dynamic(
   () => import('@/components/about/AboutSections').then(mod => mod.TeamSection),
   { ssr: false, loading: () => <SectionFallback /> }
@@ -405,13 +410,50 @@ export default function AboutPage() {
   const openModal = (member: TeamMember) => setSelectedMember(member);
   const closeModal = () => setSelectedMember(null);
 
-  const symbolData = [
-    { icon: '💻', title: t('about.symbolTech') || 'Teknologi', description: t('about.symbolTechDesc') || 'Fokus pada teknologi dan informatika', gradient: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
-    { icon: '🎓', title: t('about.symbolEducation') || 'Pendidikan', description: t('about.symbolEducationDesc') || 'Komitmen pada pembelajaran', gradient: 'bg-gradient-to-r from-green-500 to-emerald-600' },
-    { icon: '🌟', title: t('about.symbolCreativity') || 'Kreativitas', description: t('about.symbolCreativityDesc') || 'Mendorong inovasi', gradient: 'bg-gradient-to-r from-purple-500 to-pink-600' },
-    { icon: '🤝', title: t('about.symbolCollaboration') || 'Kolaborasi', description: t('about.symbolCollaborationDesc') || 'Kerjasama tim yang solid', gradient: 'bg-gradient-to-r from-orange-500 to-red-600' },
-    { icon: '🚀', title: t('about.symbolVision') || 'Visi', description: t('about.symbolVisionDesc') || 'Berwawasan ke depan', gradient: 'bg-gradient-to-r from-yellow-500 to-amber-600' },
-    { icon: '📖', title: t('about.symbolIslamic') || 'Nilai Islami', description: t('about.symbolIslamicDesc') || 'Berpegang pada nilai keislaman', gradient: 'bg-gradient-to-r from-teal-500 to-cyan-600' }
+  // Logo elements data with proper translations
+  const logoElements = [
+    { 
+      icon: '💻', 
+      title: t('about.symbolTech') || 'Simbol Teknologi', 
+      description: t('about.symbolTechDesc') || 'Merepresentasikan identitas SMK Informatika sebagai sekolah berbasis teknologi dan digital yang terus berinovasi.', 
+      color: '#3b82f6',
+      gradient: 'bg-gradient-to-r from-blue-500 to-indigo-600' 
+    },
+    { 
+      icon: '🎓', 
+      title: t('about.symbolEducation') || 'Pendidikan Berkualitas', 
+      description: t('about.symbolEducationDesc') || 'Melambangkan komitmen sekolah dalam memberikan pendidikan informatika yang berkualitas dan relevan dengan industri.', 
+      color: '#10b981',
+      gradient: 'bg-gradient-to-r from-green-500 to-emerald-600' 
+    },
+    { 
+      icon: '🌟', 
+      title: t('about.symbolCreativity') || 'Kreativitas & Inovasi', 
+      description: t('about.symbolCreativityDesc') || 'Mendorong siswa untuk berpikir kreatif, inovatif, dan berani menciptakan solusi teknologi masa depan.', 
+      color: '#a855f7',
+      gradient: 'bg-gradient-to-r from-purple-500 to-pink-600' 
+    },
+    { 
+      icon: '🤝', 
+      title: t('about.symbolCollaboration') || 'Kolaborasi', 
+      description: t('about.symbolCollaborationDesc') || 'Menekankan pentingnya kerja sama tim dalam mengembangkan proyek dan mencapai tujuan bersama.', 
+      color: '#f97316',
+      gradient: 'bg-gradient-to-r from-orange-500 to-red-600' 
+    },
+    { 
+      icon: '🚀', 
+      title: t('about.symbolVision') || 'Visi Masa Depan', 
+      description: t('about.symbolVisionDesc') || 'Mempersiapkan siswa menjadi profesional IT yang siap menghadapi tantangan era digital dan industri 4.0.', 
+      color: '#eab308',
+      gradient: 'bg-gradient-to-r from-yellow-500 to-amber-600' 
+    },
+    { 
+      icon: '📖', 
+      title: t('about.symbolIslamic') || 'Nilai Islami', 
+      description: t('about.symbolIslamicDesc') || 'Mengintegrasikan nilai-nilai Islam dalam setiap aspek pembelajaran dan pengembangan karakter siswa.', 
+      color: '#14b8a6',
+      gradient: 'bg-gradient-to-r from-teal-500 to-cyan-600' 
+    }
   ];
 
   return (
@@ -423,8 +465,8 @@ export default function AboutPage() {
         {/* Hero Section with 3D */}
         {isClient && (
           <HeroSection3D
-            title={t('about.heroTitle') || 'Tentang Kami'}
-            subtitle={t('about.heroSubtitle') || 'Organisasi Siswa Intra Sekolah SMK Informatika - Membentuk pemimpin masa depan yang berintegritas dan berwawasan teknologi'}
+            title={`${t('about.heroTitle1') || 'Tentang'} ${t('about.heroTitle2') || 'DIRGANTARA 2025'}`}
+            subtitle={`${t('about.heroSubtitle1') || 'Mengenal lebih dekat'} ${t('about.heroSubtitle2') || 'OSIS SMK Informatika - Dirgantara'}`}
             scrollText={t('about.scrollText') || 'Scroll untuk menjelajahi'}
           />
         )}
@@ -459,17 +501,14 @@ export default function AboutPage() {
         {/* Values Section */}
         <ValuesSection />
 
-        {/* Symbol/Logo Section */}
+        {/* Logo Reveal 3D Section - Like igloo.inc */}
         {isClient && (
-          <SymbolSection
-            title={t('about.symbolTitle1') || 'Makna'}
-            highlightTitle={t('about.symbolTitle2') || 'Logo'}
-            subtitle={t('about.symbolSubtitle') || 'Setiap elemen dalam logo kami memiliki makna mendalam'}
+          <LogoReveal3D
             logoSrc="/images/logo-2.png"
-            logoAlt={t('navbar.logoAlt') || 'Logo OSIS'}
-            logoCaption={t('about.symbolLogoCaption') || 'Logo resmi OSIS SMK Informatika'}
-            logoTitle={t('about.symbolLogoTitle') || 'Elemen dalam Logo Kami'}
-            symbols={symbolData}
+            logoAlt={t('navbar.logoAlt') || 'Logo OSIS SMK Informatika'}
+            sectionTitle={t('about.symbolLogoTitle') || 'Filosofi Logo SMK Informatika'}
+            sectionSubtitle={t('about.symbolSubtitle') || 'Setiap elemen dalam logo OSIS memiliki filosofi dan makna yang mendalam'}
+            elements={logoElements}
           />
         )}
 
