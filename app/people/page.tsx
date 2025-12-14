@@ -1,6 +1,6 @@
 import React from 'react';
-import PageEnterAnimation from '@/components/PageEnterAnimation';
 import PeopleSectionsClient from '@/components/PeopleSectionsClient';
+import PageHero from '@/components/animations/PageHero';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const revalidate = 0; // Always fetch fresh data
@@ -85,21 +85,13 @@ export default async function PeoplePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
       {/* Hero Section */}
-      <PageEnterAnimation animation="fade">
-        <section className="relative bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 text-white py-16 sm:py-20 lg:py-24 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent" />
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-            <div className="max-w-4xl mx-auto">
-              <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full p-5 sm:p-6 mb-6 sm:mb-8 animate-float">
-                <i className="fas fa-users text-4xl sm:text-5xl lg:text-6xl" />
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6">Anggota OSIS</h1>
-              <p className="text-lg sm:text-xl lg:text-2xl text-white/90">Daftar anggota OSIS yang aktif</p>
-            </div>
-          </div>
-        </section>
-      </PageEnterAnimation>
+      <PageHero
+        title="Anggota OSIS"
+        subtitle="Tim Kami"
+        description="Daftar anggota OSIS yang aktif berkontribusi untuk sekolah"
+        icon={<i className="fas fa-users text-4xl" />}
+        gradient="yellow"
+      />
 
       {/* Main Content */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">

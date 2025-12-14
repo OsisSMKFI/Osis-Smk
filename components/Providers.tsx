@@ -20,13 +20,34 @@ const ExperienceProvider = lazy(() =>
   }))
 );
 
+// Public pages that should have 3D experience
+const PUBLIC_PAGES_WITH_3D = [
+  '/',
+  '/home',
+  '/beranda',
+  '/about',
+  '/bidang',
+  '/gallery',
+  '/info',
+  '/people',
+  '/sekbid',
+  '/activity',
+  '/our-social-media',
+  '/posts',
+];
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname?.startsWith('/admin');
   const isRegisterPage = pathname?.startsWith('/register');
   
-  // Only show 3D experience on homepage and some public pages
-  const show3DExperience = !isAdminPage && !isRegisterPage && pathname === '/';
+  // Show 3D experience on all public pages (not admin, register, or special pages)
+  const isPublicPage = !isAdminPage && !isRegisterPage;
+  const show3DExperience = isPublicPage && PUBLIC_PAGES_WITH_3D.some(p => 
+    pathname === p || pathname?.startsWith(p + '/')
+  );
+  // Only show intro on homepage
+  const showIntro = pathname === '/' || pathname === '/home' || pathname === '/beranda';
 
   return (
     <SessionProvider>
@@ -35,52 +56,52 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           <ThemeProvider>
             <ToastProvider>
             <SmoothScroll>
-              {/* 3D Experience - only on homepage */}
+              {/* 3D Experience - on all public pages */}
               {show3DExperience ? (
                 <Suspense fallback={
                   <>
-                    {!isAdminPage && !isRegisterPage && (
+                    {isPublicPage && (
                       <ClientOnly><Navbar /></ClientOnly>
                     )}
                     <PageTransition>
-                      <div style={!isAdminPage && !isRegisterPage ? { paddingTop: 'var(--nav-offset)' } : undefined}>
+                      <div style={isPublicPage ? { paddingTop: 'var(--nav-offset)' } : undefined}>
                         {children}
                       </div>
                     </PageTransition>
-                    {!isAdminPage && !isRegisterPage && <Footer />}
+                    {isPublicPage && <Footer />}
                   </>
                 }>
-                  <ExperienceProvider showIntro={true} showCustomCursor={true}>
-                    {!isAdminPage && !isRegisterPage && (
+                  <ExperienceProvider showIntro={showIntro} showCustomCursor={true}>
+                    {isPublicPage && (
                       <ClientOnly><Navbar /></ClientOnly>
                     )}
                     <PageTransition>
-                      <div style={!isAdminPage && !isRegisterPage ? { paddingTop: 'var(--nav-offset)' } : undefined}>
+                      <div style={isPublicPage ? { paddingTop: 'var(--nav-offset)' } : undefined}>
                         {children}
                       </div>
                     </PageTransition>
-                    {!isAdminPage && !isRegisterPage && <Footer />}
+                    {isPublicPage && <Footer />}
                   </ExperienceProvider>
                 </Suspense>
               ) : (
                 <>
                   {/* Navbar - hide on admin & register pages */}
-                  {!isAdminPage && !isRegisterPage && (
+                  {isPublicPage && (
                     <ClientOnly>
                       <Navbar />
                     </ClientOnly>
                   )}
                   <PageTransition>
                     <div 
-                      className={!isAdminPage && !isRegisterPage ? '' : ''} 
-                      style={!isAdminPage && !isRegisterPage ? { paddingTop: 'var(--nav-offset)' } : undefined}
+                      className={isPublicPage ? '' : ''} 
+                      style={isPublicPage ? { paddingTop: 'var(--nav-offset)' } : undefined}
                       suppressHydrationWarning
                     >
                       {children}
                     </div>
                   </PageTransition>
                   {/* Footer - hide on admin & register pages */}
-                  {!isAdminPage && !isRegisterPage && <Footer />}
+                  {isPublicPage && <Footer />}
                 </>
               )}
             </SmoothScroll>

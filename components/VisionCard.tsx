@@ -1,13 +1,20 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const VisionCard: React.FC = () => {
   const { t } = useTranslation();
   
   return (
-    <div className="relative max-w-5xl mx-auto group px-4 sm:px-6">
+    <motion.div 
+      className="relative max-w-5xl mx-auto group px-4 sm:px-6"
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+    >
       {/* Enhanced background decorations */}
       <div className="absolute -top-4 sm:-top-8 -left-4 sm:-left-8 w-20 sm:w-32 h-20 sm:h-32 bg-gradient-to-br from-yellow-400/20 to-amber-500/20 rounded-full blur-2xl animate-float" />
       <div className="absolute -bottom-4 sm:-bottom-8 -right-4 sm:-right-8 w-24 sm:w-40 h-24 sm:h-40 bg-gradient-to-br from-blue-400/20 to-indigo-500/20 rounded-full blur-2xl animate-float-reverse" />
@@ -87,7 +94,7 @@ const VisionCard: React.FC = () => {
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-yellow-400/5 via-transparent to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-3xl" />
       </div>
-    </div>
+    </motion.div>
   );
 };
 

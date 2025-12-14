@@ -1,10 +1,37 @@
 "use client";
 
 import React from 'react';
+import { motion, type Variants } from 'framer-motion';
 import AnimatedSection from '@/components/AnimatedSection';
 import MemberCard from '@/components/MemberCard';
 import MemberStats from '@/components/MemberStats';
 import { useTranslation } from '@/hooks/useTranslation';
+
+// Animation variants for staggered grid
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 30, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 100,
+      damping: 15,
+    },
+  },
+};
 
 interface MemberProp {
   id: number;
@@ -126,122 +153,225 @@ export default function PeopleSectionsClient({ members }: Props) {
     const meta = groupMeta.get(key);
     const label = meta?.label ?? (group[0].department ?? key);
     return (
-      <div key={`sekbid-${key}`}>
+      <motion.div 
+        key={`sekbid-${key}`}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+        variants={containerVariants}
+      >
         <div className="text-center mb-6">
-                          <h3 className="text-2xl md:text-3xl font-serif font-semibold tracking-tight text-gray-900 dark:text-white">{label}</h3>
-                          <p className="mt-1 text-sm text-gray-500 dark:text-gray-300">Anggota aktif</p>
-                        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {group.map((member, i) => (
-            <AnimatedSection key={member.id} delay={0.1 * (i + 1)} direction="up" className="scroll-reveal">
-              <MemberCard member={member} delay={i * 100} />
-            </AnimatedSection>
-          ))}
+          <motion.h3 
+            className="text-2xl md:text-3xl font-serif font-semibold tracking-tight text-gray-900 dark:text-white"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            {label}
+          </motion.h3>
+          <motion.p 
+            className="mt-1 text-sm text-gray-500 dark:text-gray-300"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+          >
+            Anggota aktif
+          </motion.p>
         </div>
-      </div>
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+          variants={containerVariants}
+        >
+          {group.map((member, i) => (
+            <motion.div key={member.id} variants={itemVariants}>
+              <MemberCard member={member} delay={i * 100} />
+            </motion.div>
+          ))}
+        </motion.div>
+      </motion.div>
     );
   });
 
         return (
         <>
       {/* Ketua */}
-      <AnimatedSection delay={0.2} className="mb-20">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 dark:text-white mb-6">Ketua OSIS</h2>
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        variants={containerVariants}
+        className="mb-20"
+      >
+        <motion.div 
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 bg-clip-text text-transparent mb-6">Ketua OSIS</h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Pemimpin organisasi</p>
-        </div>
+        </motion.div>
 
-        <div className="flex justify-center">
+        <motion.div 
+          className="flex justify-center"
+          variants={itemVariants}
+        >
           <div className="max-w-md">
             {ketua ? <MemberCard member={ketua} isLeader delay={0} /> : (
               <div className="text-center text-gray-500">Belum ada data Ketua</div>
             )}
           </div>
-        </div>
-      </AnimatedSection>
+        </motion.div>
+      </motion.section>
 
       {/* Pengurus Inti */}
-      <AnimatedSection delay={0.4} className="mb-20">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 dark:text-white mb-6">Pengurus Inti</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Tim inti organisasi (Ketua, Wakil, Sekretaris, Bendahara)</p>
-        </div>
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={containerVariants}
+        className="mb-20"
+      >
+        <motion.div 
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 bg-clip-text text-transparent mb-6">Pengurus Inti</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Tim inti organisasi (Ketua, Wakil, Sekretaris, Bendahara)</p>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          variants={containerVariants}
+        >
           {pengurusInti.map((member, i) => (
-            <AnimatedSection key={member.id} delay={0.1 * (i + 1)} direction="up" className="scroll-reveal">
+            <motion.div key={member.id} variants={itemVariants}>
               <MemberCard member={member} delay={i * 100} />
-            </AnimatedSection>
+            </motion.div>
           ))}
-        </div>
-      </AnimatedSection>
+        </motion.div>
+      </motion.section>
 
       {/* Koordinator Sekbid */}
-      <AnimatedSection delay={0.6} className="mb-20">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 dark:text-white mb-6">{useTranslation().t('peopleWarnings.deptHeadTitle')}</h2>
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={containerVariants}
+        className="mb-20"
+      >
+        <motion.div 
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600 bg-clip-text text-transparent mb-6">{useTranslation().t('peopleWarnings.deptHeadTitle')}</h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{useTranslation().t('peopleWarnings.deptHeadDesc')}</p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+          variants={containerVariants}
+        >
           {koordinatorSekbid.map((member, i) => (
-            <AnimatedSection key={member.id} delay={0.1 * (i + 1)} direction="up" className="scroll-reveal">
+            <motion.div key={member.id} variants={itemVariants}>
               <MemberCard member={member} delay={i * 100} />
-            </AnimatedSection>
+            </motion.div>
           ))}
-        </div>
-      </AnimatedSection>
+        </motion.div>
+      </motion.section>
 
       {/* Anggota Sekbid */}
-      <AnimatedSection delay={0.8} className="mb-20">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 dark:text-white mb-6">Anggota Seksi Bidang</h2>
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+        variants={containerVariants}
+        className="mb-20"
+      >
+        <motion.div 
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-500 via-pink-500 to-rose-600 bg-clip-text text-transparent mb-6">Anggota Seksi Bidang</h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Anggota aktif per sekbid</p>
-        </div>
+        </motion.div>
 
           <div className="space-y-8">
             {renderGroups}
 
             {/* Orphaned members: no department and not core team */}
             {orphanedMembers.length > 0 && (
-              <div>
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={containerVariants}
+              >
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">Anggota Belum Ditugaskan</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                     Member berikut belum ditugaskan ke sekbid. Silakan hubungi admin untuk penempatan.
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <motion.div 
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+                  variants={containerVariants}
+                >
                   {orphanedMembers.map((member, i) => (
-                    <AnimatedSection key={member.id} delay={0.1 * (i + 1)} direction="up" className="scroll-reveal">
+                    <motion.div key={member.id} variants={itemVariants}>
                       <MemberCard member={member} delay={i * 100} />
-                    </AnimatedSection>
+                    </motion.div>
                   ))}
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             )}
 
             {/* Members with no sekbid (appear after sekbid 1..6) */}
             {anggotaNoSek.length > 0 && (
-              <div>
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={containerVariants}
+              >
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">Sekbid Lainnya</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <motion.div 
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+                  variants={containerVariants}
+                >
                   {anggotaNoSek.map((member, i) => (
-                    <AnimatedSection key={member.id} delay={0.1 * (i + 1)} direction="up" className="scroll-reveal">
+                    <motion.div key={member.id} variants={itemVariants}>
                       <MemberCard member={member} delay={i * 100} />
-                    </AnimatedSection>
+                    </motion.div>
                   ))}
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             )}
           </div>
-      </AnimatedSection>
+      </motion.section>
 
-      <AnimatedSection delay={1.0} className="scroll-reveal">
+      <motion.section
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="scroll-reveal"
+      >
         <MemberStats />
-      </AnimatedSection>
+      </motion.section>
     </>
   );
 }

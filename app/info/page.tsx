@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
-import { FaBullhorn, FaCalendarAlt, FaPoll, FaNewspaper, FaFileAlt } from 'react-icons/fa';
+import { FaBullhorn, FaCalendarAlt, FaPoll, FaNewspaper, FaFileAlt, FaInfoCircle } from 'react-icons/fa';
 import MediaRenderer from '@/components/MediaRenderer';
 import ContentInteractions from '@/components/ContentInteractions';
 import Link from 'next/link';
+import PageHero from '@/components/animations/PageHero';
 
 interface Announcement {
   id: string;
@@ -220,30 +222,33 @@ export default function InfoPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      {/* Hero Section */}
-      <section className="relative py-16 sm:py-20 lg:py-24 overflow-hidden bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5"></div>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto">
-            <FaNewspaper className="text-4xl sm:text-5xl lg:text-6xl text-blue-600 mx-auto mb-4 sm:mb-6" />
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Pusat Informasi OSIS
-            </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300">
-              Temukan pengumuman, acara, polling, dan informasi terbaru dari OSIS
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* Hero Section with Animation */}
+      <PageHero
+        title="Pusat Informasi"
+        subtitle="OSIS SMK Informatika"
+        description="Temukan pengumuman, acara, polling, dan informasi terbaru dari OSIS"
+        icon={<FaInfoCircle className="w-10 h-10 text-blue-500" />}
+        gradient="blue"
+      />
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+      <motion.div 
+        className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+      >
         <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Announcements Section */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-3 mb-6">
+            <motion.div 
+              className="flex items-center gap-3 mb-6"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
               <FaBullhorn className="text-2xl sm:text-3xl text-blue-600" />
               <h2 className="text-2xl sm:text-3xl font-bold">Pengumuman</h2>
-            </div>
+            </motion.div>
 
             {announcements.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
@@ -634,7 +639,7 @@ export default function InfoPage() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

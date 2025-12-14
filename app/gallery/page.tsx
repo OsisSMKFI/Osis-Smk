@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import MediaRenderer from '@/components/MediaRenderer';
-import { FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaTimes, FaChevronLeft, FaChevronRight, FaImages } from 'react-icons/fa';
+import PageHero from '@/components/animations/PageHero';
+import { AnimatedSection, StaggerContainer, StaggerItem } from '@/components/animations/AnimatedSection';
 
 interface GalleryItem {
   id: string;
@@ -125,39 +128,34 @@ export default function GalleryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      {/* Hero Section */}
-      <section className="relative py-16 sm:py-20 lg:py-24 overflow-hidden bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5"></div>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Galeri Kegiatan
-            </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300">
-              Dokumentasi kegiatan dan prestasi OSIS
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* Hero Section with Animation */}
+      <PageHero
+        title="Galeri Kegiatan"
+        subtitle="Dokumentasi OSIS"
+        description="Dokumentasi kegiatan dan prestasi OSIS SMK Informatika"
+        icon={<FaImages className="w-10 h-10 text-purple-500" />}
+        gradient="purple"
+      />
 
       {/* Filter Section (Event + Sekbid) */}
-      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Event Filter */}
-          <div className="flex-1">
-            <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Event (Opsional)</label>
-            <select
-              value={eventFilter}
-              onChange={(e) => setEventFilter(e.target.value as any)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Semua Event</option>
-              {events.map(ev => (
-                <option key={ev.id} value={ev.id}>{ev.title}</option>
-              ))}
-            </select>
-          </div>
-          {/* Sekbid Filter */}
+      <AnimatedSection variant="fadeUp" delay={0.1}>
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Event Filter */}
+            <div className="flex-1">
+              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Event (Opsional)</label>
+              <select
+                value={eventFilter}
+                onChange={(e) => setEventFilter(e.target.value as any)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">Semua Event</option>
+                {events.map(ev => (
+                  <option key={ev.id} value={ev.id}>{ev.title}</option>
+                ))}
+              </select>
+            </div>
+            {/* Sekbid Filter */}
           <div className="flex-1">
             <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Sekbid (Opsional)</label>
             <select
@@ -197,92 +195,125 @@ export default function GalleryPage() {
             >{sb.name}</button>
           ))}
         </div>
-      </section>
+        </section>
+      </AnimatedSection>
 
-      {/* Gallery Grid */}
-      <section className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 lg:pb-24">
-        {filteredGallery.length === 0 ? (
-          <div className="text-center py-12 sm:py-16 lg:py-20">
-            <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400">
-              {sekbidFilter === 'all' && eventFilter === 'all' ? 'Belum ada foto di galeri' : 'Belum ada foto untuk filter ini'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            {filteredGallery.map((item, index) => (
-              <div
-                key={item.id}
-                className="group relative aspect-square overflow-hidden rounded-lg sm:rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer bg-gray-200 dark:bg-gray-700"
-                onClick={() => openLightbox(index)}
-              >
-                <MediaRenderer
-                  src={item.image_url}
-                  alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  controlsForVideo={false}
-                  autoPlay
-                  loop
-                  muted
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white">
-                    <h3 className="font-bold text-base sm:text-lg line-clamp-2">{item.title}</h3>
-                    {item.description && (
-                      <p className="text-xs sm:text-sm text-gray-200 line-clamp-1 mt-1">{item.description}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Lightbox */}
-      {selectedImage !== null && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
-          <button
-            onClick={closeLightbox}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
-          >
-            <FaTimes size={32} />
-          </button>
-          
-          <button
-            onClick={prevImage}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors z-10"
-          >
-            <FaChevronLeft size={32} />
-          </button>
-          
-          <button
-            onClick={nextImage}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors z-10"
-          >
-            <FaChevronRight size={32} />
-          </button>
-
-          <div className="max-w-6xl max-h-[90vh] w-full h-full flex flex-col items-center justify-center">
-            <div className="relative w-full h-full flex items-center justify-center">
-              <MediaRenderer
-                src={filteredGallery[selectedImage].image_url}
-                alt={filteredGallery[selectedImage].title}
-                className="w-full h-full object-contain"
-                controlsForVideo={true}
-              />
-            </div>
-            <div className="mt-4 text-center text-white">
-              <h3 className="text-2xl font-bold">{filteredGallery[selectedImage].title}</h3>
-              {filteredGallery[selectedImage].description && (
-                <p className="mt-2 text-gray-300">{filteredGallery[selectedImage].description}</p>
-              )}
-              <p className="mt-2 text-sm text-gray-400">
-                {selectedImage + 1} / {filteredGallery.length}
+      {/* Gallery Grid with Animations */}
+      <AnimatedSection variant="fadeUp" delay={0.2}>
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 lg:pb-24">
+          {filteredGallery.length === 0 ? (
+            <div className="text-center py-12 sm:py-16 lg:py-20">
+              <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400">
+                {sekbidFilter === 'all' && eventFilter === 'all' ? 'Belum ada foto di galeri' : 'Belum ada foto untuk filter ini'}
               </p>
             </div>
-          </div>
-        </div>
-      )}
+          ) : (
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.1 },
+                },
+              }}
+            >
+              {filteredGallery.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 30, scale: 0.9 },
+                    visible: { opacity: 1, y: 0, scale: 1 },
+                  }}
+                  transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+                  whileHover={{ scale: 1.02, y: -5 }}
+                  className="group relative aspect-square overflow-hidden rounded-lg sm:rounded-xl shadow-md hover:shadow-2xl transition-all cursor-pointer bg-gray-200 dark:bg-gray-700"
+                  onClick={() => openLightbox(index)}
+                >
+                  <MediaRenderer
+                    src={item.image_url}
+                    alt={item.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    controlsForVideo={false}
+                    autoPlay
+                    loop
+                    muted
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white">
+                      <h3 className="font-bold text-base sm:text-lg line-clamp-2">{item.title}</h3>
+                      {item.description && (
+                        <p className="text-xs sm:text-sm text-gray-200 line-clamp-1 mt-1">{item.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </section>
+      </AnimatedSection>
+
+      {/* Lightbox with Animation */}
+      <AnimatePresence>
+        {selectedImage !== null && (
+          <motion.div 
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <button
+              onClick={closeLightbox}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
+            >
+              <FaTimes size={32} />
+            </button>
+            
+            <button
+              onClick={prevImage}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors z-10"
+            >
+              <FaChevronLeft size={32} />
+            </button>
+            
+            <button
+              onClick={nextImage}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 transition-colors z-10"
+            >
+              <FaChevronRight size={32} />
+            </button>
+
+            <motion.div 
+              className="max-w-6xl max-h-[90vh] w-full h-full flex flex-col items-center justify-center"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="relative w-full h-full flex items-center justify-center">
+                <MediaRenderer
+                  src={filteredGallery[selectedImage].image_url}
+                  alt={filteredGallery[selectedImage].title}
+                  className="w-full h-full object-contain"
+                  controlsForVideo={true}
+                />
+              </div>
+              <div className="mt-4 text-center text-white">
+                <h3 className="text-2xl font-bold">{filteredGallery[selectedImage].title}</h3>
+                {filteredGallery[selectedImage].description && (
+                  <p className="mt-2 text-gray-300">{filteredGallery[selectedImage].description}</p>
+                )}
+                <p className="mt-2 text-sm text-gray-400">
+                  {selectedImage + 1} / {filteredGallery.length}
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
