@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -13,10 +13,16 @@ import ClientOnly from './ClientOnly';
 import { SessionProvider } from 'next-auth/react';
 import { SecurityAnalyzerProvider } from './SecurityAnalyzerProvider';
 
+// Lazy load experience provider to avoid SSR issues
+const ExperienceProvider = lazy(() => import('./experience/ExperienceProvider'));
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminPage = pathname?.startsWith('/admin');
   const isRegisterPage = pathname?.startsWith('/register');
+
+  // Only show 3D experience on main pages, not admin
+  const showExperience = !isAdminPage && !isRegisterPage;
 
   return (
     <SessionProvider>
@@ -37,7 +43,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   style={!isAdminPage && !isRegisterPage ? { paddingTop: 'var(--nav-offset)' } : undefined}
                   suppressHydrationWarning
                 >
-                  {children}
+                  {showExperience ? (
+                    <Suspense fallback={<>{children}</>}>
+                      <ExperienceProvider 
+                        showIntro={pathname === '/'} 
+                        show3DBackground={true}
+                        showCustomCursor={true}
+                        backgroundVariant="particles"
+                      >
+                        {children}
+                      </ExperienceProvider>
+                    </Suspense>
+                  ) : (
+                    children
+                  )}
                 </div>
               </PageTransition>
               {/* Footer - hide on admin & register pages */}
