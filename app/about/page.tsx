@@ -213,16 +213,9 @@ function StatsSection() {
       <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500" />
       <div className="absolute inset-0 bg-black/20" />
       
-      {/* Animated pattern */}
-      <motion.div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 1px)`,
-          backgroundSize: '40px 40px'
-        }}
-        animate={{ backgroundPosition: ['0px 0px', '40px 40px'] }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-      />
+      {/* Decorative elements */}
+      <div className="absolute top-0 left-0 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-60 h-60 bg-amber-300/20 rounded-full blur-3xl" />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -412,23 +405,17 @@ export default function AboutPage() {
           sekbidId: m.sekbid_id,
         }));
 
-        // Tim Inti: anggota tanpa sekbid_id (null) - ini adalah pengurus inti
+        // Tim Inti: HANYA anggota tanpa sekbid_id (null) - pengurus inti seperti Ketua, Wakil, Sekretaris, Bendahara
         const core = mapped.filter((m: any) => {
-          const pos = (m.position || '').toLowerCase();
-          // Anggota tanpa sekbid adalah tim inti
-          if (m.sekbidId === null || m.sekbidId === undefined) {
-            return true;
-          }
-          // Atau jika role mengandung kata-kata kunci
-          return pos.includes('ketua') || pos.includes('wakil') || 
-                 pos.includes('sekretaris') || pos.includes('bendahara');
+          // Tim inti adalah anggota yang TIDAK memiliki sekbid_id
+          return m.sekbidId === null || m.sekbidId === undefined;
         });
 
-        // Koordinator: anggota dengan sekbid_id 1-6 yang merupakan koordinator/kepala
+        // Koordinator Sekbid: anggota dengan sekbid_id 1-6 yang rolenya adalah koordinator
         const koordinator = mapped.filter((m: any) => {
           const pos = (m.position || '').trim().toLowerCase();
           const hasSekbid = m.sekbidId !== null && m.sekbidId >= 1 && m.sekbidId <= 6;
-          // Hanya koordinator/kepala dari sekbid 1-6
+          // Hanya yang memiliki role koordinator/kepala sekbid
           return hasSekbid && (pos.includes('koordinator') || pos.includes('kepala') || pos.includes('ketua sekbid'));
         });
 
