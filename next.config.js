@@ -26,6 +26,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
               "style-src 'self' 'unsafe-inline' https:",
               "img-src 'self' data: blob: https:",
+              "media-src 'self' blob: https: data:",
               "connect-src 'self' https: wss:",
               "font-src 'self' data: https:",
               "frame-src 'self' https:",
