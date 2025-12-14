@@ -159,27 +159,25 @@ interface ScrollSectionProps {
 
 export function ScrollSection({ children, className = '', parallaxOffset = 50 }: ScrollSectionProps) {
   const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.1 });
+  
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ['start end', 'end start'],
   });
 
-  const y = useTransform(scrollYProgress, [0, 1], [parallaxOffset, -parallaxOffset]);
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0.95, 1, 1, 0.95]);
-
+  const y = useTransform(scrollYProgress, [0, 0.5, 1], [parallaxOffset, 0, -parallaxOffset]);
   const smoothY = useSpring(y, { stiffness: 100, damping: 30 });
-  const smoothOpacity = useSpring(opacity, { stiffness: 100, damping: 30 });
-  const smoothScale = useSpring(scale, { stiffness: 100, damping: 30 });
 
   return (
     <motion.div
       ref={ref}
       className={className}
+      initial={{ opacity: 0, y: 30, scale: 0.98 }}
+      animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       style={{
         y: smoothY,
-        opacity: smoothOpacity,
-        scale: smoothScale,
       }}
     >
       {children}
