@@ -3,6 +3,33 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { MembersResponseSchema, buildError, buildSuccess, MemberSchema } from '@/lib/validation';
 import crypto from 'crypto';
 
+// Supabase storage base URL for members photos
+const SUPABASE_STORAGE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL 
+  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gallery/members`
+  : 'https://mhefqwregrldvxtqqxbb.supabase.co/storage/v1/object/public/gallery/members';
+
+/**
+ * Fix incomplete URLs that only contain filename
+ */
+function fixPhotoUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  
+  // Already a full URL
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // Already a path starting with /
+  if (url.startsWith('/')) {
+    // Local path - keep as is
+    if (url.startsWith('/images/')) return url;
+    return `${SUPABASE_STORAGE_URL}${url}`;
+  }
+  
+  // Just a filename - construct full URL
+  return `${SUPABASE_STORAGE_URL}/${url}`;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -30,9 +57,15 @@ export async function GET(request: NextRequest) {
       return sekbidId === null || (sekbidId >= 1 && sekbidId <= 6);
     });
 
+    // Fix photo URLs for each member
+    const membersWithFixedUrls = filteredMembers.map((m: any) => ({
+      ...m,
+      photo_url: fixPhotoUrl(m.photo_url),
+    }));
+
     // Validate each member schema (non-fatal collect errors)
     const invalid: any[] = [];
-    const safeMembers = filteredMembers.filter((m: any) => {
+    const safeMembers = membersWithFixedUrls.filter((m: any) => {
       const parsed = MemberSchema.safeParse(m);
       if (!parsed.success) {
         invalid.push({ id: m.id, issues: parsed.error.issues });

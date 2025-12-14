@@ -12,10 +12,7 @@ UPDATE gallery
 SET url = REPLACE(url, 'eilrnslorvfrtwjwvbaw.supabase.co', 'mhefqwregrldvxtqqxbb.supabase.co')
 WHERE url LIKE '%eilrnslorvfrtwjwvbaw.supabase.co%';
 
--- Update gallery table - thumbnail_url column if exists
-UPDATE gallery 
-SET thumbnail_url = REPLACE(thumbnail_url, 'eilrnslorvfrtwjwvbaw.supabase.co', 'mhefqwregrldvxtqqxbb.supabase.co')
-WHERE thumbnail_url LIKE '%eilrnslorvfrtwjwvbaw.supabase.co%';
+-- Note: thumbnail_url column doesn't exist in gallery table
 
 -- Update events table - image_url column
 UPDATE events 
