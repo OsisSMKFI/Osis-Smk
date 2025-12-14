@@ -289,8 +289,13 @@ export default function InfoPage() {
                       </p>
                       {shouldShowReadMore && (
                         <button
-                          onClick={() => toggleAnnouncementExpand(ann.id)}
-                          className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleAnnouncementExpand(ann.id);
+                          }}
+                          className="mt-2 px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
                         >
                           {isExpanded ? '← Tutup' : 'Baca selengkapnya →'}
                         </button>
@@ -366,8 +371,13 @@ export default function InfoPage() {
                           </p>
                           {shouldShowReadMore && (
                             <button
-                              onClick={() => toggleEventExpand(uniqueKey)}
-                              className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleEventExpand(uniqueKey);
+                              }}
+                              className="mt-2 px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
                             >
                               {isExpanded ? '← Tutup' : 'Baca selengkapnya →'}
                             </button>
