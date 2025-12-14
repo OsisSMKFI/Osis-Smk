@@ -254,7 +254,9 @@ export default function InfoPage() {
                 {announcements.map((ann) => {
                   const isExpanded = expandedAnnouncements.has(ann.id);
                   const contentLength = ann.content?.length || 0;
-                  const shouldShowReadMore = contentLength > 200;
+                  const hasNewlines = (ann.content?.split('\n').length || 1) > 3;
+                  // Show read more if text is long OR has multiple lines
+                  const shouldShowReadMore = contentLength > 100 || hasNewlines;
                   
                   return (
                   <div
@@ -343,7 +345,9 @@ export default function InfoPage() {
                   const uniqueKey = event.id || `${event.title}-${event.event_date}-${index}`;
                   const isExpanded = expandedEvents.has(uniqueKey);
                   const descriptionLength = event.description?.length || 0;
-                  const shouldShowReadMore = descriptionLength > 100;
+                  const hasNewlines = (event.description?.split('\n').length || 1) > 2;
+                  // Show read more if text is long OR has multiple lines
+                  const shouldShowReadMore = descriptionLength > 50 || hasNewlines;
                   
                   return (
                   <div
