@@ -39,8 +39,13 @@ const CustomCursor = dynamic(
   { ssr: false }
 );
 
-const SmoothScrollProvider = dynamic(
-  () => import('@/components/about/SmoothScrollProvider'),
+const SoundProvider = dynamic(
+  () => import('@/components/about/SoundEffects').then(mod => mod.SoundProvider),
+  { ssr: false }
+);
+
+const SoundToggle = dynamic(
+  () => import('@/components/about/SoundEffects').then(mod => mod.SoundToggle),
   { ssr: false }
 );
 
@@ -457,10 +462,13 @@ export default function AboutPage() {
   ];
 
   return (
-    <SmoothScrollProvider>
-      <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden">
+    <SoundProvider>
+      <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden scroll-smooth">
         {/* Custom Cursor - Desktop only */}
         {isClient && <CustomCursor />}
+        
+        {/* Sound Toggle Button */}
+        {isClient && <SoundToggle />}
 
         {/* Hero Section with 3D */}
         {isClient && (
@@ -562,6 +570,6 @@ export default function AboutPage() {
           />
         )}
       </div>
-    </SmoothScrollProvider>
+    </SoundProvider>
   );
 }

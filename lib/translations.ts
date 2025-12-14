@@ -360,6 +360,77 @@ export const translations = {
       id: 'Berdasarkan akhlak mulia dan nilai-nilai Islam',
       en: 'Based on noble character and Islamic values'
     },
+    
+    // Vision & Mission Section
+    visionMissionLabel: { id: 'Visi & Misi', en: 'Vision & Mission' },
+    visionTitle: { id: 'Arah', en: 'Our' },
+    visionTitleHighlight: { id: 'Langkah Kami', en: 'Direction' },
+    visionLabel: { id: 'Visi', en: 'Vision' },
+    visionContent: { 
+      id: 'Menjadi organisasi siswa yang unggul, inovatif, dan berkarakter islami dalam membentuk generasi pemimpin masa depan yang berwawasan teknologi dan berjiwa kepemimpinan.',
+      en: 'To become an excellent, innovative, and Islamic student organization in shaping future generation leaders with technological insight and leadership spirit.'
+    },
+    missionLabel: { id: 'Misi', en: 'Mission' },
+    mission1: { 
+      id: 'Mengembangkan potensi kepemimpinan siswa melalui berbagai kegiatan organisasi',
+      en: 'Developing student leadership potential through various organizational activities'
+    },
+    mission2: { 
+      id: 'Menumbuhkan kreativitas dan inovasi dalam setiap program kerja',
+      en: 'Fostering creativity and innovation in every work program'
+    },
+    mission3: { 
+      id: 'Menanamkan nilai-nilai keislaman dalam setiap aktivitas',
+      en: 'Instilling Islamic values in every activity'
+    },
+    mission4: { 
+      id: 'Membangun kerjasama yang solid antar anggota dan stakeholder',
+      en: 'Building solid cooperation between members and stakeholders'
+    },
+    
+    // Values Section
+    valuesLabel: { id: 'Nilai-Nilai Kami', en: 'Our Values' },
+    valuesTitle: { id: 'Prinsip', en: 'Principles' },
+    valuesTitleHighlight: { id: 'yang Kami Pegang', en: 'We Hold' },
+    valueInnovation: { id: 'Inovasi', en: 'Innovation' },
+    valueInnovationDesc: { 
+      id: 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
+      en: 'Always looking for new and creative ways in every activity'
+    },
+    valueIntegrity: { id: 'Integritas', en: 'Integrity' },
+    valueIntegrityDesc: { 
+      id: 'Menjunjung tinggi kejujuran dan tanggung jawab',
+      en: 'Upholding honesty and responsibility'
+    },
+    valueExcellence: { id: 'Keunggulan', en: 'Excellence' },
+    valueExcellenceDesc: { 
+      id: 'Berusaha memberikan yang terbaik dalam setiap aspek',
+      en: 'Striving to give the best in every aspect'
+    },
+    valueIslamic: { id: 'Islami', en: 'Islamic' },
+    valueIslamicDesc: { 
+      id: 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
+      en: 'Based on Islamic values in every action'
+    },
+    
+    // Stats Section
+    statYear: { id: 'Tahun Berdiri', en: 'Year Founded' },
+    statMembers: { id: 'Anggota Aktif', en: 'Active Members' },
+    statDepartments: { id: 'Seksi Bidang', en: 'Departments' },
+    statEvents: { id: 'Kegiatan/Tahun', en: 'Events/Year' },
+    
+    // CTA Section
+    ctaTitle: { id: 'Bergabung', en: 'Join' },
+    ctaTitleHighlight: { id: 'Bersama Kami', en: 'With Us' },
+    ctaDescription: { 
+      id: 'Mari bersama-sama membangun organisasi yang lebih baik dan menciptakan dampak positif bagi sekolah dan masyarakat.',
+      en: 'Let\'s build a better organization together and create a positive impact for the school and community.'
+    },
+    ctaButton: { id: 'Daftar Sekarang', en: 'Register Now' },
+    ctaSecondaryButton: { id: 'Pelajari Lebih Lanjut', en: 'Learn More' },
+    
+    // Scroll Text
+    scrollText: { id: 'Scroll untuk menjelajahi', en: 'Scroll to explore' },
   },
 
   // Sekbid (Work Programs)
