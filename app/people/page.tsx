@@ -5,6 +5,21 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const revalidate = 0; // Always fetch fresh data
 
+// Fix incomplete URLs stored as just filenames
+const SUPABASE_STORAGE_URL = 'https://mhefqwregrldvxtqqxbb.supabase.co/storage/v1/object/public/gallery/members';
+
+function fixPhotoUrl(url: string | null | undefined): string {
+  if (!url) return '/images/placeholder.svg';
+  // Already a full URL
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  // Local path
+  if (url.startsWith('/images/')) return url;
+  // Path starting with /
+  if (url.startsWith('/')) return `https://mhefqwregrldvxtqqxbb.supabase.co/storage/v1/object/public${url}`;
+  // Just a filename - construct full URL
+  return `${SUPABASE_STORAGE_URL}/${url}`;
+}
+
 interface Member {
   id: number;
   name: string;
@@ -47,7 +62,7 @@ export default async function PeoplePage() {
           name: m.name || 'Data Tidak Tersedia',
           position: roleValue, // Use actual role from DB
           description: m.quote || '',
-          image: m.photo_url || '/images/placeholder.svg',
+          image: fixPhotoUrl(m.photo_url),
           instagram_username: m.instagram || m.instagram_username || undefined,
           kelas: m.class || m.kelas || undefined,
           department: m.sekbid?.name || undefined, // Only set if has sekbid
