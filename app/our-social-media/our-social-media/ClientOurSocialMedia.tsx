@@ -1,34 +1,166 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
 import { fetchSocialMediaConfig, type SocialMediaFullConfig } from '@/lib/socialMediaConfig.client';
 import { useSocialMediaData } from '@/lib/hooks/useSocialMediaData';
 import Image from 'next/image';
 
-// Floating social icons component
-const FloatingIcon = ({ icon, color, delay, className }: { icon: string; color: string; delay: number; className?: string }) => (
+// ============================================
+// 3D TILT CARD COMPONENT
+// ============================================
+const Tilt3DCard = ({ 
+  children, 
+  className = '',
+  intensity = 15,
+}: { 
+  children: React.ReactNode; 
+  className?: string;
+  intensity?: number;
+}) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const rotateX = useMotionValue(0);
+  const rotateY = useMotionValue(0);
+  
+  const springConfig = { stiffness: 300, damping: 30 };
+  const rotateXSpring = useSpring(rotateX, springConfig);
+  const rotateYSpring = useSpring(rotateY, springConfig);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    
+    const rect = cardRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const mouseX = e.clientX - centerX;
+    const mouseY = e.clientY - centerY;
+    
+    const rotateXValue = (mouseY / (rect.height / 2)) * -intensity;
+    const rotateYValue = (mouseX / (rect.width / 2)) * intensity;
+    
+    rotateX.set(rotateXValue);
+    rotateY.set(rotateYValue);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    rotateX.set(0);
+    rotateY.set(0);
+  };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      className={`relative ${className}`}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateX: rotateXSpring,
+        rotateY: rotateYSpring,
+        transformStyle: 'preserve-3d',
+      }}
+    >
+      {children}
+      {isHovered && (
+        <div className="absolute inset-0 pointer-events-none rounded-[inherit] bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-50" />
+      )}
+    </motion.div>
+  );
+};
+
+// ============================================
+// FLOATING PARTICLES
+// ============================================
+const FloatingParticles = () => {
+  const particles = useMemo(() => 
+    Array.from({ length: 30 }, (_, i) => ({
+      id: i,
+      size: Math.random() * 4 + 2,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      duration: Math.random() * 15 + 10,
+      delay: Math.random() * 5,
+    })), []
+  );
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((particle) => (
+        <motion.div
+          key={particle.id}
+          className="absolute rounded-full bg-white/30"
+          style={{
+            width: particle.size,
+            height: particle.size,
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+          }}
+          animate={{
+            y: [0, -20, 0],
+            opacity: [0.3, 0.7, 0.3],
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            delay: particle.delay,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// ============================================
+// GRADIENT ORB
+// ============================================
+const GradientOrb = ({ 
+  className, 
+  colors, 
+  size = 300,
+}: { 
+  className?: string; 
+  colors: string[]; 
+  size?: number;
+}) => (
   <motion.div
-    className={`absolute text-4xl md:text-6xl opacity-10 ${className}`}
-    initial={{ y: 0 }}
-    animate={{ y: [-10, 10, -10] }}
-    transition={{ duration: 4, repeat: Infinity, delay }}
-    style={{ color }}
-  >
-    <i className={icon} />
-  </motion.div>
+    className={`absolute rounded-full pointer-events-none blur-3xl ${className}`}
+    style={{
+      width: size,
+      height: size,
+      background: `linear-gradient(135deg, ${colors.join(', ')})`,
+      opacity: 0.6,
+    }}
+    animate={{
+      scale: [1, 1.2, 1],
+      x: [0, 20, 0],
+      y: [0, -15, 0],
+    }}
+    transition={{
+      duration: 8,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    }}
+  />
 );
 
-// Platform card with hover effects
-const PlatformCard = ({ 
+// ============================================
+// 3D PLATFORM CARD
+// ============================================
+const PlatformCard3D = ({ 
   platform, 
   icon, 
   url, 
   followers, 
   gradient, 
   description,
+  username,
   isActive,
   index 
 }: {
@@ -38,107 +170,177 @@ const PlatformCard = ({
   followers: string | number;
   gradient: string;
   description: string;
+  username?: string;
   isActive: boolean;
   index: number;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
+  const formatFollowers = (num: number | string) => {
+    const value = typeof num === 'string' ? parseInt(num) : num;
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+    return value.toString();
+  };
+
   return (
-    <motion.a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group relative block"
+    <motion.div
       initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.6, delay: index * 0.1 }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={`
-        relative overflow-hidden rounded-3xl p-8 md:p-10 
-        bg-gradient-to-br ${gradient}
-        transform transition-all duration-500 ease-out
-        ${isHovered ? 'scale-[1.02] shadow-2xl' : 'shadow-lg'}
-      `}>
-        {/* Animated background circles */}
-        <div className="absolute inset-0 overflow-hidden">
-          <motion.div
-            className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full"
-            animate={{ scale: isHovered ? 1.5 : 1 }}
-            transition={{ duration: 0.5 }}
-          />
-          <motion.div
-            className="absolute -left-10 -bottom-10 w-32 h-32 bg-white/5 rounded-full"
-            animate={{ scale: isHovered ? 1.3 : 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          />
-        </div>
+      <Tilt3DCard intensity={8} className="h-full">
+        <motion.a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group relative block h-full"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className={`
+            relative overflow-hidden rounded-3xl p-6 md:p-8 h-full min-h-[300px]
+            bg-gradient-to-br ${gradient}
+            shadow-xl hover:shadow-2xl transition-shadow duration-500
+          `}>
+            {/* Animated background */}
+            <div className="absolute inset-0 overflow-hidden">
+              <motion.div
+                className="absolute -right-16 -top-16 w-48 h-48 bg-white/10 rounded-full blur-2xl"
+                animate={{ 
+                  scale: isHovered ? 1.5 : 1,
+                  rotate: isHovered ? 90 : 0,
+                }}
+                transition={{ duration: 0.6 }}
+              />
+              <motion.div
+                className="absolute -left-16 -bottom-16 w-40 h-40 bg-white/10 rounded-full blur-xl"
+                animate={{ 
+                  scale: isHovered ? 1.3 : 1,
+                }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              />
+              
+              {/* Grid pattern */}
+              <div 
+                className="absolute inset-0 opacity-10"
+                style={{
+                  backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+                  backgroundSize: '24px 24px',
+                }}
+              />
+            </div>
 
-        {/* Content */}
-        <div className="relative z-10">
-          {/* Icon */}
-          <motion.div
-            className="mb-6"
-            animate={{ rotate: isHovered ? 360 : 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <i className={`${icon} text-5xl md:text-6xl text-white drop-shadow-lg`} />
-          </motion.div>
+            {/* Content */}
+            <div className="relative z-10 flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <motion.div
+                  animate={{ 
+                    rotateY: isHovered ? 360 : 0,
+                    scale: isHovered ? 1.1 : 1,
+                  }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                    <i className={`${icon} text-2xl md:text-3xl text-white drop-shadow-lg`} />
+                  </div>
+                </motion.div>
 
-          {/* Platform name */}
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">{platform}</h3>
-          
-          {/* Description */}
-          <p className="text-white/80 text-sm md:text-base mb-6 line-clamp-2">{description}</p>
+                {!isActive ? (
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium text-white/90">
+                    Coming Soon
+                  </span>
+                ) : (
+                  <motion.span 
+                    className="px-3 py-1 bg-green-500/40 backdrop-blur-sm rounded-full text-xs font-medium text-white flex items-center gap-1.5"
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    Active
+                  </motion.span>
+                )}
+              </div>
 
-          {/* Stats */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl md:text-4xl font-bold text-white">{followers}</div>
-              <div className="text-white/60 text-sm">
-                {platform === 'YouTube' ? 'Subscribers' : 'Followers'}
+              {/* Info */}
+              <div className="flex-1">
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-1">{platform}</h3>
+                {username && (
+                  <p className="text-white/70 text-sm mb-3 truncate">{username}</p>
+                )}
+                <p className="text-white/80 text-sm md:text-base line-clamp-2">{description}</p>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-end justify-between mt-6 pt-4 border-t border-white/20">
+                <div>
+                  <motion.div 
+                    className="text-3xl md:text-4xl font-bold text-white"
+                    animate={isHovered ? { scale: [1, 1.1, 1] } : {}}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {formatFollowers(followers)}
+                  </motion.div>
+                  <div className="text-white/60 text-sm">
+                    {platform === 'YouTube' ? 'Subscribers' : 'Followers'}
+                  </div>
+                </div>
+                
+                <motion.div
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/20 backdrop-blur-sm rounded-full"
+                  animate={{ x: isHovered ? 5 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <span className="text-white text-sm font-medium hidden sm:inline">Follow</span>
+                  <i className="fas fa-arrow-right text-white" />
+                </motion.div>
               </div>
             </div>
-            
-            {/* Arrow */}
-            <motion.div
-              className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center"
-              animate={{ x: isHovered ? 5 : 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <i className="fas fa-arrow-right text-white text-lg" />
-            </motion.div>
-          </div>
 
-          {/* Status badge */}
-          {!isActive && (
-            <div className="absolute top-4 right-4 px-3 py-1 bg-white/20 rounded-full text-xs text-white/80">
-              Coming Soon
-            </div>
-          )}
-        </div>
-      </div>
-    </motion.a>
+            {/* Shine effect */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full pointer-events-none"
+              animate={isHovered ? { translateX: '100%' } : { translateX: '-100%' }}
+              transition={{ duration: 0.6 }}
+            />
+          </div>
+        </motion.a>
+      </Tilt3DCard>
+    </motion.div>
   );
 };
 
-// Stat counter with animation
-const AnimatedCounter = ({ value, label, icon, color }: { value: string | number; label: string; icon: string; color: string }) => {
+// ============================================
+// ANIMATED COUNTER
+// ============================================
+const AnimatedCounter = ({ 
+  value, 
+  label, 
+  icon, 
+  gradient,
+  delay = 0 
+}: { 
+  value: string | number; 
+  label: string; 
+  icon: string; 
+  gradient: string;
+  delay?: number;
+}) => {
   const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-        }
+        if (entry.isIntersecting) setIsVisible(true);
       },
       { threshold: 0.1 }
     );
-
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
@@ -174,95 +376,141 @@ const AnimatedCounter = ({ value, label, icon, color }: { value: string | number
   return (
     <motion.div
       ref={ref}
-      className="text-center p-6"
-      initial={{ opacity: 0, scale: 0.5 }}
-      animate={isVisible ? { opacity: 1, scale: 1 } : {}}
-      transition={{ duration: 0.5 }}
+      initial={{ opacity: 0, y: 30, scale: 0.9 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay }}
     >
-      <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 ${color}`}>
-        <i className={`${icon} text-2xl text-white`} />
-      </div>
-      <div className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
-        {typeof value === 'string' && value.includes('+') 
-          ? `${formatNumber(count)}+`
-          : formatNumber(count)
-        }
-      </div>
-      <div className="text-gray-500 dark:text-gray-400 text-sm font-medium">{label}</div>
+      <Tilt3DCard intensity={6} className="h-full">
+        <div className="relative p-6 md:p-8 rounded-3xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow overflow-hidden group">
+          <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+          
+          <motion.div
+            className={`inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br ${gradient} mb-4 shadow-lg`}
+            whileHover={{ scale: 1.1, rotate: 5 }}
+          >
+            <i className={`${icon} text-xl md:text-2xl text-white`} />
+          </motion.div>
+          
+          <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-2">
+            {formatNumber(count)}
+          </div>
+          
+          <div className="text-gray-500 dark:text-gray-400 text-sm font-medium">{label}</div>
+        </div>
+      </Tilt3DCard>
     </motion.div>
   );
 };
 
-// Content preview card
-const ContentPreview = ({ 
+// ============================================
+// CONTENT PREVIEW CARD
+// ============================================
+const ContentPreviewCard = ({ 
   title, 
   platform, 
   thumbnail, 
   url,
-  metric 
+  metric,
+  index 
 }: { 
   title: string; 
   platform: string; 
   thumbnail?: string; 
   url?: string;
   metric?: string | number;
-}) => (
-  <motion.a
-    href={url}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="group block bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
-    whileHover={{ y: -5 }}
-  >
-    {/* Thumbnail */}
-    <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 overflow-hidden">
-      {thumbnail ? (
-        <Image
-          src={thumbnail}
-          alt={title}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-110"
-          unoptimized
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <i className={`fab fa-${platform.toLowerCase()} text-5xl text-gray-300 dark:text-gray-500`} />
-        </div>
-      )}
-      
-      {/* Platform badge */}
-      <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg">
-        <i className={`fab fa-${platform.toLowerCase()} text-white text-sm`} />
-      </div>
+  index: number;
+}) => {
+  const platformColors: Record<string, string> = {
+    Instagram: 'from-purple-500 via-pink-500 to-orange-500',
+    YouTube: 'from-red-500 to-red-600',
+    TikTok: 'from-gray-900 via-pink-500 to-cyan-400',
+    Spotify: 'from-green-500 to-green-600',
+  };
 
-      {/* Metric badge */}
-      {metric && (
-        <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-xs font-medium">
-          {typeof metric === 'number' ? metric.toLocaleString() : metric}
-        </div>
-      )}
-    </div>
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true, margin: '-30px' }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+    >
+      <Tilt3DCard intensity={10}>
+        <motion.a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group block bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300"
+          whileHover={{ y: -8 }}
+        >
+          <div className="relative aspect-square overflow-hidden">
+            {thumbnail ? (
+              <Image
+                src={thumbnail}
+                alt={title}
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-110"
+                unoptimized
+              />
+            ) : (
+              <div className={`absolute inset-0 bg-gradient-to-br ${platformColors[platform] || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
+                <motion.i 
+                  className={`fab fa-${platform.toLowerCase()} text-5xl md:text-6xl text-white/80`}
+                  whileHover={{ scale: 1.2, rotate: 10 }}
+                />
+              </div>
+            )}
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            <motion.div 
+              className={`absolute top-3 left-3 px-2.5 py-1.5 bg-gradient-to-r ${platformColors[platform] || 'from-gray-500 to-gray-600'} rounded-lg shadow-lg`}
+              whileHover={{ scale: 1.1 }}
+            >
+              <i className={`fab fa-${platform.toLowerCase()} text-white text-sm`} />
+            </motion.div>
 
-    {/* Title */}
-    <div className="p-4">
-      <p className="text-gray-900 dark:text-white font-medium text-sm line-clamp-2 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
-        {title}
-      </p>
-    </div>
-  </motion.a>
-);
+            {metric !== undefined && metric !== null && (
+              <div className="absolute bottom-3 right-3 px-2.5 py-1.5 bg-black/70 backdrop-blur-sm rounded-lg text-white text-xs font-medium flex items-center gap-1">
+                <i className="fas fa-eye text-[10px]" />
+                {typeof metric === 'number' ? metric.toLocaleString() : metric}
+              </div>
+            )}
 
-// Main component
+            {(platform === 'YouTube' || platform === 'TikTok') && (
+              <motion.div
+                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                whileHover={{ scale: 1.1 }}
+              >
+                <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center shadow-xl">
+                  <i className="fas fa-play text-gray-900 text-lg ml-1" />
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          <div className="p-4">
+            <p className="text-gray-900 dark:text-white font-medium text-sm line-clamp-2 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
+              {title}
+            </p>
+          </div>
+        </motion.a>
+      </Tilt3DCard>
+    </motion.div>
+  );
+};
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 const ClientOurSocialMediaPage: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'all' | 'instagram' | 'youtube' | 'tiktok' | 'spotify'>('all');
-  const { instagramPosts, youtubeVideos, spotifyContent, tiktokVideos, loading } = useSocialMediaData();
+  const { instagramPosts, youtubeVideos, tiktokVideos, loading } = useSocialMediaData();
   
-  // Dynamic config from admin settings
   const [config, setConfig] = useState<SocialMediaFullConfig>(SOCIAL_MEDIA_CONFIG);
   const [configLoading, setConfigLoading] = useState(true);
 
-  // Fetch dynamic config from database
   useEffect(() => {
     const loadConfig = async () => {
       try {
@@ -270,7 +518,6 @@ const ClientOurSocialMediaPage: React.FC = () => {
         setConfig(dynamicConfig);
       } catch (error) {
         console.error('Failed to load social media config:', error);
-        // Fall back to static config
         setConfig(SOCIAL_MEDIA_CONFIG);
       } finally {
         setConfigLoading(false);
@@ -279,7 +526,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
     loadConfig();
   }, []);
 
-  const socialPlatforms = [
+  const socialPlatforms = useMemo(() => [
     {
       platform: 'Instagram',
       icon: 'fab fa-instagram',
@@ -287,6 +534,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
       url: config.instagram.url,
       gradient: 'from-purple-600 via-pink-600 to-orange-500',
       followers: config.instagram.followers,
+      username: config.instagram.username,
       isActive: config.instagram.isActive
     },
     {
@@ -296,6 +544,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
       url: config.youtube.url,
       gradient: 'from-red-600 to-red-500',
       followers: config.youtube.subscribers,
+      username: config.youtube.channelName,
       isActive: config.youtube.isActive
     },
     {
@@ -305,6 +554,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
       url: config.tiktok.url,
       gradient: 'from-gray-900 via-pink-600 to-cyan-400',
       followers: config.tiktok.followers,
+      username: config.tiktok.username,
       isActive: config.tiktok.isActive
     },
     {
@@ -314,12 +564,12 @@ const ClientOurSocialMediaPage: React.FC = () => {
       url: config.spotify.url,
       gradient: 'from-green-600 to-green-500',
       followers: config.spotify.followers,
+      username: config.spotify.username,
       isActive: config.spotify.isActive
     }
-  ];
+  ], [config, t]);
 
-  // Combined content for previews
-  const allContent = React.useMemo(() => {
+  const allContent = useMemo(() => {
     const items: any[] = [];
 
     (instagramPosts || []).forEach((p: any) => {
@@ -363,67 +613,140 @@ const ClientOurSocialMediaPage: React.FC = () => {
     ? allContent 
     : allContent.filter(c => c.platform.toLowerCase() === activeTab);
 
+  const totalFollowers = useMemo(() => {
+    return (
+      config.instagram.followers +
+      config.youtube.subscribers +
+      config.tiktok.followers +
+      config.spotify.followers
+    );
+  }, [config]);
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
+      {/* HERO SECTION */}
+      <section className="relative min-h-[85vh] md:min-h-screen flex items-center justify-center overflow-hidden">
         {/* Animated background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500">
-          {/* Floating icons */}
-          <FloatingIcon icon="fab fa-instagram" color="#E1306C" delay={0} className="top-[10%] left-[10%]" />
-          <FloatingIcon icon="fab fa-youtube" color="#FF0000" delay={0.5} className="top-[20%] right-[15%]" />
-          <FloatingIcon icon="fab fa-tiktok" color="#000000" delay={1} className="bottom-[30%] left-[20%]" />
-          <FloatingIcon icon="fab fa-spotify" color="#1DB954" delay={1.5} className="bottom-[20%] right-[10%]" />
+        <div className="absolute inset-0">
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600"
+            animate={{
+              background: [
+                'linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ea580c 100%)',
+                'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #f59e0b 100%)',
+                'linear-gradient(135deg, #ea580c 0%, #f59e0b 50%, #f97316 100%)',
+              ],
+            }}
+            transition={{ duration: 10, repeat: Infinity, repeatType: 'reverse' }}
+          />
           
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900" />
+          <GradientOrb className="-top-32 -left-32" colors={['#ec4899', '#8b5cf6']} size={400} />
+          <GradientOrb className="-bottom-32 -right-32" colors={['#06b6d4', '#3b82f6']} size={350} />
+          <GradientOrb className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" colors={['#fbbf24', '#f97316']} size={500} />
         </div>
 
+        <FloatingParticles />
+
+        {/* Grid overlay */}
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900" />
+
         {/* Content */}
-        <div className="relative z-10 container mx-auto px-4 text-center">
+        <div className="relative z-10 container mx-auto px-4 text-center py-20">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <motion.div
-              className="inline-block mb-6"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+            {/* Social Icons */}
+            <motion.div 
+              className="flex justify-center gap-3 md:gap-5 mb-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
             >
-              <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto">
-                <i className="fas fa-hashtag text-4xl md:text-5xl text-white" />
-              </div>
+              {[
+                { icon: 'fab fa-instagram', gradient: 'from-purple-500 via-pink-500 to-orange-500' },
+                { icon: 'fab fa-youtube', gradient: 'from-red-500 to-red-600' },
+                { icon: 'fab fa-tiktok', gradient: 'from-gray-800 via-pink-500 to-cyan-400' },
+                { icon: 'fab fa-spotify', gradient: 'from-green-500 to-green-600' },
+              ].map((item, i) => (
+                <motion.div
+                  key={item.icon}
+                  initial={{ scale: 0, rotateY: -180 }}
+                  animate={{ scale: 1, rotateY: 0 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 * i }}
+                  whileHover={{ scale: 1.15, rotate: 5 }}
+                  className="relative"
+                >
+                  <div className={`absolute inset-0 rounded-xl blur-lg bg-gradient-to-br ${item.gradient} opacity-60`} />
+                  <div className={`relative w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-xl`}>
+                    <i className={`${item.icon} text-xl md:text-2xl text-white`} />
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
 
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight">
+            {/* Title */}
+            <motion.h1 
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white mb-6 tracking-tight"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              style={{ textShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
+            >
               {t('socialMediaPage.title') || 'Connect With Us'}
-            </h1>
+            </motion.h1>
             
-            <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-10">
-              {t('socialMediaPage.subtitle') || 'Follow our journey across all social platforms'}
-            </p>
-
-            {/* Quick follow buttons */}
-            <motion.div
-              className="flex flex-wrap justify-center gap-4"
+            <motion.p 
+              className="text-lg sm:text-xl md:text-2xl text-white/90 max-w-2xl mx-auto mb-10 px-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
             >
-              {socialPlatforms.map((p) => (
+              {t('socialMediaPage.subtitle') || 'Follow our journey across all social platforms'}
+            </motion.p>
+
+            {/* Total followers pill */}
+            <motion.div
+              className="inline-flex items-center gap-3 px-6 py-3 bg-white/15 backdrop-blur-md rounded-full border border-white/25 mb-10"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <span className="text-white/80">Total Community</span>
+              <span className="text-2xl font-bold text-white">{totalFollowers.toLocaleString()}+</span>
+            </motion.div>
+
+            {/* Platform buttons */}
+            <motion.div
+              className="flex flex-wrap justify-center gap-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+            >
+              {socialPlatforms.map((p, i) => (
                 <motion.a
                   key={p.platform}
                   href={p.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full border border-white/20 transition-all duration-300"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-2 px-5 py-3 bg-white/15 hover:bg-white/25 backdrop-blur-md rounded-full border border-white/25 transition-all duration-300"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.7 + i * 0.1 }}
                 >
-                  <i className={`${p.icon} text-white text-xl`} />
-                  <span className="text-white font-medium hidden sm:inline">{p.platform}</span>
+                  <i className={`${p.icon} text-white text-lg`} />
+                  <span className="text-white font-medium text-sm md:text-base">{p.platform}</span>
                 </motion.a>
               ))}
             </motion.div>
@@ -433,191 +756,279 @@ const ClientOurSocialMediaPage: React.FC = () => {
         {/* Scroll indicator */}
         <motion.div
           className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1, y: [0, 10, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity, delay: 1 }}
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
         >
-          <i className="fas fa-chevron-down text-white/60 text-2xl" />
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-white/60 text-xs uppercase tracking-widest">Scroll</span>
+            <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center pt-2">
+              <motion.div
+                className="w-1.5 h-1.5 bg-white rounded-full"
+                animate={{ y: [0, 12, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+            </div>
+          </div>
         </motion.div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 md:py-24 bg-white dark:bg-gray-800">
-        <div className="container mx-auto px-4">
+      {/* STATS SECTION */}
+      <section className="py-16 md:py-24 bg-white dark:bg-gray-800 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-80 h-80 bg-yellow-100 dark:bg-yellow-900/20 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-orange-100 dark:bg-orange-900/20 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl" />
+        
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 20 }}
+            className="text-center mb-12 md:mb-16"
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <motion.span 
+              className="inline-block px-4 py-1.5 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 rounded-full text-sm font-medium mb-4"
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+            >
               Our Community
+            </motion.span>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+              Growing Every Day
             </h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              Growing every day with your support
+              Join our amazing community across all platforms
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 max-w-5xl mx-auto">
             <AnimatedCounter 
               value={config.instagram.followers} 
               label="Instagram" 
               icon="fab fa-instagram"
-              color="bg-gradient-to-br from-purple-500 to-pink-500"
+              gradient="from-purple-500 via-pink-500 to-orange-500"
+              delay={0}
             />
             <AnimatedCounter 
               value={config.youtube.subscribers} 
               label="YouTube" 
               icon="fab fa-youtube"
-              color="bg-red-500"
+              gradient="from-red-500 to-red-600"
+              delay={0.1}
             />
             <AnimatedCounter 
               value={config.tiktok.followers} 
               label="TikTok" 
               icon="fab fa-tiktok"
-              color="bg-gray-900 dark:bg-gray-700"
+              gradient="from-gray-700 to-gray-900"
+              delay={0.2}
             />
             <AnimatedCounter 
               value={config.spotify.followers} 
               label="Spotify" 
               icon="fab fa-spotify"
-              color="bg-green-500"
+              gradient="from-green-500 to-green-600"
+              delay={0.3}
             />
           </div>
         </div>
       </section>
 
-      {/* Platform Cards */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
+      {/* PLATFORM CARDS */}
+      <section className="py-16 md:py-24 relative overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-5 dark:opacity-10"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
+            backgroundSize: '32px 32px',
+          }}
+        />
+        
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 20 }}
+            className="text-center mb-12 md:mb-16"
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <motion.span 
+              className="inline-block px-4 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium mb-4"
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+            >
               Our Platforms
+            </motion.span>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+              Follow Us Everywhere
             </h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-              Pick your favorite platform and follow along
+              Pick your favorite platform and stay connected
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-5xl mx-auto">
             {socialPlatforms.map((platform, index) => (
-              <PlatformCard key={platform.platform} {...platform} index={index} />
+              <PlatformCard3D key={platform.platform} {...platform} index={index} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Latest Content */}
-      {allContent.length > 0 && (
-        <section className="py-16 md:py-24 bg-white dark:bg-gray-800">
-          <div className="container mx-auto px-4">
+      {/* LATEST CONTENT */}
+      {(allContent.length > 0 || loading) && (
+        <section className="py-16 md:py-24 bg-white dark:bg-gray-800 relative overflow-hidden">
+          <div className="absolute top-1/2 left-0 w-64 h-64 bg-purple-100 dark:bg-purple-900/20 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+          <div className="absolute top-1/4 right-0 w-64 h-64 bg-pink-100 dark:bg-pink-900/20 rounded-full translate-x-1/2 blur-3xl" />
+          
+          <div className="container mx-auto px-4 relative z-10">
             <motion.div
               className="text-center mb-12"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              <motion.span 
+                className="inline-block px-4 py-1.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium mb-4"
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+              >
                 Latest Content
+              </motion.span>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+                Fresh From Our Feed
               </h2>
               <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto mb-8">
-                Fresh posts from our social channels
+                Check out our latest posts and videos
               </p>
 
               {/* Tab filters */}
               <div className="flex flex-wrap justify-center gap-2">
                 {['all', 'instagram', 'youtube', 'tiktok', 'spotify'].map((tab) => (
-                  <button
+                  <motion.button
                     key={tab}
                     onClick={() => setActiveTab(tab as typeof activeTab)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                    className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
                       activeTab === tab
-                        ? 'bg-yellow-500 text-white'
+                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg shadow-yellow-500/30'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </motion.div>
 
             <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                {filteredContent.map((content) => (
-                  <ContentPreview key={content.id} {...content} />
-                ))}
-              </motion.div>
+              {loading ? (
+                <motion.div 
+                  key="loading"
+                  className="flex justify-center py-16"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="relative">
+                    <div className="w-16 h-16 border-4 border-yellow-200 dark:border-yellow-900 rounded-full" />
+                    <div className="absolute top-0 left-0 w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                </motion.div>
+              ) : filteredContent.length > 0 ? (
+                <motion.div
+                  key={activeTab}
+                  className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {filteredContent.map((content, index) => (
+                    <ContentPreviewCard key={content.id} {...content} index={index} />
+                  ))}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  className="text-center py-16"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i className="fas fa-photo-video text-3xl text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400">No content available yet</p>
+                </motion.div>
+              )}
             </AnimatePresence>
-
-            {loading && (
-              <div className="flex justify-center py-12">
-                <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
           </div>
         </section>
       )}
 
-      {/* CTA Section */}
+      {/* CTA SECTION */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
           <motion.div
-            className="relative max-w-4xl mx-auto bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 rounded-3xl p-10 md:p-16 text-center overflow-hidden"
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+            <Tilt3DCard intensity={5} className="max-w-4xl mx-auto">
+              <div className="relative bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600 rounded-3xl p-8 md:p-12 lg:p-16 text-center overflow-hidden">
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
+                  <div className="absolute bottom-0 left-0 w-56 h-56 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
+                  <FloatingParticles />
+                </div>
 
-            <div className="relative z-10">
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                viewport={{ once: true }}
-                className="inline-block mb-6"
-              >
-                <i className="fas fa-heart text-5xl text-white" />
-              </motion.div>
-
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Be Part of Our Story
-              </h2>
-              <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
-                Join our growing community and never miss an update. Follow us on your favorite platform!
-              </p>
-
-              <div className="flex flex-wrap justify-center gap-3">
-                {socialPlatforms.map((p) => (
-                  <motion.a
-                    key={p.platform}
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 bg-white text-gray-900 rounded-full font-semibold hover:bg-yellow-50 transition-all duration-300 flex items-center gap-2"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                <div className="relative z-10">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
                   >
-                    <i className={p.icon} />
-                    <span>{p.platform}</span>
-                  </motion.a>
-                ))}
+                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6">
+                      <motion.i 
+                        className="fas fa-heart text-4xl text-white"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      />
+                    </div>
+                  </motion.div>
+
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+                    Be Part of Our Story
+                  </h2>
+                  <p className="text-white/80 text-base md:text-lg mb-8 max-w-xl mx-auto">
+                    Join our growing community and never miss an update!
+                  </p>
+
+                  <div className="flex flex-wrap justify-center gap-3 md:gap-4">
+                    {socialPlatforms.map((p, i) => (
+                      <motion.a
+                        key={p.platform}
+                        href={p.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-5 md:px-6 py-3 bg-white text-gray-900 rounded-full font-semibold hover:bg-yellow-50 transition-all duration-300 flex items-center gap-2 shadow-lg"
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.3 + i * 0.1 }}
+                      >
+                        <i className={p.icon} />
+                        <span>{p.platform}</span>
+                      </motion.a>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
+            </Tilt3DCard>
           </motion.div>
         </div>
       </section>
