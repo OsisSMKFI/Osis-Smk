@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import TeamMemberModal from '@/components/TeamMemberModal';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -28,13 +29,23 @@ const TeamSection = dynamic(
   { ssr: false, loading: () => <SectionFallback /> }
 );
 
+const CustomCursor = dynamic(
+  () => import('@/components/about/Effects').then(mod => mod.CustomCursor),
+  { ssr: false }
+);
+
+const SmoothScrollProvider = dynamic(
+  () => import('@/components/about/SmoothScrollProvider'),
+  { ssr: false }
+);
+
 // Fallback components
 function HeroFallback() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black flex items-center justify-center">
       <div className="text-center">
         <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">Memuat halaman...</p>
       </div>
     </div>
   );
@@ -42,9 +53,297 @@ function HeroFallback() {
 
 function SectionFallback() {
   return (
-    <div className="py-20 flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+    <div className="py-32 flex items-center justify-center bg-white dark:bg-gray-900">
+      <div className="text-center">
+        <div className="w-10 h-10 border-3 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Memuat...</p>
+      </div>
     </div>
+  );
+}
+
+// Vision & Mission Section
+function VisionMissionSection() {
+  const { t } = useTranslation();
+  
+  return (
+    <section className="relative py-32 overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
+      {/* Background grid */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{
+        backgroundImage: `linear-gradient(to right, rgba(251, 191, 36, 0.5) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(251, 191, 36, 0.5) 1px, transparent 1px)`,
+        backgroundSize: '60px 60px'
+      }} />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <span className="inline-flex items-center gap-2 text-yellow-400 text-sm font-medium tracking-widest uppercase mb-4">
+            <span className="w-8 h-px bg-yellow-400" />
+            {t('about.visionMissionLabel') || 'Visi & Misi'}
+            <span className="w-8 h-px bg-yellow-400" />
+          </span>
+          <h2 className="text-4xl md:text-6xl font-bold text-white mb-4">
+            {t('about.visionTitle') || 'Arah'}{' '}
+            <span className="text-yellow-400">{t('about.visionTitleHighlight') || 'Langkah Kami'}</span>
+          </h2>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Vision Card */}
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition duration-500" />
+            <div className="relative bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-yellow-500/20 h-full">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-yellow-500/30">
+                  🎯
+                </div>
+                <h3 className="text-2xl md:text-3xl font-bold text-white">
+                  {t('about.visionLabel') || 'Visi'}
+                </h3>
+              </div>
+              <p className="text-gray-300 text-lg leading-relaxed">
+                {t('about.visionContent') || 'Menjadi organisasi siswa yang unggul, inovatif, dan berkarakter islami dalam membentuk generasi pemimpin masa depan yang berwawasan teknologi dan berjiwa kepemimpinan.'}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Mission Card */}
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition duration-500" />
+            <div className="relative bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-blue-500/20 h-full">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-blue-500/30">
+                  🚀
+                </div>
+                <h3 className="text-2xl md:text-3xl font-bold text-white">
+                  {t('about.missionLabel') || 'Misi'}
+                </h3>
+              </div>
+              <ul className="space-y-4">
+                {[
+                  t('about.mission1') || 'Mengembangkan potensi kepemimpinan siswa melalui berbagai kegiatan organisasi',
+                  t('about.mission2') || 'Menumbuhkan kreativitas dan inovasi dalam setiap program kerja',
+                  t('about.mission3') || 'Menanamkan nilai-nilai keislaman dalam setiap aktivitas',
+                  t('about.mission4') || 'Membangun kerjasama yang solid antar anggota dan stakeholder'
+                ].map((mission, index) => (
+                  <motion.li 
+                    key={index}
+                    className="flex items-start gap-3 text-gray-300"
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.5 + index * 0.1 }}
+                  >
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 text-xs font-bold mt-0.5">
+                      {index + 1}
+                    </span>
+                    <span>{mission}</span>
+                  </motion.li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Stats Section with animated counters
+function StatsSection() {
+  const { t } = useTranslation();
+  const stats = [
+    { number: '2024', label: t('about.statYear') || 'Tahun Berdiri', icon: '📅' },
+    { number: '50+', label: t('about.statMembers') || 'Anggota Aktif', icon: '👥' },
+    { number: '6', label: t('about.statDepartments') || 'Seksi Bidang', icon: '🏛️' },
+    { number: '20+', label: t('about.statEvents') || 'Kegiatan/Tahun', icon: '📋' },
+  ];
+
+  return (
+    <section className="relative py-24 overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500" />
+      <div className="absolute inset-0 bg-black/20" />
+      
+      {/* Animated pattern */}
+      <motion.div
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }}
+        animate={{ backgroundPosition: ['0px 0px', '40px 40px'] }}
+        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+      />
+
+      <div className="relative z-10 max-w-6xl mx-auto px-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {stats.map((stat, index) => (
+            <motion.div
+              key={index}
+              className="text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <div className="text-4xl mb-3">{stat.icon}</div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">
+                {stat.number}
+              </div>
+              <div className="text-white/80 text-sm uppercase tracking-wider">
+                {stat.label}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Values Section
+function ValuesSection() {
+  const { t } = useTranslation();
+  
+  const values = [
+    {
+      icon: '💡',
+      title: t('about.valueInnovation') || 'Inovasi',
+      description: t('about.valueInnovationDesc') || 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
+      color: 'from-yellow-400 to-orange-500'
+    },
+    {
+      icon: '🤝',
+      title: t('about.valueIntegrity') || 'Integritas',
+      description: t('about.valueIntegrityDesc') || 'Menjunjung tinggi kejujuran dan tanggung jawab',
+      color: 'from-blue-400 to-indigo-500'
+    },
+    {
+      icon: '🌟',
+      title: t('about.valueExcellence') || 'Keunggulan',
+      description: t('about.valueExcellenceDesc') || 'Berusaha memberikan yang terbaik dalam setiap aspek',
+      color: 'from-purple-400 to-pink-500'
+    },
+    {
+      icon: '🕌',
+      title: t('about.valueIslamic') || 'Islami',
+      description: t('about.valueIslamicDesc') || 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
+      color: 'from-green-400 to-emerald-500'
+    }
+  ];
+
+  return (
+    <section className="relative py-32 overflow-hidden bg-white dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4">
+        <motion.div
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm font-medium tracking-widest uppercase mb-4">
+            ✨ {t('about.valuesLabel') || 'Nilai-Nilai Kami'}
+          </span>
+          <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white">
+            {t('about.valuesTitle') || 'Prinsip'}{' '}
+            <span className="text-yellow-500">{t('about.valuesTitleHighlight') || 'yang Kami Pegang'}</span>
+          </h2>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {values.map((value, index) => (
+            <motion.div
+              key={index}
+              className="group relative"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <div className={`absolute -inset-0.5 bg-gradient-to-r ${value.color} rounded-2xl blur opacity-0 group-hover:opacity-30 transition duration-500`} />
+              <div className="relative bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 h-full transition-all duration-300 group-hover:-translate-y-1">
+                <div className={`w-14 h-14 bg-gradient-to-r ${value.color} rounded-xl flex items-center justify-center text-2xl mb-4 shadow-lg`}>
+                  {value.icon}
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  {value.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                  {value.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Footer CTA Section
+function FooterCTASection() {
+  const { t } = useTranslation();
+
+  return (
+    <section className="relative py-32 overflow-hidden bg-gray-900">
+      {/* Gradient orbs */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/20 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl" />
+
+      <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
+            {t('about.ctaTitle') || 'Bergabung'}{' '}
+            <span className="text-yellow-400">{t('about.ctaTitleHighlight') || 'Bersama Kami'}</span>
+          </h2>
+          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+            {t('about.ctaDescription') || 'Mari bersama-sama membangun organisasi yang lebih baik dan menciptakan dampak positif bagi sekolah dan masyarakat.'}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <motion.a
+              href="/register"
+              className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-gray-900 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-yellow-500/30"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="relative z-10">{t('about.ctaButton') || 'Daftar Sekarang'}</span>
+              <span className="ml-2">→</span>
+            </motion.a>
+            <motion.a
+              href="/info"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-white border border-white/30 rounded-full hover:bg-white/10 transition-all duration-300"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {t('about.ctaSecondaryButton') || 'Pelajari Lebih Lanjut'}
+            </motion.a>
+          </div>
+        </motion.div>
+      </div>
+    </section>
   );
 }
 
@@ -57,7 +356,6 @@ export default function AboutPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
-  // Check if we're on client side
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -77,28 +375,17 @@ export default function AboutPage() {
           name: m.name || m.nama || 'Unknown',
           position: m.role || m.jabatan || 'Anggota',
           image: m.photo_url || m.foto_url || '/images/placeholder.svg',
-          description: m.quote || m.quotes || t('about.coreDataPending'),
+          description: m.quote || m.quotes || t('about.coreDataPending') || 'Data sedang diperbarui',
           ttl: m.ttl || '-',
           alamat: m.alamat || '-',
           motto: m.motto || '-',
         }));
 
-        // Filter core team members
         const core = mapped.filter((m: any) => {
           const pos = (m.position || '').toLowerCase();
-          return (
-            pos === 'ketua osis' ||
-            pos === 'wakil ketua' ||
-            pos === 'sekretaris' ||
-            pos === 'bendahara' ||
-            pos === (t('about.positionChairman') || '').toLowerCase() ||
-            pos === (t('about.positionViceChairman') || '').toLowerCase() ||
-            pos === (t('about.positionSecretary') || '').toLowerCase() ||
-            pos === (t('about.positionTreasurer') || '').toLowerCase()
-          );
+          return ['ketua osis', 'wakil ketua', 'sekretaris', 'bendahara'].includes(pos);
         });
 
-        // Filter koordinator sekbid
         const koordinator = mapped.filter((m: any) => {
           const pos = (m.position || '').trim().toLowerCase();
           return pos === 'koordinator sekbid' || pos === 'kepala departemen';
@@ -108,7 +395,7 @@ export default function AboutPage() {
           setCoreTeam(core);
           setKoordinatorSekbid(koordinator);
         }
-      } catch (e) {
+      } catch {
         if (mounted) setFetchError('Gagal memuat data anggota. Silakan refresh halaman.');
       }
     })();
@@ -118,138 +405,124 @@ export default function AboutPage() {
   const openModal = (member: TeamMember) => setSelectedMember(member);
   const closeModal = () => setSelectedMember(null);
 
-  // Symbol data for the logo meaning section
   const symbolData = [
-    {
-      icon: '💻',
-      title: t('about.symbolTech') || 'Teknologi',
-      description: t('about.symbolTechDesc') || 'Melambangkan fokus pada teknologi dan informatika',
-      gradient: 'bg-gradient-to-r from-blue-500 to-indigo-600'
-    },
-    {
-      icon: '🎓',
-      title: t('about.symbolEducation') || 'Pendidikan',
-      description: t('about.symbolEducationDesc') || 'Komitmen pada pembelajaran dan pengembangan diri',
-      gradient: 'bg-gradient-to-r from-green-500 to-emerald-600'
-    },
-    {
-      icon: '🌟',
-      title: t('about.symbolCreativity') || 'Kreativitas',
-      description: t('about.symbolCreativityDesc') || 'Mendorong inovasi dan ide-ide baru',
-      gradient: 'bg-gradient-to-r from-purple-500 to-pink-600'
-    },
-    {
-      icon: '🤝',
-      title: t('about.symbolCollaboration') || 'Kolaborasi',
-      description: t('about.symbolCollaborationDesc') || 'Kerjasama tim yang solid dan saling mendukung',
-      gradient: 'bg-gradient-to-r from-orange-500 to-red-600'
-    },
-    {
-      icon: '🚀',
-      title: t('about.symbolVision') || 'Visi',
-      description: t('about.symbolVisionDesc') || 'Berwawasan ke depan dan siap menghadapi tantangan',
-      gradient: 'bg-gradient-to-r from-yellow-500 to-amber-600'
-    },
-    {
-      icon: '📖',
-      title: t('about.symbolIslamic') || 'Nilai Islami',
-      description: t('about.symbolIslamicDesc') || 'Berpegang teguh pada nilai-nilai keislaman',
-      gradient: 'bg-gradient-to-r from-teal-500 to-cyan-600'
-    }
+    { icon: '💻', title: t('about.symbolTech') || 'Teknologi', description: t('about.symbolTechDesc') || 'Fokus pada teknologi dan informatika', gradient: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
+    { icon: '🎓', title: t('about.symbolEducation') || 'Pendidikan', description: t('about.symbolEducationDesc') || 'Komitmen pada pembelajaran', gradient: 'bg-gradient-to-r from-green-500 to-emerald-600' },
+    { icon: '🌟', title: t('about.symbolCreativity') || 'Kreativitas', description: t('about.symbolCreativityDesc') || 'Mendorong inovasi', gradient: 'bg-gradient-to-r from-purple-500 to-pink-600' },
+    { icon: '🤝', title: t('about.symbolCollaboration') || 'Kolaborasi', description: t('about.symbolCollaborationDesc') || 'Kerjasama tim yang solid', gradient: 'bg-gradient-to-r from-orange-500 to-red-600' },
+    { icon: '🚀', title: t('about.symbolVision') || 'Visi', description: t('about.symbolVisionDesc') || 'Berwawasan ke depan', gradient: 'bg-gradient-to-r from-yellow-500 to-amber-600' },
+    { icon: '📖', title: t('about.symbolIslamic') || 'Nilai Islami', description: t('about.symbolIslamicDesc') || 'Berpegang pada nilai keislaman', gradient: 'bg-gradient-to-r from-teal-500 to-cyan-600' }
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden">
-      {/* Hero Section with 3D Background */}
-      {isClient && (
-        <HeroSection3D
-          title={t('about.heroTitle') || 'Tentang Kami'}
-          subtitle={t('about.heroSubtitle') || 'Organisasi Siswa Intra Sekolah SMK Informatika - Membentuk pemimpin masa depan yang berintegritas dan berwawasan teknologi'}
-          scrollText={t('about.scrollText') || 'Scroll untuk menjelajahi'}
-        />
-      )}
+    <SmoothScrollProvider>
+      <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden">
+        {/* Custom Cursor - Desktop only */}
+        {isClient && <CustomCursor />}
 
-      {/* Story Section - "Cerita Dirgantara" */}
-      {isClient && (
-        <StorySection
-          title={t('about.storyTitle1') || 'Cerita'}
-          highlightTitle={t('about.storyTitle2') || 'Dirgantara'}
-          philosophyTitle={t('about.philosophyTitle') || 'Filosofi Nama'}
-          philosophyHighlight={t('about.philosophyHighlight') || 'Dirgantara'}
-          philosophyContent={{
-            part1: t('about.philosophyPart1') || 'Nama',
-            nameHighlight: t('about.philosophyNameHighlight') || '"Dirgantara"',
-            part2: t('about.philosophyPart2') || 'diambil dari kata dalam bahasa Indonesia yang berarti',
-            skyHighlight: t('about.philosophySkyHighlight') || '"angkasa" atau "langit"',
-            part3: t('about.philosophyPart3') || '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.'
-          }}
-          descriptions={[
-            t('about.philosophyDesc1') || 'Sebagai organisasi siswa, kami berkomitmen untuk mengembangkan kepemimpinan, kreativitas, dan nilai-nilai keislaman dalam setiap kegiatan.',
-            t('about.philosophyDesc2') || 'Dengan semangat yang membara seperti matahari, kami terus bergerak maju menuju masa depan yang lebih cerah.'
-          ]}
-        />
-      )}
+        {/* Hero Section with 3D */}
+        {isClient && (
+          <HeroSection3D
+            title={t('about.heroTitle') || 'Tentang Kami'}
+            subtitle={t('about.heroSubtitle') || 'Organisasi Siswa Intra Sekolah SMK Informatika - Membentuk pemimpin masa depan yang berintegritas dan berwawasan teknologi'}
+            scrollText={t('about.scrollText') || 'Scroll untuk menjelajahi'}
+          />
+        )}
 
-      {/* Symbol/Logo Meaning Section */}
-      {isClient && (
-        <SymbolSection
-          title={t('about.symbolTitle1') || 'Makna'}
-          highlightTitle={t('about.symbolTitle2') || 'Logo'}
-          subtitle={t('about.symbolSubtitle') || 'Setiap elemen dalam logo kami memiliki makna mendalam yang mencerminkan nilai-nilai organisasi'}
-          logoSrc="/images/logo-2.png"
-          logoAlt={t('navbar.logoAlt') || 'Logo OSIS'}
-          logoCaption={t('about.symbolLogoCaption') || 'Logo resmi OSIS SMK Informatika'}
-          logoTitle={t('about.symbolLogoTitle') || 'Elemen dalam Logo Kami'}
-          symbols={symbolData}
-        />
-      )}
+        {/* Stats Section */}
+        <StatsSection />
 
-      {/* Core Team Section */}
-      {isClient && (
-        <TeamSection
-          title={t('about.coreTeamTitle1') || 'Pengurus'}
-          highlightTitle={t('about.coreTeamTitle2') || 'Inti'}
-          subtitle={t('about.coreTeamSubtitle') || 'Para pemimpin yang menggerakkan roda organisasi dengan dedikasi tinggi'}
-          warningText={t('about.coreTeamWarning') || 'Data anggota dimuat secara real-time dari database'}
-          warningColor="yellow"
-          members={coreTeam || []}
-          onMemberClick={openModal}
-          gridCols={4}
-        />
-      )}
+        {/* Story Section - Cerita Dirgantara */}
+        {isClient && (
+          <StorySection
+            title={t('about.storyTitle1') || 'Cerita'}
+            highlightTitle={t('about.storyTitle2') || 'Dirgantara'}
+            philosophyTitle={t('about.philosophyTitle') || 'Filosofi Nama'}
+            philosophyHighlight={t('about.philosophyHighlight') || 'Dirgantara'}
+            philosophyContent={{
+              part1: t('about.philosophyPart1') || 'Nama',
+              nameHighlight: t('about.philosophyNameHighlight') || '"Dirgantara"',
+              part2: t('about.philosophyPart2') || 'diambil dari kata dalam bahasa Indonesia yang berarti',
+              skyHighlight: t('about.philosophySkyHighlight') || '"angkasa" atau "langit"',
+              part3: t('about.philosophyPart3') || '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.'
+            }}
+            descriptions={[
+              t('about.philosophyDesc1') || 'Sebagai organisasi siswa, kami berkomitmen untuk mengembangkan kepemimpinan, kreativitas, dan nilai-nilai keislaman dalam setiap kegiatan.',
+              t('about.philosophyDesc2') || 'Dengan semangat yang membara seperti matahari, kami terus bergerak maju menuju masa depan yang lebih cerah.'
+            ]}
+          />
+        )}
 
-      {/* Koordinator Sekbid Section */}
-      {isClient && koordinatorSekbid && koordinatorSekbid.length > 0 && (
-        <TeamSection
-          title={t('about.deptHeadsTitle1') || 'Koordinator'}
-          highlightTitle={t('about.deptHeadsTitle2') || 'Sekbid'}
-          subtitle={t('about.deptHeadsSubtitle') || 'Para koordinator yang memimpin setiap seksi bidang dengan penuh tanggung jawab'}
-          warningText={t('about.deptHeadsWarning') || 'Data koordinator dimuat dari database'}
-          warningColor="blue"
-          members={koordinatorSekbid}
-          onMemberClick={openModal}
-          gridCols={3}
-          colorVariant={true}
-        />
-      )}
+        {/* Vision & Mission Section */}
+        <VisionMissionSection />
 
-      {/* Error State */}
-      {fetchError && (
-        <div className="py-20 text-center">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 max-w-md mx-auto">
-            <p className="text-red-600 dark:text-red-400 font-medium">{fetchError}</p>
+        {/* Values Section */}
+        <ValuesSection />
+
+        {/* Symbol/Logo Section */}
+        {isClient && (
+          <SymbolSection
+            title={t('about.symbolTitle1') || 'Makna'}
+            highlightTitle={t('about.symbolTitle2') || 'Logo'}
+            subtitle={t('about.symbolSubtitle') || 'Setiap elemen dalam logo kami memiliki makna mendalam'}
+            logoSrc="/images/logo-2.png"
+            logoAlt={t('navbar.logoAlt') || 'Logo OSIS'}
+            logoCaption={t('about.symbolLogoCaption') || 'Logo resmi OSIS SMK Informatika'}
+            logoTitle={t('about.symbolLogoTitle') || 'Elemen dalam Logo Kami'}
+            symbols={symbolData}
+          />
+        )}
+
+        {/* Core Team Section */}
+        {isClient && (
+          <TeamSection
+            title={t('about.coreTeamTitle1') || 'Pengurus'}
+            highlightTitle={t('about.coreTeamTitle2') || 'Inti'}
+            subtitle={t('about.coreTeamSubtitle') || 'Para pemimpin yang menggerakkan roda organisasi dengan dedikasi tinggi'}
+            warningText={t('about.coreTeamWarning') || 'Data anggota dimuat secara real-time dari database'}
+            warningColor="yellow"
+            members={coreTeam || []}
+            onMemberClick={openModal}
+            gridCols={4}
+          />
+        )}
+
+        {/* Koordinator Sekbid Section */}
+        {isClient && koordinatorSekbid && koordinatorSekbid.length > 0 && (
+          <TeamSection
+            title={t('about.deptHeadsTitle1') || 'Koordinator'}
+            highlightTitle={t('about.deptHeadsTitle2') || 'Sekbid'}
+            subtitle={t('about.deptHeadsSubtitle') || 'Para koordinator yang memimpin setiap seksi bidang'}
+            warningText={t('about.deptHeadsWarning') || 'Data koordinator dimuat dari database'}
+            warningColor="blue"
+            members={koordinatorSekbid}
+            onMemberClick={openModal}
+            gridCols={3}
+            colorVariant={true}
+          />
+        )}
+
+        {/* Footer CTA Section */}
+        <FooterCTASection />
+
+        {/* Error State */}
+        {fetchError && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg">
+              <p className="font-medium">{fetchError}</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Team Member Modal */}
-      {selectedMember && (
-        <TeamMemberModal 
-          member={selectedMember} 
-          isOpen={!!selectedMember} 
-          onClose={closeModal} 
-        />
-      )}
-    </div>
+        {/* Team Member Modal */}
+        {selectedMember && (
+          <TeamMemberModal 
+            member={selectedMember} 
+            isOpen={!!selectedMember} 
+            onClose={closeModal} 
+          />
+        )}
+      </div>
+    </SmoothScrollProvider>
   );
 }
