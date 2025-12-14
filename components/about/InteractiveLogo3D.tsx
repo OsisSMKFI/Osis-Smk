@@ -21,95 +21,101 @@ interface InteractiveLogoProps {
   elements: LogoElement[];
 }
 
-// ============ AUDIO ENGINE - Igloo Style ============
+// ============ AUDIO ENGINE ============
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
+  private masterGain: GainNode | null = null;
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     if (!this.ctx) {
       try {
         this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.connect(this.ctx.destination);
+        this.masterGain.gain.value = 0.25;
       } catch { return null; }
     }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
     return this.ctx;
+  }
+
+  private getMaster(): GainNode | null {
+    this.getContext();
+    return this.masterGain;
   }
 
   setEnabled(enabled: boolean) { this.enabled = enabled; }
   isEnabled() { return this.enabled; }
 
-  // Subtle hover - high pitched tick
   hover() {
     if (!this.enabled) return;
     const ctx = this.getContext();
-    if (!ctx) return;
+    const master = this.getMaster();
+    if (!ctx || !master) return;
     
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(master);
     
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(2000, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(2400, ctx.currentTime + 0.03);
-    
-    gain.gain.setValueAtTime(0.02, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-    
+    osc.frequency.setValueAtTime(2200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(2600, ctx.currentTime + 0.02);
+    gain.gain.setValueAtTime(0.04, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
     osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.05);
+    osc.stop(ctx.currentTime + 0.03);
   }
 
-  // Click - soft pop
   click() {
     if (!this.enabled) return;
     const ctx = this.getContext();
-    if (!ctx) return;
+    const master = this.getMaster();
+    if (!ctx || !master) return;
     
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(master);
     
     osc.type = 'sine';
     osc.frequency.setValueAtTime(600, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.08);
-    
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.1);
   }
 
-  // Reveal - ascending chime
   reveal() {
     if (!this.enabled) return;
     const ctx = this.getContext();
-    if (!ctx) return;
+    const master = this.getMaster();
+    if (!ctx || !master) return;
     
-    [400, 500, 600, 800].forEach((freq, i) => {
+    [330, 440, 550, 660].forEach((freq, i) => {
       setTimeout(() => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(master);
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        gain.gain.setValueAtTime(0.03, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
         osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.2);
+        osc.stop(ctx.currentTime + 0.3);
       }, i * 60);
     });
   }
 
-  // Transition whoosh
-  transition() {
+  whoosh() {
     if (!this.enabled) return;
     const ctx = this.getContext();
-    if (!ctx) return;
+    const master = this.getMaster();
+    if (!ctx || !master) return;
     
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -117,16 +123,17 @@ class AudioEngine {
     
     osc.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(master);
     
     osc.type = 'sawtooth';
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(200, ctx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 0.1);
-    filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.25);
+    filter.type = 'bandpass';
+    filter.Q.value = 3;
+    filter.frequency.setValueAtTime(100, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 0.12);
+    filter.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.25);
     
-    osc.frequency.setValueAtTime(100, ctx.currentTime);
-    gain.gain.setValueAtTime(0.03, ctx.currentTime);
+    osc.frequency.setValueAtTime(60, ctx.currentTime);
+    gain.gain.setValueAtTime(0.04, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
     
     osc.start(ctx.currentTime);
@@ -136,380 +143,233 @@ class AudioEngine {
 
 const audio = new AudioEngine();
 
-// ============ SECTION REVEAL - Igloo Style Opening ============
-function SectionReveal({ 
+// ============ SCROLL REVEAL CARD ============
+function ScrollRevealCard({ 
   children, 
-  onReveal 
+  index = 0,
+  className = ''
 }: { 
   children: React.ReactNode;
-  onReveal?: () => void;
+  index?: number;
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.15 });
-  const [revealed, setRevealed] = useState(false);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
+  const [hasRevealed, setHasRevealed] = useState(false);
 
   useEffect(() => {
-    if (isInView && !revealed) {
-      setRevealed(true);
-      audio.reveal();
-      onReveal?.();
+    if (isInView && !hasRevealed) {
+      setHasRevealed(true);
+      setTimeout(() => audio.reveal(), index * 80);
     }
-  }, [isInView, revealed, onReveal]);
+  }, [isInView, hasRevealed, index]);
 
   return (
-    <div ref={ref}>
-      <motion.div
-        initial={{ opacity: 0, y: 100 }}
-        animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 100 }}
-        transition={{ 
-          duration: 1.2, 
-          ease: [0.16, 1, 0.3, 1] // Custom easing like igloo
-        }}
-      >
-        {children}
-      </motion.div>
-    </div>
+    <motion.div
+      ref={ref}
+      className={className}
+      initial={{ opacity: 0, y: 60, scale: 0.95 }}
+      animate={hasRevealed ? { 
+        opacity: 1, 
+        y: 0, 
+        scale: 1 
+      } : { 
+        opacity: 0, 
+        y: 60, 
+        scale: 0.95 
+      }}
+      transition={{ 
+        duration: 0.7, 
+        delay: index * 0.1,
+        ease: [0.16, 1, 0.3, 1]
+      }}
+    >
+      {children}
+    </motion.div>
   );
 }
 
-// ============ ANIMATED TEXT - Letter by Letter ============
-function AnimatedText({ 
-  text, 
-  className = '',
-  delay = 0,
-  highlight = false
+// ============ ELEMENT CARD ============
+function ElementCard({ 
+  element, 
+  index, 
+  isActive, 
+  onHover, 
+  onClick 
 }: { 
-  text: string; 
-  className?: string;
-  delay?: number;
-  highlight?: boolean;
+  element: LogoElement;
+  index: number;
+  isActive: boolean;
+  onHover: (active: boolean) => void;
+  onClick: () => void;
 }) {
-  const letters = text.split('');
-  
   return (
-    <span className={`inline-block ${highlight ? 'bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent' : ''}`}>
-      {letters.map((letter, i) => (
-        <motion.span
-          key={i}
-          className={`inline-block ${className}`}
-          initial={{ opacity: 0, y: 40, rotateX: -90 }}
-          whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
-          viewport={{ once: true }}
-          transition={{
-            duration: 0.6,
-            delay: delay + i * 0.03,
-            ease: [0.16, 1, 0.3, 1]
-          }}
-          style={{ transformOrigin: 'bottom' }}
+    <ScrollRevealCard index={index} className="h-full">
+      <motion.div
+        className={`
+          relative h-full min-h-[380px] md:min-h-[420px] rounded-2xl md:rounded-3xl overflow-hidden cursor-pointer
+          bg-white dark:bg-gradient-to-br dark:from-[#1a1a24] dark:via-[#15151d] dark:to-[#0f0f14]
+          border transition-all duration-500
+          ${isActive 
+            ? 'border-yellow-400/60 shadow-xl shadow-yellow-500/20 dark:shadow-yellow-500/10' 
+            : 'border-gray-200 dark:border-white/[0.05] hover:border-yellow-400/30'
+          }
+        `}
+        onMouseEnter={() => {
+          onHover(true);
+          audio.hover();
+        }}
+        onMouseLeave={() => onHover(false)}
+        onClick={() => {
+          audio.click();
+          onClick();
+        }}
+        whileHover={{ scale: 1.02, y: -6 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        {/* Gradient overlay */}
+        <motion.div 
+          className={`absolute inset-0 ${element.gradient} opacity-0`}
+          animate={{ opacity: isActive ? 0.1 : 0 }}
+          transition={{ duration: 0.4 }}
+        />
+        
+        {/* Number watermark */}
+        <span 
+          className="absolute top-4 right-4 md:top-6 md:right-6 text-6xl md:text-8xl font-black text-gray-100 dark:text-white/[0.03] select-none"
+          style={{ lineHeight: 1 }}
         >
-          {letter === ' ' ? '\u00A0' : letter}
-        </motion.span>
-      ))}
-    </span>
+          0{index + 1}
+        </span>
+        
+        {/* Content */}
+        <div className="relative z-10 p-6 md:p-8 h-full flex flex-col">
+          {/* Icon */}
+          <motion.div 
+            className={`
+              w-14 h-14 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6
+              ${isActive ? element.gradient : 'bg-gray-100 dark:bg-white/5'}
+              transition-all duration-400 shadow-lg
+            `}
+            animate={{ 
+              rotate: isActive ? [0, -6, 6, -3, 3, 0] : 0,
+              scale: isActive ? 1.08 : 1
+            }}
+            transition={{ duration: 0.5 }}
+          >
+            <span className="text-2xl md:text-3xl">{element.icon}</span>
+          </motion.div>
+          
+          {/* Title */}
+          <h3 className={`
+            text-lg md:text-xl font-bold mb-2 md:mb-3 transition-colors duration-300
+            ${isActive ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-900 dark:text-white'}
+          `}>
+            {element.title}
+          </h3>
+          
+          {/* Description */}
+          <p className="text-gray-600 dark:text-[#b6bac5]/70 text-sm md:text-base leading-relaxed flex-1">
+            {element.description}
+          </p>
+          
+          {/* Action hint */}
+          <motion.div 
+            className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-white/5"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isActive ? 1 : 0.5 }}
+            transition={{ duration: 0.3 }}
+          >
+            <span className={`text-sm font-medium ${isActive ? 'text-yellow-500 dark:text-yellow-400' : 'text-gray-400 dark:text-white/30'}`}>
+              {isActive ? 'Klik untuk detail' : 'Hover untuk info'}
+            </span>
+            <motion.div 
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${isActive ? 'bg-yellow-400' : 'bg-gray-100 dark:bg-white/5'}`}
+              animate={{ x: isActive ? [0, 4, 0] : 0 }}
+              transition={{ duration: 0.6, repeat: isActive ? Infinity : 0 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8H13M13 8L8 3M13 8L8 13" stroke={isActive ? "#000" : "#999"} strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </motion.div>
+          </motion.div>
+        </div>
+        
+        {/* Bottom accent line */}
+        <motion.div 
+          className={`absolute bottom-0 left-0 h-1 ${element.gradient}`}
+          initial={{ width: 0 }}
+          animate={{ width: isActive ? '100%' : 0 }}
+          transition={{ duration: 0.3 }}
+        />
+      </motion.div>
+    </ScrollRevealCard>
   );
 }
 
-// ============ HORIZONTAL SCROLL GALLERY - Igloo Style ============
-function HorizontalGallery({ 
+// ============ ELEMENTS GRID ============
+function ElementsGrid({ 
   elements, 
   onElementClick 
 }: { 
   elements: LogoElement[];
   onElementClick: (element: LogoElement, index: number) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"]
-  });
-  
-  const x = useTransform(scrollYProgress, [0, 1], ["0%", "-30%"]);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   return (
-    <div ref={containerRef} className="relative overflow-hidden py-12">
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
+      {/* Section label */}
       <motion.div 
-        className="flex gap-6 px-8"
-        style={{ x }}
+        className="text-center mb-8 md:mb-12"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
       >
+        <span className="inline-flex items-center gap-2 text-gray-500 dark:text-[#b6bac5]/50 text-xs tracking-widest uppercase">
+          <span className="w-6 h-px bg-gray-300 dark:bg-white/20" />
+          6 Elemen Filosofi
+          <span className="w-6 h-px bg-gray-300 dark:bg-white/20" />
+        </span>
+      </motion.div>
+      
+      {/* Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {elements.map((element, index) => (
-          <motion.div
+          <ElementCard
             key={index}
-            className="flex-shrink-0 w-80 md:w-96 cursor-pointer"
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ 
-              duration: 0.8, 
-              delay: index * 0.1,
-              ease: [0.16, 1, 0.3, 1]
-            }}
-            onMouseEnter={() => {
-              setHoveredIndex(index);
-              audio.hover();
-            }}
-            onMouseLeave={() => setHoveredIndex(null)}
-            onClick={() => {
-              audio.click();
-              onElementClick(element, index);
-            }}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className={`
-              relative p-8 rounded-3xl h-72 overflow-hidden
-              bg-gradient-to-br from-[#383e4e] to-[#2a2f3a]
-              border transition-all duration-500
-              ${hoveredIndex === index 
-                ? 'border-yellow-400/50 shadow-2xl shadow-yellow-500/10' 
-                : 'border-white/5'
-              }
-            `}>
-              {/* Background gradient on hover */}
-              <motion.div 
-                className={`absolute inset-0 ${element.gradient} opacity-0`}
-                animate={{ opacity: hoveredIndex === index ? 0.1 : 0 }}
-                transition={{ duration: 0.3 }}
-              />
-              
-              {/* Number */}
-              <motion.span 
-                className="absolute top-6 right-6 text-6xl font-bold text-white/5"
-                animate={{ 
-                  color: hoveredIndex === index ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.05)'
-                }}
-              >
-                0{index + 1}
-              </motion.span>
-              
-              {/* Icon */}
-              <motion.div 
-                className={`
-                  w-16 h-16 rounded-2xl flex items-center justify-center mb-6
-                  ${hoveredIndex === index ? element.gradient : 'bg-white/10'}
-                  transition-all duration-300
-                `}
-                animate={{ 
-                  rotate: hoveredIndex === index ? [0, -5, 5, 0] : 0,
-                  scale: hoveredIndex === index ? 1.1 : 1
-                }}
-              >
-                <span className="text-3xl">{element.icon}</span>
-              </motion.div>
-              
-              {/* Content */}
-              <div className="relative z-10">
-                <h3 className={`
-                  text-xl font-bold mb-3 transition-colors duration-300
-                  ${hoveredIndex === index ? 'text-yellow-400' : 'text-white'}
-                `}>
-                  {element.title}
-                </h3>
-                <p className="text-[#b6bac5] text-sm leading-relaxed line-clamp-3">
-                  {element.description}
-                </p>
-              </div>
-              
-              {/* Click hint */}
-              <motion.div 
-                className="absolute bottom-6 right-6 flex items-center gap-2 text-yellow-400 text-sm"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ 
-                  opacity: hoveredIndex === index ? 1 : 0,
-                  x: hoveredIndex === index ? 0 : -10
-                }}
-              >
-                <span>Lihat</span>
-                <motion.span
-                  animate={{ x: hoveredIndex === index ? [0, 5, 0] : 0 }}
-                  transition={{ repeat: Infinity, duration: 0.8 }}
-                >
-                  →
-                </motion.span>
-              </motion.div>
-              
-              {/* Bottom line */}
-              <motion.div 
-                className={`absolute bottom-0 left-0 h-1 ${element.gradient}`}
-                initial={{ width: 0 }}
-                animate={{ width: hoveredIndex === index ? '100%' : 0 }}
-                transition={{ duration: 0.3 }}
-              />
-            </div>
-          </motion.div>
+            element={element}
+            index={index}
+            isActive={activeIndex === index}
+            onHover={(active) => setActiveIndex(active ? index : null)}
+            onClick={() => onElementClick(element, index)}
+          />
+        ))}
+      </div>
+      
+      {/* Indicator */}
+      <motion.div 
+        className="flex justify-center mt-8 md:mt-12 gap-1.5"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+      >
+        {elements.map((_, i) => (
+          <motion.div
+            key={i}
+            className={`h-1 rounded-full transition-all duration-300 ${
+              activeIndex === i 
+                ? 'w-6 bg-yellow-400' 
+                : 'w-1.5 bg-gray-300 dark:bg-white/20'
+            }`}
+          />
         ))}
       </motion.div>
     </div>
   );
 }
 
-// ============ DETAIL MODAL - Igloo Style Fullscreen ============
-function DetailModal({ 
-  element, 
-  isOpen, 
-  onClose 
-}: { 
-  element: LogoElement | null; 
-  isOpen: boolean; 
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    if (isOpen) {
-      audio.transition();
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  const handleClose = useCallback(() => {
-    audio.click();
-    onClose();
-  }, [onClose]);
-
-  // Close on escape
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) handleClose();
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen, handleClose]);
-
-  if (!element) return null;
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          {/* Backdrop */}
-          <motion.div 
-            className="absolute inset-0 bg-[#0a0a0f]/95 backdrop-blur-xl"
-            onClick={handleClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          />
-          
-          {/* Close button - top right */}
-          <motion.button
-            className="absolute top-8 right-8 z-10 w-14 h-14 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors"
-            onClick={handleClose}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ delay: 0.2 }}
-            whileHover={{ rotate: 90 }}
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </motion.button>
-          
-          {/* Content */}
-          <motion.div
-            className="relative w-full max-w-4xl mx-6 md:mx-12"
-            initial={{ opacity: 0, y: 60, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.98 }}
-            transition={{ 
-              duration: 0.6,
-              ease: [0.16, 1, 0.3, 1]
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              {/* Left - Icon */}
-              <motion.div 
-                className="flex justify-center"
-                initial={{ opacity: 0, x: -50, rotate: -10 }}
-                animate={{ opacity: 1, x: 0, rotate: 0 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-              >
-                <div className={`
-                  w-48 h-48 md:w-64 md:h-64 rounded-3xl ${element.gradient}
-                  flex items-center justify-center shadow-2xl
-                `}>
-                  <motion.span 
-                    className="text-8xl md:text-9xl"
-                    animate={{ 
-                      rotate: [0, 5, -5, 0],
-                      scale: [1, 1.05, 1]
-                    }}
-                    transition={{ 
-                      duration: 4, 
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    {element.icon}
-                  </motion.span>
-                </div>
-              </motion.div>
-              
-              {/* Right - Content */}
-              <div className="text-left">
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <span className="text-yellow-400 text-sm tracking-widest uppercase mb-4 block">
-                    Filosofi Logo
-                  </span>
-                  
-                  <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                    {element.title}
-                  </h2>
-                  
-                  <div className="w-16 h-1 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full mb-8" />
-                  
-                  <p className="text-[#b6bac5] text-lg leading-relaxed mb-8">
-                    {element.description}
-                  </p>
-                  
-                  <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
-                    <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                      <span className="text-yellow-400">✦</span>
-                      Makna Mendalam
-                    </h4>
-                    <p className="text-[#b6bac5] text-sm leading-relaxed">
-                      Setiap elemen dalam logo OSIS SMK Informatika dirancang dengan cermat 
-                      untuk merepresentasikan nilai-nilai organisasi dan visi untuk 
-                      membentuk generasi pemimpin masa depan yang inovatif dan berkarakter.
-                    </p>
-                  </div>
-                </motion.div>
-                
-                {/* Close button */}
-                <motion.button
-                  onClick={handleClose}
-                  className="mt-8 px-8 py-4 bg-gradient-to-r from-yellow-500 to-amber-500 text-gray-900 font-semibold rounded-xl hover:from-yellow-400 hover:to-amber-400 transition-all"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Tutup
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ============ 3D LOGO - Parallax & Interactive ============
+// ============ 3D LOGO ============
 function Logo3D({ 
   logoSrc, 
   logoAlt 
@@ -518,13 +378,13 @@ function Logo3D({
   logoAlt: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { once: true, amount: 0.5 });
+  const isInView = useInView(containerRef, { once: true, amount: 0.3 });
   
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   
-  const rotateX = useSpring(useTransform(mouseY, [-300, 300], [15, -15]), { stiffness: 100, damping: 20 });
-  const rotateY = useSpring(useTransform(mouseX, [-300, 300], [-15, 15]), { stiffness: 100, damping: 20 });
+  const rotateX = useSpring(useTransform(mouseY, [-200, 200], [15, -15]), { stiffness: 100, damping: 25 });
+  const rotateY = useSpring(useTransform(mouseX, [-200, 200], [-15, 15]), { stiffness: 100, damping: 25 });
   
   const [isHovered, setIsHovered] = useState(false);
 
@@ -544,7 +404,7 @@ function Logo3D({
   return (
     <motion.div 
       ref={containerRef}
-      className="relative flex justify-center items-center py-20 cursor-pointer"
+      className="relative flex justify-center items-center py-16 md:py-24"
       onMouseMove={handleMouseMove}
       onMouseEnter={() => {
         setIsHovered(true);
@@ -558,44 +418,69 @@ function Logo3D({
     >
       {/* Background glow */}
       <motion.div 
-        className="absolute w-96 h-96 rounded-full"
+        className="absolute w-64 h-64 md:w-96 md:h-96 rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(251,191,36,0.15) 0%, transparent 70%)'
+          background: 'radial-gradient(circle, rgba(251,191,36,0.15) 0%, rgba(251,191,36,0.03) 50%, transparent 70%)'
         }}
         animate={{ 
-          scale: isHovered ? 1.3 : 1,
-          opacity: isHovered ? 1 : 0.5
+          scale: isHovered ? 1.2 : 1,
+          opacity: isHovered ? 1 : 0.6
         }}
+        transition={{ duration: 0.6 }}
       />
 
-      {/* Orbiting rings */}
+      {/* Orbital rings */}
       {[1, 2, 3].map((i) => (
         <motion.div
           key={i}
-          className="absolute rounded-full border"
+          className="absolute rounded-full border border-yellow-400/10"
           style={{
-            width: 200 + i * 50,
-            height: 200 + i * 50,
-            borderColor: `rgba(251,191,36,${0.1 / i})`
+            width: 140 + i * 50,
+            height: 140 + i * 50,
           }}
-          animate={{ rotate: i % 2 === 0 ? 360 : -360 }}
+          animate={{ 
+            rotate: i % 2 === 0 ? 360 : -360,
+            scale: isHovered ? 1.05 : 1,
+          }}
           transition={{ 
-            duration: 20 + i * 10, 
-            repeat: Infinity, 
-            ease: 'linear' 
+            rotate: { duration: 20 + i * 8, repeat: Infinity, ease: 'linear' },
+            scale: { duration: 0.4 }
           }}
         />
       ))}
 
-      {/* Logo with 3D rotation */}
+      {/* Floating particles on hover */}
+      <AnimatePresence>
+        {isHovered && [...Array(8)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full"
+            initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+            animate={{ 
+              opacity: [0, 1, 0],
+              scale: [0, 1, 0],
+              x: Math.cos(i * 45 * Math.PI / 180) * 120,
+              y: Math.sin(i * 45 * Math.PI / 180) * 120
+            }}
+            exit={{ opacity: 0, scale: 0 }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              delay: i * 0.1,
+            }}
+          />
+        ))}
+      </AnimatePresence>
+
+      {/* Logo with 3D effect */}
       <motion.div
-        className="relative w-52 h-52 md:w-64 md:h-64"
-        initial={{ scale: 0.5, opacity: 0, rotateY: -180 }}
+        className="relative w-44 h-44 md:w-56 md:h-56 lg:w-64 lg:h-64 cursor-pointer"
+        initial={{ scale: 0.5, opacity: 0, rotateY: -90 }}
         animate={isInView ? { 
           scale: 1, 
           opacity: 1, 
           rotateY: 0 
-        } : { scale: 0.5, opacity: 0, rotateY: -180 }}
+        } : { scale: 0.5, opacity: 0, rotateY: -90 }}
         transition={{ 
           duration: 1.2,
           ease: [0.16, 1, 0.3, 1]
@@ -605,53 +490,308 @@ function Logo3D({
           rotateY,
           transformStyle: 'preserve-3d'
         }}
-        whileHover={{ scale: 1.08 }}
+        whileHover={{ scale: 1.05 }}
       >
         <Image
           src={logoSrc}
           alt={logoAlt}
           fill
+          sizes="(max-width: 768px) 176px, (max-width: 1024px) 224px, 256px"
           className="object-contain drop-shadow-2xl"
           priority
         />
       </motion.div>
-
-      {/* Floating particles on hover */}
-      <AnimatePresence>
-        {isHovered && [...Array(6)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-yellow-400 rounded-full"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ 
-              scale: [0, 1, 0],
-              opacity: [0, 1, 0],
-              x: Math.cos(i * 60 * Math.PI / 180) * 150,
-              y: Math.sin(i * 60 * Math.PI / 180) * 150
-            }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              delay: i * 0.1
-            }}
-          />
-        ))}
-      </AnimatePresence>
       
       {/* Hint text */}
       <motion.p 
-        className="absolute -bottom-4 text-[#b6bac5] text-xs tracking-widest uppercase"
-        animate={{ opacity: isHovered ? 0 : 0.5 }}
+        className="absolute -bottom-2 text-gray-400 dark:text-[#b6bac5]/40 text-xs tracking-widest uppercase"
+        animate={{ 
+          opacity: isHovered ? 0 : [0.4, 0.7, 0.4],
+        }}
+        transition={{ duration: 2, repeat: Infinity }}
       >
-        ↑ Gerakkan mouse
+        ↑ Gerakkan kursor
       </motion.p>
     </motion.div>
   );
 }
 
+// ============ DETAIL MODAL ============
+function DetailModal({ 
+  element, 
+  isOpen, 
+  onClose 
+}: { 
+  element: LogoElement | null; 
+  isOpen: boolean; 
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (isOpen) {
+      audio.whoosh();
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  const handleClose = useCallback(() => {
+    audio.click();
+    onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) handleClose();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, handleClose]);
+
+  if (!element) return null;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          {/* Backdrop */}
+          <motion.div 
+            className="absolute inset-0 bg-black/80 dark:bg-[#0a0a0f]/95 backdrop-blur-xl"
+            onClick={handleClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+          
+          {/* Close button */}
+          <motion.button
+            className="absolute top-4 right-4 md:top-8 md:right-8 z-10 w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+            onClick={handleClose}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ delay: 0.1 }}
+            whileHover={{ rotate: 90, scale: 1.1 }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </motion.button>
+          
+          {/* Content */}
+          <motion.div
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.97 }}
+            transition={{ 
+              duration: 0.5,
+              ease: [0.16, 1, 0.3, 1]
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-white dark:bg-[#12121a] rounded-3xl p-6 md:p-10 shadow-2xl">
+              <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+                {/* Icon */}
+                <motion.div 
+                  className="flex justify-center"
+                  initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.2, duration: 0.6 }}
+                >
+                  <motion.div 
+                    className={`
+                      w-48 h-48 md:w-56 md:h-56 rounded-3xl ${element.gradient}
+                      flex items-center justify-center shadow-2xl
+                    `}
+                    animate={{ 
+                      rotate: [0, 2, -2, 0],
+                      scale: [1, 1.02, 1]
+                    }}
+                    transition={{ 
+                      duration: 5, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <motion.span 
+                      className="text-7xl md:text-8xl"
+                      animate={{ y: [0, -8, 0] }}
+                      transition={{ duration: 2.5, repeat: Infinity }}
+                    >
+                      {element.icon}
+                    </motion.span>
+                  </motion.div>
+                </motion.div>
+                
+                {/* Details */}
+                <motion.div 
+                  className="text-center md:text-left"
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  {/* Label */}
+                  <motion.span 
+                    className="inline-flex items-center gap-2 text-yellow-500 dark:text-yellow-400 text-xs tracking-widest uppercase mb-4"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 }}
+                  >
+                    <span className="w-6 h-px bg-yellow-400" />
+                    Filosofi Logo
+                  </motion.span>
+                  
+                  {/* Title */}
+                  <motion.h2 
+                    className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 md:mb-6"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    {element.title}
+                  </motion.h2>
+                  
+                  {/* Divider */}
+                  <motion.div 
+                    className="w-16 h-1 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full mb-6 mx-auto md:mx-0"
+                    initial={{ width: 0 }}
+                    animate={{ width: 64 }}
+                    transition={{ delay: 0.45, duration: 0.4 }}
+                  />
+                  
+                  {/* Description */}
+                  <motion.p 
+                    className="text-gray-600 dark:text-[#b6bac5] text-base md:text-lg leading-relaxed mb-6"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    {element.description}
+                  </motion.p>
+                  
+                  {/* Extra info */}
+                  <motion.div 
+                    className="bg-gray-50 dark:bg-white/5 rounded-xl p-5 border border-gray-100 dark:border-white/5 text-left"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.55 }}
+                  >
+                    <h4 className="text-gray-900 dark:text-white font-semibold mb-2 flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-yellow-400/20 flex items-center justify-center">
+                        <span className="text-yellow-500 text-xs">✦</span>
+                      </span>
+                      Makna Mendalam
+                    </h4>
+                    <p className="text-gray-500 dark:text-[#b6bac5]/70 text-sm leading-relaxed">
+                      Setiap elemen dalam logo OSIS SMK Informatika dirancang dengan cermat 
+                      untuk merepresentasikan nilai-nilai organisasi dan visi untuk 
+                      membentuk generasi pemimpin masa depan yang inovatif dan berkarakter.
+                    </p>
+                  </motion.div>
+                  
+                  {/* Close button */}
+                  <motion.button
+                    onClick={handleClose}
+                    className="mt-6 px-8 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-gray-900 font-bold rounded-xl hover:from-yellow-400 hover:to-amber-400 transition-all shadow-lg"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Tutup
+                  </motion.button>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ============ SECTION HEADER ============
+function SectionHeader({ 
+  title, 
+  subtitle 
+}: { 
+  title: string; 
+  subtitle: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.3 });
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    if (isInView && !revealed) {
+      setRevealed(true);
+      audio.reveal();
+    }
+  }, [isInView, revealed]);
+
+  return (
+    <div ref={ref} className="text-center mb-8 md:mb-12 px-4">
+      {/* Label */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={revealed ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.6 }}
+        className="mb-4 md:mb-6"
+      >
+        <span className="inline-flex items-center gap-3 text-yellow-500 dark:text-yellow-400/70 text-xs tracking-widest uppercase">
+          <motion.span 
+            className="w-8 md:w-12 h-px bg-gradient-to-r from-transparent to-yellow-400"
+            initial={{ scaleX: 0 }}
+            animate={revealed ? { scaleX: 1 } : {}}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          />
+          {title}
+          <motion.span 
+            className="w-8 md:w-12 h-px bg-gradient-to-l from-transparent to-yellow-400"
+            initial={{ scaleX: 0 }}
+            animate={revealed ? { scaleX: 1 } : {}}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          />
+        </span>
+      </motion.div>
+      
+      {/* Main title */}
+      <motion.h2 
+        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white tracking-tight mb-4 md:mb-6"
+        initial={{ opacity: 0, y: 30 }}
+        animate={revealed ? { opacity: 1, y: 0 } : {}}
+        transition={{ delay: 0.1, duration: 0.7 }}
+      >
+        Filosofi{' '}
+        <span className="bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 bg-clip-text text-transparent">
+          Logo
+        </span>
+      </motion.h2>
+      
+      {/* Subtitle */}
+      <motion.p 
+        className="text-gray-500 dark:text-[#b6bac5]/60 text-base md:text-lg max-w-2xl mx-auto"
+        initial={{ opacity: 0, y: 20 }}
+        animate={revealed ? { opacity: 1, y: 0 } : {}}
+        transition={{ delay: 0.2, duration: 0.6 }}
+      >
+        {subtitle}
+      </motion.p>
+    </div>
+  );
+}
+
 // ============ SOUND TOGGLE ============
-function SoundToggle() {
+function SoundToggleButton() {
   const [enabled, setEnabled] = useState(true);
   
   const toggle = () => {
@@ -664,9 +804,9 @@ function SoundToggle() {
   return (
     <motion.button
       onClick={toggle}
-      className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[90] w-11 h-11 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/10 shadow-lg border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-all"
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 1 }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
@@ -697,144 +837,99 @@ export default function InteractiveLogo3D({
 }: InteractiveLogoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedElement, setSelectedElement] = useState<LogoElement | null>(null);
-  const [revealed, setRevealed] = useState(false);
   
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
   });
 
-  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "20%"]);
+  const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "10%"]);
 
   return (
     <>
-      <SoundToggle />
+      <SoundToggleButton />
       
       <section 
         ref={containerRef}
-        className="relative py-24 md:py-40 overflow-hidden"
+        id="filosofi"
+        className="relative py-16 md:py-24 lg:py-32 overflow-hidden bg-gray-50 dark:bg-transparent"
         style={{ 
-          background: 'linear-gradient(180deg, #0a0a0f 0%, #12121a 50%, #0a0a0f 100%)'
+          position: 'relative' // Fix scroll offset warning
         }}
       >
-        {/* Background effects */}
-        <motion.div 
-          className="absolute inset-0 pointer-events-none"
-          style={{ y: backgroundY }}
-        >
-          {/* Center gradient */}
-          <div 
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px]"
-            style={{
-              background: 'radial-gradient(circle, rgba(251,191,36,0.05) 0%, transparent 50%)'
-            }}
-          />
-          
-          {/* Grid overlay */}
-          <div 
-            className="absolute inset-0 opacity-[0.015]"
-            style={{
-              backgroundImage: `
-                linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)
-              `,
-              backgroundSize: '80px 80px'
-            }}
-          />
-        </motion.div>
+        {/* Background - Dark mode only */}
+        <div className="absolute inset-0 dark:block hidden">
+          <motion.div 
+            className="absolute inset-0 pointer-events-none"
+            style={{ y: backgroundY }}
+          >
+            {/* Central glow */}
+            <div 
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]"
+              style={{
+                background: 'radial-gradient(circle, rgba(251,191,36,0.05) 0%, transparent 60%)'
+              }}
+            />
+            
+            {/* Grid */}
+            <div 
+              className="absolute inset-0 opacity-[0.015]"
+              style={{
+                backgroundImage: `
+                  linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)
+                `,
+                backgroundSize: '80px 80px'
+              }}
+            />
+          </motion.div>
+        </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6">
-          {/* Section Header with reveal animation */}
-          <SectionReveal onReveal={() => setRevealed(true)}>
-            <div className="text-center mb-8">
-              {/* Label */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={revealed ? { opacity: 1, y: 0 } : {}}
-                transition={{ delay: 0.2 }}
-                className="mb-6"
-              >
-                <span className="inline-flex items-center gap-3 text-yellow-400/80 text-xs tracking-[0.3em] uppercase">
-                  <span className="w-8 h-px bg-yellow-400/50" />
-                  {sectionTitle}
-                  <span className="w-8 h-px bg-yellow-400/50" />
-                </span>
-              </motion.div>
-              
-              {/* Title with letter animation */}
-              <h2 className="text-5xl md:text-7xl lg:text-8xl font-light text-white tracking-tight mb-6">
-                <AnimatedText text="Filosofi " delay={0.3} />
-                <AnimatedText text="Logo" delay={0.5} highlight />
-              </h2>
-              
-              {/* Subtitle */}
-              <motion.p 
-                className="text-[#b6bac5] text-lg md:text-xl max-w-2xl mx-auto"
-                initial={{ opacity: 0, y: 20 }}
-                animate={revealed ? { opacity: 1, y: 0 } : {}}
-                transition={{ delay: 0.8 }}
-              >
-                {sectionSubtitle}
-              </motion.p>
-            </div>
-          </SectionReveal>
+        {/* Light mode background */}
+        <div className="absolute inset-0 dark:hidden">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-100/50 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-amber-100/50 rounded-full blur-3xl" />
+        </div>
+
+        <div className="relative z-10">
+          {/* Header */}
+          <SectionHeader title={sectionTitle} subtitle={sectionSubtitle} />
 
           {/* 3D Logo */}
           <Logo3D logoSrc={logoSrc} logoAlt={logoAlt} />
 
           {/* Divider */}
           <motion.div 
-            className="flex items-center justify-center gap-4 py-12"
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-          >
-            <div className="h-px w-20 bg-gradient-to-r from-transparent to-white/20" />
-            <motion.div 
-              className="w-3 h-3 bg-yellow-400/50 rounded-full"
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-            <div className="h-px w-20 bg-gradient-to-l from-transparent to-white/20" />
-          </motion.div>
-
-          {/* Elements label */}
-          <motion.div 
-            className="text-center mb-8"
+            className="flex items-center justify-center gap-4 py-8 md:py-12"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
-            <span className="text-[#b6bac5]/50 text-sm tracking-widest uppercase">
-              Elemen Logo • Klik untuk detail
-            </span>
+            <motion.div 
+              className="h-px w-16 md:w-20 bg-gradient-to-r from-transparent to-gray-300 dark:to-white/10"
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+            />
+            <motion.div 
+              className="w-2 h-2 bg-yellow-400 rounded-full"
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <motion.div 
+              className="h-px w-16 md:w-20 bg-gradient-to-l from-transparent to-gray-300 dark:to-white/10"
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+            />
           </motion.div>
         </div>
 
-        {/* Horizontal scrolling gallery */}
-        <HorizontalGallery 
+        {/* Elements Grid */}
+        <ElementsGrid 
           elements={elements} 
-          onElementClick={(element, index) => setSelectedElement(element)}
+          onElementClick={(element) => setSelectedElement(element)}
         />
-
-        {/* Bottom accent */}
-        <motion.div 
-          className="flex justify-center gap-2 mt-16"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          {[...Array(5)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="w-1.5 h-1.5 rounded-full bg-yellow-500/30"
-              initial={{ scale: 0 }}
-              whileInView={{ scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 + i * 0.08 }}
-            />
-          ))}
-        </motion.div>
 
         {/* Detail Modal */}
         <DetailModal 
