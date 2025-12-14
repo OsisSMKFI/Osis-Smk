@@ -232,6 +232,8 @@ export default function InfoPage() {
             <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300">
               Temukan pengumuman, acara, polling, dan informasi terbaru dari OSIS
             </p>
+            {/* Build version indicator - remove after testing */}
+            <p className="text-xs text-gray-400 mt-2">v2024.12.14-fix3</p>
           </div>
         </div>
       </section>
