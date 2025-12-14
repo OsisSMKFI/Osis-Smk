@@ -63,6 +63,32 @@ export default function InfoPage() {
   const [loading, setLoading] = useState(true);
   const [votedPolls, setVotedPolls] = useState<Set<string>>(new Set());
   const [votingPoll, setVotingPoll] = useState<string | null>(null);
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  const [expandedAnnouncements, setExpandedAnnouncements] = useState<Set<string>>(new Set());
+
+  const toggleEventExpand = (eventId: string) => {
+    setExpandedEvents(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAnnouncementExpand = (annId: string) => {
+    setExpandedAnnouncements(prev => {
+      const next = new Set(prev);
+      if (next.has(annId)) {
+        next.delete(annId);
+      } else {
+        next.add(annId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -225,7 +251,12 @@ export default function InfoPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {announcements.map((ann) => (
+                {announcements.map((ann) => {
+                  const isExpanded = expandedAnnouncements.has(ann.id);
+                  const contentLength = ann.content?.length || 0;
+                  const shouldShowReadMore = contentLength > 200;
+                  
+                  return (
                   <div
                     key={ann.id || ann.title}
                     className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-l-4 ${
@@ -243,19 +274,29 @@ export default function InfoPage() {
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
                           ann.priority === 'urgent'
-                            ? 'bg-red-100 text-red-800'
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                             : ann.priority === 'high'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-blue-100 text-blue-800'
+                            ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
                         }`}
                       >
                         {ann.priority === 'urgent' ? 'URGENT' : ann.priority === 'high' ? 'PENTING' : 'Info'}
                       </span>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-wrap">
-                      {ann.content}
-                    </p>
-                    <p className="text-sm text-gray-500">
+                    <div className="mb-4">
+                      <p className={`text-gray-600 dark:text-gray-300 whitespace-pre-wrap ${!isExpanded && shouldShowReadMore ? 'line-clamp-4' : ''}`}>
+                        {ann.content}
+                      </p>
+                      {shouldShowReadMore && (
+                        <button
+                          onClick={() => toggleAnnouncementExpand(ann.id)}
+                          className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                        >
+                          {isExpanded ? '← Tutup' : 'Baca selengkapnya →'}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {new Date(ann.created_at).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'long',
@@ -276,7 +317,8 @@ export default function InfoPage() {
                       />
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
             )}
 
@@ -294,6 +336,10 @@ export default function InfoPage() {
               <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                 {events.map((event, index) => {
                   const uniqueKey = event.id || `${event.title}-${event.event_date}-${index}`;
+                  const isExpanded = expandedEvents.has(uniqueKey);
+                  const descriptionLength = event.description?.length || 0;
+                  const shouldShowReadMore = descriptionLength > 100;
+                  
                   return (
                   <div
                     key={uniqueKey}
@@ -314,9 +360,19 @@ export default function InfoPage() {
                         {event.title}
                       </h3>
                       {event.description && (
-                        <p className="text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">
-                          {event.description}
-                        </p>
+                        <div className="mb-4">
+                          <p className={`text-gray-600 dark:text-gray-300 whitespace-pre-wrap ${!isExpanded && shouldShowReadMore ? 'line-clamp-3' : ''}`}>
+                            {event.description}
+                          </p>
+                          {shouldShowReadMore && (
+                            <button
+                              onClick={() => toggleEventExpand(uniqueKey)}
+                              className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                            >
+                              {isExpanded ? '← Tutup' : 'Baca selengkapnya →'}
+                            </button>
+                          )}
+                        </div>
                       )}
                       <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                         <p>
