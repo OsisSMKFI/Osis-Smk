@@ -347,8 +347,18 @@ export default function UserDashboard() {
                       cleanUsername = cleanUsername.split('@')[0];
                     }
                     
-                    // Validasi apakah username valid (hanya huruf, angka, underscore, titik)
-                    const isValidUsername = /^[a-zA-Z0-9._]+$/.test(cleanUsername) && cleanUsername.length > 0;
+                    // Hapus domain email yang mungkin tertempel (gmail.com, yahoo.com, dll)
+                    // Pattern: username diikuti langsung domain tanpa @ (misal: bilaniumn1gmail.com)
+                    const emailDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'mail.com', 'ymail.com', 'live.com', 'protonmail.com', 'zoho.com'];
+                    for (const domain of emailDomains) {
+                      if (cleanUsername.toLowerCase().endsWith(domain)) {
+                        cleanUsername = cleanUsername.slice(0, -domain.length);
+                        break;
+                      }
+                    }
+                    
+                    // Validasi apakah username valid (hanya huruf, angka, underscore, titik, max 30 char)
+                    const isValidUsername = /^[a-zA-Z0-9._]+$/.test(cleanUsername) && cleanUsername.length > 0 && cleanUsername.length <= 30;
                     
                     if (isValidUsername) {
                       return (
