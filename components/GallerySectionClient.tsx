@@ -18,6 +18,7 @@ const GallerySectionClient: React.FC<GallerySectionClientProps> = ({ initialItem
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [imageLoading, setImageLoading] = useState<boolean>(false);
   const [imageError, setImageError] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const images = initialItems;
   const { t } = useTranslation();
 
@@ -42,6 +43,17 @@ const GallerySectionClient: React.FC<GallerySectionClientProps> = ({ initialItem
     setSelectedImage(null);
     setImageLoading(false);
     setImageError(false);
+    setIsFullscreen(false);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen?.();
+      setIsFullscreen(false);
+    }
   }, []);
 
   const nextImage = useCallback(() => {
@@ -188,145 +200,178 @@ const GallerySectionClient: React.FC<GallerySectionClientProps> = ({ initialItem
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal - Improved responsive design */}
       {selectedImage !== null && (
         <div
-          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[9999] flex flex-col"
           onClick={closeModal}
         >
-          {/* Close button - Larger on mobile */}
-          <button
-            type="button"
-            onClick={closeModal}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 sm:w-12 sm:h-12 bg-red-500 hover:bg-red-600 active:bg-red-700 rounded-full flex items-center justify-center text-white transition-all duration-300 z-[10000] shadow-lg hover:scale-110 active:scale-95"
-            aria-label="Close modal"
-          >
-            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {/* Top bar with controls */}
+          <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
+            {/* Left: Image counter */}
+            <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
+              <span className="text-white text-sm font-medium">
+                {selectedImage + 1} / {images.length}
+              </span>
+            </div>
 
-          {/* Previous button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              prevImage();
-            }}
-            className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-300 z-[10000] shadow-lg hover:scale-110 active:scale-95"
-            aria-label="Previous image"
-          >
-            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+            {/* Right: Controls */}
+            <div className="flex items-center gap-2">
+              {/* Fullscreen button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreen();
+                }}
+                className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all duration-200 hover:scale-105"
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              >
+                {isFullscreen ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                  </svg>
+                )}
+              </button>
 
-          {/* Next button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              nextImage();
-            }}
-            className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 active:bg-white/40 rounded-full flex items-center justify-center text-white transition-all duration-300 z-[10000] shadow-lg hover:scale-110 active:scale-95"
-            aria-label="Next image"
-          >
-            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-
-          {/* Media container - Image or Video */}
-          <div
-            className="relative max-w-4xl max-h-[80vh] w-full h-full flex items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Loading spinner */}
-            {imageLoading && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-              </div>
-            )}
-
-            {/* Error state */}
-            {imageError && (
-              <div className="flex flex-col items-center justify-center text-white p-8">
-                <svg className="w-16 h-16 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={closeModal}
+                className="w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-all duration-200 hover:scale-105"
+                aria-label="Close modal"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                <p className="text-lg font-semibold mb-2">{t('galleryPage.imageLoadError')}</p>
-                <p className="text-gray-300 text-center">{t('galleryPage.imageSorry')}</p>
-              </div>
-            )}
+              </button>
+            </div>
+          </div>
 
-            {/* Main media - Image or Video */}
-            {images[selectedImage].image_url?.match(/\.(mp4|webm|ogg|mov)$/i) ? (
-              <video
-                src={images[selectedImage].image_url}
-                controls
-                autoPlay
-                loop
-                className={`max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-                onLoadedData={() => {
-                  console.log('[GalleryClient Modal] Video loaded:', images[selectedImage].title);
-                  setImageLoading(false);
-                  setImageError(false);
-                }}
-                onError={() => {
-                  console.error('[GalleryClient Modal] Video failed to load:', {
-                    title: images[selectedImage].title,
-                    url: images[selectedImage].image_url,
-                    index: selectedImage
-                  });
-                  setImageLoading(false);
-                  setImageError(true);
-                }}
-              />
-            ) : (
-              <img
-                src={images[selectedImage].image_url}
-                alt={images[selectedImage].title}
-                className={`max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-                onLoad={() => {
-                  console.log('[GalleryClient Modal] Image loaded:', images[selectedImage].title);
-                  setImageLoading(false);
-                  setImageError(false);
-                }}
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  console.error('[GalleryClient Modal] Image failed to load:', {
-                    title: images[selectedImage].title,
-                    url: images[selectedImage].image_url
-                  });
-                  setImageLoading(false);
-                  setImageError(true);
-                }}
-              />
-            )}
+          {/* Main content area */}
+          <div className="flex-1 flex items-center justify-center relative px-4 py-2 min-h-0">
+            {/* Previous button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                prevImage();
+              }}
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all duration-200 z-10 hover:scale-110"
+              aria-label="Previous image"
+            >
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
 
-            {/* Image info - only show when image is loaded and no error */}
-            {!imageLoading && !imageError && (
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 sm:p-6 rounded-b-lg">
-                <h3 className="text-white text-lg sm:text-xl font-semibold mb-1 sm:mb-2">
+            {/* Next button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                nextImage();
+              }}
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all duration-200 z-10 hover:scale-110"
+              aria-label="Next image"
+            >
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* Media container - constrained size */}
+            <div
+              className="relative w-full max-w-5xl max-h-full flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Loading spinner - modern */}
+              {imageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 opacity-20 blur-lg animate-pulse" />
+                    <div className="absolute inset-0 rounded-full border-4 border-white/20" />
+                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-yellow-400 border-r-amber-500 animate-spin" />
+                  </div>
+                </div>
+              )}
+
+              {/* Error state */}
+              {imageError && (
+                <div className="flex flex-col items-center justify-center text-white p-8">
+                  <svg className="w-16 h-16 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-lg font-semibold mb-2">{t('galleryPage.imageLoadError')}</p>
+                  <p className="text-gray-300 text-center">{t('galleryPage.imageSorry')}</p>
+                </div>
+              )}
+
+              {/* Main media - Image or Video with constrained dimensions */}
+              {images[selectedImage].image_url?.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                <video
+                  src={images[selectedImage].image_url}
+                  controls
+                  autoPlay
+                  loop
+                  className={`w-auto h-auto max-w-full max-h-[60vh] sm:max-h-[65vh] object-contain rounded-lg shadow-2xl transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+                  onLoadedData={() => {
+                    console.log('[GalleryClient Modal] Video loaded:', images[selectedImage].title);
+                    setImageLoading(false);
+                    setImageError(false);
+                  }}
+                  onError={() => {
+                    console.error('[GalleryClient Modal] Video failed to load');
+                    setImageLoading(false);
+                    setImageError(true);
+                  }}
+                />
+              ) : (
+                <img
+                  src={images[selectedImage].image_url}
+                  alt={images[selectedImage].title}
+                  className={`w-auto h-auto max-w-full max-h-[60vh] sm:max-h-[65vh] object-contain rounded-lg shadow-2xl transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+                  onLoad={() => {
+                    console.log('[GalleryClient Modal] Image loaded:', images[selectedImage].title);
+                    setImageLoading(false);
+                    setImageError(false);
+                  }}
+                  onError={() => {
+                    console.error('[GalleryClient Modal] Image failed to load');
+                    setImageLoading(false);
+                    setImageError(true);
+                  }}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Bottom info bar - always visible */}
+          {!imageLoading && !imageError && (
+            <div 
+              className="flex-shrink-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent px-4 sm:px-8 py-4 sm:py-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="max-w-4xl mx-auto">
+                <h3 className="text-white text-lg sm:text-xl font-bold mb-2">
                   {images[selectedImage].title}
                 </h3>
-                <p className="text-gray-300 text-sm sm:text-base">
-                  {images[selectedImage].description}
-                </p>
+                {images[selectedImage].description && (
+                  <p className="text-gray-300 text-sm sm:text-base line-clamp-3">
+                    {images[selectedImage].description}
+                  </p>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Image counter */}
-          <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1 sm:px-4 sm:py-2">
-            <span className="text-white text-xs sm:text-sm font-medium">
-              {selectedImage + 1} / {images.length}
-            </span>
-          </div>
-
-          {/* ESC hint - Hide on mobile */}
-          <div className="hidden sm:block absolute top-6 left-6 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2">
-            <span className="text-white text-sm">Press ESC to close</span>
+          {/* ESC hint - desktop only */}
+          <div className="hidden sm:block absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2">
+            <span className="text-white/70 text-xs">Tekan ESC untuk menutup</span>
           </div>
         </div>
       )}

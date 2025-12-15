@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { uploadWithProgress } from '@/lib/client/uploadWithProgress';
 import ImageUploadField from '@/components/ImageUploadField';
+import { LoadingSection } from '@/components/ui/LoadingSpinner';
 import { FaUsers, FaPlus, FaEdit, FaTrash, FaTimes, FaUserShield, FaUserCheck, FaBan, FaEnvelope, FaIdCard, FaClock, FaEye, FaSchool, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 interface User {
@@ -384,13 +385,8 @@ export default function UsersPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-600 border-t-transparent mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium">Memuat data...</p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <LoadingSection text="Memuat data users..." variant="gradient" />
       </div>
     );
   }
