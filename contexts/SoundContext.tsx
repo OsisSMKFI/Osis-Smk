@@ -197,13 +197,17 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
   // Toggle sound with enable jingle
   const toggleSound = useCallback(() => {
+    // Initialize AudioContext on toggle (user interaction)
+    const ctx = initAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    
     setSoundEnabled(prev => {
       const newVal = !prev;
-      if (newVal) {
+      if (newVal && ctx) {
         // Play enable sound after short delay
         setTimeout(() => {
-          const ctx = initAudioContext();
-          if (!ctx) return;
           try {
             if (ctx.state === 'suspended') ctx.resume();
             const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
