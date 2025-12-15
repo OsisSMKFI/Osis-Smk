@@ -39,8 +39,11 @@ export function SoundManagerProvider({ children }: { children: React.ReactNode }
   const [masterVolume, setMasterVolumeState] = useState(0.5);
   const [isReady, setIsReady] = useState(false);
 
-  // Initialize sounds
+  // Initialize sounds - DISABLED: Using Web Audio API oscillators from SoundContext instead
   useEffect(() => {
+    // Skip MP3 loading - we use Web Audio API oscillators instead
+    console.log('[SoundManager] Initialized (MP3 loading disabled) - v3');
+    
     // Check if sounds are disabled
     const savedMuted = localStorage.getItem('soundMuted');
     const savedVolume = localStorage.getItem('soundVolume');
@@ -48,19 +51,19 @@ export function SoundManagerProvider({ children }: { children: React.ReactNode }
     if (savedMuted === 'true') setIsMuted(true);
     if (savedVolume) setMasterVolumeState(parseFloat(savedVolume));
 
-    // Preload sounds
-    Object.entries(SOUNDS).forEach(([id, path]) => {
-      const audio = new Audio();
-      audio.preload = 'auto';
-      audio.src = path;
-      audio.volume = masterVolume;
-      
-      sounds.current.set(id, {
-        id,
-        audio,
-        volume: 1,
-      });
-    });
+    // DISABLED: Don't preload MP3 files - using Web Audio API instead
+    // Object.entries(SOUNDS).forEach(([id, path]) => {
+    //   const audio = new Audio();
+    //   audio.preload = 'auto';
+    //   audio.src = path;
+    //   audio.volume = masterVolume;
+    //   
+    //   sounds.current.set(id, {
+    //     id,
+    //     audio,
+    //     volume: 1,
+    //   });
+    // });
 
     setIsReady(true);
 
