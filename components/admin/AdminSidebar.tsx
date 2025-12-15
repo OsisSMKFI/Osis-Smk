@@ -101,9 +101,13 @@ export default function AdminSidebar() {
       <aside
         className={`
           fixed top-0 left-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
-          text-white shadow-2xl z-[56] transition-all duration-300 ease-in-out
+          text-white shadow-2xl transition-transform duration-300 ease-in-out
           ${collapsed ? 'w-20' : 'w-72'}
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          lg:translate-x-0 lg:z-40
+          ${mobileOpen 
+            ? 'translate-x-0 z-[56]' 
+            : '-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0'
+          }
         `}
       >
         {/* Header */}
