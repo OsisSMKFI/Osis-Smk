@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import { FaPoll, FaCheckCircle } from 'react-icons/fa';
+import { useHomePageContext, Poll as ContextPoll } from '@/contexts/HomePageDataContext';
 
 interface PollOption {
   id: string;
@@ -19,33 +20,25 @@ interface Poll {
 }
 
 export default function PollsWidget() {
+  const { polls: contextPolls, loading } = useHomePageContext();
   const [polls, setPolls] = useState<Poll[]>([]);
-  const [loading, setLoading] = useState(true);
   const [votedPolls, setVotedPolls] = useState<Set<string>>(new Set());
   const [voting, setVoting] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPolls();
+    // Sync with context polls when they change
+    if (contextPolls.length > 0) {
+      setPolls(contextPolls as Poll[]);
+    }
+  }, [contextPolls]);
+
+  useEffect(() => {
     // Load voted polls from localStorage
     const voted = localStorage.getItem('voted_polls');
     if (voted) {
       setVotedPolls(new Set(JSON.parse(voted)));
     }
   }, []);
-
-  const fetchPolls = async () => {
-    try {
-      const response = await apiFetch('/api/polls');
-      if (response.ok) {
-        const data = await safeJson(response, { url: '/api/polls', method: 'GET' });
-        setPolls(data.polls || []);
-      }
-    } catch (error) {
-      console.error('Error fetching polls:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleVote = async (pollId: string, optionId: string) => {
     if (votedPolls.has(pollId) || voting) return;

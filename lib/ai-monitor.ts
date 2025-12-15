@@ -229,6 +229,10 @@ function monitorUserBehavior() {
   });
 }
 
+// Track slow API calls to prevent spam
+const slowApiCalls = new Set<string>();
+const SLOW_API_DEBOUNCE = 30000; // 30 seconds debounce
+
 /**
  * Network Monitoring
  */
@@ -242,11 +246,15 @@ function monitorNetwork() {
       const response = await originalFetch(...args);
       const duration = Date.now() - startTime;
 
-      // Monitor slow API calls
-      if (duration > 3000) {
+      // Monitor slow API calls (increased threshold to 10s, with debounce)
+      const urlKey = typeof args[0] === 'string' ? args[0] : 'unknown';
+      if (duration > 10000 && !slowApiCalls.has(urlKey)) {
+        slowApiCalls.add(urlKey);
+        setTimeout(() => slowApiCalls.delete(urlKey), SLOW_API_DEBOUNCE);
+        
         reportToAI({
           type: 'client_error',
-          severity: 'medium',
+          severity: 'low', // Changed from medium to low
           message: `Slow API call: ${duration}ms`,
           data: {
             url: args[0],

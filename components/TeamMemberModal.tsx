@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FaTimes } from 'react-icons/fa';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -54,17 +55,20 @@ const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClo
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+  // Use portal to render at document body level, avoiding z-index stacking context issues
+  if (typeof document === 'undefined') return null;
+  
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] overflow-y-auto cursor-default">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0 cursor-default">
         {/* Background overlay */}
         <div 
-          className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm transition-opacity z-0"
           onClick={onClose}
         ></div>
 
         {/* Modal panel */}
-        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 dark:border-gray-700">
+        <div className="relative z-10 inline-block align-bottom bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 dark:border-gray-700 cursor-auto">
           <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl leading-6 font-bold text-gray-900 dark:text-white">
@@ -124,7 +128,7 @@ const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClo
           <div className="bg-gray-50 dark:bg-gray-700/30 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
-              className="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-base font-bold text-gray-900 hover:from-yellow-400 hover:to-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm transition-all"
+              className="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-base font-bold text-gray-900 hover:from-yellow-400 hover:to-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm transition-all cursor-pointer"
               onClick={onClose}
             >
               {t('common.close') || 'Tutup'}
@@ -134,6 +138,8 @@ const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClo
       </div>
     </div>
   );
+  
+  return createPortal(modalContent, document.body);
 };
 
 export default TeamMemberModal;

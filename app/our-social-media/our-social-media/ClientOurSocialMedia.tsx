@@ -595,10 +595,10 @@ const ClientOurSocialMediaPage: React.FC = () => {
   // Sound effects
   const { playHoverSound, playClickSound, playSuccessSound, isSoundEnabled, setIsSoundEnabled } = useSoundEffects();
   
-  // Scroll progress for parallax
+  // Scroll progress for parallax - use output range that keeps content visible
   const { scrollYProgress } = useScroll();
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0.3]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.98]);
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -661,9 +661,9 @@ const ClientOurSocialMediaPage: React.FC = () => {
   const allContent = useMemo(() => {
     const items: any[] = [];
 
-    (instagramPosts || []).forEach((p: any) => {
+    (instagramPosts || []).forEach((p: any, idx: number) => {
       items.push({
-        id: p.id || Math.random().toString(),
+        id: `ig-${p.id || idx}`,
         platform: 'Instagram',
         title: p.caption || p.title || 'Instagram Post',
         thumbnail: p.image || p.thumbnail || p.media_url,
@@ -672,10 +672,10 @@ const ClientOurSocialMediaPage: React.FC = () => {
       });
     });
 
-    (youtubeVideos || []).forEach((v: any) => {
+    (youtubeVideos || []).forEach((v: any, idx: number) => {
       const thumb = v.thumbnail || (Array.isArray(v.thumbnails) ? v.thumbnails[0]?.url : undefined);
       items.push({
-        id: v.id || Math.random().toString(),
+        id: `yt-${v.id || idx}`,
         platform: 'YouTube',
         title: v.title || 'YouTube Video',
         thumbnail: thumb,
@@ -684,9 +684,9 @@ const ClientOurSocialMediaPage: React.FC = () => {
       });
     });
 
-    (tiktokVideos || []).forEach((t: any) => {
+    (tiktokVideos || []).forEach((t: any, idx: number) => {
       items.push({
-        id: t.id || Math.random().toString(),
+        id: `tt-${t.id || idx}`,
         platform: 'TikTok',
         title: t.caption || t.title || 'TikTok Video',
         thumbnail: t.thumbnail || t.cover,
@@ -735,8 +735,8 @@ const ClientOurSocialMediaPage: React.FC = () => {
         className="relative min-h-[85vh] md:min-h-screen flex items-center justify-center overflow-hidden"
         style={{ opacity: heroOpacity, scale: heroScale }}
       >
-        {/* Animated background */}
-        <div className="absolute inset-0">
+        {/* Animated background - z-0 */}
+        <div className="absolute inset-0 z-0">
           <motion.div
             className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600"
             animate={{
@@ -754,21 +754,25 @@ const ClientOurSocialMediaPage: React.FC = () => {
           <GradientOrb className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" colors={['#fbbf24', '#f97316']} size={500} />
         </div>
 
-        <FloatingParticles />
+        {/* Particles layer - z-[1] */}
+        <div className="absolute inset-0 z-[1] pointer-events-none">
+          <FloatingParticles />
+        </div>
 
-        {/* Grid overlay */}
+        {/* Grid overlay - z-[2] */}
         <div 
-          className="absolute inset-0 opacity-10"
+          className="absolute inset-0 opacity-10 z-[2] pointer-events-none"
           style={{
             backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
           }}
         />
 
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900" />
+        {/* Fade overlay - z-[3] */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900 z-[3] pointer-events-none" />
 
-        {/* Content */}
-        <div className="relative z-10 container mx-auto px-4 text-center py-20">
+        {/* Content - z-[10] */}
+        <div className="relative z-20 container mx-auto px-4 text-center py-20">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1055,7 +1059,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
                   transition={{ duration: 0.3 }}
                 >
                   {filteredContent.map((content, index) => (
-                    <ContentPreviewCard key={content.id} {...content} index={index} />
+                    <ContentPreviewCard key={`${content.platform}-${content.id}-${index}`} {...content} index={index} />
                   ))}
                 </motion.div>
               ) : (

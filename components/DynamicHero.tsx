@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, memo } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getPageContent } from '@/lib/supabase/client';
 import { fetchGlobalBackground, type GlobalBackgroundConfig } from '@/lib/adminSettings.client';
@@ -137,59 +138,93 @@ function DynamicHeroInternal() {
       {!bg.imageUrl && process.env.NODE_ENV === 'development' && (
         <div className="absolute top-2 left-2 z-20 bg-red-600 text-white text-xs px-2 py-1 rounded shadow">No imageUrl</div>
       )}
-      
-      {/* Animated background particles - Only show when no custom background */}
-      {bg.mode === 'none' && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-[1]">
-          <div className="absolute top-20 sm:top-32 left-10 sm:left-20 w-48 sm:w-72 h-48 sm:h-72 bg-yellow-400/10 sm:bg-yellow-400/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-10 sm:bottom-20 right-10 sm:right-20 w-64 sm:w-96 h-64 sm:h-96 bg-blue-400/10 sm:bg-blue-400/20 rounded-full blur-3xl animate-pulse delay-75" />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[25rem] sm:w-[40rem] h-[25rem] sm:h-[40rem] bg-purple-400/5 sm:bg-purple-400/10 rounded-full blur-3xl animate-pulse delay-150" />
-        </div>
-      )}
 
-      {/* Content */}
+      {/* Content with animations */}
       <div className="container mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <div className="max-w-5xl mx-auto">
-          <h1 className="heading-hero text-xl xs:text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold mb-3 xs:mb-4 sm:mb-6 text-white dark:text-gray-100 animate-fade-in-up leading-[1.15] xs:leading-[1.1] sm:leading-tight text-center drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+          {/* Animated Title */}
+          <motion.h1 
+            initial={{ opacity: 0, y: 50, filter: 'blur(10px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="heading-hero text-xl xs:text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold mb-3 xs:mb-4 sm:mb-6 text-white dark:text-gray-100 leading-[1.15] xs:leading-[1.1] sm:leading-tight text-center drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]"
+          >
             {displayTitle}
-          </h1>
+          </motion.h1>
 
-          <div className="inline-block mb-4 xs:mb-5 sm:mb-6 lg:mb-8 animate-fade-in-up animation-delay-200">
-            <p className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-semibold text-yellow-300 dark:text-yellow-300 px-3 xs:px-4 sm:px-6 lg:px-8 py-1.5 xs:py-2 sm:py-2.5 rounded-full bg-white/30 sm:bg-white/25 dark:bg-gray-700/50 backdrop-blur-md border border-white/40 dark:border-gray-600/40 text-center drop-shadow-lg">
+          {/* Animated Subtitle Badge */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5, type: 'spring', stiffness: 200 }}
+            className="inline-block mb-4 xs:mb-5 sm:mb-6 lg:mb-8"
+          >
+            <motion.p 
+              whileHover={{ scale: 1.05 }}
+              className="text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-semibold text-yellow-300 dark:text-yellow-300 px-3 xs:px-4 sm:px-6 lg:px-8 py-1.5 xs:py-2 sm:py-2.5 rounded-full bg-white/30 sm:bg-white/25 dark:bg-gray-700/50 backdrop-blur-md border border-white/40 dark:border-gray-600/40 text-center drop-shadow-lg cursor-default"
+            >
               {displaySubtitle}
-            </p>
-          </div>
+            </motion.p>
+          </motion.div>
 
-          <p className="text-[0.7rem] xs:text-xs sm:text-sm md:text-base lg:text-lg text-blue-50 dark:text-gray-100 mb-6 xs:mb-7 sm:mb-8 lg:mb-10 xl:mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-up animation-delay-400 px-3 xs:px-4 text-center drop-shadow-md">
+          {/* Animated Description */}
+          <motion.p 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+            className="text-[0.7rem] xs:text-xs sm:text-sm md:text-base lg:text-lg text-blue-50 dark:text-gray-100 mb-6 xs:mb-7 sm:mb-8 lg:mb-10 xl:mb-12 max-w-3xl mx-auto leading-relaxed px-3 xs:px-4 text-center drop-shadow-md"
+          >
             {displayDescription}
-          </p>
+          </motion.p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2.5 xs:gap-3 sm:gap-4 justify-center items-stretch sm:items-center animate-fade-in-up animation-delay-600 px-3 xs:px-4">
-            <a 
+          {/* Animated CTA Buttons */}
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.9 }}
+            className="flex flex-col sm:flex-row gap-2.5 xs:gap-3 sm:gap-4 justify-center items-stretch sm:items-center px-3 xs:px-4"
+          >
+            <motion.a 
               href="/about" 
-              className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-yellow-400 hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-gray-900 dark:text-gray-900 font-bold rounded-full transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-xl text-sm sm:text-base text-center min-h-[44px] flex items-center justify-center"
+              whileHover={{ scale: 1.08, boxShadow: '0 20px 40px rgba(251, 191, 36, 0.4)' }}
+              whileTap={{ scale: 0.95 }}
+              className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-yellow-400 hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-gray-900 dark:text-gray-900 font-bold rounded-full transition-colors duration-300 shadow-xl text-sm sm:text-base text-center min-h-[44px] flex items-center justify-center"
               aria-label="Learn more about us"
             >
               {labelAbout}
-            </a>
-            <a 
+            </motion.a>
+            <motion.a 
               href="/gallery" 
-              className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-white/15 hover:bg-white/25 dark:bg-gray-700/50 dark:hover:bg-gray-600/50 backdrop-blur-md text-white dark:text-gray-100 font-bold rounded-full border-2 border-white/40 dark:border-gray-600/50 transition-all duration-300 transform hover:scale-105 hover:shadow-xl shadow-lg text-sm sm:text-base text-center min-h-[44px] flex items-center justify-center"
+              whileHover={{ scale: 1.08, boxShadow: '0 20px 40px rgba(255, 255, 255, 0.2)' }}
+              whileTap={{ scale: 0.95 }}
+              className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-white/15 hover:bg-white/25 dark:bg-gray-700/50 dark:hover:bg-gray-600/50 backdrop-blur-md text-white dark:text-gray-100 font-bold rounded-full border-2 border-white/40 dark:border-gray-600/50 transition-colors duration-300 shadow-lg text-sm sm:text-base text-center min-h-[44px] flex items-center justify-center"
               aria-label="View our photo gallery"
             >
               {labelGallery}
-            </a>
-          </div>
+            </motion.a>
+          </motion.div>
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div className="hidden sm:block absolute bottom-6 sm:bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 rounded-full border-2 border-white/50 flex items-start justify-center p-2">
-          <div className="w-1 h-3 bg-white/70 rounded-full animate-scroll" />
-        </div>
-      </div>
+      {/* Animated Scroll indicator */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.2, duration: 0.5 }}
+        className="hidden sm:block absolute bottom-6 sm:bottom-10 left-1/2 transform -translate-x-1/2"
+      >
+        <motion.div 
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          className="w-6 h-10 rounded-full border-2 border-white/50 flex items-start justify-center p-2"
+        >
+          <motion.div 
+            animate={{ opacity: [1, 0.3, 1], y: [0, 8, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-1 h-3 bg-white/70 rounded-full" 
+          />
+        </motion.div>
+      </motion.div>
     </section>
   );
 }

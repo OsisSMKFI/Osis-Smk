@@ -1,49 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getPublishedPosts } from '@/lib/supabase/client';
 import AnimatedSection from './AnimatedSection';
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 import { PostCard } from './cards/PostCard';
-
-interface Post {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  featured_image: string | null;
-  published_at: string;
-  views: number;
-  author: {
-    name: string;
-    photo_url: string | null;
-  } | null;
-  sekbid: {
-    nama: string;
-    color: string;
-    icon: string;
-  } | null;
-}
+import { useHomePageContext } from '@/contexts/HomePageDataContext';
 
 export default function LatestPostsSection() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadPosts() {
-      try {
-        const data = await getPublishedPosts(3); // Get latest 3 posts
-        setPosts(data);
-      } catch (error) {
-        console.error('Error loading posts:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadPosts();
-  }, []);
+  const { posts, loading } = useHomePageContext();
 
   if (loading) {
     return (
@@ -96,7 +60,7 @@ export default function LatestPostsSection() {
           {/* Posts Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto mb-12">
             {posts.map((post, index) => (
-              <PostCard key={post.id} post={post} index={index} />
+              <PostCard key={post.id} post={post as any} index={index} />
             ))}
           </div>
 

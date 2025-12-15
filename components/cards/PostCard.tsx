@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { FaCalendar, FaEye } from 'react-icons/fa';
 
 interface Author {
@@ -35,29 +37,75 @@ interface PostCardProps {
 export function PostCard({ post, index = 0 }: PostCardProps) {
   const fallbackImage = '/images/default-post.jpg';
   const imageUrl = post.featured_image || fallbackImage;
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  
+  // 3D tilt effect
+  const rotateX = useMotionValue(0);
+  const rotateY = useMotionValue(0);
+  const springConfig = { stiffness: 300, damping: 30 };
+  const rotateXSpring = useSpring(rotateX, springConfig);
+  const rotateYSpring = useSpring(rotateY, springConfig);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const mouseX = e.clientX - centerX;
+    const mouseY = e.clientY - centerY;
+    rotateX.set((mouseY / (rect.height / 2)) * -8);
+    rotateY.set((mouseX / (rect.width / 2)) * 8);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    rotateX.set(0);
+    rotateY.set(0);
+  };
   
   // Tiny blur placeholder (1x1 transparent gray)
   const blurDataURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
   return (
-    <Link
-      href={`/posts/${post.slug}`}
-      className="group block rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
-      style={{ animationDelay: `${index * 100}ms` }}
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateX: rotateXSpring,
+        rotateY: rotateYSpring,
+        transformStyle: 'preserve-3d',
+        perspective: '1000px',
+      }}
+      className="relative"
     >
-      {/* Glassmorphism Card */}
-      <div className="h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/20 dark:border-gray-700/50 shadow-lg">
+      <Link
+        href={`/posts/${post.slug}`}
+        className="group block rounded-2xl overflow-hidden"
+      >
+        {/* Glassmorphism Card */}
+        <motion.div 
+          className="h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/20 dark:border-gray-700/50 shadow-lg rounded-2xl overflow-hidden"
+          whileHover={{ scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        >
         
-        {/* Featured Image with fixed aspect ratio */}
-        <div className="relative aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-800">
-          <Image
-            src={imageUrl}
-            alt={post.title}
-            fill
-            priority={index === 0}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            placeholder="blur"
-            blurDataURL={blurDataURL}
+          {/* Featured Image with fixed aspect ratio */}
+          <div className="relative aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-800">
+            <Image
+              src={imageUrl}
+              alt={post.title}
+              fill
+              priority={index === 0}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              placeholder="blur"
+              blurDataURL={blurDataURL}
             className="object-cover group-hover:scale-110 transition-transform duration-500"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -129,7 +177,13 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
             </span>
           </div>
         </div>
-      </div>
-    </Link>
+        
+        {/* Glare effect on hover */}
+        {isHovered && (
+          <div className="absolute inset-0 pointer-events-none rounded-2xl bg-gradient-to-br from-white/25 via-transparent to-transparent opacity-50" />
+        )}
+        </motion.div>
+      </Link>
+    </motion.div>
   );
 }

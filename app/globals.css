@@ -151,17 +151,17 @@ html.light {
 
 /* Dark mode via class selector */
 html.dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --gradient-bg: linear-gradient(to bottom, #111827 0%, #1f2937 50%, #0f172a 100%);
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --gradient-bg: linear-gradient(180deg, #0f172a 0%, #1e293b 30%, #1e3a5f 60%, #0f172a 100%);
 
-  --surface: #0f172a;
-  --surface-alt: #1e293b;
-  --surface-muted: #27354a;
-  --surface-inset: #162131;
-  --border: #334155;
-  --border-alt: #1e293b;
-  --border-strong: #475569;
+  --surface: #1e293b;
+  --surface-alt: #1e3a5f;
+  --surface-muted: #334155;
+  --surface-inset: #0f172a;
+  --border: #475569;
+  --border-alt: #334155;
+  --border-strong: #64748b;
   --text-primary: #f8fafc;
   --text-secondary: #e2e8f0;
   --text-muted: #94a3b8;

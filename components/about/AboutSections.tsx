@@ -457,6 +457,8 @@ interface TeamCardProps {
 }
 
 export function TeamCard3D({ member, index, onClick, colorIndex }: TeamCardProps) {
+  const [isFlipping, setIsFlipping] = useState(false);
+  
   const gradients = [
     'from-yellow-400 to-amber-500',
     'from-blue-400 to-blue-600',
@@ -468,15 +470,40 @@ export function TeamCard3D({ member, index, onClick, colorIndex }: TeamCardProps
   ];
 
   const gradient = gradients[colorIndex ?? index % gradients.length];
+  
+  const handleClick = () => {
+    setIsFlipping(true);
+    // Trigger modal immediately, don't wait for animation
+    onClick(member);
+    // Reset flip state after animation completes
+    setTimeout(() => {
+      setIsFlipping(false);
+    }, 600);
+  };
 
   return (
     <Reveal direction="up" delay={index * 0.1}>
       <FloatingElement intensity={10}>
-        <div className="group relative cursor-pointer" onClick={() => onClick(member)}>
+        <motion.div 
+          className="group relative cursor-pointer" 
+          onClick={handleClick}
+          style={{ perspective: 1000 }}
+        >
           {/* Glow Effect */}
-          <div className={`absolute -inset-1 bg-gradient-to-r ${gradient} rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-300`} />
+          <motion.div 
+            className={`absolute -inset-1 bg-gradient-to-r ${gradient} rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-300`}
+            animate={isFlipping ? { opacity: 0.6, scale: 1.1 } : {}}
+          />
           
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
+          <motion.div 
+            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200/50 dark:border-gray-700/50"
+            animate={isFlipping ? { 
+              rotateY: [0, 180, 360],
+              scale: [1, 0.9, 1]
+            } : {}}
+            transition={isFlipping ? { duration: 0.6, ease: 'easeInOut' } : {}}
+            style={{ transformStyle: 'preserve-3d' }}
+          >
             {/* Image Container */}
             <div className="relative h-80 overflow-hidden">
               <motion.img 
@@ -494,13 +521,25 @@ export function TeamCard3D({ member, index, onClick, colorIndex }: TeamCardProps
                 </div>
               </div>
 
-              {/* View Button */}
+              {/* View Button with pulse animation */}
               <motion.div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white/20 backdrop-blur-sm border-2 border-white/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100"
-                whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.2 }}
+                whileHover={{ scale: 1.2 }}
+                animate={{ 
+                  boxShadow: ['0 0 0 0 rgba(255,255,255,0.4)', '0 0 0 20px rgba(255,255,255,0)', '0 0 0 0 rgba(255,255,255,0.4)']
+                }}
+                transition={{ 
+                  boxShadow: { duration: 2, repeat: Infinity },
+                  scale: { duration: 0.2 }
+                }}
               >
-                <span className="text-white text-2xl">👤</span>
+                <motion.span 
+                  className="text-white text-2xl"
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  👤
+                </motion.span>
               </motion.div>
             </div>
 
@@ -516,13 +555,27 @@ export function TeamCard3D({ member, index, onClick, colorIndex }: TeamCardProps
                 {member.description}
               </p>
 
-              {/* Bottom Decoration */}
-              <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-                <div className={`w-10 h-1 bg-gradient-to-r ${gradient} rounded-full mx-auto opacity-60 group-hover:opacity-100 transition-opacity`} />
+              {/* Animated dots */}
+              <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50 flex justify-center gap-1">
+                {[...Array(3)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className={`w-2 h-2 rounded-full bg-gradient-to-r ${gradient}`}
+                    animate={{ 
+                      y: [0, -4, 0],
+                      opacity: [0.5, 1, 0.5]
+                    }}
+                    transition={{ 
+                      duration: 1, 
+                      delay: i * 0.15,
+                      repeat: Infinity
+                    }}
+                  />
+                ))}
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </FloatingElement>
     </Reveal>
   );

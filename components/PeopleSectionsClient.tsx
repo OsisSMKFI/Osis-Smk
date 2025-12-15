@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion, type Variants } from 'framer-motion';
 import AnimatedSection from '@/components/AnimatedSection';
-import MemberCard from '@/components/MemberCard';
+import InteractiveMemberCard from '@/components/InteractiveMemberCard';
 import MemberStats from '@/components/MemberStats';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -185,7 +185,7 @@ export default function PeopleSectionsClient({ members }: Props) {
         >
           {group.map((member, i) => (
             <motion.div key={member.id} variants={itemVariants}>
-              <MemberCard member={member} delay={i * 100} />
+              <InteractiveMemberCard member={member} delay={i * 100} />
             </motion.div>
           ))}
         </motion.div>
@@ -219,7 +219,7 @@ export default function PeopleSectionsClient({ members }: Props) {
           variants={itemVariants}
         >
           <div className="max-w-md">
-            {ketua ? <MemberCard member={ketua} isLeader delay={0} /> : (
+            {ketua ? <InteractiveMemberCard member={ketua} isLeader delay={0} /> : (
               <div className="text-center text-gray-500">Belum ada data Ketua</div>
             )}
           </div>
@@ -251,7 +251,7 @@ export default function PeopleSectionsClient({ members }: Props) {
         >
           {pengurusInti.map((member, i) => (
             <motion.div key={member.id} variants={itemVariants}>
-              <MemberCard member={member} delay={i * 100} />
+              <InteractiveMemberCard member={member} delay={i * 100} />
             </motion.div>
           ))}
         </motion.div>
@@ -282,7 +282,7 @@ export default function PeopleSectionsClient({ members }: Props) {
         >
           {koordinatorSekbid.map((member, i) => (
             <motion.div key={member.id} variants={itemVariants}>
-              <MemberCard member={member} delay={i * 100} />
+              <InteractiveMemberCard member={member} delay={i * 100} />
             </motion.div>
           ))}
         </motion.div>
@@ -330,7 +330,7 @@ export default function PeopleSectionsClient({ members }: Props) {
                 >
                   {orphanedMembers.map((member, i) => (
                     <motion.div key={member.id} variants={itemVariants}>
-                      <MemberCard member={member} delay={i * 100} />
+                      <InteractiveMemberCard member={member} delay={i * 100} />
                     </motion.div>
                   ))}
                 </motion.div>
@@ -354,7 +354,7 @@ export default function PeopleSectionsClient({ members }: Props) {
                 >
                   {anggotaNoSek.map((member, i) => (
                     <motion.div key={member.id} variants={itemVariants}>
-                      <MemberCard member={member} delay={i * 100} />
+                      <InteractiveMemberCard member={member} delay={i * 100} />
                     </motion.div>
                   ))}
                 </motion.div>

@@ -1,17 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FaBullhorn, FaExclamationTriangle, FaExclamationCircle, FaInfoCircle, FaChevronDown, FaChevronUp } from 'react-icons/fa';
-import { getActiveAnnouncements } from '@/lib/supabase/client';
-
-interface Announcement {
-  id: string;
-  title: string;
-  content: string;
-  priority: 'urgent' | 'high' | 'medium' | 'low' | 'normal';
-  created_at: string;
-  expires_at: string | null;
-}
+import { useHomePageContext, Announcement } from '@/contexts/HomePageDataContext';
 
 const priorityConfig = {
   urgent: { 
@@ -47,24 +38,8 @@ const priorityConfig = {
 };
 
 export default function AnnouncementsWidget() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { announcements, loading } = useHomePageContext();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        const data = await getActiveAnnouncements();
-        console.log('[AnnouncementsWidget] Loaded announcements:', data.length);
-        setAnnouncements(data.slice(0, 5)); // Show latest 5
-      } catch (error) {
-        console.error('[AnnouncementsWidget] Error fetching announcements:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAnnouncements();
-  }, []);
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);

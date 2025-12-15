@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { SoundProvider } from '@/contexts/SoundContext';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import PageTransition from './PageTransition';
@@ -12,6 +13,7 @@ import SmoothScroll from './SmoothScroll';
 import ClientOnly from './ClientOnly';
 import { SessionProvider } from 'next-auth/react';
 import { SecurityAnalyzerProvider } from './SecurityAnalyzerProvider';
+import GlobalSoundInteraction from './GlobalSoundInteraction';
 
 // Lazy load ExperienceProvider to prevent blocking initial render
 const ExperienceProvider = lazy(() => 
@@ -48,6 +50,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   );
   // Only show intro on homepage
   const showIntro = pathname === '/' || pathname === '/home' || pathname === '/beranda';
+  
+  // Pages with fullscreen hero that handle their own padding
+  // These pages should NOT have nav-offset padding added by wrapper
+  const HERO_PAGES = ['/', '/home', '/beranda', '/about', '/our-social-media'];
+  const hasFullscreenHero = HERO_PAGES.includes(pathname || '');
+  
+  // Only add padding if public page WITHOUT fullscreen hero
+  const shouldAddPadding = isPublicPage && !hasFullscreenHero;
 
   return (
     <SessionProvider>
@@ -55,6 +65,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <LanguageProvider>
           <ThemeProvider>
             <ToastProvider>
+            <SoundProvider>
+            <GlobalSoundInteraction />
             <SmoothScroll>
               {/* 3D Experience - on all public pages */}
               {show3DExperience ? (
@@ -64,7 +76,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                       <ClientOnly><Navbar /></ClientOnly>
                     )}
                     <PageTransition>
-                      <div style={isPublicPage ? { paddingTop: 'var(--nav-offset)' } : undefined}>
+                      <div style={shouldAddPadding ? { paddingTop: 'var(--nav-offset)' } : undefined}>
                         {children}
                       </div>
                     </PageTransition>
@@ -76,7 +88,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                       <ClientOnly><Navbar /></ClientOnly>
                     )}
                     <PageTransition>
-                      <div style={isPublicPage ? { paddingTop: 'var(--nav-offset)' } : undefined}>
+                      <div style={shouldAddPadding ? { paddingTop: 'var(--nav-offset)' } : undefined}>
                         {children}
                       </div>
                     </PageTransition>
@@ -94,7 +106,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   <PageTransition>
                     <div 
                       className={isPublicPage ? '' : ''} 
-                      style={isPublicPage ? { paddingTop: 'var(--nav-offset)' } : undefined}
+                      style={shouldAddPadding ? { paddingTop: 'var(--nav-offset)' } : undefined}
                       suppressHydrationWarning
                     >
                       {children}
@@ -105,6 +117,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 </>
               )}
             </SmoothScroll>
+          </SoundProvider>
           </ToastProvider>
         </ThemeProvider>
       </LanguageProvider>
