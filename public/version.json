@@ -1,11 +1,11 @@
 {
-  "version": "0.1.6",
-  "buildTime": "2025-12-15T13:15:00+07:00",
+  "version": "0.1.7",
+  "buildTime": "2025-01-19T12:00:00+07:00",
   "changes": [
-    "Performance optimizations for low-end devices",
-    "Reduced motion support",
-    "Optimized 3D background",
-    "Hardware acceleration CSS",
-    "Changed button text to Lihat Info Terkini"
+    "Loading screen theme sync (light/dark)",
+    "PageTransition optimized - faster animations",
+    "Disabled all 3D/WebGL effects for maximum performance",
+    "Reduced blur effects",
+    "Simplified curtain animation"
   ]
 }

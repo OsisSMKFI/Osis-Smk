@@ -14,6 +14,19 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
   message = "Memuat halaman..." 
 }) => {
   const [dots, setDots] = useState('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  // Sync with system/stored theme
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme === 'dark' || storedTheme === 'light') {
+      setTheme(storedTheme);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+    } else {
+      setTheme('light');
+    }
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -25,40 +38,21 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
 
   if (!isVisible) return null;
 
+  // Theme-aware colors
+  const bgClass = theme === 'dark' 
+    ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
+    : 'bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50';
+  const textClass = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
+  const progressBgClass = theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-300/50';
+  const progressTextClass = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+
   return (
-    <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center" suppressHydrationWarning>
-      {/* Background Animation */}
+    <div className={`fixed inset-0 z-[9999] ${bgClass} flex items-center justify-center`} suppressHydrationWarning>
+      {/* Background Animation - Simplified for performance */}
       <div className="absolute inset-0 overflow-hidden" suppressHydrationWarning>
-        {/* Animated Grid */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="grid grid-cols-8 grid-rows-8 h-full w-full">
-            {[...Array(64)].map((_, i) => (
-              <div 
-                key={i} 
-                className="border border-yellow-400/20 animate-pulse"
-                style={{ animationDelay: `${i * 0.05}s` }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Floating Particles */}
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-yellow-400/30 rounded-full animate-float"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${i * 0.1}s`,
-              animationDuration: `${2 + Math.random() * 2}s`
-            }}
-          />
-        ))}
-
-        {/* Gradient Orbs */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-yellow-400/10 to-amber-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-r from-blue-400/10 to-indigo-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+        {/* Simplified Gradient Orbs - reduced blur for performance */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-yellow-400/10 to-amber-500/10 rounded-full blur-2xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-r from-blue-400/10 to-indigo-500/10 rounded-full blur-2xl" />
       </div>
 
       {/* Main Content */}
@@ -88,10 +82,10 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
           <p className="text-yellow-400 font-medium text-lg">Dirgantara 2025</p>
         </div>
 
-        {/* Loading Animation */}
+        {/* Loading Animation - Simplified */}
         <div className="mb-6">
           <div className="flex justify-center space-x-2 mb-4">
-            {[...Array(5)].map((_, i) => (
+            {[0, 1, 2, 3, 4].map((i) => (
               <div
                 key={i}
                 className="w-3 h-8 bg-gradient-to-t from-yellow-400 to-amber-500 rounded-full animate-bounce"
@@ -104,7 +98,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
           </div>
           
           {/* Loading Text */}
-          <p className="text-gray-300 text-lg">
+          <p className={`${textClass} text-lg`}>
             {message}{dots}
           </p>
         </div>
@@ -112,30 +106,17 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
         {/* Progress Bar */}
         {progress > 0 && (
           <div className="w-80 mx-auto">
-            <div className="bg-gray-700/50 rounded-full h-2 overflow-hidden">
+            <div className={`${progressBgClass} rounded-full h-2 overflow-hidden`}>
               <div
-                className="bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 h-2 rounded-full transition-all duration-300 relative"
+                className="bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(progress, 100)}%` }}
-              >
-                {/* Shimmer Effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-              </div>
+              />
             </div>
-            <p className="text-gray-400 text-sm mt-2">
+            <p className={`${progressTextClass} text-sm mt-2`}>
               {Math.round(progress)}%
             </p>
           </div>
         )}
-
-        {/* Decorative Elements */}
-        <div className="absolute -top-8 -left-8 w-4 h-4 bg-yellow-400/60 rounded-full animate-bounce" 
-             style={{ animationDelay: '0.5s' }} />
-        <div className="absolute -top-4 -right-12 w-3 h-3 bg-blue-400/60 rounded-full animate-bounce" 
-             style={{ animationDelay: '1s' }} />
-        <div className="absolute -bottom-6 -left-10 w-2 h-2 bg-purple-400/60 rounded-full animate-bounce" 
-             style={{ animationDelay: '1.5s' }} />
-        <div className="absolute -bottom-8 -right-8 w-3 h-3 bg-green-400/60 rounded-full animate-bounce" 
-             style={{ animationDelay: '2s' }} />
       </div>
     </div>
   );

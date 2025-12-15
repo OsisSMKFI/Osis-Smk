@@ -47,11 +47,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   
   // Show 3D experience on all public pages (not admin, register, or special pages)
   const isPublicPage = !isAdminPage && !isRegisterPage;
-  const show3DExperience = isPublicPage && PUBLIC_PAGES_WITH_3D.some(p => 
-    pathname === p || pathname?.startsWith(p + '/')
-  );
-  // Only show intro on homepage
-  const showIntro = pathname === '/' || pathname === '/home' || pathname === '/beranda';
+  
+  // PERFORMANCE: Disable 3D experience for now - too laggy
+  const show3DExperience = false;
+  
+  // Only show intro on homepage - DISABLED for performance
+  const showIntro = false;
   
   // Pages with fullscreen hero that handle their own padding
   // These pages should NOT have nav-offset padding added by wrapper

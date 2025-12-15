@@ -8,11 +8,20 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "github": {
-    "autoAlias": false,
+    "autoAlias": true,
     "silent": false,
     "autoJobCancelation": false
   },
   "headers": [
+    {
+      "source": "/version.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [
