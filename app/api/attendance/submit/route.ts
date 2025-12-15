@@ -98,49 +98,24 @@ export async function POST(request: NextRequest) {
       .eq('key', 'location_required')
       .single();
     
-    // Default to TRUE (strict mode) for security
-    const wifiRequired = wifiSetting?.value !== 'false'; 
-    const locationRequired = locationSetting?.value !== 'false';
+    // WiFi is ALWAYS optional in browser - browsers cannot reliably detect WiFi SSID
+    // We only log WiFi info if provided, but never block attendance
+    const wifiRequired = false; // Browser limitation - cannot detect WiFi SSID
+    const locationRequired = locationSetting?.value !== 'false'; // Location can still be required
 
     console.log('[Attendance Submit] 🔒 Security Settings:', {
-      wifiRequired: wifiRequired ? '✅ STRICT' : '⚠️ BYPASS',
+      wifiRequired: '⚠️ DISABLED (browser limitation)',
       locationRequired: locationRequired ? '✅ STRICT' : '⚠️ BYPASS',
-      providedWiFi: body.wifiSSID,
+      providedWiFi: body.wifiSSID || 'not provided',
       providedLocation: `${body.latitude},${body.longitude}`,
     });
 
-    // CONDITIONAL WiFi validation
-    if (wifiRequired) {
-      const allowedWiFiList = locationConfigs[0].allowed_wifi_ssids || [];
-      const providedWiFi = body.wifiSSID?.trim() || '';
-      const isWiFiValid = allowedWiFiList.length === 0 || allowedWiFiList.some((ssid: string) => 
-        ssid.toLowerCase() === providedWiFi.toLowerCase()
-      );
-      
-      if (!isWiFiValid) {
-        console.error('[Attendance Submit] ❌ WiFi validation failed:', {
-          provided: providedWiFi,
-          allowed: allowedWiFiList
-        });
-        
-        return NextResponse.json(
-          { 
-            error: 'WiFi tidak valid! Anda harus terhubung ke WiFi sekolah yang terdaftar.',
-            details: {
-              providedWiFi: providedWiFi,
-              allowedWiFi: allowedWiFiList,
-              hint: allowedWiFiList.length > 0 
-                ? 'Pastikan terhubung ke: ' + allowedWiFiList.join(', ')
-                : 'Belum ada WiFi terdaftar - hubungi admin'
-            }
-          },
-          { status: 403 }
-        );
-      }
-      
-      console.log('[Attendance Submit] ✅ WiFi validated (STRICT MODE):', providedWiFi);
+    // WiFi validation SKIPPED - browser cannot detect WiFi SSID reliably
+    // We still log the network info for security auditing if provided
+    if (body.wifiSSID) {
+      console.log('[Attendance Submit] 📶 WiFi info captured for logging:', body.wifiSSID);
     } else {
-      console.log('[Attendance Submit] ⏭️ WiFi validation BYPASSED (not required)');
+      console.log('[Attendance Submit] 📶 No WiFi info (expected - browser limitation)');
     }
 
     // 2. CONDITIONAL Location validation

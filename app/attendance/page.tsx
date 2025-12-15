@@ -1735,11 +1735,9 @@ export default function AttendancePage() {
   };
 
   const handleSubmitAttendance = async () => {
-    if (!wifiSSID) {
-      toast.error('Silakan masukkan nama WiFi sekolah');
-      return;
-    }
-
+    // WiFi is OPTIONAL - browser cannot reliably detect WiFi SSID
+    // We still capture network info for security logging but don't require it
+    
     if (!locationData) {
       toast.error('Lokasi belum terdeteksi');
       return;

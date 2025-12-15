@@ -1212,7 +1212,7 @@ REMINDER: You have ALL the data above. Answer ONLY from this data. DO NOT halluc
           action: 'send_message',
           description: `AI Chat: ${userQuery.substring(0, 100)}${userQuery.length > 100 ? '...' : ''}`,
           metadata: {
-            provider: result.provider || 'unknown',
+            provider: (result as any).provider || 'unknown',
             query_length: userQuery.length,
             response_length: finalReply.length,
             session_id: sessionId
