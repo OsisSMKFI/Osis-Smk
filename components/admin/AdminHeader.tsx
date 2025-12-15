@@ -57,15 +57,15 @@ export default function AdminHeader() {
 
   return (
     <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700">
-      <div className="flex items-center justify-between px-6 py-4">
-        {/* Search Bar */}
-        <div className="flex-1 max-w-xl">
+      <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4 ml-12 lg:ml-0">
+        {/* Search Bar - hide on mobile */}
+        <div className="hidden sm:block flex-1 max-w-xs md:max-w-md lg:max-w-xl">
           <div className="relative">
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
             <input
               type="text"
-              placeholder="Search posts, events, users..."
-              className="w-full pl-12 pr-4 py-3 rounded-xl border focus:outline-none transition-all"
+              placeholder="Search..."
+              className="w-full pl-9 md:pl-12 pr-3 md:pr-4 py-2 md:py-3 rounded-xl border text-sm focus:outline-none transition-all"
               style={{
                 background: 'var(--input-bg)',
                 color: 'var(--text-primary)',
@@ -76,9 +76,11 @@ export default function AdminHeader() {
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center space-x-4 ml-6">
-          {/* Global Language Toggle */}
-          <LanguageToggle />
+        <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 ml-auto">
+          {/* Global Language Toggle - hide on small mobile */}
+          <div className="hidden xs:block">
+            <LanguageToggle />
+          </div>
 
           {/* Global Theme Toggle */}
           <ThemeToggle />
@@ -87,11 +89,11 @@ export default function AdminHeader() {
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-3 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-all"
+              className="relative p-2 md:p-3 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-all"
             >
-              <FaBell className="text-gray-600 dark:text-gray-300 text-xl" />
+              <FaBell className="text-gray-600 dark:text-gray-300 text-lg md:text-xl" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-red-500 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -99,12 +101,12 @@ export default function AdminHeader() {
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-                <div className="p-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 dark:text-white">
-                  <h3 className="font-bold text-lg">Notifications</h3>
-                  <p className="text-sm opacity-80">{unreadCount} unread</p>
+              <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+                <div className="p-3 md:p-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 dark:text-white">
+                  <h3 className="font-bold text-base md:text-lg">Notifications</h3>
+                  <p className="text-xs md:text-sm opacity-80">{unreadCount} unread</p>
                 </div>
-                <div className="max-h-96 overflow-y-auto">
+                <div className="max-h-72 md:max-h-96 overflow-y-auto">
                   {loadingNotifs && <div className="p-4 text-sm text-stone-500">Loading...</div>}
                   {!loadingNotifs && notifications.length === 0 && (
                     <div className="p-4 text-sm text-stone-500">No notifications</div>
@@ -112,11 +114,11 @@ export default function AdminHeader() {
                   {!loadingNotifs && notifications.map((notif) => (
                     <div
                       key={notif.id}
-                      className={`p-4 border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all cursor-pointer ${
+                      className={`p-3 md:p-4 border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all cursor-pointer ${
                         notif.status !== 'reviewed' ? 'bg-yellow-50 dark:bg-slate-700/50' : ''
                       }`}
                     >
-                      <p className="text-sm text-gray-800 dark:text-white font-medium">
+                      <p className="text-xs md:text-sm text-gray-800 dark:text-white font-medium">
                         {notif.payload?.message || notif.action || JSON.stringify(notif.payload || {}).slice(0, 80)}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

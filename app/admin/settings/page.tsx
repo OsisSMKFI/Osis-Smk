@@ -439,15 +439,15 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminPageShell
-      icon={<FaCog className="w-8 h-8" />}
+      icon={<FaCog className="w-6 h-6 md:w-8 md:h-8" />}
       title="Pengaturan Sistem"
       subtitle="Konfigurasi AI, database, keamanan, dan tampilan website"
       gradient="from-gray-700 to-slate-800"
       actions={(
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             onClick={() => setShowSecrets(!showSecrets)}
-            className="flex items-center space-x-2 bg-white/20 text-white px-4 py-2 rounded-xl font-medium hover:bg-white/30 transition-all backdrop-blur-sm"
+            className="flex items-center justify-center space-x-2 bg-white/20 text-white px-3 md:px-4 py-2 rounded-lg md:rounded-xl font-medium hover:bg-white/30 transition-all backdrop-blur-sm text-sm md:text-base"
           >
             <FaEye />
             <span>{showSecrets ? 'Hide' : 'Show'} Secrets</span>
@@ -455,16 +455,17 @@ export default function AdminSettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center space-x-2 bg-white text-gray-800 px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="flex items-center justify-center space-x-2 bg-white text-gray-800 px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl font-semibold hover:bg-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm md:text-base"
           >
             <FaSave />
-            <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
+            <span className="hidden xs:inline">{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
+            <span className="xs:hidden">{saving ? 'Simpan...' : 'Simpan'}</span>
           </button>
         </div>
       )}
     >
       {message && (
-        <div className={`p-4 rounded-2xl shadow-lg mb-6 ${
+        <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl shadow-lg mb-4 md:mb-6 text-sm md:text-base ${
           message.startsWith('✅') 
             ? 'bg-green-50 border-2 border-green-200 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200' 
             : message.startsWith('⚠️')
@@ -479,62 +480,62 @@ export default function AdminSettingsPage() {
         {Object.entries(SETTINGS_GROUPS).map(([key, group]) => (
           <div 
             key={key}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700"
+            className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700"
           >
             {/* Section Header */}
             <button
               onClick={() => toggleSection(key)}
-              className="w-full p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              className="w-full p-4 md:p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
-              <div className="flex items-center space-x-4">
-                <div className={`p-3 rounded-xl bg-gradient-to-r ${group.color} text-white`}>
+              <div className="flex items-center space-x-3 md:space-x-4">
+                <div className={`p-2 md:p-3 rounded-lg md:rounded-xl bg-gradient-to-r ${group.color} text-white`}>
                   {group.icon}
                 </div>
                 <div className="text-left">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{group.title}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{group.settings.length} pengaturan</p>
+                  <h3 className="text-base md:text-xl font-bold text-gray-900 dark:text-white">{group.title}</h3>
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{group.settings.length} pengaturan</p>
                 </div>
               </div>
               {expandedSections[key] ? (
-                <FaChevronUp className="w-5 h-5 text-gray-400" />
+                <FaChevronUp className="w-4 h-4 md:w-5 md:h-5 text-gray-400 flex-shrink-0" />
               ) : (
-                <FaChevronDown className="w-5 h-5 text-gray-400" />
+                <FaChevronDown className="w-4 h-4 md:w-5 md:h-5 text-gray-400 flex-shrink-0" />
               )}
             </button>
 
             {/* Section Content */}
             {expandedSections[key] && (
-              <div className="p-6 pt-0 space-y-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="p-4 md:p-6 pt-0 space-y-3 md:space-y-4 border-t border-gray-200 dark:border-gray-700">
                 {/* AI Provider Info */}
                 {key === 'ai' && (
-                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-4 space-y-3">
-                    <h4 className="text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center gap-2">
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-lg md:rounded-xl p-3 md:p-4 space-y-2 md:space-y-3">
+                    <h4 className="text-xs md:text-sm font-bold text-purple-900 dark:text-purple-200 flex items-center gap-2">
                       <FaRobot className="text-purple-600" />
                       Multi-Provider AI System
                     </h4>
-                    <div className="space-y-2 text-sm text-purple-800 dark:text-purple-200">
-                      <p className="flex items-start gap-2">
-                        <span className="font-semibold min-w-[100px]">Auto-Detect:</span>
+                    <div className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-purple-800 dark:text-purple-200">
+                      <p className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                        <span className="font-semibold sm:min-w-[100px]">Auto-Detect:</span>
                         <span>Sistem otomatis memilih provider berdasarkan API key yang tersedia</span>
                       </p>
-                      <p className="flex items-start gap-2">
-                        <span className="font-semibold min-w-[100px]">Priority:</span>
+                      <p className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                        <span className="font-semibold sm:min-w-[100px]">Priority:</span>
                         <span>Gemini → OpenAI → Anthropic (menggunakan yang pertama tersedia)</span>
                       </p>
-                      <p className="flex items-start gap-2">
-                        <span className="font-semibold min-w-[100px]">Key Format:</span>
-                        <span>OpenAI: <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded">sk-proj-...</code> | Gemini: <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded">AIza...</code> | Claude: <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded">sk-ant-...</code></span>
+                      <p className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                        <span className="font-semibold sm:min-w-[100px]">Key Format:</span>
+                        <span className="break-all">OpenAI: <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded text-[10px] md:text-xs">sk-proj-...</code> | Gemini: <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded text-[10px] md:text-xs">AIza...</code> | Claude: <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded text-[10px] md:text-xs">sk-ant-...</code></span>
                       </p>
-                      <div className="mt-3 pt-3 border-t border-purple-300 dark:border-purple-600">
-                        <p className="font-semibold mb-1">💡 Cara Setup API Key:</p>
-                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-purple-300 dark:border-purple-600">
+                        <p className="font-semibold mb-1 text-xs md:text-sm">💡 Cara Setup API Key:</p>
+                        <ol className="list-decimal list-inside space-y-0.5 md:space-y-1 ml-1 md:ml-2 text-[10px] md:text-xs">
                           <li><strong>Klik "Show Secrets"</strong> button di pojok kanan atas</li>
                           <li>Field API key akan berubah dari <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded">***</code> menjadi editable</li>
                           <li>Paste API key Anda (pilih salah satu: Gemini, OpenAI, atau Claude)</li>
                           <li>Klik <strong>"Simpan Perubahan"</strong> (pojok kanan atas)</li>
                           <li>Cek console browser untuk log: <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded">[AI] Key status</code></li>
                         </ol>
-                        <p className="mt-2 text-xs bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded p-2">
+                        <p className="mt-2 text-[10px] md:text-xs bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded p-1.5 md:p-2">
                           ⚠️ <strong>Penting:</strong> Jika field masih <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded">***</code>, klik "Show Secrets" dulu sebelum save!
                         </p>
                       </div>

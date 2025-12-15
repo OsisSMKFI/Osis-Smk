@@ -213,20 +213,20 @@ export default function AdminMembersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 p-3 sm:p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <FaUserGraduate className="text-2xl text-white" />
+        <div className="bg-white rounded-xl md:rounded-2xl shadow-lg md:shadow-xl border border-slate-200 p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
+                <FaUserGraduate className="text-lg md:text-2xl text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
                   Manajemen Anggota
                 </h1>
-                <p className="text-slate-500 text-sm mt-1">Kelola data anggota OSIS dengan lengkap</p>
+                <p className="text-slate-500 text-xs md:text-sm mt-0.5 md:mt-1">Kelola data anggota OSIS dengan lengkap</p>
               </div>
             </div>
             <button
@@ -247,31 +247,31 @@ export default function AdminMembersPage() {
                   is_active: true 
                 });
               }}
-              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg md:rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 text-sm md:text-base"
             >
-              <FaPlus /> Tambah Anggota
+              <FaPlus /> <span className="hidden sm:inline">Tambah</span> Anggota
             </button>
           </div>
         </div>
 
         {/* Modal Form */}
         {showForm && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300">
-              <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5 flex justify-between items-center sticky top-0 z-10">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl md:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300">
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 md:px-6 py-4 md:py-5 flex justify-between items-center sticky top-0 z-10">
+                <h2 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
                   {editingId ? <FaEdit /> : <FaPlus />}
                   {editingId ? 'Edit Anggota' : 'Tambah Anggota Baru'}
                 </h2>
                 <button
                   onClick={() => setShowForm(false)}
-                  className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-all"
+                  className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 md:p-2 rounded-lg transition-all"
                 >
-                  <FaTimes size={20} />
+                  <FaTimes size={18} />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4 md:space-y-5">
                 {/* Photo Upload with Crop */}
                 <div className="col-span-2">
                   <ImageUploadField
@@ -300,12 +300,12 @@ export default function AdminMembersPage() {
                 </div>
 
                 {/* Info Helper */}
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-4 rounded-lg">
-                  <div className="flex gap-3">
-                    <div className="text-purple-600 text-xl">ℹ️</div>
-                    <div className="text-sm text-slate-700">
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-3 md:p-4 rounded-lg">
+                  <div className="flex gap-2 md:gap-3">
+                    <div className="text-purple-600 text-base md:text-xl">ℹ️</div>
+                    <div className="text-xs md:text-sm text-slate-700">
                       <p className="font-semibold mb-1">Panduan Pengisian:</p>
-                      <ul className="space-y-1 text-xs">
+                      <ul className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
                         <li>• <strong>Tim Inti</strong> (Ketua, Wakil, Sekretaris, Bendahara) → Sekbid otomatis kosong</li>
                         <li>• <strong>Koordinator/Ketua Sekbid</strong> → Pilih Sekbid yang dipimpin</li>
                         <li>• <strong>Anggota</strong> → Pilih Sekbid yang diikuti</li>
@@ -314,30 +314,30 @@ export default function AdminMembersPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-5">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-1 md:mb-2">
                       Nama Lengkap <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-slate-50 border-2 border-slate-200 rounded-lg md:rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900 text-sm"
                       placeholder="Contoh: Ahmad Rifai"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    <label className="block text-xs md:text-sm font-semibold text-slate-700 mb-1 md:mb-2">
                       Jabatan <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={formData.role}
                       onChange={(e) => {
                         const newRole = e.target.value;
-                        setFormData({ 
+                        setFormData({
                           ...formData, 
                           role: newRole,
                           // Auto set sekbid_id null untuk Tim Inti

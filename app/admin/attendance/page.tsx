@@ -150,70 +150,70 @@ export default function AdminAttendancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:to-gray-800 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-gray-900 dark:to-gray-800 p-3 sm:p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 border-2 border-blue-100 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <FaCheckCircle className="text-2xl text-white" />
+        <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-lg md:shadow-xl p-4 md:p-6 border-2 border-blue-100 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
+                <FaCheckCircle className="text-lg md:text-2xl text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Data Absensi</h1>
-                <p className="text-gray-600 dark:text-gray-300">Monitoring absensi siswa & guru</p>
+                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Data Absensi</h1>
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Monitoring absensi siswa & guru</p>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 md:gap-3">
               <Link
                 href="/admin/attendance/settings"
-                className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold rounded-xl hover:shadow-xl transition-all flex items-center gap-2"
+                className="px-3 md:px-6 py-2 md:py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold rounded-lg md:rounded-xl hover:shadow-xl transition-all flex items-center gap-1 md:gap-2 text-xs md:text-sm"
               >
-                <FaCog /> Konfigurasi
+                <FaCog /> <span className="hidden sm:inline">Konfigurasi</span>
               </Link>
               <button
                 onClick={exportToCSV}
-                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:shadow-xl transition-all flex items-center gap-2"
+                className="px-3 md:px-6 py-2 md:py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg md:rounded-xl hover:shadow-xl transition-all flex items-center gap-1 md:gap-2 text-xs md:text-sm"
               >
-                <FaDownload /> Export CSV
+                <FaDownload /> <span className="hidden sm:inline">Export CSV</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
           {[
             { label: 'Total Absensi', value: stats.total, icon: FaCheckCircle, color: 'blue' },
             { label: 'Siswa', value: stats.siswa, icon: FaUserGraduate, color: 'purple' },
             { label: 'Guru', value: stats.guru, icon: FaChalkboardTeacher, color: 'indigo' },
             { label: 'Terverifikasi', value: stats.verified, icon: FaCheck, color: 'green' },
           ].map((stat) => (
-            <div key={stat.label} className={`bg-gradient-to-br from-${stat.color}-50 to-${stat.color}-100 dark:from-${stat.color}-900/20 dark:to-${stat.color}-800/20 border-2 border-${stat.color}-200 dark:border-${stat.color}-700 rounded-2xl p-6`}>
+            <div key={stat.label} className={`bg-gradient-to-br from-${stat.color}-50 to-${stat.color}-100 dark:from-${stat.color}-900/20 dark:to-${stat.color}-800/20 border-2 border-${stat.color}-200 dark:border-${stat.color}-700 rounded-xl md:rounded-2xl p-3 md:p-6`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className={`text-sm font-semibold text-${stat.color}-700 dark:text-${stat.color}-300`}>{stat.label}</p>
-                  <p className={`text-3xl font-bold text-${stat.color}-900 dark:text-${stat.color}-100 mt-2`}>{stat.value}</p>
+                  <p className={`text-[10px] md:text-sm font-semibold text-${stat.color}-700 dark:text-${stat.color}-300`}>{stat.label}</p>
+                  <p className={`text-xl md:text-3xl font-bold text-${stat.color}-900 dark:text-${stat.color}-100 mt-1 md:mt-2`}>{stat.value}</p>
                 </div>
-                <stat.icon className={`text-4xl text-${stat.color}-600 opacity-50`} />
+                <stat.icon className={`text-2xl md:text-4xl text-${stat.color}-600 opacity-50`} />
               </div>
             </div>
           ))}
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border-2 border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3 mb-4">
-            <FaFilter className="text-blue-600" />
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Filter Data</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 border-2 border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+            <FaFilter className="text-blue-600 text-sm md:text-base" />
+            <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">Filter Data</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Role</label>
+              <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 md:mb-2">Role</label>
               <select
                 value={filter.role}
                 onChange={(e) => setFilter({ ...filter, role: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-900 dark:text-white"
+                className="w-full px-3 md:px-4 py-2 bg-gray-50 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-900 dark:text-white text-sm"
               >
                 <option value="all">Semua</option>
                 <option value="siswa">Siswa</option>
@@ -221,11 +221,11 @@ export default function AdminAttendancePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Status</label>
+              <label className="block text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 md:mb-2">Status</label>
               <select
                 value={filter.status}
                 onChange={(e) => setFilter({ ...filter, status: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-900 dark:text-white"
+                className="w-full px-3 md:px-4 py-2 bg-gray-50 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-900 dark:text-white text-sm"
               >
                 <option value="all">Semua</option>
                 <option value="present">Hadir</option>
@@ -236,91 +236,93 @@ export default function AdminAttendancePage() {
               </select>
             </div>
             <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                <FaCalendar /> Tanggal
+              <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1 md:mb-2">
+                <FaCalendar className="text-xs md:text-sm" /> Tanggal
               </label>
               <input
                 type="date"
                 value={filter.date}
                 onChange={(e) => setFilter({ ...filter, date: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-900 dark:text-white"
+                className="w-full px-3 md:px-4 py-2 bg-gray-50 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-lg md:rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none text-gray-900 dark:text-white text-sm"
               />
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-lg md:shadow-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead>
                 <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Nama</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Check-in</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Check-out</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Durasi</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Aksi</th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Nama</th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">Role</th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Check-in</th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell">Check-out</th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell">Durasi</th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-center text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {attendances.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
-                      <FaClock className="mx-auto text-5xl text-gray-300 dark:text-gray-600 mb-4" />
-                      <p className="text-gray-500 dark:text-gray-400 font-medium">Tidak ada data absensi</p>
+                    <td colSpan={7} className="px-4 md:px-6 py-8 md:py-12 text-center">
+                      <FaClock className="mx-auto text-4xl md:text-5xl text-gray-300 dark:text-gray-600 mb-3 md:mb-4" />
+                      <p className="text-gray-500 dark:text-gray-400 font-medium text-sm md:text-base">Tidak ada data absensi</p>
                     </td>
                   </tr>
                 ) : (
                   attendances.map((attendance) => (
                     <tr key={attendance.id} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-900 dark:text-white">{attendance.user_name}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{attendance.wifi_ssid}</div>
+                      <td className="px-3 md:px-6 py-3 md:py-4">
+                        <div className="font-semibold text-gray-900 dark:text-white text-xs md:text-sm">{attendance.user_name}</div>
+                        <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">{attendance.wifi_ssid}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                      <td className="px-3 md:px-6 py-3 md:py-4 hidden sm:table-cell">
+                        <span className={`inline-flex items-center px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold ${
                           attendance.user_role === 'siswa'
                             ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
                             : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
                         }`}>
                           {attendance.user_role === 'siswa' ? <FaUserGraduate className="mr-1" /> : <FaChalkboardTeacher className="mr-1" />}
-                          {attendance.user_role === 'siswa' ? 'Siswa' : 'Guru'}
+                          <span className="hidden md:inline">{attendance.user_role === 'siswa' ? 'Siswa' : 'Guru'}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300">
                         {formatAttendanceTime(attendance.check_in_time)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300 hidden md:table-cell">
                         {attendance.check_out_time ? formatAttendanceTime(attendance.check_out_time) : (
-                          <span className="text-orange-600 font-semibold">Belum checkout</span>
+                          <span className="text-orange-600 font-semibold text-xs">Belum checkout</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300 font-semibold">
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300 font-semibold hidden lg:table-cell">
                         {calculateDuration(attendance.check_in_time, attendance.check_out_time)}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-${getStatusColor(attendance.status)}-100 text-${getStatusColor(attendance.status)}-700 dark:bg-${getStatusColor(attendance.status)}-900/30 dark:text-${getStatusColor(attendance.status)}-300`}>
-                          {attendance.is_verified ? <FaCheck className="mr-1" /> : <FaClock className="mr-1" />}
-                          {attendance.is_verified ? 'Verified' : 'Pending'}
+                      <td className="px-3 md:px-6 py-3 md:py-4">
+                        <span className={`inline-flex items-center px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold bg-${getStatusColor(attendance.status)}-100 text-${getStatusColor(attendance.status)}-700 dark:bg-${getStatusColor(attendance.status)}-900/30 dark:text-${getStatusColor(attendance.status)}-300`}>
+                          {attendance.is_verified ? <FaCheck className="mr-0.5 md:mr-1" /> : <FaClock className="mr-0.5 md:mr-1" />}
+                          <span className="hidden md:inline">{attendance.is_verified ? 'Verified' : 'Pending'}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center space-x-2">
-                        <button
-                          onClick={() => setSelectedAttendance(attendance)}
-                          className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all text-xs font-semibold"
-                        >
-                          <FaEye className="mr-1" /> Detail
-                        </button>
-                        {!attendance.is_verified && (
+                      <td className="px-3 md:px-6 py-3 md:py-4 text-center">
+                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 justify-center">
                           <button
-                            onClick={() => handleVerify(attendance.id, true)}
-                            className="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-all text-xs font-semibold"
+                            onClick={() => setSelectedAttendance(attendance)}
+                            className="inline-flex items-center justify-center px-2 md:px-3 py-1 md:py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all text-[10px] md:text-xs font-semibold"
                           >
-                            <FaCheck className="mr-1" /> Verify
+                            <FaEye className="mr-0.5 md:mr-1" /> <span className="hidden xs:inline">Detail</span>
                           </button>
-                        )}
+                          {!attendance.is_verified && (
+                            <button
+                              onClick={() => handleVerify(attendance.id, true)}
+                              className="inline-flex items-center justify-center px-2 md:px-3 py-1 md:py-1.5 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-all text-[10px] md:text-xs font-semibold"
+                            >
+                              <FaCheck className="mr-0.5 md:mr-1" /> <span className="hidden xs:inline">Verify</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

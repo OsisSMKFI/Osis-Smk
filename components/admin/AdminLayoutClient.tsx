@@ -71,8 +71,8 @@ export default function AdminLayoutClient({
         {!isLogin && session?.user && <AdminHeader />}
 
         {/* Page Content */}
-        <main className="p-6">
-          <div className="max-w-7xl mx-auto" suppressHydrationWarning>
+        <main className="p-3 sm:p-4 md:p-6">
+          <div className="max-w-7xl mx-auto w-full" suppressHydrationWarning>
             {/* Role / route diagnostics banner (production + flag only) */}
             {session?.user && <RoleStatusBanner />}
             {children}
@@ -81,8 +81,8 @@ export default function AdminLayoutClient({
 
         {/* Footer */}
         {!isLogin && session?.user && (
-          <footer className="mt-8 py-6 px-4 sm:px-6 border-t border-gray-200 dark:border-slate-700">
-            <div className="max-w-7xl mx-auto text-center text-sm text-gray-600 dark:text-gray-400">
+          <footer className="mt-6 md:mt-8 py-4 md:py-6 px-3 sm:px-4 md:px-6 border-t border-gray-200 dark:border-slate-700">
+            <div className="max-w-7xl mx-auto text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               <p>© 2025 OSIS SMK Informatika - Dirgantara. Made with ❤️ by Dirgantara Team</p>
             </div>
           </footer>
