@@ -7,86 +7,21 @@ import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
 import { fetchSocialMediaConfig, type SocialMediaFullConfig } from '@/lib/socialMediaConfig.client';
 import { useSocialMediaData } from '@/lib/hooks/useSocialMediaData';
 import Image from 'next/image';
+import { useSoundEffects as useGlobalSoundEffects } from '@/contexts/SoundContext';
 
 // ============================================
-// SOUND EFFECTS HOOK
+// SOUND EFFECTS HOOK - Uses Global Sound Context
 // ============================================
 const useSoundEffects = () => {
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
-
-  const initAudioContext = useCallback(() => {
-    if (!audioContextRef.current && typeof window !== 'undefined') {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    return audioContextRef.current;
-  }, []);
-
-  const playHoverSound = useCallback(() => {
-    if (!isSoundEnabled) return;
-    const ctx = initAudioContext();
-    if (!ctx) return;
-
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    oscillator.frequency.setValueAtTime(800, ctx.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
-    
-    gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-    
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.1);
-  }, [isSoundEnabled, initAudioContext]);
-
-  const playClickSound = useCallback(() => {
-    if (!isSoundEnabled) return;
-    const ctx = initAudioContext();
-    if (!ctx) return;
-
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    oscillator.frequency.setValueAtTime(600, ctx.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.15);
-    
-    gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-    
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.15);
-  }, [isSoundEnabled, initAudioContext]);
-
-  const playSuccessSound = useCallback(() => {
-    if (!isSoundEnabled) return;
-    const ctx = initAudioContext();
-    if (!ctx) return;
-
-    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-    notes.forEach((freq, i) => {
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      oscillator.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
-      gainNode.gain.setValueAtTime(0.1, ctx.currentTime + i * 0.1);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.1 + 0.2);
-      
-      oscillator.start(ctx.currentTime + i * 0.1);
-      oscillator.stop(ctx.currentTime + i * 0.1 + 0.2);
-    });
-  }, [isSoundEnabled, initAudioContext]);
-
-  return { playHoverSound, playClickSound, playSuccessSound, isSoundEnabled, setIsSoundEnabled };
+  const { soundEnabled, playClickSound, playHoverSound, playSuccessSound, toggleSound } = useGlobalSoundEffects();
+  
+  return { 
+    playHoverSound, 
+    playClickSound, 
+    playSuccessSound, 
+    isSoundEnabled: soundEnabled, 
+    setIsSoundEnabled: toggleSound 
+  };
 };
 
 // ============================================
@@ -713,22 +648,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
-      {/* Sound Toggle Button */}
-      <motion.button
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-white dark:bg-gray-800 shadow-xl flex items-center justify-center border border-gray-200 dark:border-gray-700 hover:scale-110 transition-transform"
-        onClick={() => {
-          setIsSoundEnabled(!isSoundEnabled);
-          playClickSound();
-        }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1 }}
-        title={isSoundEnabled ? 'Mute sounds' : 'Enable sounds'}
-      >
-        <i className={`fas ${isSoundEnabled ? 'fa-volume-up text-yellow-500' : 'fa-volume-mute text-gray-400'} text-xl`} />
-      </motion.button>
+      {/* Sound Toggle removed - now handled by GlobalFloatingControls */}
 
       {/* HERO SECTION */}
       <motion.section 
