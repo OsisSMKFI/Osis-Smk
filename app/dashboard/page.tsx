@@ -333,21 +333,50 @@ export default function UserDashboard() {
                 </svg>
                 <div className="flex-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Instagram</p>
-                  {profile?.instagram_username ? (
-                    <a 
-                      href={`https://instagram.com/${profile.instagram_username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1"
-                    >
-                      @{profile.instagram_username}
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  ) : (
-                    <p className="font-medium text-red-600 dark:text-red-400">belum diisi</p>
-                  )}
+                  {(() => {
+                    // Clean instagram_username - extract username jika berbentuk email atau URL
+                    const rawUsername = profile?.instagram_username || '';
+                    let cleanUsername = rawUsername
+                      .replace(/^@/, '') // hapus @ di awal
+                      .replace(/https?:\/\/(www\.)?instagram\.com\//i, '') // hapus URL Instagram
+                      .replace(/\/$/, '') // hapus trailing slash
+                      .trim();
+                    
+                    // Jika masih berbentuk email, ambil bagian sebelum @
+                    if (cleanUsername.includes('@')) {
+                      cleanUsername = cleanUsername.split('@')[0];
+                    }
+                    
+                    // Validasi apakah username valid (hanya huruf, angka, underscore, titik)
+                    const isValidUsername = /^[a-zA-Z0-9._]+$/.test(cleanUsername) && cleanUsername.length > 0;
+                    
+                    if (isValidUsername) {
+                      return (
+                        <a 
+                          href={`https://instagram.com/${cleanUsername}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1"
+                        >
+                          @{cleanUsername}
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      );
+                    } else if (rawUsername) {
+                      // Tampilkan peringatan jika format tidak valid
+                      return (
+                        <p className="font-medium text-amber-600 dark:text-amber-400 text-sm">
+                          Format salah - Update di profil
+                        </p>
+                      );
+                    } else {
+                      return (
+                        <p className="font-medium text-red-600 dark:text-red-400">belum diisi</p>
+                      );
+                    }
+                  })()}
                 </div>
               </div>
               
