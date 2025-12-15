@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { createClient } from '@supabase/supabase-js';
 import { uploadFileWithSignedUrl } from '@/lib/signedUrls';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Check if Vercel Blob is available
+const useVercelBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +38,44 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Upload with automatic signed URL generation
+    // ===== PRIMARY: Use Vercel Blob if available =====
+    if (useVercelBlob) {
+      try {
+        const { uploadFile, generateFilename } = await import('@/lib/vercel/blob');
+        
+        // Organize by date: attendance/selfies/YYYY/MM/userId/filename
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const filename = generateFilename(file.name || 'selfie.jpg', 'selfie');
+        const fullPath = `attendance/selfies/${year}/${month}/${userId.substring(0, 8)}/${filename}`;
+        
+        const result = await uploadFile(fullPath, buffer, {
+          access: 'public',
+          contentType: file.type || 'image/jpeg',
+          addRandomSuffix: false,
+          cacheControlMaxAge: 31536000, // 1 year cache
+        });
+
+        console.log('[Upload Selfie] ✅ Vercel Blob upload:', {
+          path: result.pathname,
+          url: result.url.substring(0, 50) + '...'
+        });
+
+        return NextResponse.json({
+          success: true,
+          url: result.url,
+          publicUrl: result.url,
+          path: result.pathname,
+          storage: 'vercel-blob'
+        });
+      } catch (blobError: any) {
+        console.error('[Upload Selfie] Vercel Blob failed, falling back to Supabase:', blobError.message);
+        // Fall through to Supabase
+      }
+    }
+
+    // ===== FALLBACK: Supabase Storage =====
     const result = await uploadFileWithSignedUrl(buffer, userId, {
       type: 'selfie',
       bucket: 'user-photos',
@@ -56,18 +90,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[Upload Selfie] ✅ Uploaded with signed URL:', {
+    console.log('[Upload Selfie] ✅ Supabase upload:', {
       path: result.path,
       expiresAt: result.expiresAt
     });
 
     return NextResponse.json({
       success: true,
-      url: result.signedUrl,        // Client gets time-limited signed URL
-      publicUrl: result.url,          // For storage reference (optional)
+      url: result.signedUrl,
+      publicUrl: result.url,
       path: result.path,
       expiresAt: result.expiresAt,
-      bucket: result.bucket
+      bucket: result.bucket,
+      storage: 'supabase'
     });
   } catch (error: any) {
     console.error('Upload selfie error:', error);

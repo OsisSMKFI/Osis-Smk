@@ -9,6 +9,9 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// Check if Vercel Blob is available
+const useVercelBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
+
 /**
  * POST /api/enroll/upload-photo
  * Upload verified face anchor photo to storage with signed URL
@@ -41,19 +44,56 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await photo.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Upload with signed URL generation
-    const result = await uploadFileWithSignedUrl(buffer, userId, {
-      type: 'reference',
-      bucket: 'biometric-data',
-      contentType: photo.type || 'image/jpeg',
-      fileName: `${userId}_anchor_${Date.now()}.jpg`
-    });
+    let photoUrl: string;
+    let storageType = 'supabase';
     
-    if (!result) {
-      throw new Error('Upload failed');
+    // ===== PRIMARY: Use Vercel Blob if available =====
+    if (useVercelBlob) {
+      try {
+        const { uploadFile, generateFilename } = await import('@/lib/vercel/blob');
+        
+        // Organize: enrollment/photos/YYYY/MM/userId/filename
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const filename = generateFilename(photo.name || 'anchor.jpg', 'anchor');
+        const fullPath = `enrollment/photos/${year}/${month}/${userId.substring(0, 8)}/${filename}`;
+        
+        const result = await uploadFile(fullPath, buffer, {
+          access: 'public',
+          contentType: photo.type || 'image/jpeg',
+          addRandomSuffix: false,
+          cacheControlMaxAge: 31536000, // 1 year cache
+        });
+
+        photoUrl = result.url;
+        storageType = 'vercel-blob';
+        console.log('[Upload Face Anchor] ✅ Vercel Blob:', result.url.substring(0, 50) + '...');
+      } catch (blobError: any) {
+        console.error('[Upload Face Anchor] Vercel Blob failed, falling back to Supabase:', blobError.message);
+        // Fall through to Supabase
+        const result = await uploadFileWithSignedUrl(buffer, userId, {
+          type: 'reference',
+          bucket: 'biometric-data',
+          contentType: photo.type || 'image/jpeg',
+          fileName: `${userId}_anchor_${Date.now()}.jpg`
+        });
+        
+        if (!result) throw new Error('Upload failed');
+        photoUrl = result.url;
+      }
+    } else {
+      // ===== FALLBACK: Supabase Storage =====
+      const result = await uploadFileWithSignedUrl(buffer, userId, {
+        type: 'reference',
+        bucket: 'biometric-data',
+        contentType: photo.type || 'image/jpeg',
+        fileName: `${userId}_anchor_${Date.now()}.jpg`
+      });
+      
+      if (!result) throw new Error('Upload failed');
+      photoUrl = result.url;
     }
-    
-    const photoUrl = result.url; // Store public URL in database
     
     // Check if biometric_data exists
     const { data: existingBiometric } = await supabaseAdmin
@@ -82,7 +122,7 @@ export async function POST(request: NextRequest) {
         });
     }
     
-    console.log('[Face Anchor Saved] ✅ Signed URL:', result.signedUrl);
+    console.log('[Face Anchor Saved] ✅ URL:', photoUrl.substring(0, 50) + '...');
     
     // Log security event
     await supabaseAdmin.from('security_events').insert({
@@ -92,17 +132,15 @@ export async function POST(request: NextRequest) {
       metadata: {
         description: 'Face anchor photo uploaded successfully',
         photoUrl,
-        bucket: result.bucket,
-        expiresAt: result.expiresAt
+        storage: storageType
       },
     });
     
     return NextResponse.json({
       success: true,
-      photoUrl: result.signedUrl,  // Client gets signed URL
-      publicUrl: result.url,        // For reference
-      expiresAt: result.expiresAt,
-      bucket: result.bucket,
+      photoUrl,
+      publicUrl: photoUrl,
+      storage: storageType,
       message: 'Face anchor saved successfully',
     });
     
