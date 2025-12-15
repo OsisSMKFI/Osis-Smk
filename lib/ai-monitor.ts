@@ -326,10 +326,11 @@ function monitorMemory() {
 
 /**
  * Report to AI System
+ * Now logs to both error_logs AND activity_logs for visibility
  */
 async function reportToAI(data: any) {
   try {
-    // Send to error logging API
+    // Send to error logging API (for error tracking)
     await fetch('/api/errors/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -340,6 +341,22 @@ async function reportToAI(data: any) {
         metadata: data.data,
         pageUrl: window.location.href,
         environment: process.env.NODE_ENV
+      })
+    });
+
+    // ALSO send to activity tracking API (for activity page visibility)
+    await fetch('/api/ai/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: `ai_monitor_${data.type}`,
+        data: {
+          severity: data.severity,
+          message: data.message,
+          details: data.data
+        },
+        url: window.location.href,
+        timestamp: new Date().toISOString()
       })
     });
 

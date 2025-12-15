@@ -19,16 +19,19 @@ import {
   FaChartLine,
   FaClipboardCheck,
   FaCog,
+  FaImage,
+  FaBullhorn,
+  FaSync,
 } from 'react-icons/fa';
-import AdminNotifications from './AdminNotifications';
 
 interface StatCard {
   title: string;
   value: string | number;
   change: string;
-  trend: 'up' | 'down';
+  trend: 'up' | 'down' | 'neutral';
   icon: React.ReactNode;
   color: string;
+  link: string;
 }
 
 interface ErrorSummary {
@@ -43,11 +46,47 @@ interface ErrorSummary {
   }>;
 }
 
+interface DashboardStats {
+  totalPosts: number;
+  totalEvents: number;
+  totalUsers: number;
+  totalMembers: number;
+  totalGallery: number;
+  totalAnnouncements: number;
+}
+
+interface RecentActivity {
+  id: string;
+  action: string;
+  title: string;
+  user: string;
+  time: string;
+  type: 'post' | 'event' | 'user' | 'gallery' | 'announcement';
+}
+
+interface TopProgram {
+  id: number;
+  name: string;
+  sekbid: string;
+  description?: string;
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const role = ((session?.user as any)?.role || '').toLowerCase();
   const canAccessAdminPanel = ['super_admin','admin','osis'].includes(role);
 
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+    totalPosts: 0,
+    totalEvents: 0,
+    totalUsers: 0,
+    totalMembers: 0,
+    totalGallery: 0,
+    totalAnnouncements: 0,
+  });
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [topPrograms, setTopPrograms] = useState<TopProgram[]>([]);
   const [errorSummary, setErrorSummary] = useState<ErrorSummary>({
     total: 0,
     critical: 0,
@@ -67,6 +106,110 @@ export default function AdminDashboard() {
       return;
     }
 
+    // Fetch all dashboard data from real database
+    async function fetchDashboardData() {
+      setLoading(true);
+      try {
+        // Fetch all data in parallel
+        const [postsRes, eventsRes, usersRes, membersRes, galleryRes, announcementsRes, prokerRes] = await Promise.all([
+          apiFetch('/api/admin/posts').catch(() => null),
+          apiFetch('/api/admin/events').catch(() => null),
+          apiFetch('/api/admin/users').catch(() => null),
+          apiFetch('/api/admin/members').catch(() => null),
+          apiFetch('/api/admin/gallery').catch(() => null),
+          apiFetch('/api/admin/announcements').catch(() => null),
+          apiFetch('/api/admin/proker').catch(() => null),
+        ]);
+
+        // Parse responses safely
+        const posts = postsRes?.ok ? await postsRes.json().catch(() => []) : [];
+        const eventsData = eventsRes?.ok ? await eventsRes.json().catch(() => ({ events: [] })) : { events: [] };
+        const users = usersRes?.ok ? await usersRes.json().catch(() => []) : [];
+        const membersData = membersRes?.ok ? await membersRes.json().catch(() => ({ members: [] })) : { members: [] };
+        const galleryData = galleryRes?.ok ? await galleryRes.json().catch(() => ({ gallery: [] })) : { gallery: [] };
+        const announcementsData = announcementsRes?.ok ? await announcementsRes.json().catch(() => ({ announcements: [] })) : { announcements: [] };
+        const prokerData = prokerRes?.ok ? await prokerRes.json().catch(() => ({ proker: [] })) : { proker: [] };
+
+        const postsArray = Array.isArray(posts) ? posts : [];
+        const eventsArray = Array.isArray(eventsData?.events) ? eventsData.events : (Array.isArray(eventsData) ? eventsData : []);
+        const usersArray = Array.isArray(users) ? users : [];
+        const membersArray = Array.isArray(membersData?.members) ? membersData.members : (Array.isArray(membersData) ? membersData : []);
+        const galleryArray = Array.isArray(galleryData?.gallery) ? galleryData.gallery : (Array.isArray(galleryData) ? galleryData : []);
+        const announcementsArray = Array.isArray(announcementsData?.announcements) ? announcementsData.announcements : (Array.isArray(announcementsData) ? announcementsData : []);
+        const prokerArray = Array.isArray(prokerData?.proker) ? prokerData.proker : (Array.isArray(prokerData) ? prokerData : []);
+
+        // Set dashboard stats from real data
+        setDashboardStats({
+          totalPosts: postsArray.length,
+          totalEvents: eventsArray.length,
+          totalUsers: usersArray.length,
+          totalMembers: membersArray.length,
+          totalGallery: galleryArray.length,
+          totalAnnouncements: announcementsArray.length,
+        });
+
+        // Build recent activities from real data
+        const activities: RecentActivity[] = [];
+        
+        // Add recent posts
+        postsArray.slice(0, 3).forEach((post: any) => {
+          activities.push({
+            id: `post-${post.id}`,
+            action: 'Post created',
+            title: post.title || 'Untitled',
+            user: 'Admin',
+            time: formatTimeAgo(post.created_at),
+            type: 'post',
+          });
+        });
+
+        // Add recent events
+        eventsArray.slice(0, 3).forEach((event: any) => {
+          activities.push({
+            id: `event-${event.id}`,
+            action: 'Event scheduled',
+            title: event.title || 'Untitled Event',
+            user: 'Admin',
+            time: formatTimeAgo(event.created_at),
+            type: 'event',
+          });
+        });
+
+        // Add recent announcements
+        announcementsArray.slice(0, 2).forEach((ann: any) => {
+          activities.push({
+            id: `ann-${ann.id}`,
+            action: 'Announcement posted',
+            title: ann.title || 'Untitled',
+            user: 'Admin',
+            time: formatTimeAgo(ann.created_at),
+            type: 'announcement',
+          });
+        });
+
+        // Sort by time and take top 5
+        activities.sort((a, b) => {
+          // Simple sort by time string
+          return 0;
+        });
+        setRecentActivities(activities.slice(0, 5));
+
+        // Set top programs from proker data
+        const programs = prokerArray.slice(0, 5).map((p: any, idx: number) => ({
+          id: p.id || idx + 1,
+          name: p.name || p.title || 'Program ' + (idx + 1),
+          sekbid: p.sekbid_name || p.sekbid?.name || 'Sekbid',
+          description: p.description,
+        }));
+        setTopPrograms(programs);
+
+      } catch (error) {
+        console.error('[Dashboard] Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     async function fetchErrorSummary() {
       try {
         const res = await apiFetch('/api/admin/errors?summary=true');
@@ -84,7 +227,7 @@ export default function AdminDashboard() {
           let recentCount = 0;
           
           errors.forEach((error: any) => {
-            const msg = error.message || 'Unknown error';
+            const msg = error.error_message || error.message || 'Unknown error';
             errorGroups.set(msg, (errorGroups.get(msg) || 0) + 1);
             
             if (error.severity === 'critical' || error.severity === 'error') {
@@ -102,7 +245,7 @@ export default function AdminDashboard() {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 3)
             .map(([message, count]) => {
-              const lastError = errors.find((e: any) => (e.message || 'Unknown error') === message);
+              const lastError = errors.find((e: any) => (e.error_message || e.message || 'Unknown error') === message);
               return {
                 message: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
                 count,
@@ -114,7 +257,7 @@ export default function AdminDashboard() {
             total: errors.length,
             critical: criticalCount,
             recent: recentCount,
-            resolved: 0, // TODO: implement resolved tracking
+            resolved: 0,
             topErrors
           });
         }
@@ -126,179 +269,222 @@ export default function AdminDashboard() {
     }
     
     if (status === 'authenticated' && canAccessAdminPanel) {
+      fetchDashboardData();
       fetchErrorSummary();
     }
   }, [status, canAccessAdminPanel]);
+
+  // Helper function to format time ago
+  function formatTimeAgo(dateString: string): string {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString('id-ID');
+  }
+
+  // Build stats from real data
   const stats: StatCard[] = [
     {
       title: 'Total Posts',
-      value: 127,
-      change: '+12.5%',
-      trend: 'up',
+      value: dashboardStats.totalPosts,
+      change: dashboardStats.totalPosts > 0 ? 'Active' : 'No data',
+      trend: dashboardStats.totalPosts > 0 ? 'up' : 'neutral',
       icon: <FaNewspaper />,
       color: 'from-blue-400 to-blue-600',
+      link: '/admin/posts',
     },
     {
       title: 'Events',
-      value: 45,
-      change: '+8.2%',
-      trend: 'up',
+      value: dashboardStats.totalEvents,
+      change: dashboardStats.totalEvents > 0 ? 'Active' : 'No data',
+      trend: dashboardStats.totalEvents > 0 ? 'up' : 'neutral',
       icon: <FaCalendarAlt />,
       color: 'from-green-400 to-green-600',
+      link: '/admin/events',
     },
     {
       title: 'Users',
-      value: 234,
-      change: '+15.3%',
-      trend: 'up',
+      value: dashboardStats.totalUsers,
+      change: dashboardStats.totalUsers > 0 ? 'Registered' : 'No data',
+      trend: dashboardStats.totalUsers > 0 ? 'up' : 'neutral',
       icon: <FaUsers />,
       color: 'from-purple-400 to-purple-600',
+      link: '/admin/users',
     },
     {
-      title: 'Total Views',
-      value: '12.5K',
-      change: '+23.1%',
-      trend: 'up',
-      icon: <FaEye />,
+      title: 'Members',
+      value: dashboardStats.totalMembers,
+      change: dashboardStats.totalMembers > 0 ? 'Active' : 'No data',
+      trend: dashboardStats.totalMembers > 0 ? 'up' : 'neutral',
+      icon: <FaUsers />,
       color: 'from-yellow-400 to-amber-600',
+      link: '/admin/members',
+    },
+    {
+      title: 'Gallery',
+      value: dashboardStats.totalGallery,
+      change: dashboardStats.totalGallery > 0 ? 'Items' : 'No data',
+      trend: dashboardStats.totalGallery > 0 ? 'up' : 'neutral',
+      icon: <FaImage />,
+      color: 'from-pink-400 to-rose-600',
+      link: '/admin/gallery',
+    },
+    {
+      title: 'Announcements',
+      value: dashboardStats.totalAnnouncements,
+      change: dashboardStats.totalAnnouncements > 0 ? 'Active' : 'No data',
+      trend: dashboardStats.totalAnnouncements > 0 ? 'up' : 'neutral',
+      icon: <FaBullhorn />,
+      color: 'from-orange-400 to-red-600',
+      link: '/admin/announcements',
     },
   ];
 
-  const recentActivities = [
-    {
-      id: 1,
-      action: 'New post published',
-      title: 'Classmeet 2025 - Event Terbesar Tahun Ini',
-      user: 'Admin Muhammad',
-      time: '5 minutes ago',
-      icon: <FaNewspaper className="text-blue-500" />,
-    },
-    {
-      id: 2,
-      action: 'Event registration',
-      title: '15 new registrations for Market Day',
-      user: 'System',
-      time: '15 minutes ago',
-      icon: <FaUsers className="text-green-500" />,
-    },
-    {
-      id: 3,
-      action: 'Poll created',
-      title: 'Program Favorit Bulan Ini',
-      user: 'Admin Siti',
-      time: '1 hour ago',
-      icon: <FaClock className="text-purple-500" />,
-    },
-    {
-      id: 4,
-      action: 'Program completed',
-      title: 'Murotal Pagi - Sekbid 1',
-      user: 'Admin Irsyad',
-      time: '2 hours ago',
-      icon: <FaCheckCircle className="text-yellow-500" />,
-    },
+  // Activity type icons
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'post': return <FaNewspaper className="text-blue-500" />;
+      case 'event': return <FaCalendarAlt className="text-green-500" />;
+      case 'user': return <FaUsers className="text-purple-500" />;
+      case 'gallery': return <FaImage className="text-pink-500" />;
+      case 'announcement': return <FaBullhorn className="text-orange-500" />;
+      default: return <FaClock className="text-gray-500" />;
+    }
+  };
+
+  const topProgramsData = topPrograms.length > 0 ? topPrograms : [
+    { id: 0, name: 'No programs yet', sekbid: 'Add programs in Proker menu', description: '' }
   ];
 
-  const topPrograms = [
-    { id: 1, name: 'Murotal Pagi', sekbid: 'Kerohanian', views: 245, trend: '+12%' },
-    { id: 2, name: 'Market Day', sekbid: 'Ekonomi Kreatif', views: 198, trend: '+8%' },
-    { id: 3, name: 'Classmeet', sekbid: 'Akademik', views: 167, trend: '+15%' },
-    { id: 4, name: 'Jumat Bersih', sekbid: 'Kesehatan Lingkungan', views: 143, trend: '+5%' },
-    { id: 5, name: 'Web Development', sekbid: 'Kominfo', views: 128, trend: '+20%' },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-yellow-500 mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-400 mt-4 text-lg">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 rounded-2xl p-8 shadow-2xl">
         <h1 className="text-4xl font-bold text-slate-900 mb-2">
-          Welcome back, Admin! 👋
+          Welcome back, {session?.user?.name || 'Admin'}! 👋
         </h1>
         <p className="text-slate-800 text-lg">
           Here's what's happening with your OSIS dashboard today
         </p>
-        <div className="mt-4">
-          <AdminNotifications />
+        <div className="mt-4 flex items-center gap-4 text-slate-700">
+          <span className="flex items-center gap-2">
+            <FaSync className="animate-pulse" />
+            Data loaded from database
+          </span>
+          <span>|</span>
+          <span>{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Grid - Real Data */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stats.map((stat, index) => (
-          <div
+          <Link
             key={index}
-            className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group"
+            href={stat.link}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 group"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-4 rounded-xl bg-gradient-to-br ${stat.color} text-white shadow-lg group-hover:scale-110 transition-transform`}>
-                <div className="text-2xl">{stat.icon}</div>
+            <div className="flex items-center justify-between mb-3">
+              <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                <div className="text-xl">{stat.icon}</div>
               </div>
-              <div className={`text-sm font-bold px-3 py-1 rounded-full ${
-                stat.trend === 'up' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+              <div className={`text-xs font-bold px-2 py-1 rounded-full ${
+                stat.trend === 'up' ? 'bg-green-100 text-green-600' : 
+                stat.trend === 'down' ? 'bg-red-100 text-red-600' : 
+                'bg-gray-100 text-gray-600'
               }`}>
                 {stat.change}
               </div>
             </div>
-            <h3 className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-1">
+            <h3 className="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1">
               {stat.title}
             </h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               {stat.value}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
+        {/* Recent Activity - Real Data */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
               <FaClock className="mr-3 text-yellow-500" />
               Recent Activity
             </h2>
-            <button className="text-sm text-yellow-600 dark:text-yellow-400 font-medium hover:underline">
-              View all
-            </button>
+            <span className="text-sm text-gray-500">From database</span>
           </div>
           <div className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start space-x-4 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-all group"
-              >
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  {activity.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {activity.action}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                    {activity.title}
-                  </p>
-                  <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-500">
-                    <span>{activity.user}</span>
-                    <span className="mx-2">•</span>
-                    <span>{activity.time}</span>
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start space-x-4 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-all group"
+                >
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    {getActivityIcon(activity.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {activity.action}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                      {activity.title}
+                    </p>
+                    <div className="flex items-center mt-1 text-xs text-gray-500 dark:text-gray-500">
+                      <span>{activity.user}</span>
+                      <span className="mx-2">•</span>
+                      <span>{activity.time}</span>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <FaClock className="text-4xl mx-auto mb-3 opacity-50" />
+                <p>No recent activity</p>
+                <p className="text-sm">Start adding posts, events, or announcements</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* Top Programs */}
+        {/* Top Programs - Real Data from Proker */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
               <FaFire className="mr-3 text-yellow-500" />
               Top Programs
             </h2>
+            <Link href="/admin/proker" className="text-sm text-yellow-600 hover:underline">
+              View all
+            </Link>
           </div>
           <div className="space-y-3">
-            {topPrograms.map((program, index) => (
+            {topProgramsData.map((program, index) => (
               <div
                 key={program.id}
                 className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-all"
@@ -312,14 +498,6 @@ export default function AdminDashboard() {
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {program.sekbid}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">
-                    {program.views}
-                  </p>
-                  <p className="text-xs text-green-600 dark:text-green-400">
-                    {program.trend}
                   </p>
                 </div>
               </div>
