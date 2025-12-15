@@ -153,6 +153,7 @@ export default function ActivityPage() {
       member_search: <FaUsers className="text-gray-500" />,
       security_validation: <FaShieldAlt className="text-orange-500" />,
       ai_verification: <FaEye className="text-purple-500" />,
+      biometric_registration: <FaLock className="text-blue-600" />,
     };
     return icons[type] || <FaFileAlt className="text-gray-500" />;
   };
@@ -184,6 +185,7 @@ export default function ActivityPage() {
       member_search: 'Cari Anggota',
       security_validation: 'Validasi Keamanan',
       ai_verification: 'Verifikasi AI',
+      biometric_registration: 'Registrasi Biometrik',
     };
     return labels[type] || type;
   };

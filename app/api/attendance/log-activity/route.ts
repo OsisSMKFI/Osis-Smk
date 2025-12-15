@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { logActivity, getIpAddress, parseUserAgent } from '@/lib/activity-logger';
 
 /**
  * POST /api/attendance/log-activity
- * Log user activity for monitoring
+ * Log user activity for monitoring - Uses centralized activity_logs table
  */
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +12,8 @@ export async function POST(request: NextRequest) {
     const { 
       userId, 
       userEmail, 
+      userName,
+      userRole,
       activityType, 
       description,
       status,
@@ -42,36 +34,26 @@ export async function POST(request: NextRequest) {
                request.headers.get('x-real-ip') || 
                'Unknown';
 
-    // Insert activity log
-    const { data, error } = await supabaseAdmin
-      .from('user_activities')
-      .insert({
-        user_id: userId,
-        user_email: userEmail,
-        activity_type: activityType,
-        description: description || activityType,
-        status: status || 'info',
-        details: details || {},
-        ip_address: ip,
-        user_agent: userAgent,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    // Use centralized activity logger - logs to activity_logs table
+    await logActivity({
+      userId,
+      userEmail,
+      userName,
+      userRole,
+      activityType: activityType as any,
+      action: activityType,
+      description: description || activityType,
+      status: status || 'success',
+      metadata: details || {},
+      ipAddress: ip,
+      userAgent
+    });
 
-    if (error) {
-      console.error('[Log Activity API] Error:', error);
-      return NextResponse.json(
-        { error: 'Failed to log activity', details: error.message },
-        { status: 500 }
-      );
-    }
-
-    console.log('[Log Activity API] ✅ Logged:', activityType, 'for', userEmail);
+    console.log('[Log Activity API] ✅ Logged to activity_logs:', activityType, 'for', userEmail);
 
     return NextResponse.json({
       success: true,
-      data
+      message: 'Activity logged successfully'
     });
 
   } catch (error: any) {

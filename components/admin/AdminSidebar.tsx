@@ -77,7 +77,8 @@ export default function AdminSidebar() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 rounded-xl shadow-lg hover:shadow-xl transition-all"
+        className="lg:hidden fixed top-4 left-4 z-[60] p-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 rounded-xl shadow-lg hover:shadow-xl transition-all"
+        aria-label="Toggle menu"
       >
         <FaBars className="text-xl" />
       </button>
@@ -85,7 +86,7 @@ export default function AdminSidebar() {
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 bg-black/50 z-[55] backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -94,13 +95,13 @@ export default function AdminSidebar() {
       <aside
         className={`
           fixed top-0 left-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
-          text-white shadow-2xl z-40 transition-all duration-300 ease-in-out
+          text-white shadow-2xl z-[56] transition-all duration-300 ease-in-out
           ${collapsed ? 'w-20' : 'w-72'}
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Header */}
-        <div className="relative h-20 flex items-center justify-between px-6 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 shadow-xl">
+        <div className="relative h-20 flex items-center justify-between px-4 sm:px-6 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 shadow-xl">
           {!collapsed && (
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
@@ -115,7 +116,18 @@ export default function AdminSidebar() {
             </div>
           )}
           
-          {/* Collapse Button */}
+          {/* Mobile Close Button */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="lg:hidden flex w-10 h-10 items-center justify-center bg-white/30 backdrop-blur-sm rounded-xl hover:bg-white/50 transition-all text-slate-900"
+            aria-label="Close menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          {/* Collapse Button - Desktop Only */}
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="hidden lg:flex w-8 h-8 items-center justify-center bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all text-slate-900"

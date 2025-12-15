@@ -32,6 +32,7 @@ export interface ActivityLogData {
     | 'admin_action'
     | 'security_validation'
     | 'ai_verification'
+    | 'biometric_registration'
     | 'other';
   action: string;
   description?: string;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { logActivity, getIpAddress } from '@/lib/activity-logger';
 
 /**
  * POST /api/attendance/biometric/reset-request
@@ -63,16 +64,23 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Log activity
-    await supabaseAdmin.from('user_activities').insert({
-      user_id: userId,
-      activity_type: 'biometric_reset_request',
+    // Log activity - to activity_logs table
+    await logActivity({
+      userId,
+      userName: session.user.name || '',
+      userEmail: session.user.email || '',
+      userRole: (session.user.role || '').toLowerCase(),
+      activityType: 'security_validation',
+      action: 'biometric_reset_request',
       description: 'Requested biometric data reset',
       metadata: {
         requestId: resetRequest.id,
         reason: reason,
         timestamp: new Date().toISOString()
-      }
+      },
+      status: 'success',
+      ipAddress: getIpAddress(request),
+      userAgent: request.headers.get('user-agent') || ''
     });
 
     // TODO: Send notification to admin (implement later)

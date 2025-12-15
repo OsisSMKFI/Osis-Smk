@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { checkRateLimit, RateLimitPresets } from '@/lib/rateLimitRedis';
 import { BiometricSetupSchema } from '@/lib/validation';
 import { convertToSignedUrl } from '@/lib/signedUrls';
+import { logActivity, getIpAddress, parseUserAgent } from '@/lib/activity-logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -174,19 +175,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Log activity untuk dashboard user (UPDATE)
-      await supabaseAdmin.from('user_activities').insert({
-        user_id: userId,
-        activity_type: 'biometric_update',
+      // Log activity untuk dashboard user (UPDATE) - to activity_logs table
+      await logActivity({
+        userId,
+        userName: session.user.name || '',
+        userEmail: session.user.email || '',
+        userRole,
+        activityType: 'biometric_registration',
+        action: 'biometric_update',
         description: `Updated biometric registration (${biometricType || 'fingerprint'})`,
         metadata: {
           photoUrl: referencePhotoUrl.substring(0, 100) + '...',
           fingerprintHash: fingerprintTemplate.substring(0, 16) + '...',
-          biometricType: biometricType || 'fingerprint', // ✅ LOG TYPE
+          biometricType: biometricType || 'fingerprint',
           deviceInfo: deviceInfo,
           hasWebAuthn: !!webauthnCredentialId,
           timestamp: new Date().toISOString()
-        }
+        },
+        status: 'success',
+        ipAddress: getIpAddress(request),
+        userAgent: request.headers.get('user-agent') || ''
       });
 
       console.log('[Biometric Setup] ✅ Biometric data updated + activity logged');
@@ -256,19 +264,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Log activity untuk dashboard user (NEW REGISTRATION)
-      await supabaseAdmin.from('user_activities').insert({
-        user_id: userId,
-        activity_type: 'biometric_registration',
+      // Log activity untuk dashboard user (NEW REGISTRATION) - to activity_logs table
+      await logActivity({
+        userId,
+        userName: session.user.name || '',
+        userEmail: session.user.email || '',
+        userRole,
+        activityType: 'biometric_registration',
+        action: 'biometric_registration',
         description: `Registered biometric authentication (${biometricType || 'fingerprint'})`,
         metadata: {
           photoUrl: referencePhotoUrl.substring(0, 100) + '...',
           fingerprintHash: fingerprintTemplate.substring(0, 16) + '...',
-          biometricType: biometricType || 'fingerprint', // ✅ LOG TYPE
+          biometricType: biometricType || 'fingerprint',
           deviceInfo: deviceInfo,
           hasWebAuthn: !!webauthnCredentialId,
           registeredAt: new Date().toISOString()
-        }
+        },
+        status: 'success',
+        ipAddress: getIpAddress(request),
+        userAgent: request.headers.get('user-agent') || ''
       });
 
       console.log('[Biometric Setup] ✅ Biometric data registered + activity logged');

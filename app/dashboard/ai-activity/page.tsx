@@ -50,6 +50,7 @@ export default function UserActivityDashboard() {
     gallery_upload: '📸 Upload Gallery',
     admin_action: '⚙️ Admin Action',
     security_validation: '🛡️ Validasi Keamanan',
+    biometric_registration: '🔐 Registrasi Biometrik',
     other: '📌 Lainnya',
   };
 
