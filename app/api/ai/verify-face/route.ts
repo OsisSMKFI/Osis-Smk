@@ -94,57 +94,62 @@ export async function POST(request: NextRequest) {
       reasoning: '' as string | undefined
     };
 
-    // AI PROVIDER AUTO-SWITCHING (Adaptive Learning seperti Live Chat)
-    // Priority: Gemini → OpenAI → Google Cloud → Azure → Basic Fallback
+    // =================================================================
+    // AI PROVIDER AUTO-SWITCHING (SAMA SEPERTI AI LIVE CHAT)
+    // Priority: Gemini → OpenAI → Anthropic → Basic Fallback
+    // Dengan proper API key validation & automatic retry
+    // =================================================================
     
+    // Get all API keys from admin settings (sama seperti chat)
+    const geminiKey = await getConfig('GEMINI_API_KEY');
+    const openaiKey = await getConfig('OPENAI_API_KEY');
+    const anthropicKey = await getConfig('ANTHROPIC_API_KEY');
+    
+    // Debug: Show key status (sama seperti chat)
+    console.log('[AI Verify] 🔑 API Key status:', {
+      gemini: geminiKey ? `${geminiKey.substring(0, 10)}... (${geminiKey.length} chars)` : 'NOT SET',
+      openai: openaiKey ? `${openaiKey.substring(0, 10)}... (${openaiKey.length} chars)` : 'NOT SET',
+      anthropic: anthropicKey ? `${anthropicKey.substring(0, 10)}... (${anthropicKey.length} chars)` : 'NOT SET',
+    });
+    
+    // Prepare photo data (base64 atau URL)
+    const currentPhoto = body.liveSelfieBase64 || body.currentPhotoUrl || '';
+    
+    // Build providers list with proper key validation (SAMA SEPERTI CHAT)
     const aiProviders = [
       {
         name: 'Gemini Vision',
-        check: async () => !!(await getConfig('GEMINI_API_KEY')),
-        execute: () => verifyWithGemini(
-          body.liveSelfieBase64 || body.currentPhotoUrl || '', 
-          referencePhotoUrl
-        )
+        // Validate format: harus mulai dengan 'AIza'
+        check: () => !!(geminiKey && geminiKey.startsWith('AIza')),
+        execute: () => verifyWithGemini(currentPhoto, referencePhotoUrl, geminiKey!)
       },
       {
         name: 'OpenAI Vision',
-        check: async () => !!(await getConfig('OPENAI_API_KEY')),
-        execute: () => verifyWithOpenAI(
-          body.currentPhotoUrl || '', 
-          referencePhotoUrl
-        )
+        // Validate format: harus mulai dengan 'sk-' atau 'sk-proj-'
+        check: () => !!(openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))),
+        execute: () => verifyWithOpenAI(currentPhoto, referencePhotoUrl, openaiKey!)
       },
       {
-        name: 'Google Cloud Vision',
-        check: () => !!process.env.GOOGLE_CLOUD_API_KEY,
-        execute: () => verifyWithGoogleVision(
-          body.currentPhotoUrl || body.liveSelfieBase64 || '', 
-          referencePhotoUrl
-        )
-      },
-      {
-        name: 'Azure Face',
-        check: () => !!process.env.AZURE_FACE_API_KEY,
-        execute: () => verifyWithAzureFace(
-          body.currentPhotoUrl || body.liveSelfieBase64 || '', 
-          referencePhotoUrl
-        )
+        name: 'Anthropic Vision',
+        // Validate format: harus mulai dengan 'sk-ant-'
+        check: () => !!(anthropicKey && anthropicKey.startsWith('sk-ant-')),
+        execute: () => verifyWithAnthropic(currentPhoto, referencePhotoUrl, anthropicKey!)
       },
       {
         name: 'Basic Fallback',
         check: () => true,
-        execute: () => basicImageVerification(
-          body.currentPhotoUrl || body.liveSelfieBase64 || '', 
-          referencePhotoUrl
-        )
+        execute: () => basicImageVerification(currentPhoto, referencePhotoUrl)
       }
     ];
 
-    // AUTO-SWITCH: Try each AI provider until one succeeds (like live chat adaptive learning)
-    let lastError = null;
+    // AUTO-SWITCH: Try each AI provider until one succeeds (SAMA SEPERTI LIVE CHAT)
+    let lastError: string | null = null;
+    let successProvider: string | null = null;
+    
     for (const provider of aiProviders) {
+      // Check dulu tanpa await (sync check)
       if (!provider.check()) {
-        console.log(`[AI Verify] ⏭️ Skipping ${provider.name} (not configured)`);
+        console.log(`[AI Verify] ⏭️ Skipping ${provider.name} (not configured or invalid key format)`);
         continue;
       }
 
@@ -154,17 +159,26 @@ export async function POST(request: NextRequest) {
         
         if (verificationResult.success) {
           console.log(`[AI Verify] ✅ ${provider.name} succeeded!`);
+          successProvider = provider.name;
           break; // Success! Stop trying other providers
         } else {
-          console.log(`[AI Verify] ⚠️ ${provider.name} returned unsuccessful result, trying next...`);
-          lastError = `${provider.name} failed to verify`;
+          console.log(`[AI Verify] ⚠️ ${provider.name} returned unsuccessful result:`, verificationResult.details?.error);
+          lastError = `${provider.name} failed: ${verificationResult.details?.error || 'Unknown error'}`;
+          // Continue to next provider (auto-fallback)
         }
       } catch (error: any) {
         console.error(`[AI Verify] ❌ ${provider.name} error:`, error.message);
-        lastError = error.message;
-        // Continue to next provider (auto-switch)
+        lastError = `${provider.name} error: ${error.message}`;
+        // Continue to next provider (auto-switch like live chat)
         continue;
       }
+    }
+    
+    // Log which provider was used
+    if (successProvider) {
+      console.log(`[AI Verify] 🎯 Final provider used: ${successProvider}`);
+    } else {
+      console.error('[AI Verify] ❌ All AI providers failed!', lastError);
     }
 
     if (!verificationResult.success) {
@@ -267,11 +281,10 @@ export async function POST(request: NextRequest) {
  * Google Gemini Vision API (PRIORITY)
  * Best untuk: Akurasi tinggi, liveness detection, anti-spoofing
  */
-async function verifyWithGemini(currentPhoto: string, referencePhoto: string): Promise<any> {
+async function verifyWithGemini(currentPhoto: string, referencePhoto: string, apiKey: string): Promise<any> {
   try {
-    const apiKey = await getConfig('GEMINI_API_KEY');
-    if (!apiKey) {
-      throw new Error('Gemini API key not configured');
+    if (!apiKey || !apiKey.startsWith('AIza')) {
+      throw new Error('Gemini API key not valid (must start with AIza)');
     }
 
     console.log('[Gemini Vision] Analyzing faces...');
@@ -498,22 +511,42 @@ Perform ultra-accurate face verification analysis:
     };
 
   } catch (error: any) {
-    console.error('[Gemini Vision] Error:', error);
-    // Fallback to basic verification
-    return await basicImageVerification(
-      currentPhoto.startsWith('http') ? currentPhoto : 'data:image/jpeg;base64,' + currentPhoto,
-      referencePhoto
-    );
+    console.error('[Gemini Vision] Error:', error.message);
+    // Return error instead of fallback (let next provider try)
+    return {
+      success: false,
+      faceDetected: false,
+      matchScore: 0,
+      confidence: 0,
+      details: { error: error.message },
+      aiProvider: 'gemini-vision-2.0'
+    };
   }
 }
 
 /**
- * OpenAI Vision API
+ * OpenAI Vision API (GPT-4 Vision)
  * Best untuk: General face detection dan comparison
  */
-async function verifyWithOpenAI(currentPhoto: string, referencePhoto: string): Promise<any> {
+async function verifyWithOpenAI(currentPhoto: string, referencePhoto: string, apiKey: string): Promise<any> {
   try {
-    const apiKey = await getConfig('OPENAI_API_KEY');
+    if (!apiKey || (!apiKey.startsWith('sk-') && !apiKey.startsWith('sk-proj-'))) {
+      throw new Error('OpenAI API key not valid (must start with sk-)');
+    }
+    
+    console.log('[OpenAI Vision] Analyzing faces...');
+    
+    // Convert photos to proper URL format for OpenAI
+    let currentPhotoUrl = currentPhoto;
+    let referencePhotoUrl = referencePhoto;
+    
+    // If base64, convert to data URL
+    if (!currentPhoto.startsWith('http') && !currentPhoto.startsWith('data:')) {
+      currentPhotoUrl = `data:image/jpeg;base64,${currentPhoto}`;
+    }
+    if (!referencePhoto.startsWith('http') && !referencePhoto.startsWith('data:')) {
+      referencePhotoUrl = `data:image/jpeg;base64,${referencePhoto}`;
+    }
     
     // Call OpenAI Vision API
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -543,7 +576,7 @@ async function verifyWithOpenAI(currentPhoto: string, referencePhoto: string): P
               {
                 type: 'image_url',
                 image_url: {
-                  url: currentPhoto
+                  url: currentPhotoUrl
                 }
               },
               {
@@ -553,7 +586,7 @@ async function verifyWithOpenAI(currentPhoto: string, referencePhoto: string): P
               {
                 type: 'image_url',
                 image_url: {
-                  url: referencePhoto
+                  url: referencePhotoUrl
                 }
               }
             ]
@@ -578,45 +611,166 @@ async function verifyWithOpenAI(currentPhoto: string, referencePhoto: string): P
     };
 
   } catch (error: any) {
-    console.error('[OpenAI Vision] Error:', error);
-    // Fallback ke basic
-    return await basicImageVerification(currentPhoto, referencePhoto);
+    console.error('[OpenAI Vision] Error:', error.message);
+    // Return error instead of fallback (let next provider try)
+    return {
+      success: false,
+      faceDetected: false,
+      matchScore: 0,
+      confidence: 0,
+      details: { error: error.message },
+      aiProvider: 'openai-vision'
+    };
   }
 }
 
 /**
- * Google Cloud Vision API
- * Best untuk: Face landmarks dan detection accuracy
+ * Anthropic Claude Vision API
+ * Best untuk: Detailed analysis dan reasoning
  */
-async function verifyWithGoogleVision(currentPhoto: string, referencePhoto: string): Promise<any> {
+async function verifyWithAnthropic(currentPhoto: string, referencePhoto: string, apiKey: string): Promise<any> {
   try {
-    // TODO: Implement Google Cloud Vision API
-    // https://cloud.google.com/vision/docs/detecting-faces
+    if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+      throw new Error('Anthropic API key not valid (must start with sk-ant-)');
+    }
     
-    // For now, fallback
-    return await basicImageVerification(currentPhoto, referencePhoto);
+    console.log('[Anthropic Vision] Analyzing faces...');
     
-  } catch (error: any) {
-    console.error('[Google Vision] Error:', error);
-    return await basicImageVerification(currentPhoto, referencePhoto);
-  }
-}
+    // Prepare photo data (convert to base64 if URL)
+    let currentBase64 = currentPhoto;
+    let referenceBase64 = referencePhoto;
+    
+    // Download and convert URLs to base64
+    if (currentPhoto.startsWith('http')) {
+      const response = await fetch(currentPhoto);
+      const buffer = await response.arrayBuffer();
+      currentBase64 = Buffer.from(buffer).toString('base64');
+    } else if (currentPhoto.startsWith('data:')) {
+      currentBase64 = currentPhoto.split(',')[1];
+    }
+    
+    if (referencePhoto.startsWith('http')) {
+      const response = await fetch(referencePhoto);
+      const buffer = await response.arrayBuffer();
+      referenceBase64 = Buffer.from(buffer).toString('base64');
+    } else if (referencePhoto.startsWith('data:')) {
+      referenceBase64 = referencePhoto.split(',')[1];
+    }
+    
+    // Call Anthropic Claude Vision API
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `You are a facial recognition expert. Analyze these two photos for face verification.
 
-/**
- * Azure Face API
- * Best untuk: Face verification dan liveness detection
- */
-async function verifyWithAzureFace(currentPhoto: string, referencePhoto: string): Promise<any> {
-  try {
-    // TODO: Implement Azure Face API
-    // https://learn.microsoft.com/en-us/azure/ai-services/computer-vision/concept-face-detection
+Photo 1 is the REFERENCE (registered user photo).
+Photo 2 is the CURRENT (live selfie for verification).
+
+Analyze and return ONLY valid JSON:
+{
+  "faceDetected": boolean,
+  "matchScore": number 0.0-1.0 (how similar are the faces),
+  "isLive": boolean (is this a real person, not a photo of photo),
+  "isFake": boolean (is this a screenshot/print/deepfake),
+  "confidence": number 0.0-1.0,
+  "details": {
+    "facialStructure": "matching|similar|different",
+    "warnings": []
+  },
+  "reasoning": "Brief explanation of analysis"
+}`
+              },
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: 'image/jpeg',
+                  data: referenceBase64
+                }
+              },
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: 'image/jpeg',
+                  data: currentBase64
+                }
+              }
+            ]
+          }
+        ]
+      })
+    });
     
-    // For now, fallback
-    return await basicImageVerification(currentPhoto, referencePhoto);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Extract text content from response
+    const textContent = data.content?.find((c: any) => c.type === 'text')?.text || '';
+    
+    // Parse JSON from response
+    let result;
+    try {
+      // Try to extract JSON from markdown code block
+      let jsonText = textContent;
+      if (textContent.includes('```json')) {
+        jsonText = textContent.split('```json')[1].split('```')[0].trim();
+      } else if (textContent.includes('```')) {
+        jsonText = textContent.split('```')[1].split('```')[0].trim();
+      }
+      result = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('[Anthropic Vision] Failed to parse JSON:', textContent);
+      throw new Error('Failed to parse Anthropic response');
+    }
+    
+    console.log('[Anthropic Vision] Analysis complete:', {
+      faceDetected: result.faceDetected,
+      matchScore: result.matchScore,
+      isLive: result.isLive,
+      confidence: result.confidence
+    });
+    
+    return {
+      success: true,
+      faceDetected: result.faceDetected,
+      matchScore: result.matchScore,
+      isLive: result.isLive,
+      isFake: result.isFake,
+      confidence: result.confidence,
+      details: result.details,
+      reasoning: result.reasoning,
+      aiProvider: 'anthropic-claude-vision'
+    };
     
   } catch (error: any) {
-    console.error('[Azure Face] Error:', error);
-    return await basicImageVerification(currentPhoto, referencePhoto);
+    console.error('[Anthropic Vision] Error:', error.message);
+    // Return error instead of fallback (let next provider try)
+    return {
+      success: false,
+      faceDetected: false,
+      matchScore: 0,
+      confidence: 0,
+      details: { error: error.message },
+      aiProvider: 'anthropic-claude-vision'
+    };
   }
 }
 
