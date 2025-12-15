@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { buildAIContext } from '@/lib/aiContext';
 import { handleAdminCommand } from '@/lib/adminChatCommands';
 import { getConfig } from '@/lib/adminConfig';
+import { logActivity } from '@/lib/activity-logger';
 // Clean formatter to align chat with vision formatting (remove markdown bold etc.)
 function formatCleanResponse(text: string, opts: { emphasis?: boolean } = {}): string {
   let out = text || '';
@@ -1198,6 +1199,31 @@ REMINDER: You have ALL the data above. Answer ONLY from this data. DO NOT halluc
     if (mode === 'public') {
       finalReply = sanitizePublicAI(finalReply, { vision: false });
     }
+    
+    // Log AI chat activity if user is logged in
+    if (userId) {
+      try {
+        await logActivity({
+          userId,
+          userName: (session?.user as any)?.name || (session?.user as any)?.email,
+          userEmail: (session?.user as any)?.email,
+          userRole: role,
+          activityType: 'ai_chat_message',
+          action: 'send_message',
+          description: `AI Chat: ${userQuery.substring(0, 100)}${userQuery.length > 100 ? '...' : ''}`,
+          metadata: {
+            provider: result.provider || 'unknown',
+            query_length: userQuery.length,
+            response_length: finalReply.length,
+            session_id: sessionId
+          },
+          status: 'success'
+        });
+      } catch (logErr) {
+        console.error('[AI Chat] Activity log failed:', logErr);
+      }
+    }
+    
     return NextResponse.json({ reply: formatCleanResponse(finalReply, { emphasis }), historyEnabled: true, resetApplied: reset });
   } catch (e: any) {
     console.error('[/api/ai/chat] Error:', e);

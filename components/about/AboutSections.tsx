@@ -34,15 +34,24 @@ interface HeroSection3DProps {
 }
 
 export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menjelajahi' }: HeroSection3DProps) {
-  // PERFORMANCE: Disable 3D for better performance
-  const [isWebGLSupported, setIsWebGLSupported] = useState(false); // Set to false to disable 3D
+  // Enable 3D if browser supports WebGL
+  const [isWebGLSupported, setIsWebGLSupported] = useState(false);
   const [stats, setStats] = useState({ year: 2024, activeMembers: 50, departments: 6 });
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
   const scale = useTransform(scrollY, [0, 400], [1, 0.95]);
   const y = useTransform(scrollY, [0, 400], [0, 50]);
 
-  // PERFORMANCE: Keep 3D disabled for better performance
+  // Check WebGL support on mount
+  useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      setIsWebGLSupported(!!gl);
+    } catch (e) {
+      setIsWebGLSupported(false);
+    }
+  }, []);
 
   // Fetch real stats from API
   useEffect(() => {

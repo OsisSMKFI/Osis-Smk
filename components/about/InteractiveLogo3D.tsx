@@ -804,7 +804,7 @@ export default function InteractiveLogo3D({
 
   return (
     <>
-      <SoundToggleButton />
+      {/* SoundToggleButton removed - handled by GlobalFloatingControls in layout */}
       
       <section 
         ref={containerRef}

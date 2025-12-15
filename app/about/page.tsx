@@ -544,8 +544,7 @@ export default function AboutPage() {
         {/* Custom Cursor - Desktop only */}
         {isClient && <CustomCursor />}
         
-        {/* Sound Toggle Button */}
-        {isClient && <SoundToggle />}
+        {/* Sound Toggle removed - handled by GlobalFloatingControls in layout */}
 
         {/* Hero Section with 3D */}
         {isClient && (
