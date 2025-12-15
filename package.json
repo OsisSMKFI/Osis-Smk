@@ -1,8 +1,8 @@
 {
   "name": "osis-smk-fithrah-insani",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
-  "buildTimestamp": "2025-12-02T17:52:00+07:00",
+  "buildTimestamp": "2025-12-15T12:00:00+07:00",
   "scripts": {
     "predev": "node ./show-lan-ip.js || echo LAN IP check skipped",
     "dev": "cross-env NODE_OPTIONS=--max_old_space_size=4096 next dev --turbo -p 3000 -H ::",

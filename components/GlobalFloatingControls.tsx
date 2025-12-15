@@ -76,6 +76,8 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
     e.preventDefault();
     e.stopPropagation();
     
+    console.log('[ScrollToTop] Button clicked - v2');
+    
     // Play sound first (wrapped in try-catch to not block scroll)
     try {
       playClickSound();
@@ -85,32 +87,47 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
     
     // Multiple scroll methods for maximum compatibility
     const doScroll = () => {
+      console.log('[ScrollToTop] Executing scroll...');
+      
       // Method 1: scrollTo with options
       try {
         window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        console.log('[ScrollToTop] Method 1: scrollTo with options');
       } catch {
         // Method 2: scrollTo without options
         window.scrollTo(0, 0);
+        console.log('[ScrollToTop] Method 2: scrollTo fallback');
       }
       
       // Method 3: Direct element scroll
       if (document.documentElement) {
         document.documentElement.scrollTop = 0;
+        console.log('[ScrollToTop] Method 3: documentElement');
       }
       if (document.body) {
         document.body.scrollTop = 0;
+        console.log('[ScrollToTop] Method 3: body');
       }
       
       // Method 4: scrollIntoView on top element
       const topElement = document.getElementById('top') || document.body.firstElementChild;
       if (topElement && typeof topElement.scrollIntoView === 'function') {
         topElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        console.log('[ScrollToTop] Method 4: scrollIntoView');
       }
     };
     
     // Execute immediately and also with requestAnimationFrame
     doScroll();
     requestAnimationFrame(doScroll);
+    
+    // Also try with setTimeout as ultimate fallback
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      console.log('[ScrollToTop] Timeout fallback executed');
+    }, 100);
   }, [playClickSound]);
 
   const openChat = useCallback(() => {
