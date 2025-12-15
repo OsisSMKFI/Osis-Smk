@@ -26,7 +26,7 @@ function RoleStatusBanner() {
       }
     }
     load();
-    const interval = setInterval(load, 30000);
+    const interval = setInterval(load, 120000); // every 2 min (was 30s - too frequent)
     return () => { active = false; clearInterval(interval); };
   }, []);
 
