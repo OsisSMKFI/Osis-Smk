@@ -126,8 +126,27 @@ export default function EditProfilePage() {
     }
   };
 
+  // Validate Instagram username format
+  const validateInstagramUsername = (username: string): boolean => {
+    if (!username) return true; // Optional field
+    // Instagram username rules: 1-30 chars, letters, numbers, periods, underscores
+    // Cannot be an email (no @domain.com pattern)
+    const emailPattern = /@.*\./; // Detects email pattern like @something.com
+    const validIgPattern = /^[a-zA-Z0-9._]{1,30}$/;
+    
+    if (emailPattern.test(username)) return false;
+    return validIgPattern.test(username);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate Instagram username
+    if (formData.instagram_username && !validateInstagramUsername(formData.instagram_username)) {
+      showToast('❌ Username Instagram tidak valid! Jangan gunakan email. Contoh: username_anda', 'error');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -408,14 +427,28 @@ export default function EditProfilePage() {
                   type="text"
                   value={formData.instagram_username}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/@/g, '');
+                    // Remove @ and any email domain patterns, only allow valid IG chars
+                    let value = e.target.value
+                      .replace(/@/g, '') // Remove @ symbols
+                      .replace(/\s/g, '') // Remove spaces
+                      .toLowerCase();
+                    // Only allow valid Instagram characters
+                    value = value.replace(/[^a-z0-9._]/g, '');
+                    // Limit to 30 characters (Instagram max)
+                    value = value.slice(0, 30);
                     setFormData({ ...formData, instagram_username: value });
                   }}
                   placeholder="username_instagram"
-                  className="w-full pl-8 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className={`w-full pl-8 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    formData.instagram_username && /@.*\./.test(formData.instagram_username)
+                      ? 'border-red-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                 />
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Masukkan username Instagram Anda</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                ⚠️ Masukkan <strong>username</strong> Instagram, bukan email! Contoh: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">osissmkinformatika_fi</code>
+              </p>
             </div>
           </div>
 
