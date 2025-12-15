@@ -419,7 +419,7 @@ function FooterCTASection() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {t('about.ctaSecondaryButton') || 'Pelajari Lebih Lanjut'}
+              {t('about.ctaSecondaryButton') || 'Lihat Info Terkini'}
             </motion.a>
           </div>
         </motion.div>

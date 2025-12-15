@@ -447,7 +447,7 @@ export const translations = {
       en: 'Let\'s build a better organization together and create a positive impact for the school and community.'
     },
     ctaButton: { id: 'Daftar Sekarang', en: 'Register Now' },
-    ctaSecondaryButton: { id: 'Pelajari Lebih Lanjut', en: 'Learn More' },
+    ctaSecondaryButton: { id: 'Lihat Info Terkini', en: 'View Latest Info' },
     
     // Scroll Text
     scrollText: { id: 'Scroll untuk menjelajahi', en: 'Scroll to explore' },

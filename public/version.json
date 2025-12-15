@@ -1,5 +1,6 @@
 {
-  "version": "0.1.4",
-  "buildTime": "2025-12-15T12:50:00+07:00",
-  "commit": "96ba10d"
+  "version": "0.1.5",
+  "buildTime": "2025-12-15T13:00:00+07:00",
+  "commit": "pending",
+  "changes": ["fix sound 404", "change button text to Lihat Info Terkini"]
 }
