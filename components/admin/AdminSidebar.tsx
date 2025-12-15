@@ -74,13 +74,19 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button - Toggle between hamburger and X */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
         className="lg:hidden fixed top-4 left-4 z-[60] p-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 rounded-xl shadow-lg hover:shadow-xl transition-all"
-        aria-label="Toggle menu"
+        aria-label={mobileOpen ? "Close menu" : "Open menu"}
       >
-        <FaBars className="text-xl" />
+        {mobileOpen ? (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <FaBars className="text-xl" />
+        )}
       </button>
 
       {/* Mobile Overlay */}
@@ -115,17 +121,6 @@ export default function AdminSidebar() {
               </div>
             </div>
           )}
-          
-          {/* Mobile Close Button */}
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="lg:hidden flex w-10 h-10 items-center justify-center bg-white/30 backdrop-blur-sm rounded-xl hover:bg-white/50 transition-all text-slate-900"
-            aria-label="Close menu"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
           
           {/* Collapse Button - Desktop Only */}
           <button
