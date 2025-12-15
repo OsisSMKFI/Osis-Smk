@@ -71,31 +71,46 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
     };
   }, [mounted]);
 
-  const scrollToTop = useCallback(() => {
+  const scrollToTop = useCallback((e: React.MouseEvent) => {
+    // Prevent any default behavior
+    e.preventDefault();
+    e.stopPropagation();
+    
     // Play sound first (wrapped in try-catch to not block scroll)
     try {
       playClickSound();
-    } catch (e) {
-      console.warn('Sound play failed:', e);
+    } catch (err) {
+      console.warn('Sound play failed:', err);
     }
     
-    // Scroll to top with fallback
-    try {
-      // Try smooth scroll first
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    } catch {
-      // Fallback to instant scroll
-      window.scrollTo(0, 0);
-    }
+    // Multiple scroll methods for maximum compatibility
+    const doScroll = () => {
+      // Method 1: scrollTo with options
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      } catch {
+        // Method 2: scrollTo without options
+        window.scrollTo(0, 0);
+      }
+      
+      // Method 3: Direct element scroll
+      if (document.documentElement) {
+        document.documentElement.scrollTop = 0;
+      }
+      if (document.body) {
+        document.body.scrollTop = 0;
+      }
+      
+      // Method 4: scrollIntoView on top element
+      const topElement = document.getElementById('top') || document.body.firstElementChild;
+      if (topElement && typeof topElement.scrollIntoView === 'function') {
+        topElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
     
-    // Also try scrolling html and body directly as fallback
-    try {
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    } catch {}
+    // Execute immediately and also with requestAnimationFrame
+    doScroll();
+    requestAnimationFrame(doScroll);
   }, [playClickSound]);
 
   const openChat = useCallback(() => {

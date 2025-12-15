@@ -123,7 +123,7 @@ const MemberDetailModal: React.FC<{
                   damping: 25,
                   mass: 0.8
                 }}
-                className="relative w-full max-w-2xl max-h-[85vh] overflow-auto rounded-2xl shadow-2xl cursor-auto"
+                className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl shadow-2xl cursor-auto"
                 style={{ 
                   perspective: '1200px',
                   transformStyle: 'preserve-3d',
@@ -229,7 +229,8 @@ const MemberDetailModal: React.FC<{
                 <div className="relative flex flex-col md:flex-row dark:bg-slate-900/95">
                   {/* Image Section with premium effects */}
                   <motion.div 
-                    className="relative w-full md:w-2/5 aspect-square md:aspect-auto min-h-[280px] md:min-h-[400px]"
+                    className="relative w-full md:w-2/5 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-900"
+                    style={{ minHeight: '250px', maxHeight: '400px' }}
                     initial={{ x: -80, opacity: 0, rotateY: -15 }}
                     animate={{ x: 0, opacity: 1, rotateY: 0 }}
                     transition={{ delay: 0.15, duration: 0.6, type: 'spring' }}
@@ -237,7 +238,7 @@ const MemberDetailModal: React.FC<{
                     <img
                       src={member.image}
                       alt={member.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain max-h-[400px]"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = '/images/placeholder.svg';
                       }}
