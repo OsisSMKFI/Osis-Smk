@@ -285,21 +285,21 @@ const Navbar: React.FC = () => {
       >
         {/* Premium Panel Card */}
         <div 
-          className={`relative w-full max-w-[560px] mx-auto rounded-2xl md:rounded-3xl border border-white/10 bg-white/90 dark:bg-[#0F172A]/95 backdrop-blur-xl shadow-2xl shadow-black/50 max-h-[86vh] overflow-y-auto overflow-x-hidden transition-all duration-300 ease-out ${
+          className={`relative w-full max-w-[560px] mx-4 sm:mx-auto rounded-2xl md:rounded-3xl border border-white/10 bg-white/90 dark:bg-[#0F172A]/95 backdrop-blur-xl shadow-2xl shadow-black/50 max-h-[86vh] overflow-y-auto overflow-x-hidden transition-all duration-300 ease-out ${
             isOpen ? 'translate-y-0 opacity-100' : '-translate-y-6 opacity-0'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* FASE 4: Header tersusun: Brand + Icon group terpusat, close di kanan */}
-          <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-xl border-b border-white/10 px-4 xs:px-5 py-3 flex w-full items-center gap-2 xs:gap-3">
-            {/* Cluster kiri: Brand + Icons */}
-            <div className="flex items-center gap-1.5 xs:gap-2 min-w-0">
+          {/* Header: Logo + Close button only - simplified for mobile */}
+          <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-xl border-b border-white/10 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              {/* Left: Logo + Brand */}
               <Link
                 href="/"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-1.5 xs:gap-2 group flex-shrink-0 min-w-0"
+                className="flex items-center gap-2.5 group flex-shrink-0"
               >
-                <div className="relative w-8 h-8 xs:w-9 xs:h-9 rounded-full overflow-hidden flex-shrink-0">
+                <div className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
                   <img
                     src="/images/logo-2.png"
                     alt={t('navbar.logoAlt')}
@@ -307,54 +307,44 @@ const Navbar: React.FC = () => {
                   />
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400/20 to-amber-500/20 group-hover:scale-125 transition-transform duration-300" />
                 </div>
-                <span className="flex items-center min-w-0">
-                  <span className="block sm:hidden text-[0.65rem] xs:text-[0.7rem] font-bold bg-gradient-to-r from-yellow-600 to-amber-600 dark:from-yellow-400 dark:to-amber-400 bg-clip-text text-transparent leading-tight truncate max-w-[70px]">
-                    {brandNameShort}
-                  </span>
-                  <span className="hidden sm:block text-xs sm:text-sm font-bold bg-gradient-to-r from-yellow-600 to-amber-600 dark:from-yellow-400 dark:to-amber-400 bg-clip-text text-transparent leading-tight truncate max-w-[140px]">
-                    {brandNameFull}
-                  </span>
+                <span className="text-sm font-bold bg-gradient-to-r from-yellow-600 to-amber-600 dark:from-yellow-400 dark:to-amber-400 bg-clip-text text-transparent leading-tight">
+                  <span className="sm:hidden">{brandNameShort}</span>
+                  <span className="hidden sm:inline">{brandNameFull}</span>
                 </span>
               </Link>
 
-              {/* Icon group langsung setelah brand */}
-              <div className="flex items-center gap-1.5 xs:gap-2 pl-1 xs:pl-1.5">
-                {/* Language Toggle */}
-                <div className="w-8 h-8 xs:w-9 xs:h-9 flex items-center justify-center flex-shrink-0">
-                  <div className="scale-[0.65] xs:scale-[0.7] sm:scale-[0.75] origin-center">
-                    <ClientOnly fallback={<div className="w-7 h-7 xs:w-8 xs:h-8 bg-gray-200/50 dark:bg-gray-700/50 rounded-full animate-pulse" />}>
+              {/* Right: Theme + Language + Close */}
+              <div className="flex items-center gap-2">
+                {/* Language Toggle - Compact */}
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <div className="scale-[0.55] origin-center">
+                    <ClientOnly fallback={<div className="w-6 h-6 bg-gray-200/50 dark:bg-gray-700/50 rounded-full animate-pulse" />}>
                       <LanguageToggle />
                     </ClientOnly>
                   </div>
                 </div>
 
-                {/* Theme Toggle */}
-                <div className="w-8 h-8 xs:w-9 xs:h-9 flex items-center justify-center flex-shrink-0">
-                  <div className="scale-[0.65] xs:scale-[0.7] sm:scale-[0.75] origin-center">
-                    <ClientOnly fallback={<div className="w-7 h-7 xs:w-8 xs:h-8 bg-gray-200/50 dark:bg-gray-700/50 rounded-full animate-pulse" />}>
+                {/* Theme Toggle - Compact */}
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <div className="scale-[0.55] origin-center">
+                    <ClientOnly fallback={<div className="w-6 h-6 bg-gray-200/50 dark:bg-gray-700/50 rounded-full animate-pulse" />}>
                       <ThemeToggle />
                     </ClientOnly>
                   </div>
                 </div>
-                {/* Divider */}
-                <div className="hidden xs:block h-5 w-px bg-gray-300/50 dark:bg-gray-600/50 mx-0.5" />
-              </div>
-            </div>
 
-            {/* Close button di kanan dengan ml-auto */}
-            <div className="ml-auto flex items-center">
-              {/* Language Toggle */}
-              {/* Close Button lebih kecil */}
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="w-10 h-10 xs:w-11 xs:h-11 rounded-full border border-yellow-500/50 bg-white/70 dark:bg-[#0F172A]/70 hover:bg-yellow-500/20 backdrop-blur-lg flex items-center justify-center text-gray-800 dark:text-gray-200 hover:text-yellow-600 dark:hover:text-yellow-400 shadow-lg hover:shadow-yellow-500/30 transition-all duration-200 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-[#0F172A]"
-                aria-label="Close menu"
-              >
-                <svg className="w-5 h-5 xs:w-6 xs:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="w-9 h-9 rounded-full border border-yellow-500/50 bg-white/70 dark:bg-[#0F172A]/70 hover:bg-yellow-500/20 backdrop-blur-lg flex items-center justify-center text-gray-800 dark:text-gray-200 hover:text-yellow-600 dark:hover:text-yellow-400 shadow-md transition-all duration-200 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  aria-label="Close menu"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
 
