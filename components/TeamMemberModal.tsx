@@ -84,11 +84,11 @@ const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClo
             
             <div className="mt-2">
               <div className="text-center mb-6">
-                <div className="relative w-48 h-48 mx-auto rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
+                <div className="relative w-48 h-auto mx-auto rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
                   <img 
                     src={member.image} 
                     alt={member.name} 
-                    className="w-full h-full object-cover"
+                    className="w-full h-auto object-contain max-h-64"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/images/placeholder.svg';
                     }}

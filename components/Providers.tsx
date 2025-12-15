@@ -14,6 +14,7 @@ import ClientOnly from './ClientOnly';
 import { SessionProvider } from 'next-auth/react';
 import { SecurityAnalyzerProvider } from './SecurityAnalyzerProvider';
 import GlobalSoundInteraction from './GlobalSoundInteraction';
+import ScrollToTopOnNavigation from './ScrollToTopOnNavigation';
 
 // Lazy load ExperienceProvider to prevent blocking initial render
 const ExperienceProvider = lazy(() => 
@@ -66,6 +67,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           <ThemeProvider>
             <ToastProvider>
             <SoundProvider>
+            <ScrollToTopOnNavigation />
             <GlobalSoundInteraction />
             <SmoothScroll>
               {/* 3D Experience - on all public pages */}

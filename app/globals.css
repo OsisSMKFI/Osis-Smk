@@ -218,6 +218,23 @@ body {
   padding: 0;
 }
 
+/* Cover top area behind navbar with matching background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, var(--background) 0%, transparent 100%);
+  z-index: 99;
+  pointer-events: none;
+}
+
+.dark body::before {
+  background: linear-gradient(to bottom, #111827 0%, transparent 100%);
+}
+
 /* ===== LAYOUT ===== */
 .page-content {
   padding-top: clamp(60px, 10vw, 80px);

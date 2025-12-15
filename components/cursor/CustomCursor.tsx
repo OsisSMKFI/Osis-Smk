@@ -100,6 +100,11 @@ export default function CustomCursor({ enabled = true }: CustomCursorProps) {
         @media (pointer: fine) and (min-width: 768px) {
           body { cursor: none !important; }
           a, button, [role="button"] { cursor: none !important; }
+          /* Allow cursor in modals and overlays */
+          [class*="z-[9999]"], [class*="z-[9999]"] *, 
+          .modal, .modal *, 
+          [role="dialog"], [role="dialog"] *,
+          .cursor-auto, .cursor-auto * { cursor: auto !important; }
         }
       `}</style>
     </>
