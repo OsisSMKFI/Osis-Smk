@@ -21,14 +21,16 @@ interface SoundManagerContextType {
 
 const SoundManagerContext = createContext<SoundManagerContextType | null>(null);
 
-// Sound definitions
-const SOUNDS = {
-  hover: '/sounds/hover.mp3',
-  click: '/sounds/click.mp3',
-  success: '/sounds/success.mp3',
-  transition: '/sounds/transition.mp3',
-  ambient: '/sounds/ambient.mp3',
-  whoosh: '/sounds/whoosh.mp3',
+// Sound definitions - using empty strings to prevent 404 errors
+// The actual sound is handled by SoundContext with Web Audio API oscillators
+const SOUNDS: Record<string, string> = {
+  // Disabled - using Web Audio API oscillators instead of MP3 files
+  // hover: '/sounds/hover.mp3',
+  // click: '/sounds/click.mp3',
+  // success: '/sounds/success.mp3',
+  // transition: '/sounds/transition.mp3',
+  // ambient: '/sounds/ambient.mp3',
+  // whoosh: '/sounds/whoosh.mp3',
 };
 
 export function SoundManagerProvider({ children }: { children: React.ReactNode }) {

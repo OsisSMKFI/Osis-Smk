@@ -17,6 +17,7 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
   const { soundEnabled, toggleSound, playClickSound, playHoverSound } = useSoundEffects();
 
   useEffect(() => {
+    console.log('[GlobalFloatingControls] Component mounted - v3');
     setMounted(true);
     setPortalRoot(document.body);
   }, []);
@@ -25,8 +26,11 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
   useEffect(() => {
     if (!mounted) return;
     
+    console.log('[GlobalFloatingControls] Scroll listener attached - v3');
+    
     let rafId: number;
     let lastScrollY = 0;
+    let loggedOnce = false;
     
     const updateScrollState = () => {
       const scrollY = Math.max(
@@ -38,7 +42,12 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
       
       if (scrollY !== lastScrollY) {
         lastScrollY = scrollY;
-        setShowScrollTop(scrollY > 200);
+        const shouldShow = scrollY > 200;
+        if (!loggedOnce && shouldShow) {
+          console.log('[GlobalFloatingControls] Scroll button should show, scrollY:', scrollY);
+          loggedOnce = true;
+        }
+        setShowScrollTop(shouldShow);
       }
       
       rafId = requestAnimationFrame(updateScrollState);
