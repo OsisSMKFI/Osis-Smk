@@ -72,11 +72,30 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
   }, [mounted]);
 
   const scrollToTop = useCallback(() => {
-    playClickSound();
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    // Play sound first (wrapped in try-catch to not block scroll)
+    try {
+      playClickSound();
+    } catch (e) {
+      console.warn('Sound play failed:', e);
+    }
+    
+    // Scroll to top with fallback
+    try {
+      // Try smooth scroll first
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    } catch {
+      // Fallback to instant scroll
+      window.scrollTo(0, 0);
+    }
+    
+    // Also try scrolling html and body directly as fallback
+    try {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    } catch {}
   }, [playClickSound]);
 
   const openChat = useCallback(() => {
@@ -85,7 +104,11 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
   }, [playClickSound]);
 
   const handleToggleSound = useCallback(() => {
-    toggleSound();
+    try {
+      toggleSound();
+    } catch (e) {
+      console.warn('Toggle sound failed:', e);
+    }
   }, [toggleSound]);
 
   if (!mounted || !portalRoot) return null;

@@ -15,6 +15,7 @@ import { SessionProvider } from 'next-auth/react';
 import { SecurityAnalyzerProvider } from './SecurityAnalyzerProvider';
 import GlobalSoundInteraction from './GlobalSoundInteraction';
 import ScrollToTopOnNavigation from './ScrollToTopOnNavigation';
+import GlobalFloatingControls from './GlobalFloatingControls';
 
 // Lazy load ExperienceProvider to prevent blocking initial render
 const ExperienceProvider = lazy(() => 
@@ -69,6 +70,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <SoundProvider>
             <ScrollToTopOnNavigation />
             <GlobalSoundInteraction />
+            <GlobalFloatingControls showChat={isPublicPage} />
             <SmoothScroll>
               {/* 3D Experience - on all public pages */}
               {show3DExperience ? (
