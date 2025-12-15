@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion, type Variants, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -315,14 +316,16 @@ const GoalsSection: React.FC = () => {
           <p className="text-gray-700 dark:text-gray-300 mb-6">
             {t('goals.joinUsDesc')}
           </p>
-          <motion.button 
-            type="button"
-            className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 dark:from-yellow-500 dark:to-amber-600 dark:hover:from-yellow-600 dark:hover:to-amber-700 text-slate-900 dark:text-gray-900 font-semibold py-3 px-8 rounded-full shadow-lg transition-all duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {t('common.learnMore')}
-          </motion.button>
+          <Link href="/about">
+            <motion.button 
+              type="button"
+              className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 dark:from-yellow-500 dark:to-amber-600 dark:hover:from-yellow-600 dark:hover:to-amber-700 text-slate-900 dark:text-gray-900 font-semibold py-3 px-8 rounded-full shadow-lg transition-all duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {t('common.learnMore')}
+            </motion.button>
+          </Link>
         </motion.div>
       </motion.div>
     </div>
