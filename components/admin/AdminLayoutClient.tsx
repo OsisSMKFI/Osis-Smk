@@ -6,14 +6,21 @@ import type { Session } from 'next-auth';
 import { useEffect, useState } from 'react';
 
 function RoleStatusBanner() {
-  // Only enable in production when explicitly configured
-  if (typeof window === 'undefined') return null;
-  if (process.env.NODE_ENV !== 'production') return null;
-  if (process.env.NEXT_PUBLIC_DEBUG_ADMIN_ENDPOINTS !== '1') return null;
-
+  const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Only enable in production when explicitly configured
+  const shouldShow = mounted && 
+    process.env.NODE_ENV === 'production' && 
+    process.env.NEXT_PUBLIC_DEBUG_ADMIN_ENDPOINTS === '1';
+
+  useEffect(() => {
+    if (!shouldShow) return;
+    
     let active = true;
     async function load() {
       try {
@@ -28,9 +35,9 @@ function RoleStatusBanner() {
     load();
     const interval = setInterval(load, 120000); // every 2 min (was 30s - too frequent)
     return () => { active = false; clearInterval(interval); };
-  }, []);
+  }, [shouldShow]);
 
-  if (!data || !data.ok) return null;
+  if (!shouldShow || !data || !data.ok) return null;
 
   const mismatch = data.role_mismatch;
   const missing = (data.missing_canonicals || []) as string[];
@@ -65,8 +72,12 @@ export default function AdminLayoutClient({
       {/* Sidebar */}
       {!isLogin && session?.user && <AdminSidebar />}
 
-      {/* Main Content */}
-      <div className={isLogin || !session?.user ? '' : 'lg:pl-72 transition-all duration-300'} suppressHydrationWarning>
+      {/* Main Content - z-index lower than sidebar */}
+      <div 
+        className={isLogin || !session?.user ? '' : 'lg:pl-72 transition-all duration-300'} 
+        style={{ position: 'relative', zIndex: 1 }}
+        suppressHydrationWarning
+      >
         {/* Header */}
         {!isLogin && session?.user && <AdminHeader />}
 

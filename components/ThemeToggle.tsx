@@ -17,6 +17,7 @@ const ThemeToggle: React.FC = () => {
         className="group relative p-3 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-yellow-100 hover:to-amber-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-all duration-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 shadow-lg hover:shadow-xl transform hover:scale-105"
         aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
         title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+        suppressHydrationWarning
       >
         {/* Glow effect */}
         <div className={`absolute inset-0 rounded-2xl transition-opacity duration-500 ${

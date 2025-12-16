@@ -44,8 +44,7 @@ export default function AdminHeader() {
   const unreadCount = notifications.filter((n) => n.status !== 'reviewed').length;
 
   const handleLogout = async () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    await signOut({ callbackUrl: `${origin}/`, redirect: true });
+    await signOut({ callbackUrl: '/', redirect: true });
   };
 
   // User display data from session
@@ -56,7 +55,7 @@ export default function AdminHeader() {
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700">
+    <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700" suppressHydrationWarning>
       <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4 ml-12 lg:ml-0">
         {/* Search Bar - hide on mobile */}
         <div className="hidden sm:block flex-1 max-w-xs md:max-w-md lg:max-w-xl">
@@ -71,6 +70,7 @@ export default function AdminHeader() {
                 color: 'var(--text-primary)',
                 borderColor: 'var(--input-border)',
               }}
+              suppressHydrationWarning
             />
           </div>
         </div>

@@ -156,7 +156,7 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
         position: 'fixed',
         bottom: '24px',
         right: '24px',
-        zIndex: 99999,
+        zIndex: 50,
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',

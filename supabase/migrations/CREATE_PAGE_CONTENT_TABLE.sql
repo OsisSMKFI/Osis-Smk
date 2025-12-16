@@ -26,6 +26,10 @@ ALTER TABLE page_content ENABLE ROW LEVEL SECURITY;
 -- 4. Drop existing policies
 DROP POLICY IF EXISTS "Public can view published content" ON page_content;
 DROP POLICY IF EXISTS "Anyone can view all page content" ON page_content;
+DROP POLICY IF EXISTS "Public read all page content" ON page_content;
+DROP POLICY IF EXISTS "Authenticated users can insert page content" ON page_content;
+DROP POLICY IF EXISTS "Authenticated users can update page content" ON page_content;
+DROP POLICY IF EXISTS "Authenticated users can delete page content" ON page_content;
 
 -- 5. Create public read policy
 CREATE POLICY "Public read all page content"

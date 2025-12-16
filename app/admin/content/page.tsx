@@ -57,7 +57,8 @@ const IMPORTANT_CONTENT_KEYS = [
 export default function AdminContentPage() {
   const { data: session, status } = useSession();
   const role = ((session?.user as any)?.role || '').toLowerCase();
-  const canAccessAdminPanel = ['super_admin', 'admin'].includes(role);
+  // Allow super_admin, admin, and osis to access content management
+  const canAccessAdminPanel = ['super_admin', 'admin', 'osis'].includes(role);
 
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,12 +74,12 @@ export default function AdminContentPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       redirect('/admin/login');
+      return;
+    }
+    if (status === 'authenticated') {
+      fetchContents();
     }
   }, [status]);
-
-  useEffect(() => {
-    fetchContents();
-  }, []);
 
   const fetchContents = async () => {
     try {

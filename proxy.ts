@@ -25,12 +25,6 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // Legacy redirect
-  if (pathname === '/admin/content') {
-    const url = new URL('/admin/posts', request.url);
-    return NextResponse.redirect(url);
-  }
-
   // Admin gate
   if (pathname.startsWith('/admin')) {
     const session = await auth();

@@ -77,7 +77,8 @@ export default function AdminSidebar() {
       {/* Mobile Menu Button - Toggle between hamburger and X */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-[60] p-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 rounded-xl shadow-lg hover:shadow-xl transition-all"
+        className="lg:hidden fixed top-4 left-4 p-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 rounded-xl shadow-lg hover:shadow-xl transition-all"
+        style={{ zIndex: 10000, pointerEvents: 'auto' }}
         aria-label={mobileOpen ? "Close menu" : "Open menu"}
       >
         {mobileOpen ? (
@@ -92,23 +93,28 @@ export default function AdminSidebar() {
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-[55] backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 bg-black/50 z-[9998] backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`
-          fixed top-0 left-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
-          text-white shadow-2xl transition-transform duration-300 ease-in-out
-          ${collapsed ? 'w-20' : 'w-72'}
-          lg:translate-x-0 lg:z-40
-          ${mobileOpen 
-            ? 'translate-x-0 z-[56]' 
-            : '-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0'
-          }
-        `}
+        className={[
+          'fixed top-0 left-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900',
+          'text-white shadow-2xl transition-transform duration-300 ease-in-out',
+          collapsed ? 'w-20' : 'w-72',
+          // Desktop: always visible and clickable  
+          'lg:translate-x-0',
+          // Mobile: slide in/out
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        ].join(' ')}
+        style={{ 
+          pointerEvents: 'auto',
+          zIndex: 9999,
+          isolation: 'isolate'
+        }}
+        suppressHydrationWarning
       >
         {/* Header */}
         <div className="relative h-20 flex items-center justify-between px-4 sm:px-6 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 shadow-xl">
@@ -313,8 +319,7 @@ export default function AdminSidebar() {
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-800/50 backdrop-blur-sm border-t border-slate-700">
           <button
             onClick={() => {
-              const origin = typeof window !== 'undefined' ? window.location.origin : '';
-              signOut({ callbackUrl: `${origin}/`, redirect: true });
+              signOut({ callbackUrl: '/', redirect: true });
             }}
             className={`
               group w-full flex items-center space-x-3 px-4 py-3 rounded-xl
@@ -322,6 +327,7 @@ export default function AdminSidebar() {
               transition-all duration-200
               ${collapsed ? 'justify-center' : ''}
             `}
+            suppressHydrationWarning
           >
             <FaSignOutAlt className="text-xl" />
             {!collapsed && <span className="font-medium">Logout</span>}

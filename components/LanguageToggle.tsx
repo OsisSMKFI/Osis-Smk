@@ -17,6 +17,7 @@ const LanguageToggle: React.FC = () => {
         className="group relative flex items-center gap-1 px-1.5 py-1.5 rounded-full bg-gradient-to-br from-gray-100/80 to-gray-200/80 dark:from-gray-800/80 dark:to-gray-900/80 backdrop-blur-xl border border-gray-300/50 dark:border-gray-600/50 hover:border-gray-400/60 dark:hover:border-gray-500/60 transition-all duration-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 dark:focus:ring-offset-gray-900 shadow-lg hover:shadow-2xl transform hover:scale-105"
         aria-label={`Switch to ${language === 'id' ? 'English' : 'Indonesian'}`}
         title={`Switch to ${language === 'id' ? 'English' : 'Indonesian'}`}
+        suppressHydrationWarning
       >
         {/* Animated Background Glow */}
         <div className={`absolute inset-0 rounded-full blur-xl transition-opacity duration-700 ${
