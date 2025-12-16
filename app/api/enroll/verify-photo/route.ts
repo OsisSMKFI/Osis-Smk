@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getAIApiKeys, getAIConfig } from '@/lib/getAdminSettings';
 import OpenAI from 'openai';
+import { getAIGatewayStatus } from '@/lib/vercel/ai-gateway';
 
 /**
  * POST /api/enroll/verify-photo
@@ -52,11 +53,13 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
     
-    // Priority: Gemini (fastest + best for vision) > OpenAI
+    // Priority: Gemini (fastest + best for vision) > OpenAI > AI Gateway
     const useGemini = !!apiKeys.gemini;
     const useOpenAI = !useGemini && !!apiKeys.openai;
+    const gatewayStatus = getAIGatewayStatus();
+    const useGateway = !useGemini && !useOpenAI && gatewayStatus.anyAvailable;
     
-    if (!useGemini && !useOpenAI) {
+    if (!useGemini && !useOpenAI && !useGateway) {
       console.error('[Enrollment AI] ❌ No AI provider configured');
       
       // Fallback mode: Basic validation only
@@ -96,7 +99,7 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    console.log('[Enrollment AI] ✅ Provider:', useGemini ? 'Gemini' : 'OpenAI');
+    console.log('[Enrollment AI] ✅ Provider:', useGemini ? 'Gemini' : useOpenAI ? 'OpenAI' : 'AI Gateway');
     
     // ============================================
     // STEP 2: GET ENROLLMENT CONFIGURATION

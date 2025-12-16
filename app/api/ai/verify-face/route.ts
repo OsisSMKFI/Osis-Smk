@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { getConfig } from '@/lib/adminConfig';
+import { getAIGatewayStatus } from '@/lib/vercel/ai-gateway';
 
 interface FaceVerificationRequest {
   liveSelfieBase64?: string; // New: base64 encoded selfie
@@ -134,6 +135,11 @@ export async function POST(request: NextRequest) {
         // Validate format: harus mulai dengan 'sk-ant-'
         check: () => !!(anthropicKey && anthropicKey.startsWith('sk-ant-')),
         execute: () => verifyWithAnthropic(currentPhoto, referencePhotoUrl, anthropicKey!)
+      },
+      {
+        name: 'AI Gateway',
+        check: () => getAIGatewayStatus().anyAvailable,
+        execute: () => verifyWithAIGateway(currentPhoto, referencePhotoUrl)
       },
       {
         name: 'Basic Fallback',
@@ -770,6 +776,83 @@ Analyze and return ONLY valid JSON:
       confidence: 0,
       details: { error: error.message },
       aiProvider: 'anthropic-claude-vision'
+    };
+  }
+}
+
+/**
+ * Vercel AI Gateway Face Verification
+ * Uses AI Gateway for vision analysis
+ */
+async function verifyWithAIGateway(currentPhoto: string, referencePhoto: string): Promise<any> {
+  console.log('[AI Gateway] Running face verification via AI Gateway...');
+  
+  try {
+    const { gateway } = await import('@ai-sdk/gateway');
+    const { generateText } = await import('ai');
+    
+    const prompt = `Analyze these two face photos for identity verification:
+
+PHOTO 1 (Current/Live): The person taking the selfie now
+PHOTO 2 (Reference): The registered reference photo
+
+Provide your analysis in JSON format:
+{
+  "faceDetected": true/false,
+  "matchScore": 0.0-1.0 (confidence of same person),
+  "isLive": true/false (does photo 1 look like a real live photo, not screenshot),
+  "isFake": true/false (any signs of manipulation or fraud),
+  "analysis": "brief explanation",
+  "recommendation": "ACCEPT" or "REJECT"
+}
+
+Be strict about identity matching. Only return ACCEPT if you are confident it's the same person.`;
+
+    const result = await generateText({
+      model: gateway('openai/gpt-4o-mini'),
+      messages: [
+        { 
+          role: 'user', 
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image', image: currentPhoto.startsWith('data:') ? currentPhoto : `data:image/jpeg;base64,${currentPhoto}` },
+            { type: 'image', image: referencePhoto.startsWith('data:') ? referencePhoto : referencePhoto }
+          ]
+        }
+      ],
+    });
+
+    // Parse JSON from response
+    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        success: parsed.recommendation === 'ACCEPT' && parsed.matchScore >= 0.7,
+        faceDetected: parsed.faceDetected,
+        matchScore: parsed.matchScore,
+        isLive: parsed.isLive,
+        isFake: parsed.isFake,
+        recommendation: parsed.recommendation,
+        details: {
+          provider: 'AI Gateway (OpenAI)',
+          analysis: parsed.analysis
+        }
+      };
+    }
+    
+    throw new Error('Invalid AI Gateway response format');
+  } catch (error: any) {
+    console.error('[AI Gateway] Face verification error:', error.message);
+    return {
+      success: false,
+      faceDetected: false,
+      matchScore: 0,
+      isLive: false,
+      isFake: false,
+      details: {
+        error: error.message,
+        provider: 'AI Gateway'
+      }
     };
   }
 }

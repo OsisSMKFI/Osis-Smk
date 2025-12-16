@@ -5,6 +5,8 @@ import { buildAIContext } from '@/lib/aiContext';
 import { handleAdminCommand } from '@/lib/adminChatCommands';
 import { getConfig } from '@/lib/adminConfig';
 import { logActivity } from '@/lib/activity-logger';
+import { getAIGatewayStatus, chat as gatewayChat } from '@/lib/vercel/ai-gateway';
+
 // Clean formatter to align chat with vision formatting (remove markdown bold etc.)
 function formatCleanResponse(text: string, opts: { emphasis?: boolean } = {}): string {
   let out = text || '';
@@ -213,10 +215,27 @@ async function callAI(
     console.log('[AI] ⚠️ Anthropic key exists but does not start with "sk-ant-":', anthropicKey.substring(0, 15));
   }
 
+  // Try Vercel AI Gateway as final fallback
+  const gatewayStatus = getAIGatewayStatus();
+  if (gatewayStatus.anyAvailable) {
+    console.log('[AI] ✅ Using Vercel AI Gateway as fallback');
+    try {
+      const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
+      const systemMessage = messages.find(m => m.role === 'system')?.content;
+      const text = await gatewayChat(lastUserMessage, { 
+        model: 'gpt-4o-mini',
+        system: systemMessage,
+      });
+      return { text };
+    } catch (gatewayError: any) {
+      console.error('[AI] ❌ AI Gateway failed:', gatewayError.message);
+    }
+  }
+
   // No valid API key found
   console.error('[AI] ❌ No valid API key found. All providers unavailable.');
   return { 
-    error: 'AI provider is not configured. Please set OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY in admin settings.' 
+    error: 'AI provider is not configured. Please set API keys in admin settings or configure Vercel AI Gateway.' 
   };
 }
 

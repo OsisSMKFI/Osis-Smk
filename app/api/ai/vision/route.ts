@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { auth } from '@/lib/auth';
+import { getAIGatewayStatus } from '@/lib/vercel/ai-gateway';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -530,7 +531,40 @@ INGAT: Database di atas adalah SUMBER KEBENARAN. Gunakan dengan maksimal!`;
         return NextResponse.json({ error: 'Anthropic Vision failed', details: lastError.message }, { status: 500 });
       }
     } else {
-      return NextResponse.json({ error: 'No vision-capable AI provider configured. Please set OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY.' }, { status: 500 });
+      // Try Vercel AI Gateway as fallback for vision
+      const gatewayStatus = getAIGatewayStatus();
+      if (gatewayStatus.anyAvailable) {
+        console.log('[Vision] ✅ Using Vercel AI Gateway as fallback');
+        try {
+          // Use OpenAI via gateway for vision
+          const { gateway } = await import('@ai-sdk/gateway');
+          const { generateText } = await import('ai');
+          
+          const result = await generateText({
+            model: gateway('openai/gpt-4o-mini'),
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { 
+                role: 'user', 
+                content: [
+                  { type: 'text', text: question },
+                  { type: 'image', image: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}` }
+                ]
+              }
+            ],
+          });
+          
+          visionResult = formatCleanResponse(result.text, { emphasis });
+          if (structured) {
+            const sanitized = maybeSanitize(visionResult);
+            return NextResponse.json({ structured: true, multi: false, items: [{ index: 0, provider: 'ai-gateway', raw: sanitized, faces: [] }], result: sanitized, redacted: isPublic });
+          }
+          return NextResponse.json({ result: maybeSanitize(visionResult), redacted: isPublic });
+        } catch (gatewayError: any) {
+          console.error('[Vision] AI Gateway failed:', gatewayError.message);
+        }
+      }
+      return NextResponse.json({ error: 'No vision-capable AI provider configured. Please set API keys in admin panel or configure Vercel AI Gateway.' }, { status: 500 });
     }
 
   } catch (error: any) {
