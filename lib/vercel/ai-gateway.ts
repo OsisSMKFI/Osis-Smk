@@ -2,10 +2,9 @@
  * Vercel AI Gateway Integration
  * Built on AI SDK 5 - Switch between 100+ models without managing rate limits
  * 
- * Uses provider API keys directly - Vercel AI Gateway provides:
- * - Request caching & observability in Vercel dashboard
- * - Usage analytics & cost tracking
- * - Rate limiting & fallback handling
+ * Two modes:
+ * 1. VERCEL_AI_GATEWAY_KEY - Use Vercel AI Gateway proxy (recommended)
+ * 2. Provider API keys - Direct connection to OpenAI/Anthropic/Google
  * 
  * @see https://sdk.vercel.ai/docs
  * @see https://vercel.com/docs/ai
@@ -16,24 +15,31 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
-// API keys from environment - use provider keys directly
-// Vercel AI Gateway automatically instruments these when deployed
+// Vercel AI Gateway Key (from Vercel Dashboard > AI Gateway)
+const VERCEL_AI_GATEWAY_KEY = process.env.VERCEL_AI_GATEWAY_KEY || process.env.AI_GATEWAY_API_KEY;
+
+// Fallback: Direct provider API keys
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GOOGLE_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
 
+// Use Vercel AI Gateway if key is available, otherwise use direct provider keys
+const useGateway = !!VERCEL_AI_GATEWAY_KEY;
+
 // Create provider instances
-// When deployed to Vercel, these automatically get AI Gateway features
 export const openai = createOpenAI({
-  apiKey: OPENAI_API_KEY,
+  apiKey: useGateway ? VERCEL_AI_GATEWAY_KEY : OPENAI_API_KEY,
+  baseURL: useGateway ? 'https://gateway.ai.vercel.sh/v1' : undefined,
 });
 
 export const anthropic = createAnthropic({
-  apiKey: ANTHROPIC_API_KEY,
+  apiKey: useGateway ? VERCEL_AI_GATEWAY_KEY : ANTHROPIC_API_KEY,
+  baseURL: useGateway ? 'https://gateway.ai.vercel.sh/v1' : undefined,
 });
 
 export const google = createGoogleGenerativeAI({
-  apiKey: GOOGLE_API_KEY,
+  apiKey: useGateway ? VERCEL_AI_GATEWAY_KEY : GOOGLE_API_KEY,
+  baseURL: useGateway ? 'https://gateway.ai.vercel.sh/v1' : undefined,
 });
 
 /**
@@ -41,20 +47,25 @@ export const google = createGoogleGenerativeAI({
  */
 export function getAIGatewayStatus() {
   return {
+    mode: useGateway ? 'vercel-gateway' : 'direct-providers',
+    vercelGateway: {
+      configured: !!VERCEL_AI_GATEWAY_KEY,
+      endpoint: 'https://gateway.ai.vercel.sh/v1',
+    },
     openai: {
-      configured: !!OPENAI_API_KEY,
+      configured: useGateway || !!OPENAI_API_KEY,
       provider: 'OpenAI',
     },
     anthropic: {
-      configured: !!ANTHROPIC_API_KEY,
+      configured: useGateway || !!ANTHROPIC_API_KEY,
       provider: 'Anthropic',
     },
     google: {
-      configured: !!GOOGLE_API_KEY,
+      configured: useGateway || !!GOOGLE_API_KEY,
       provider: 'Google',
     },
-    anyAvailable: !!(OPENAI_API_KEY || ANTHROPIC_API_KEY || GOOGLE_API_KEY),
-    defaultProvider: OPENAI_API_KEY ? 'openai' : ANTHROPIC_API_KEY ? 'anthropic' : GOOGLE_API_KEY ? 'google' : null,
+    anyAvailable: useGateway || !!(OPENAI_API_KEY || ANTHROPIC_API_KEY || GOOGLE_API_KEY),
+    defaultProvider: useGateway ? 'vercel-gateway' : (OPENAI_API_KEY ? 'openai' : ANTHROPIC_API_KEY ? 'anthropic' : GOOGLE_API_KEY ? 'google' : null),
   };
 }
 
