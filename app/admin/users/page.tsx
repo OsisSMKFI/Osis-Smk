@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { uploadWithProgress } from '@/lib/client/uploadWithProgress';
+import { uploadWithProgressSmart } from '@/lib/client/uploadWithProgress';
 import ImageUploadField from '@/components/ImageUploadField';
 import { LoadingSection } from '@/components/ui/LoadingSpinner';
 import { FaUsers, FaPlus, FaEdit, FaTrash, FaTimes, FaUserShield, FaUserCheck, FaBan, FaEnvelope, FaIdCard, FaClock, FaEye, FaSchool, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
@@ -234,12 +234,8 @@ export default function UsersPage() {
     setUploading(true);
     setUploadProgress(0);
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
-      formDataUpload.append('bucket', 'gallery');
-      formDataUpload.append('folder', 'profiles');
-      // Use progress helper
-      const { status, json } = await uploadWithProgress('/api/upload', formDataUpload, (p)=> setUploadProgress(p));
+      // Use smart upload - direct to Supabase for large files
+      const { status, json } = await uploadWithProgressSmart(file, 'gallery', 'profiles', (p)=> setUploadProgress(p));
       if (status < 200 || status >= 300) {
         throw new Error(json?.error || 'Upload failed');
       }

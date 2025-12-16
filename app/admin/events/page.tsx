@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { uploadWithProgress } from '@/lib/client/uploadWithProgress';
+import { uploadWithProgressSmart } from '@/lib/client/uploadWithProgress';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import ImageUploadField from '@/components/ImageUploadField';
 import { FaCalendarAlt, FaPlus, FaEdit, FaTrash, FaTimes, FaMapMarkerAlt, FaLink, FaClock, FaImage } from 'react-icons/fa';
@@ -92,13 +92,8 @@ export default function EventsPage() {
     setUploading(true);
     setUploadProgress(0);
     try {
-      // Upload to Supabase Storage
-      const formData = new FormData();
-      formData.append('file', file);
-      // Use existing storage bucket and scoped folder
-      formData.append('bucket', 'gallery');
-      formData.append('folder', 'events');
-      const { status, json } = await uploadWithProgress('/api/upload', formData, (p) => setUploadProgress(p));
+      // Use smart upload - direct to Supabase for large files
+      const { status, json } = await uploadWithProgressSmart(file, 'gallery', 'events', (p) => setUploadProgress(p));
       if (status < 200 || status >= 300) {
         throw new Error(json?.error || 'Upload failed');
       }

@@ -7,6 +7,24 @@
   "outputDirectory": ".next",
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "app/api/upload/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/admin/upload/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/enroll/upload-photo/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/attendance/upload-selfie/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
   "github": {
     "autoAlias": true,
     "silent": false,

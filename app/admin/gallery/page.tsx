@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { uploadWithProgress } from '@/lib/client/uploadWithProgress';
+import { uploadWithProgressSmart } from '@/lib/client/uploadWithProgress';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import Image from 'next/image';
 import MediaRenderer from '@/components/MediaRenderer';
@@ -222,22 +222,16 @@ export default function GalleryPage() {
 
       setUploading(true);
       setUploadProgress(0);
-      const fd = new FormData();
-      const isVideo = file.type.startsWith('video/');
-      const filename = isVideo ? file.name : 'gallery-image.jpg';
       
-      console.log('[Gallery handleImageChange] Appending to FormData:', {
-        isVideo,
-        filename,
+      console.log('[Gallery handleImageChange] Using smart upload for:', {
+        fileName: file.name,
+        fileSize: file.size,
         bucket: 'gallery',
         folder: 'general'
       });
-
-      fd.append('file', file, filename);
-      fd.append('bucket', 'gallery');
-      fd.append('folder', 'general');
       
-      const { status, json } = await uploadWithProgress('/api/upload', fd, (p)=> setUploadProgress(p));
+      // Use smart upload - direct to Supabase for large files
+      const { status, json } = await uploadWithProgressSmart(file, 'gallery', 'general', (p)=> setUploadProgress(p));
       
       console.log('[Gallery handleImageChange] Upload response:', { status, json });
       

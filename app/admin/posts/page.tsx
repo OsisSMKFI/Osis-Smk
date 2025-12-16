@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import MediaRenderer from '@/components/MediaRenderer';
 import { FaNewspaper, FaPlus, FaEdit, FaTrash, FaTimes, FaEye, FaEyeSlash, FaImage, FaCalendarAlt } from 'react-icons/fa';
 import ImageUploadField from '@/components/ImageUploadField';
-import { uploadWithProgress } from '@/lib/client/uploadWithProgress';
+import { uploadWithProgressSmart } from '@/lib/client/uploadWithProgress';
 
 interface Post {
   id: string;
@@ -77,15 +77,8 @@ export default function PostsPage() {
     try {
       setUploading(true);
       setUploadProgress(0);
-      // Upload to Supabase Storage
-      const uploadFormData = new FormData();
-      // Preserve original filename for videos; use generic for cropped images
-      const isVideo = file.type.startsWith('video/');
-      const filename = isVideo ? file.name : 'post-image.jpg';
-      uploadFormData.append('file', file, filename);
-      uploadFormData.append('bucket', 'gallery');
-      uploadFormData.append('folder', 'posts');
-      const { status, json } = await uploadWithProgress('/api/upload', uploadFormData, (p)=> setUploadProgress(p));
+      // Use smart upload - direct to Supabase for large files
+      const { status, json } = await uploadWithProgressSmart(file, 'gallery', 'posts', (p)=> setUploadProgress(p));
       if (status < 200 || status >= 300) {
         throw new Error(json?.error || 'Upload failed');
       }

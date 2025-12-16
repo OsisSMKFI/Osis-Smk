@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { smartUpload } from '@/lib/client/directUpload';
 
 export interface ImageUploaderProps {
   label?: string;
@@ -12,7 +13,7 @@ export interface ImageUploaderProps {
   disabled?: boolean;
   helperText?: string;
   accept?: string; // mime types
-  maxSizeMB?: number; // default 10
+  maxSizeMB?: number; // default 50
   previewAspect?: string; // e.g. '16/9'
 }
 
@@ -25,8 +26,8 @@ interface UploadState {
   percent?: number;
 }
 
-// Centralized allowed mime types
-const DEFAULT_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif';
+// Centralized allowed mime types - allow all common formats
+const DEFAULT_ACCEPT = 'image/*,video/*';
 const FALLBACK_BUCKET = 'gallery';
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -36,9 +37,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   value,
   onChange,
   disabled = false,
-  helperText = 'Format: JPG, PNG, WEBP, GIF (max 10MB)',
+  helperText = 'Format: JPG, PNG, WEBP, GIF, MP4 (max 50MB)',
   accept = DEFAULT_ACCEPT,
-  maxSizeMB = 10,
+  maxSizeMB = 50,
   previewAspect = 'auto'
 }) => {
   const [state, setState] = useState<UploadState>({ progress: '', uploading: false, percent: 0 });
@@ -52,47 +53,20 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       setState({ progress: '', uploading: false, error: `File terlalu besar. Max ${maxSizeMB}MB` });
       return;
     }
-    if (!accept.split(',').some(m => file.type === m)) {
-      setState({ progress: '', uploading: false, error: 'Tipe file tidak didukung' });
-      return;
-    }
 
     try {
       setState({ uploading: true, progress: 'Menyiapkan file...', fileName: file.name, fileSize: file.size, percent: 0 });
-      // Use server-side upload API to bypass RLS issues
-      setState(s => ({ ...s, progress: 'Mengupload ke server...', percent: 10 }));
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', bucket);
-      formData.append('folder', folder || '');
-
-      // Fake progress interval (fetch doesn't provide progress natively)
-      let fakeProgress = 10;
-      const progressInterval = setInterval(() => {
-        fakeProgress += Math.random() * 12;
-        setState(s => ({ ...s, percent: Math.min(90, fakeProgress) }));
-      }, 250);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Ensure cookies are sent
+      
+      // Use smart upload - direct to Supabase for large files, API for small
+      const result = await smartUpload(file, {
+        bucket,
+        folder,
+        onProgress: (percent) => {
+          setState(s => ({ ...s, percent, progress: `Uploading... ${percent}%` }));
+        },
       });
 
-      clearInterval(progressInterval);
-
-      const text = await response.text();
-      if (text.trim().startsWith('<')) {
-        console.error('[ImageUploader] HTML response instead of JSON:', text.substring(0, 200));
-        setState({ uploading: false, progress: '', error: 'Server error - received HTML instead of JSON', percent: 0 });
-        toast.error('Upload gagal: Server error');
-        return;
-      }
-
-      const result = JSON.parse(text);
-
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         console.error('[ImageUploader] Upload error', result.error);
         setState({ uploading: false, progress: '', error: result.error || 'Upload gagal', percent: 0 });
         toast.error('Upload gagal: ' + (result.error || 'Unknown error'));
