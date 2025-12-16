@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import AnimatedSection from '@/components/AnimatedSection';
 import InteractiveMemberCard from '@/components/InteractiveMemberCard';
 import MemberStats from '@/components/MemberStats';
@@ -316,64 +316,127 @@ export default function PeopleSectionsClient({ members }: Props) {
         {/* Filter Buttons untuk Sekbid */}
         {availableSekbids.length > 1 && (
           <motion.div 
-            className="flex flex-wrap justify-center gap-2 mb-8"
+            className="mb-12"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
           >
-            <button
-              onClick={() => setSelectedSekbid('all')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                selectedSekbid === 'all'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg scale-105'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              {t('people.filterAll') || 'Semua Sekbid'}
-            </button>
-            {availableSekbids.map((num) => {
-              const key = `num-${num}`;
-              const meta = groupMeta.get(key);
-              const label = meta?.label || `Sekbid ${num}`;
-              // Extract short name: "Sekbid 1 - Kerohanian" -> "Sekbid 1"
-              const shortLabel = label.match(/sekbid\s*\d+/i)?.[0] || `Sekbid ${num}`;
-              return (
+            {/* Elegant Tab Navigation */}
+            <div className="relative flex justify-center">
+              <div className="inline-flex items-center p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-purple-500/10 dark:shadow-purple-500/5 border border-gray-100/50 dark:border-slate-700/50">
+                {/* All Tab */}
                 <button
-                  key={num}
-                  onClick={() => setSelectedSekbid(num)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                    selectedSekbid === num
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg scale-105'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  onClick={() => setSelectedSekbid('all')}
+                  className={`relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                    selectedSekbid === 'all'
+                      ? 'text-white'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
-                  title={label}
                 >
-                  {shortLabel}
+                  {selectedSekbid === 'all' && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 rounded-xl shadow-lg shadow-purple-500/30"
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    {t('people.filterAll') || 'Semua'}
+                  </span>
                 </button>
-              );
-            })}
+                
+                {/* Divider */}
+                <div className="w-px h-6 bg-gray-200 dark:bg-slate-600 mx-1" />
+                
+                {/* Sekbid Tabs */}
+                {availableSekbids.map((num, idx) => {
+                  const key = `num-${num}`;
+                  const meta = groupMeta.get(key);
+                  const label = meta?.label || `Sekbid ${num}`;
+                  // Extract full label for tooltip
+                  const fullLabel = label;
+                  // Get icon based on sekbid number
+                  const icons = ['🎭', '📚', '🏃', '💡', '🎨', '🌿'];
+                  const icon = icons[(num - 1) % icons.length];
+                  
+                  return (
+                    <button
+                      key={num}
+                      onClick={() => setSelectedSekbid(num)}
+                      className={`relative px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                        selectedSekbid === num
+                          ? 'text-white'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                      title={fullLabel}
+                    >
+                      {selectedSekbid === num && (
+                        <motion.div
+                          layoutId="activeTab"
+                          className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 rounded-xl shadow-lg shadow-purple-500/30"
+                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <span className="text-base">{icon}</span>
+                        <span className="hidden sm:inline">{num}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Current Selection Label */}
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={selectedSekbid}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.2 }}
+                className="text-center mt-4 text-sm text-gray-500 dark:text-gray-400"
+              >
+                {selectedSekbid === 'all' 
+                  ? t('people.showingAllSekbid') || 'Menampilkan semua seksi bidang'
+                  : `${groupMeta.get(`num-${selectedSekbid}`)?.label || `Sekbid ${selectedSekbid}`}`
+                }
+              </motion.p>
+            </AnimatePresence>
           </motion.div>
         )}
 
-          <div className="space-y-8">
-            {renderGroups}
+          {/* Animated content area with smooth transitions */}
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={selectedSekbid}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="space-y-12"
+            >
+              {renderGroups}
 
-            {/* Orphaned members: only show when filter is 'all' */}
-            {selectedSekbid === 'all' && orphanedMembers.length > 0 && (
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={containerVariants}
-              >
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">{t('people.unassignedMembers')}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    {t('people.unassignedMembersDesc')}
-                  </p>
-                </div>
-                <motion.div 
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+              {/* Orphaned members: only show when filter is 'all' */}
+              {selectedSekbid === 'all' && orphanedMembers.length > 0 && (
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
                   variants={containerVariants}
+                >
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">{t('people.unassignedMembers')}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                      {t('people.unassignedMembersDesc')}
+                    </p>
+                  </div>
+                  <motion.div 
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+                    variants={containerVariants}
                 >
                   {orphanedMembers.map((member, i) => (
                     <motion.div key={member.id} variants={itemVariants}>
@@ -384,29 +447,30 @@ export default function PeopleSectionsClient({ members }: Props) {
               </motion.div>
             )}
 
-            {/* Members with no sekbid: only show when filter is 'all' */}
-            {selectedSekbid === 'all' && anggotaNoSek.length > 0 && (
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={containerVariants}
-              >
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">{t('people.otherSekbid')}</h3>
-                </div>
-                <motion.div 
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+              {/* Members with no sekbid: only show when filter is 'all' */}
+              {selectedSekbid === 'all' && anggotaNoSek.length > 0 && (
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
                   variants={containerVariants}
                 >
-                  {anggotaNoSek.map((member, i) => (
-                    <motion.div key={member.id} variants={itemVariants}>
-                      <InteractiveMemberCard member={member} delay={0} />
-                    </motion.div>
-                  ))}
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">{t('people.otherSekbid')}</h3>
+                  </div>
+                  <motion.div 
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+                    variants={containerVariants}
+                  >
+                    {anggotaNoSek.map((member, i) => (
+                      <motion.div key={member.id} variants={itemVariants}>
+                        <InteractiveMemberCard member={member} delay={0} />
+                      </motion.div>
+                    ))}
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-            )}
-          </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
       </motion.section>
 
       <motion.section

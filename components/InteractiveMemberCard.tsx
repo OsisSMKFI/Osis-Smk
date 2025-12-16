@@ -123,7 +123,7 @@ const MemberDetailModal: React.FC<{
                   damping: 25,
                   mass: 0.8
                 }}
-                className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl shadow-2xl cursor-auto"
+                className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl shadow-2xl cursor-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
                 style={{ 
                   perspective: '1200px',
                   transformStyle: 'preserve-3d',
@@ -354,17 +354,17 @@ const MemberDetailModal: React.FC<{
                       
                       {member.department && (
                         <motion.div 
-                          className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/80"
+                          className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/80 col-span-2"
                           whileHover={{ scale: 1.02, y: -2 }}
                         >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                             isLeader ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-400 to-purple-500'
                           }`}>
                             <span className="text-white text-lg">🏢</span>
                           </div>
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Seksi Bidang</p>
-                            <p className="font-bold text-gray-900 dark:text-white text-sm">{member.department}</p>
+                            <p className="font-bold text-gray-900 dark:text-white text-sm break-words">{member.department}</p>
                           </div>
                         </motion.div>
                       )}
