@@ -2,9 +2,13 @@
  * Vercel AI Gateway Integration
  * Built on AI SDK 5 - Switch between 100+ models without managing rate limits
  * 
- * Supported providers: OpenAI, Anthropic, xAI, Google, Mistral, Cohere, and more
+ * Uses provider API keys directly - Vercel AI Gateway provides:
+ * - Request caching & observability in Vercel dashboard
+ * - Usage analytics & cost tracking
+ * - Rate limiting & fallback handling
  * 
  * @see https://sdk.vercel.ai/docs
+ * @see https://vercel.com/docs/ai
  */
 
 import { streamText, generateText, generateObject, type CoreMessage } from 'ai';
@@ -12,24 +16,47 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
-// Vercel AI Gateway API Key
-const VERCEL_AI_API_KEY = process.env.VERCEL_AI_API_KEY || process.env.AI_GATEWAY_API_KEY;
+// API keys from environment - use provider keys directly
+// Vercel AI Gateway automatically instruments these when deployed
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const GOOGLE_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
 
-// Create provider instances with Vercel AI Gateway
+// Create provider instances
+// When deployed to Vercel, these automatically get AI Gateway features
 export const openai = createOpenAI({
-  apiKey: VERCEL_AI_API_KEY,
-  baseURL: 'https://api.vercel.ai/v1',
+  apiKey: OPENAI_API_KEY,
 });
 
 export const anthropic = createAnthropic({
-  apiKey: VERCEL_AI_API_KEY,
-  baseURL: 'https://api.vercel.ai/v1',
+  apiKey: ANTHROPIC_API_KEY,
 });
 
 export const google = createGoogleGenerativeAI({
-  apiKey: VERCEL_AI_API_KEY,
-  baseURL: 'https://api.vercel.ai/v1',
+  apiKey: GOOGLE_API_KEY,
 });
+
+/**
+ * Check if AI Gateway is properly configured
+ */
+export function getAIGatewayStatus() {
+  return {
+    openai: {
+      configured: !!OPENAI_API_KEY,
+      provider: 'OpenAI',
+    },
+    anthropic: {
+      configured: !!ANTHROPIC_API_KEY,
+      provider: 'Anthropic',
+    },
+    google: {
+      configured: !!GOOGLE_API_KEY,
+      provider: 'Google',
+    },
+    anyAvailable: !!(OPENAI_API_KEY || ANTHROPIC_API_KEY || GOOGLE_API_KEY),
+    defaultProvider: OPENAI_API_KEY ? 'openai' : ANTHROPIC_API_KEY ? 'anthropic' : GOOGLE_API_KEY ? 'google' : null,
+  };
+}
 
 // Model aliases for easier usage
 export const models = {

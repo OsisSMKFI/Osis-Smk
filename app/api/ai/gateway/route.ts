@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { streamAIText, type ModelName } from '@/lib/vercel/ai-gateway';
+import { streamAIText, getAIGatewayStatus, type ModelName } from '@/lib/vercel/ai-gateway';
 import { auth } from '@/lib/auth';
 import type { CoreMessage } from 'ai';
 
@@ -17,6 +17,18 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if AI is configured
+    const aiStatus = getAIGatewayStatus();
+    if (!aiStatus.anyAvailable) {
+      return new Response(JSON.stringify({ 
+        error: 'AI not configured',
+        details: 'Please add OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY in Vercel environment variables.',
+      }), {
+        status: 503,
         headers: { 'Content-Type': 'application/json' },
       });
     }
