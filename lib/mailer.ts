@@ -4,11 +4,14 @@ type MailOptions = {
   text?: string;
   html?: string;
   from?: string;
+  replyTo?: string;
 };
 
 export async function sendMail(opts: MailOptions) {
   const fromEmail = opts.from || process.env.SENDGRID_FROM || process.env.SMTP_FROM || `no-reply@${process.env.NEXT_PUBLIC_BASE_URL?.replace(/^https?:\/\//, '') || 'local'}`;
   const fromName = process.env.SENDGRID_FROM_NAME || 'OSIS SMK Informatika FI';
+  const replyToEmail = opts.replyTo || process.env.SENDGRID_FROM || fromEmail;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://osissmktest.biezz.my.id';
 
   // Prefer SendGrid if configured
   if (process.env.SENDGRID_API_KEY) {
@@ -21,22 +24,37 @@ export async function sendMail(opts: MailOptions) {
           email: fromEmail,
           name: fromName
         },
+        replyTo: {
+          email: replyToEmail,
+          name: fromName
+        },
         subject: opts.subject,
         text: opts.text,
         html: opts.html,
-        // Anti-spam headers
+        // Anti-spam settings - disable tracking to avoid spam filters
         trackingSettings: {
-          clickTracking: { enable: false },
-          openTracking: { enable: false }
+          clickTracking: { enable: false, enableText: false },
+          openTracking: { enable: false },
+          subscriptionTracking: { enable: false },
+          ganalytics: { enable: false }
         },
         mailSettings: {
           bypassListManagement: { enable: false },
           footer: { enable: false },
           sandboxMode: { enable: false }
-        }
+        },
+        // Custom headers to improve deliverability
+        headers: {
+          'X-Priority': '1',
+          'X-Mailer': 'OSIS-SMK-Mailer',
+          'List-Unsubscribe': `<mailto:${replyToEmail}?subject=unsubscribe>`,
+          'Precedence': 'bulk'
+        },
+        // Categories for SendGrid analytics (optional)
+        categories: ['transactional', 'osis-system']
       };
       const res = await sg.send(msg);
-      console.log('[mailer] Sent via SendGrid', { to: opts.to, subject: opts.subject });
+      console.log('[mailer] Sent via SendGrid', { to: opts.to, subject: opts.subject, statusCode: res?.[0]?.statusCode });
       return res;
     } catch (err) {
       console.error('[mailer] SendGrid error:', err);
@@ -63,10 +81,16 @@ export async function sendMail(opts: MailOptions) {
 
       const info = await transporter.sendMail({
         from: `${fromName} <${fromEmail}>`,
+        replyTo: replyToEmail,
         to: opts.to,
         subject: opts.subject,
         text: opts.text,
         html: opts.html,
+        headers: {
+          'X-Priority': '1',
+          'X-Mailer': 'OSIS-SMK-Mailer',
+          'List-Unsubscribe': `<mailto:${replyToEmail}?subject=unsubscribe>`
+        }
       });
       console.log('[mailer] Sent via SMTP', { to: opts.to, subject: opts.subject, messageId: info.messageId });
       return info;

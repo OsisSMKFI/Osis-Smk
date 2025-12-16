@@ -73,11 +73,11 @@ export function buildVerificationEmail(params: VerificationEmailParams) {
   body { margin:0; padding:0; background:#f6f7fb; font-family:Arial,'Helvetica Neue',Helvetica,sans-serif; -webkit-font-smoothing:antialiased; }
   .wrapper { width:100%; background:linear-gradient(135deg,#fff7e6,#ffe9c2,#ffd9a1); padding:32px 0; }
   .container { max-width:560px; margin:0 auto; background:#ffffff; border-radius:20px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }
-  .header { background:linear-gradient(135deg,#ffb347,#ff8635); padding:32px 28px 40px; color:#fff; text-align:center; position:relative; }
-  ${logoUrl ? `.logo { margin-bottom:12px } .logo img { max-width:96px; height:auto; display:block; margin:0 auto; }` : ''}
-  .brand { font-size:20px; font-weight:700; letter-spacing:.5px; margin:0 0 6px; }
-  .tagline { font-size:12px; opacity:.9; margin:0; font-weight:500; }
-  .circle { position:absolute; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.35),rgba(255,255,255,0)); top:-40px; right:-40px; filter:blur(2px); }
+  .header { background:linear-gradient(135deg,#ffb347,#ff8635); padding:32px 28px 40px; color:#fff; text-align:center; position:relative; overflow:hidden; }
+  ${logoUrl ? `.logo { margin-bottom:12px; position:relative; z-index:10; } .logo img { max-width:80px; height:auto; display:block; margin:0 auto; border-radius:12px; background:#fff; padding:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); }` : ''}
+  .brand { font-size:20px; font-weight:700; letter-spacing:.5px; margin:0 0 6px; position:relative; z-index:5; }
+  .tagline { font-size:12px; opacity:.9; margin:0; font-weight:500; position:relative; z-index:5; }
+  .circle { position:absolute; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.15),rgba(255,255,255,0)); top:-40px; right:-40px; filter:blur(2px); z-index:1; pointer-events:none; }
   .content { padding:32px 34px 10px; color:#444; line-height:1.55; font-size:14px; }
   h1 { font-size:22px; margin:0 0 18px; color:#ff7a1f; letter-spacing:.3px; }
   .intro { font-size:15px; margin:0 0 18px; font-weight:500; color:#222; }
@@ -192,11 +192,11 @@ export function buildResetEmail(params: ResetEmailParams) {
   body { margin:0; padding:0; background:#f6f7fb; font-family:Arial,'Helvetica Neue',Helvetica,sans-serif; -webkit-font-smoothing:antialiased; }
   .wrapper { width:100%; background:linear-gradient(135deg,#fff7e6,#ffe9c2,#ffd9a1); padding:32px 0; }
   .container { max-width:560px; margin:0 auto; background:#ffffff; border-radius:20px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }
-  .header { background:linear-gradient(135deg,#ffb347,#ff8635); padding:32px 28px 40px; color:#fff; text-align:center; position:relative; }
-  ${logoUrl ? `.logo { margin-bottom:12px } .logo img { max-width:96px; height:auto; display:block; margin:0 auto; }` : ''}
-  .brand { font-size:20px; font-weight:700; letter-spacing:.5px; margin:0 0 6px; }
-  .tagline { font-size:12px; opacity:.9; margin:0; font-weight:500; }
-  .circle { position:absolute; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.35),rgba(255,255,255,0)); top:-40px; right:-40px; filter:blur(2px); }
+  .header { background:linear-gradient(135deg,#ffb347,#ff8635); padding:32px 28px 40px; color:#fff; text-align:center; position:relative; overflow:hidden; }
+  ${logoUrl ? `.logo { margin-bottom:12px; position:relative; z-index:10; } .logo img { max-width:80px; height:auto; display:block; margin:0 auto; border-radius:12px; background:#fff; padding:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15); }` : ''}
+  .brand { font-size:20px; font-weight:700; letter-spacing:.5px; margin:0 0 6px; position:relative; z-index:5; }
+  .tagline { font-size:12px; opacity:.9; margin:0; font-weight:500; position:relative; z-index:5; }
+  .circle { position:absolute; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.15),rgba(255,255,255,0)); top:-40px; right:-40px; filter:blur(2px); z-index:1; pointer-events:none; }
   .content { padding:32px 34px 10px; color:#444; line-height:1.55; font-size:14px; }
   h1 { font-size:22px; margin:0 0 18px; color:#ff7a1f; letter-spacing:.3px; }
   .intro { font-size:15px; margin:0 0 18px; font-weight:500; color:#222; }
