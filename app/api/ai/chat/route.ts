@@ -1158,7 +1158,7 @@ export async function POST(request: NextRequest) {
 
     // All queries go through AI with COMPLETE auto-learned knowledge + specific retrieval
     const { getAIKnowledge } = await import('@/lib/aiAutoLearn');
-    const completeKnowledge = await getAIKnowledge(); // Full DB snapshot, auto-refreshed every 5min
+    const completeKnowledge = await getAIKnowledge(); // Full DB snapshot, auto-refreshed every 3min with temporal awareness
     const specificContext = await retrieveContext(userQuery || ''); // Query-specific search
     
     console.log('[AI] Knowledge base size:', completeKnowledge.length, 'chars');
