@@ -60,11 +60,11 @@ export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menj
         const res = await fetch('/api/stats');
         if (res.ok) {
           const data = await res.json();
-          // API returns { success, stats: { year, activeMembers, departments } }
+          // API returns { success, stats: { year, totalMembers, departments } }
           const statsData = data.stats || data;
           setStats({
             year: statsData.year || 2024,
-            activeMembers: statsData.activeMembers || 50,
+            activeMembers: statsData.totalMembers || statsData.activeMembers || 50,
             departments: statsData.departments || 6
           });
         }
