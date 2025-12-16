@@ -7,6 +7,9 @@ import { generateSignedUrl } from '@/lib/signedUrls';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// Roles that can upload files
+const UPLOAD_ALLOWED_ROLES = ['super_admin', 'admin', 'osis', 'moderator', 'editor'];
+
 // Auto-create bucket if it doesn't exist
 async function ensureBucket(supabase: any, bucketName: string) {
   try {
@@ -17,8 +20,8 @@ async function ensureBucket(supabase: any, bucketName: string) {
       console.log(`[/api/admin/upload] Creating bucket: ${bucketName}`);
       const { error: createError } = await supabase.storage.createBucket(bucketName, {
         public: true,
-        fileSizeLimit: bucketName === 'backgrounds' ? 5242880 : 10485760,
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+        fileSizeLimit: bucketName === 'backgrounds' ? 10485760 : 104857600, // 10MB backgrounds, 100MB others
+        // No MIME type restriction - allow ALL file types
       });
       
       if (createError) {
@@ -26,6 +29,12 @@ async function ensureBucket(supabase: any, bucketName: string) {
         return false;
       }
       console.log(`[/api/admin/upload] Bucket ${bucketName} created successfully`);
+    } else {
+      // Update bucket to remove MIME restrictions
+      await supabase.storage.updateBucket(bucketName, {
+        public: true,
+        fileSizeLimit: bucketName === 'backgrounds' ? 10485760 : 104857600,
+      });
     }
     return true;
   } catch (error) {
@@ -44,6 +53,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - No session' }, { status: 401 });
     }
 
+    // Check role permission for upload
+    const userRole = ((session.user as any).role || '').toLowerCase();
+    console.log('[/api/admin/upload] User role:', userRole);
+    
+    if (!UPLOAD_ALLOWED_ROLES.includes(userRole)) {
+      console.error('[/api/admin/upload] User role not allowed to upload:', userRole);
+      return NextResponse.json({ 
+        error: 'Forbidden - Role tidak memiliki izin upload', 
+        role: userRole,
+        allowedRoles: UPLOAD_ALLOWED_ROLES 
+      }, { status: 403 });
+    }
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('[/api/admin/upload] Missing Supabase credentials');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
@@ -54,17 +76,22 @@ export async function POST(request: NextRequest) {
     const bucket = formData.get('bucket') as string || 'gallery';
     const folder = formData.get('folder') as string || '';
 
-    console.log('[/api/admin/upload] Upload params:', { fileName: file?.name, bucket, folder, fileSize: file?.size });
+    console.log('[/api/admin/upload] Upload params:', { fileName: file?.name, bucket, folder, fileSize: file?.size, userRole });
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(file.type.toLowerCase())) {
+    // Allow ALL file types - no MIME restriction
+    // Just validate file is not empty and not too large
+    if (file.size === 0) {
+      return NextResponse.json({ error: 'File is empty' }, { status: 400 });
+    }
+
+    const maxSize = 104857600; // 100MB
+    if (file.size > maxSize) {
       return NextResponse.json({ 
-        error: `Invalid file type: ${file.type}. Allowed: ${allowedTypes.join(', ')}` 
+        error: `File too large. Maximum size is 100MB. Your file: ${(file.size / 1048576).toFixed(2)}MB` 
       }, { status: 400 });
     }
 
@@ -95,7 +122,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(filePath, fileBuffer, {
-        contentType: file.type,
+        contentType: file.type || 'application/octet-stream',
         upsert: false,
       });
 

@@ -11,6 +11,9 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // Check if Vercel Blob is configured
 const hasVercelBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
 
+// Roles that can upload files
+const UPLOAD_ALLOWED_ROLES = ['super_admin', 'admin', 'osis', 'moderator', 'editor'];
+
 // Auto-create bucket if it doesn't exist
 async function ensureBucket(supabase: any, bucketName: string) {
   try {
@@ -21,22 +24,8 @@ async function ensureBucket(supabase: any, bucketName: string) {
       console.log(`[/api/upload] Creating bucket: ${bucketName}`);
       const { error: createError } = await supabase.storage.createBucket(bucketName, {
         public: true,
-        fileSizeLimit: bucketName === 'backgrounds' ? 5242880 : 52428800, // 5MB for backgrounds, 50MB for others
-        allowedMimeTypes: [
-          'image/jpeg', 
-          'image/jpg',
-          'image/png', 
-          'image/webp', 
-          'image/gif',
-          'image/svg+xml',
-          'image/bmp',
-          'video/mp4', 
-          'video/webm', 
-          'video/ogg',
-          'video/quicktime', // .mov
-          'video/x-msvideo', // .avi
-          'video/x-matroska' // .mkv
-        ]
+        fileSizeLimit: bucketName === 'backgrounds' ? 10485760 : 104857600, // 10MB for backgrounds, 100MB for others
+        // Allow ALL file types - no restriction
       });
       
       if (createError) {
@@ -45,26 +34,12 @@ async function ensureBucket(supabase: any, bucketName: string) {
       }
       console.log(`[/api/upload] Bucket ${bucketName} created successfully`);
     } else {
-      // Bucket exists - try to update allowed mime types
+      // Bucket exists - try to update settings (no MIME restriction)
       console.log(`[/api/upload] Bucket ${bucketName} exists, attempting to update settings`);
       const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
         public: true,
-        fileSizeLimit: bucketName === 'backgrounds' ? 5242880 : 52428800,
-        allowedMimeTypes: [
-          'image/jpeg', 
-          'image/jpg',
-          'image/png', 
-          'image/webp', 
-          'image/gif',
-          'image/svg+xml',
-          'image/bmp',
-          'video/mp4', 
-          'video/webm', 
-          'video/ogg',
-          'video/quicktime',
-          'video/x-msvideo',
-          'video/x-matroska'
-        ]
+        fileSizeLimit: bucketName === 'backgrounds' ? 10485760 : 104857600,
+        // Remove allowedMimeTypes to allow ALL file types
       });
       
       if (updateError) {
@@ -93,6 +68,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - No session' }, { status: 401 });
     }
 
+    // Check role permission for upload
+    const userRole = ((session.user as any).role || '').toLowerCase();
+    if (!UPLOAD_ALLOWED_ROLES.includes(userRole)) {
+      console.error('[/api/upload] User role not allowed to upload:', userRole);
+      return NextResponse.json({ 
+        error: 'Forbidden - Role tidak memiliki izin upload', 
+        role: userRole,
+        allowedRoles: UPLOAD_ALLOWED_ROLES 
+      }, { status: 403 });
+    }
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('[/api/upload] Missing Supabase credentials');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
@@ -111,7 +97,7 @@ export async function POST(request: NextRequest) {
     const folder = formData.get('folder') as string || '';
 
     if (isDev) {
-      console.log('[/api/upload] Upload params:', { fileName: file?.name, bucket, folder });
+      console.log('[/api/upload] Upload params:', { fileName: file?.name, bucket, folder, userRole });
     }
 
     if (!file) {
@@ -119,31 +105,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    if (!file.type) {
-      console.error('[/api/upload] File has no MIME type');
-      return NextResponse.json({ error: 'File has no MIME type' }, { status: 400 });
+    // Allow ALL file types - no MIME type restriction
+    // Just check that file has some content
+    if (file.size === 0) {
+      console.error('[/api/upload] File is empty');
+      return NextResponse.json({ error: 'File is empty' }, { status: 400 });
     }
 
-    // Validate file type
-    const allowedTypes = [
-      'image/jpeg',
-      'image/jpg', 
-      'image/png', 
-      'image/webp', 
-      'image/gif',
-      'image/svg+xml',
-      'image/bmp',
-      'video/mp4', 
-      'video/webm', 
-      'video/ogg',
-      'video/quicktime',
-      'video/x-msvideo',
-      'video/x-matroska'
-    ];
-    if (!allowedTypes.includes(file.type.toLowerCase())) {
-      console.error('[/api/upload] Invalid file type:', file.type);
+    // Max file size: 100MB
+    const maxSize = 104857600; // 100MB
+    if (file.size > maxSize) {
+      console.error('[/api/upload] File too large:', file.size);
       return NextResponse.json({ 
-        error: `Invalid file type: ${file.type}. Allowed: images (jpeg, png, webp, gif, svg, bmp) and videos (mp4, webm, ogg, mov, avi, mkv)` 
+        error: `File too large. Maximum size is 100MB. Your file: ${(file.size / 1048576).toFixed(2)}MB` 
       }, { status: 400 });
     }
 
