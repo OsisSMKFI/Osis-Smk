@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { backgroundSecurityAnalyzer, SecurityAnalysisResult } from '@/lib/backgroundSecurityAnalyzer';
 import { toast } from 'react-hot-toast';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 /**
  * SECURITY ANALYZER PROVIDER
  * Automatically runs security analysis after login
@@ -24,16 +26,13 @@ export function SecurityAnalyzerProvider({ children }: { children: React.ReactNo
 
       // Only analyze for siswa and guru
       if (!['siswa', 'guru'].includes(userRole)) {
-        console.log('[Security Analyzer] Skipping - Role not applicable:', userRole);
         return;
       }
 
-      console.log('[Security Analyzer] User authenticated, starting background analysis...');
       runBackgroundAnalysis(userId, userEmail);
 
       // Re-run analysis every 10 minutes to keep data fresh (was 2 min - too frequent)
       const interval = setInterval(() => {
-        console.log('[Security Analyzer] Re-running analysis (scheduled)...');
         runBackgroundAnalysis(userId, userEmail, true);
       }, 10 * 60 * 1000);
 
@@ -52,13 +51,12 @@ export function SecurityAnalyzerProvider({ children }: { children: React.ReactNo
       const result = await backgroundSecurityAnalyzer.startAnalysis(userId, userEmail);
       setAnalysisResult(result);
 
-      console.log('[Security Analyzer] Analysis complete:', {
-        status: result.overallStatus,
-        wifiValid: result.wifi.isValid,
-        wifiSSID: result.wifi.ssid,
-        biometricRegistered: result.biometric.registered,
-        blockReasons: result.blockReasons,
-      });
+      if (isDev) {
+        console.log('[Security Analyzer] Analysis complete:', {
+          status: result.overallStatus,
+          wifiValid: result.wifi.isValid,
+        });
+      }
 
       // Show toast notification based on status (only on initial analysis)
       if (!silent) {

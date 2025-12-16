@@ -30,8 +30,6 @@ export function initAIMonitoring() {
   // DISABLED - causing performance issues and browser crashes
   // These monitoring functions override console.error, fetch, add many event listeners,
   // and run setInterval every 30 seconds which causes memory leaks
-  
-  console.log('[AI Monitor] Disabled for performance');
   return;
 
   // Original code (disabled):

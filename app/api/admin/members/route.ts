@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,6 +79,11 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Revalidate public pages to sync new member data
+    revalidatePath('/people');
+    revalidatePath('/');
+    revalidatePath('/api/members');
 
     return NextResponse.json({ success: true, data });
   } catch (error: any) {

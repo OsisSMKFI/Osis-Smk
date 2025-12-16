@@ -8,6 +8,7 @@ import { useSoundEffects } from '@/contexts/SoundContext';
 
 // Version marker for deployment tracking
 const COMPONENT_VERSION = 'v0.1.7';
+const isDev = process.env.NODE_ENV !== 'production';
 
 interface GlobalFloatingControlsProps {
   showChat?: boolean;
@@ -20,7 +21,6 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
   const { soundEnabled, toggleSound, playClickSound, playHoverSound } = useSoundEffects();
 
   useEffect(() => {
-    console.log(`[GlobalFloatingControls] Component mounted - ${COMPONENT_VERSION}`);
     setMounted(true);
     setPortalRoot(document.body);
   }, []);
@@ -29,11 +29,8 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
   useEffect(() => {
     if (!mounted) return;
     
-    console.log(`[GlobalFloatingControls] Scroll listener attached - ${COMPONENT_VERSION}`);
-    
     let rafId: number;
     let lastScrollY = 0;
-    let loggedOnce = false;
     
     const updateScrollState = () => {
       const scrollY = Math.max(
@@ -45,12 +42,7 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
       
       if (scrollY !== lastScrollY) {
         lastScrollY = scrollY;
-        const shouldShow = scrollY > 200;
-        if (!loggedOnce && shouldShow) {
-          console.log('[GlobalFloatingControls] Scroll button should show, scrollY:', scrollY);
-          loggedOnce = true;
-        }
-        setShowScrollTop(shouldShow);
+        setShowScrollTop(scrollY > 200);
       }
       
       rafId = requestAnimationFrame(updateScrollState);

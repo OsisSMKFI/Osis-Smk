@@ -77,8 +77,6 @@ export default function BackgroundSync() {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
-          const isDarkNow = document.documentElement.classList.contains('dark');
-          console.log('[BackgroundSync] Theme toggled, dark:', isDarkNow);
           syncBackground();
         }
       });
@@ -91,7 +89,6 @@ export default function BackgroundSync() {
 
     // Listen for storage events (theme changed in another tab)
     const handleStorageChange = () => {
-      console.log('[BackgroundSync] Storage changed in another tab');
       syncBackground();
     };
     window.addEventListener('storage', handleStorageChange);

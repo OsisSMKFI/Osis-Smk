@@ -3,9 +3,13 @@ export const runtime = 'nodejs';
 import { auth } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { generateSignedUrl } from '@/lib/signedUrls';
+import { uploadFile } from '@/lib/vercel/blob';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+// Check if Vercel Blob is configured
+const hasVercelBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
 
 // Auto-create bucket if it doesn't exist
 async function ensureBucket(supabase: any, bucketName: string) {
@@ -79,10 +83,10 @@ async function ensureBucket(supabase: any, bucketName: string) {
 
 // Direct upload endpoint (uses same logic as admin upload)
 export async function POST(request: NextRequest) {
+  const isDev = process.env.NODE_ENV !== 'production';
   try {
-    console.log('[/api/upload] ===== Upload request started =====');
+    if (isDev) console.log('[/api/upload] Upload request started');
     const session = await auth();
-    console.log('[/api/upload] Session check:', { hasSession: !!session, hasUser: !!session?.user });
     
     if (!session?.user) {
       console.error('[/api/upload] No session or user found');
@@ -106,13 +110,9 @@ export async function POST(request: NextRequest) {
     const bucket = formData.get('bucket') as string || 'gallery';
     const folder = formData.get('folder') as string || '';
 
-    console.log('[/api/upload] Upload params:', { 
-      fileName: file?.name, 
-      fileType: file?.type,
-      bucket, 
-      folder, 
-      fileSize: file?.size 
-    });
+    if (isDev) {
+      console.log('[/api/upload] Upload params:', { fileName: file?.name, bucket, folder });
+    }
 
     if (!file) {
       console.error('[/api/upload] No file in formData');
@@ -176,7 +176,9 @@ export async function POST(request: NextRequest) {
 
     const fileBuffer = Buffer.from(arrayBuffer);
 
-    console.log('[/api/upload] Uploading to:', { bucket, filePath, size: fileBuffer.length, contentType: file.type });
+    if (isDev) {
+      console.log('[/api/upload] Uploading to:', { bucket, filePath });
+    }
 
     const { data, error } = await supabase.storage
       .from(bucket)
@@ -186,6 +188,38 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
+      // Check if it's a storage quota error - try Vercel Blob as fallback
+      const isQuotaError = error.message?.toLowerCase().includes('storage') || 
+                           error.message?.toLowerCase().includes('quota') ||
+                           error.message?.toLowerCase().includes('limit') ||
+                           error.message?.toLowerCase().includes('full');
+      
+      if (isQuotaError && hasVercelBlob) {
+        console.log('[/api/upload] Supabase storage error, trying Vercel Blob fallback...');
+        try {
+          const blobResult = await uploadFile(filePath, fileBuffer, {
+            access: 'public',
+            contentType: file.type,
+          });
+          
+          console.log('[/api/upload] ✅ Vercel Blob fallback success');
+          return NextResponse.json({
+            success: true,
+            url: blobResult.url,
+            publicUrl: blobResult.url,
+            path: blobResult.pathname,
+            storage: 'vercel-blob',
+            data: {
+              path: blobResult.pathname,
+              publicUrl: blobResult.url,
+              url: blobResult.url,
+            },
+          });
+        } catch (blobError: any) {
+          console.error('[/api/upload] Vercel Blob fallback also failed:', blobError);
+        }
+      }
+      
       console.error('[/api/upload] Upload error:', error);
       return NextResponse.json({ 
         error: error.message || 'Upload failed',
@@ -193,7 +227,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    console.log('[/api/upload] ✅ Upload success:', data);
+    if (isDev) console.log('[/api/upload] ✅ Upload success');
 
     // Generate signed URL for the uploaded file
     const signedUrlResult = await generateSignedUrl(data.path, { bucket });
@@ -218,20 +252,26 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log('[/api/upload] ✅ Signed URL generated:', {
-      bucket: signedUrlResult.bucket,
-      expiresAt: signedUrlResult.expiresAt
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[/api/upload] \u2705 Signed URL generated');
+    }
+
+    // Get public URL as fallback for storage
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(filePath);
 
     return NextResponse.json({
       success: true,
-      url: signedUrlResult.url,      // Client gets time-limited signed URL
+      url: signedUrlResult.url,
+      publicUrl: publicUrl,  // Add publicUrl for compatibility
       signedUrl: signedUrlResult.url,
       expiresAt: signedUrlResult.expiresAt,
       bucket: signedUrlResult.bucket,
       path: data.path,
       data: {
         path: data.path,
+        publicUrl,
         signedUrl: signedUrlResult.url,
         url: signedUrlResult.url,
         expiresAt: signedUrlResult.expiresAt,

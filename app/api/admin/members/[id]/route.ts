@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 
 export async function DELETE(
   request: NextRequest,
@@ -21,6 +22,11 @@ export async function DELETE(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Revalidate public pages
+    revalidatePath('/people');
+    revalidatePath('/');
+    revalidatePath('/api/members');
 
     return NextResponse.json({ success: true, message: 'Member deleted' });
   } catch (error: any) {
@@ -61,6 +67,11 @@ export async function PUT(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Revalidate public pages
+    revalidatePath('/people');
+    revalidatePath('/');
+    revalidatePath('/api/members');
 
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
