@@ -2,36 +2,38 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 // Helper to detect core team roles (same logic as PeopleSectionsClient)
-function isCoreTeamRole(position: string): boolean {
-  const pos = (position || '').trim();
+// Note: DB uses 'role' or 'jabatan' column, not 'position'
+function isCoreTeamRole(role: string): boolean {
+  const r = (role || '').trim();
   return (
-    /^ketua(\s+osis)?$/i.test(pos) ||
-    /^wakil(\s+ketua(\s+osis)?)?$/i.test(pos) ||
-    /^sekretaris(\s*\d+)?$/i.test(pos) ||
-    /^bendahara(\s*\d+)?$/i.test(pos)
+    /^ketua(\s+osis)?$/i.test(r) ||
+    /^wakil(\s+ketua(\s+osis)?)?$/i.test(r) ||
+    /^sekretaris(\s*\d+)?$/i.test(r) ||
+    /^bendahara(\s*\d+)?$/i.test(r)
   );
 }
 
 // Helper to detect Ketua OSIS specifically
-function isKetua(position: string): boolean {
-  const pos = (position || '').trim();
-  return /^ketua(\s+osis)?$/i.test(pos);
+function isKetua(role: string): boolean {
+  const r = (role || '').trim();
+  return /^ketua(\s+osis)?$/i.test(r);
 }
 
 // Helper to detect koordinator sekbid
-function isKoordinator(position: string): boolean {
-  const pos = (position || '').trim().toLowerCase();
-  return pos === 'koordinator sekbid' || pos === 'kepala departemen';
+function isKoordinator(role: string): boolean {
+  const r = (role || '').trim().toLowerCase();
+  return r === 'koordinator sekbid' || r === 'kepala departemen';
 }
 
 export async function GET() {
   try {
     // Fetch all data in parallel - use simpler queries
+    // Note: DB column is 'role' not 'position'
     const [membersResult, sekbidResult, postsResult, galleryResult] = await Promise.all([
       // Get ALL active members (no filtering here - filter in JS for consistency)
       supabaseAdmin
         .from('members')
-        .select('id, name, position, sekbid_id, is_active')
+        .select('id, name, role, jabatan, sekbid_id, is_active')
         .eq('is_active', true),
       // Get sekbid count
       supabaseAdmin.from('sekbid').select('id, name'),
@@ -66,16 +68,17 @@ export async function GET() {
     const sekbidCounts: Record<number, number> = {};
 
     validMembers.forEach((m: any) => {
-      const position = m.position || '';
+      // Use 'role' column (or fallback to 'jabatan')
+      const memberRole = m.role || m.jabatan || '';
       const sekbidId = m.sekbid_id;
       
-      if (isKetua(position)) {
+      if (isKetua(memberRole)) {
         // Ketua OSIS
         ketuaCount++;
-      } else if (isCoreTeamRole(position)) {
+      } else if (isCoreTeamRole(memberRole)) {
         // Core team (Wakil, Sekretaris, Bendahara) - not including Ketua
         coreTeamCount++;
-      } else if (isKoordinator(position)) {
+      } else if (isKoordinator(memberRole)) {
         // Koordinator Sekbid
         koordinatorCount++;
       } else if (sekbidId) {

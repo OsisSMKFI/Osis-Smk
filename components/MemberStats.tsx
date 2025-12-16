@@ -90,14 +90,15 @@ const MemberStats: React.FC = () => {
           let anggotaSekbidCount = 0;
           
           members.forEach((m: any) => {
-            const position = m.position || '';
+            // Use 'role' or 'jabatan' column (DB uses these, not 'position')
+            const memberRole = m.role || m.jabatan || '';
             const hasDepartment = !!m.sekbid || !!m.sekbid_id || !!m.department;
             
-            if (isKetua(position)) {
+            if (isKetua(memberRole)) {
               ketuaCount++;
-            } else if (isCoreTeamRole(position)) {
+            } else if (isCoreTeamRole(memberRole)) {
               coreTeamCount++;
-            } else if (isKoordinator(position)) {
+            } else if (isKoordinator(memberRole)) {
               koordinatorCount++;
             } else if (hasDepartment) {
               anggotaSekbidCount++;
