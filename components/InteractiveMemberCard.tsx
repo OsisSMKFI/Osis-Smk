@@ -529,14 +529,11 @@ const InteractiveMemberCard: React.FC<InteractiveMemberCardProps> = ({
         ref={cardRef}
         className="relative cursor-pointer group"
         style={{ perspective: 1200 }}
-        initial={{ opacity: 0, y: 60, scale: 0.85, rotateX: 10 }}
-        whileInView={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
-        viewport={{ once: true, margin: '-50px' }}
+        initial={{ opacity: 0, y: 15, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ 
-          duration: 0.6, 
-          delay: delay * 0.08,
-          type: 'spring',
-          stiffness: 100
+          duration: 0.3, 
+          ease: "easeOut",
         }}
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}

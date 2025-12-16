@@ -7,28 +7,29 @@ import InteractiveMemberCard from '@/components/InteractiveMemberCard';
 import MemberStats from '@/components/MemberStats';
 import { useTranslation } from '@/hooks/useTranslation';
 
-// Animation variants for staggered grid
+// Animation variants for staggered grid - optimized for instant appearance
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
+      staggerChildren: 0.03,  // Very fast stagger
+      delayChildren: 0,       // No delay
+      when: "beforeChildren",
     },
   },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 30, scale: 0.95 },
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
     transition: {
-      type: "spring" as const,
-      stiffness: 100,
-      damping: 15,
+      type: "tween",
+      duration: 0.25,
+      ease: "easeOut",
     },
   },
 };
@@ -158,25 +159,23 @@ export default function PeopleSectionsClient({ members }: Props) {
       <motion.div 
         key={`sekbid-${key}`}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        animate="visible"
         variants={containerVariants}
       >
         <div className="text-center mb-6">
           <motion.h3 
             className="text-2xl md:text-3xl font-serif font-semibold tracking-tight text-gray-900 dark:text-white"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
           >
             {label}
           </motion.h3>
           <motion.p 
             className="mt-1 text-sm text-gray-500 dark:text-gray-300"
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.3 }}
           >
             {t('people.activeMembers')}
           </motion.p>
@@ -187,7 +186,7 @@ export default function PeopleSectionsClient({ members }: Props) {
         >
           {group.map((member, i) => (
             <motion.div key={member.id} variants={itemVariants}>
-              <InteractiveMemberCard member={member} delay={i * 100} />
+              <InteractiveMemberCard member={member} delay={0} />
             </motion.div>
           ))}
         </motion.div>
@@ -200,17 +199,15 @@ export default function PeopleSectionsClient({ members }: Props) {
       {/* Ketua */}
       <motion.section 
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.3 }}
+        animate="visible"
         variants={containerVariants}
         className="mb-20"
       >
         <motion.div 
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
         >
           <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 bg-clip-text text-transparent mb-6">{t('people.ketuaOsis')}</h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.organizationLeader')}</p>
@@ -231,17 +228,15 @@ export default function PeopleSectionsClient({ members }: Props) {
       {/* Pengurus Inti */}
       <motion.section 
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        animate="visible"
         variants={containerVariants}
         className="mb-20"
       >
         <motion.div 
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
         >
           <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 bg-clip-text text-transparent mb-6">{t('people.pengurusInti')}</h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.coreTeamDesc')}</p>
@@ -253,7 +248,7 @@ export default function PeopleSectionsClient({ members }: Props) {
         >
           {pengurusInti.map((member, i) => (
             <motion.div key={member.id} variants={itemVariants}>
-              <InteractiveMemberCard member={member} delay={i * 100} />
+              <InteractiveMemberCard member={member} delay={0} />
             </motion.div>
           ))}
         </motion.div>
@@ -262,17 +257,15 @@ export default function PeopleSectionsClient({ members }: Props) {
       {/* Koordinator Sekbid */}
       <motion.section 
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        animate="visible"
         variants={containerVariants}
         className="mb-20"
       >
         <motion.div 
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
         >
           <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600 bg-clip-text text-transparent mb-6">{t('people.deptHeadTitle')}</h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.deptHeadDesc')}</p>
@@ -284,7 +277,7 @@ export default function PeopleSectionsClient({ members }: Props) {
         >
           {koordinatorSekbid.map((member, i) => (
             <motion.div key={member.id} variants={itemVariants}>
-              <InteractiveMemberCard member={member} delay={i * 100} />
+              <InteractiveMemberCard member={member} delay={0} />
             </motion.div>
           ))}
         </motion.div>
@@ -293,17 +286,15 @@ export default function PeopleSectionsClient({ members }: Props) {
       {/* Anggota Sekbid */}
       <motion.section 
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
+        animate="visible"
         variants={containerVariants}
         className="mb-20"
       >
         <motion.div 
           className="text-center mb-12"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
         >
           <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-500 via-pink-500 to-rose-600 bg-clip-text text-transparent mb-6">{t('people.sekbidMembers')}</h2>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.sekbidMembersDesc')}</p>
@@ -316,8 +307,7 @@ export default function PeopleSectionsClient({ members }: Props) {
             {orphanedMembers.length > 0 && (
               <motion.div
                 initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
+                animate="visible"
                 variants={containerVariants}
               >
                 <div className="text-center mb-6">
@@ -332,7 +322,7 @@ export default function PeopleSectionsClient({ members }: Props) {
                 >
                   {orphanedMembers.map((member, i) => (
                     <motion.div key={member.id} variants={itemVariants}>
-                      <InteractiveMemberCard member={member} delay={i * 100} />
+                      <InteractiveMemberCard member={member} delay={0} />
                     </motion.div>
                   ))}
                 </motion.div>
@@ -343,8 +333,7 @@ export default function PeopleSectionsClient({ members }: Props) {
             {anggotaNoSek.length > 0 && (
               <motion.div
                 initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
+                animate="visible"
                 variants={containerVariants}
               >
                 <div className="text-center mb-6">
@@ -356,7 +345,7 @@ export default function PeopleSectionsClient({ members }: Props) {
                 >
                   {anggotaNoSek.map((member, i) => (
                     <motion.div key={member.id} variants={itemVariants}>
-                      <InteractiveMemberCard member={member} delay={i * 100} />
+                      <InteractiveMemberCard member={member} delay={0} />
                     </motion.div>
                   ))}
                 </motion.div>
@@ -366,10 +355,9 @@ export default function PeopleSectionsClient({ members }: Props) {
       </motion.section>
 
       <motion.section
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
         className="scroll-reveal"
       >
         <MemberStats />
