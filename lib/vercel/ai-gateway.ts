@@ -1,96 +1,63 @@
 /**
  * Vercel AI Gateway Integration
- * Built on AI SDK 5 - Switch between 100+ models without managing rate limits
+ * Built on AI SDK 5 with @ai-sdk/gateway
  * 
- * Two modes:
- * 1. VERCEL_AI_GATEWAY_KEY - Use Vercel AI Gateway proxy (recommended)
- * 2. Provider API keys - Direct connection to OpenAI/Anthropic/Google
+ * Uses Vercel AI Gateway for unified access to all AI models
+ * Get your API key from: Vercel Dashboard > AI Gateway > Create API Key
  * 
  * @see https://sdk.vercel.ai/docs
  * @see https://vercel.com/docs/ai
  */
 
 import { streamText, generateText, generateObject, type CoreMessage } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { gateway } from '@ai-sdk/gateway';
 
-// Vercel AI Gateway Key (from Vercel Dashboard > AI Gateway)
-const VERCEL_AI_GATEWAY_KEY = process.env.VERCEL_AI_GATEWAY_KEY || process.env.AI_GATEWAY_API_KEY;
-
-// Fallback: Direct provider API keys
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const GOOGLE_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
-
-// Use Vercel AI Gateway if key is available, otherwise use direct provider keys
-const useGateway = !!VERCEL_AI_GATEWAY_KEY;
-
-// Create provider instances
-export const openai = createOpenAI({
-  apiKey: useGateway ? VERCEL_AI_GATEWAY_KEY : OPENAI_API_KEY,
-  baseURL: useGateway ? 'https://gateway.ai.vercel.sh/v1' : undefined,
-});
-
-export const anthropic = createAnthropic({
-  apiKey: useGateway ? VERCEL_AI_GATEWAY_KEY : ANTHROPIC_API_KEY,
-  baseURL: useGateway ? 'https://gateway.ai.vercel.sh/v1' : undefined,
-});
-
-export const google = createGoogleGenerativeAI({
-  apiKey: useGateway ? VERCEL_AI_GATEWAY_KEY : GOOGLE_API_KEY,
-  baseURL: useGateway ? 'https://gateway.ai.vercel.sh/v1' : undefined,
-});
+// Vercel AI Gateway API Key
+const AI_GATEWAY_KEY = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_KEY;
 
 /**
  * Check if AI Gateway is properly configured
  */
 export function getAIGatewayStatus() {
   return {
-    mode: useGateway ? 'vercel-gateway' : 'direct-providers',
-    vercelGateway: {
-      configured: !!VERCEL_AI_GATEWAY_KEY,
-      endpoint: 'https://gateway.ai.vercel.sh/v1',
-    },
-    openai: {
-      configured: useGateway || !!OPENAI_API_KEY,
-      provider: 'OpenAI',
-    },
-    anthropic: {
-      configured: useGateway || !!ANTHROPIC_API_KEY,
-      provider: 'Anthropic',
-    },
-    google: {
-      configured: useGateway || !!GOOGLE_API_KEY,
-      provider: 'Google',
-    },
-    anyAvailable: useGateway || !!(OPENAI_API_KEY || ANTHROPIC_API_KEY || GOOGLE_API_KEY),
-    defaultProvider: useGateway ? 'vercel-gateway' : (OPENAI_API_KEY ? 'openai' : ANTHROPIC_API_KEY ? 'anthropic' : GOOGLE_API_KEY ? 'google' : null),
+    mode: 'vercel-gateway',
+    configured: !!AI_GATEWAY_KEY,
+    endpoint: 'https://gateway.ai.vercel.sh/v1',
+    anyAvailable: !!AI_GATEWAY_KEY,
+    defaultProvider: AI_GATEWAY_KEY ? 'vercel-gateway' : null,
+    availableModels: AI_GATEWAY_KEY ? [
+      'openai/gpt-4o', 'openai/gpt-4o-mini', 'openai/gpt-4-turbo', 'openai/o1', 'openai/o1-mini',
+      'anthropic/claude-3-5-sonnet', 'anthropic/claude-3-5-haiku', 'anthropic/claude-3-opus',
+      'google/gemini-2.0-flash', 'google/gemini-1.5-pro', 'google/gemini-1.5-flash',
+    ] : [],
   };
 }
 
-// Model aliases for easier usage
-export const models = {
-  // OpenAI Models
-  'gpt-4o': openai('gpt-4o'),
-  'gpt-4o-mini': openai('gpt-4o-mini'),
-  'gpt-4-turbo': openai('gpt-4-turbo'),
-  'gpt-3.5-turbo': openai('gpt-3.5-turbo'),
-  'o1': openai('o1'),
-  'o1-mini': openai('o1-mini'),
-  
-  // Anthropic Models
-  'claude-3-5-sonnet': anthropic('claude-3-5-sonnet-20241022'),
-  'claude-3-5-haiku': anthropic('claude-3-5-haiku-20241022'),
-  'claude-3-opus': anthropic('claude-3-opus-20240229'),
-  
-  // Google Models
-  'gemini-2.0-flash': google('gemini-2.0-flash-exp'),
-  'gemini-1.5-pro': google('gemini-1.5-pro'),
-  'gemini-1.5-flash': google('gemini-1.5-flash'),
-} as const;
+// Model aliases - using gateway() function for all models
+export type ModelName = 
+  | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo' | 'gpt-3.5-turbo' | 'o1' | 'o1-mini'
+  | 'claude-3-5-sonnet' | 'claude-3-5-haiku' | 'claude-3-opus'
+  | 'gemini-2.0-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash';
 
-export type ModelName = keyof typeof models;
+// Map simple names to gateway model IDs
+const modelMapping: Record<ModelName, string> = {
+  'gpt-4o': 'openai/gpt-4o',
+  'gpt-4o-mini': 'openai/gpt-4o-mini',
+  'gpt-4-turbo': 'openai/gpt-4-turbo',
+  'gpt-3.5-turbo': 'openai/gpt-3.5-turbo',
+  'o1': 'openai/o1',
+  'o1-mini': 'openai/o1-mini',
+  'claude-3-5-sonnet': 'anthropic/claude-3-5-sonnet-latest',
+  'claude-3-5-haiku': 'anthropic/claude-3-5-haiku-latest',
+  'claude-3-opus': 'anthropic/claude-3-opus-latest',
+  'gemini-2.0-flash': 'google/gemini-2.0-flash-exp',
+  'gemini-1.5-pro': 'google/gemini-1.5-pro',
+  'gemini-1.5-flash': 'google/gemini-1.5-flash',
+};
+
+function getModel(name: ModelName) {
+  return gateway(modelMapping[name]);
+}
 
 /**
  * Stream text from any AI model via Vercel AI Gateway (with prompt)
@@ -104,7 +71,7 @@ export async function streamAITextWithPrompt(options: {
   const { model, prompt, system, temperature = 0.7 } = options;
 
   return streamText({
-    model: models[model],
+    model: getModel(model),
     prompt,
     system,
     temperature,
@@ -123,7 +90,7 @@ export async function streamAIText(options: {
   const { model, messages, system, temperature = 0.7 } = options;
 
   return streamText({
-    model: models[model],
+    model: getModel(model),
     messages,
     system,
     temperature,
@@ -142,7 +109,7 @@ export async function generateAITextWithPrompt(options: {
   const { model, prompt, system, temperature = 0.7 } = options;
 
   return generateText({
-    model: models[model],
+    model: getModel(model),
     prompt,
     system,
     temperature,
@@ -161,7 +128,7 @@ export async function generateAIText(options: {
   const { model, messages, system, temperature = 0.7 } = options;
 
   return generateText({
-    model: models[model],
+    model: getModel(model),
     messages,
     system,
     temperature,
@@ -180,7 +147,7 @@ export async function generateAIObject<T>(options: {
   const { model, prompt, system, schema } = options;
 
   return generateObject({
-    model: models[model],
+    model: getModel(model),
     prompt,
     system,
     schema,
@@ -201,7 +168,7 @@ export async function chat(
   const { model = 'gpt-4o-mini', system, temperature = 0.7 } = options || {};
 
   const result = await generateText({
-    model: models[model],
+    model: getModel(model),
     prompt: message,
     system,
     temperature,
@@ -236,7 +203,7 @@ Text: ${text}`,
   };
 
   const result = await generateText({
-    model: models[model],
+    model: getModel(model),
     prompt: prompts[analysisType],
     temperature: 0.3,
   });

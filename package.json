@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.56",
+    "@ai-sdk/gateway": "^2.0.21",
     "@ai-sdk/google": "^2.0.46",
     "@ai-sdk/openai": "^2.0.86",
     "@anthropic-ai/sdk": "^0.71.0",
@@ -62,7 +63,7 @@
     "@vercel/blob": "^2.0.0",
     "@vercel/edge-config": "^1.4.3",
     "@vercel/speed-insights": "^1.2.0",
-    "ai": "^5.0.106",
+    "ai": "^5.0.113",
     "bcryptjs": "^3.0.3",
     "biome": "^0.3.3",
     "chart.js": "^4.4.0",
