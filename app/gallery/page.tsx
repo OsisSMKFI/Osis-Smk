@@ -38,20 +38,12 @@ export default function GalleryPage() {
   const [sekbidFilter, setSekbidFilter] = useState<'all' | number>('all');
   const [eventFilter, setEventFilter] = useState<'all' | string>('all');
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [sekbids, setSekbids] = useState<SekbidItem[]>([
-    { id: 1, name: 'Sekbid 1' },
-    { id: 2, name: 'Sekbid 2' },
-    { id: 3, name: 'Sekbid 3' },
-    { id: 4, name: 'Sekbid 4' },
-    { id: 5, name: 'Sekbid 5' },
-    { id: 6, name: 'Sekbid 6' },
-    { id: 7, name: 'Sekbid 7' },
-    { id: 8, name: 'Sekbid 8' },
-  ]);
+  const [sekbids, setSekbids] = useState<SekbidItem[]>([]);
 
   useEffect(() => {
     fetchGallery();
     fetchEvents();
+    fetchSekbids();
   }, []);
 
   useEffect(() => {
@@ -107,6 +99,19 @@ export default function GalleryPage() {
       }
     } catch (err) {
       console.error('Error fetching events:', err);
+    }
+  };
+
+  const fetchSekbids = async () => {
+    try {
+      const res = await fetch('/api/sekbid');
+      if (res.ok) {
+        const data = await res.json();
+        const arr: SekbidItem[] = Array.isArray(data?.sekbid) ? data.sekbid : [];
+        setSekbids(arr.map(s => ({ id: s.id, name: s.name })));
+      }
+    } catch (err) {
+      console.error('Error fetching sekbids:', err);
     }
   };
 
