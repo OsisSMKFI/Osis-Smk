@@ -99,8 +99,8 @@ export default function ImageCropper({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-3xl bg-gray-900 rounded-xl sm:rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
         {/* Header */}
         <div className="px-4 sm:px-6 py-3 border-b border-gray-700 flex items-center justify-between">
           <h2 className="text-lg sm:text-xl font-semibold text-white">Crop Gambar</h2>

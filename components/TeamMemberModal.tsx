@@ -83,7 +83,7 @@ const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClo
   
   const modalContent = (
     <div className="fixed inset-0 z-[100000] overflow-y-auto cursor-default">
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0 cursor-default">
+      <div className="flex items-center justify-center min-h-screen pt-2 sm:pt-4 px-2 sm:px-4 pb-12 sm:pb-20 text-center sm:p-0 cursor-default">
         {/* Background overlay */}
         <div 
           className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm transition-opacity z-0"
@@ -91,8 +91,8 @@ const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClo
         ></div>
 
         {/* Modal panel */}
-        <div className="relative z-10 inline-block align-bottom bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 dark:border-gray-700 cursor-auto">
-          <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="relative z-10 inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all my-2 sm:my-8 sm:align-middle w-full max-w-[95vw] sm:max-w-lg border border-gray-200 dark:border-gray-700 cursor-auto">
+          <div className="bg-white dark:bg-gray-800 px-3 pt-3 pb-3 sm:px-6 sm:pt-5 sm:pb-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl leading-6 font-bold text-gray-900 dark:text-white">
                 {member.name}

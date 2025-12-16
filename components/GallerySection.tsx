@@ -166,7 +166,7 @@ const GallerySection: React.FC = () => {
       {/* Modal */}
       {selectedImage !== null && (
         <div
-          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[9999] flex items-center justify-center p-2 sm:p-4"
           onClick={closeModal}
         >
           {/* Close button - Larger on mobile */}

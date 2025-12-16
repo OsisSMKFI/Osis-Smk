@@ -429,10 +429,10 @@ export default function TilawahOsisPage() {
             {/* Image Modal */}
             {selectedImage && (
                 <div
-                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
                     onClick={() => setSelectedImage(null)}
                 >
-                    <div className="relative max-w-4xl max-h-[90vh] w-full">
+                    <div className="relative max-w-[95vw] sm:max-w-4xl max-h-[85vh] sm:max-h-[90vh] w-full">
                         <button
                             onClick={() => setSelectedImage(null)}
                             className="absolute -top-12 right-0 text-white hover:text-gray-300 text-2xl z-10"

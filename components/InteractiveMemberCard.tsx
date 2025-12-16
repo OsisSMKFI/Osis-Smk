@@ -123,7 +123,7 @@ const MemberDetailModal: React.FC<{
                   damping: 25,
                   mass: 0.8
                 }}
-                className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl shadow-2xl cursor-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+                className="relative w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-xl sm:rounded-2xl shadow-2xl cursor-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
                 style={{ 
                   perspective: '1200px',
                   transformStyle: 'preserve-3d',

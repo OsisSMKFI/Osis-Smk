@@ -200,11 +200,11 @@ export default function ContentInteractions({
       {/* Share Modal */}
       {showShareModal && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
           onClick={() => setShowShareModal(false)}
         >
           <div 
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all duration-300 scale-100"
+            className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 transform transition-all duration-300 scale-100"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -308,11 +308,11 @@ export default function ContentInteractions({
       {/* QR Code Modal */}
       {showQRModal && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
           onClick={() => setShowQRModal(false)}
         >
           <div 
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-6 transform transition-all duration-300 scale-100"
+            className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-sm w-full p-4 sm:p-6 transform transition-all duration-300 scale-100"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
