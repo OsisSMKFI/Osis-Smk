@@ -28,24 +28,13 @@ export async function GET(request: NextRequest) {
     // For admin, show detailed status
     return NextResponse.json({
       available: status.anyAvailable,
-      defaultProvider: status.defaultProvider,
-      providers: {
-        openai: {
-          configured: status.openai.configured,
-          models: status.openai.configured ? ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'o1', 'o1-mini'] : [],
-        },
-        anthropic: {
-          configured: status.anthropic.configured,
-          models: status.anthropic.configured ? ['claude-3-5-sonnet', 'claude-3-5-haiku', 'claude-3-opus'] : [],
-        },
-        google: {
-          configured: status.google.configured,
-          models: status.google.configured ? ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'] : [],
-        },
-      },
+      mode: status.mode,
+      endpoint: status.endpoint,
+      configured: status.configured,
+      availableModels: status.availableModels,
       message: status.anyAvailable 
-        ? `AI Gateway active with ${status.defaultProvider}` 
-        : 'No AI provider configured. Add OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY in Vercel environment variables.',
+        ? `AI Gateway active (${status.mode})` 
+        : 'No AI Gateway configured. Add AI_GATEWAY_API_KEY or VERCEL_AI_GATEWAY_KEY in Vercel environment variables.',
     });
   } catch (error) {
     console.error('[AI Status] Error:', error);
