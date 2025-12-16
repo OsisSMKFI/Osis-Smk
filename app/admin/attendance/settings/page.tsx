@@ -131,7 +131,8 @@ export default function AttendanceSettingsPage() {
   useEffect(() => {
     if (session?.user) {
       const userRole = (session.user.role || '').toLowerCase();
-      if (!['super_admin', 'admin', 'osis'].includes(userRole)) {
+      // OSIS tidak boleh akses attendance settings - hanya super_admin dan admin
+      if (!['super_admin', 'admin'].includes(userRole)) {
         redirect('/dashboard');
       } else {
         fetchConfig();

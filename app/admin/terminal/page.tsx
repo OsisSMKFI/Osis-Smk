@@ -9,7 +9,8 @@ import AdminPageShell from '@/components/admin/AdminPageShell';
 export default function AdminTerminalPage() {
   const { data: session, status } = useSession();
   const role = ((session?.user as any)?.role || '').toLowerCase();
-  const canAccessAdminPanel = ['super_admin','admin','osis'].includes(role);
+  // OSIS tidak boleh akses terminal - hanya super_admin dan admin
+  const canAccessAdminPanel = ['super_admin','admin'].includes(role);
 
   useEffect(() => {
     if (status === 'unauthenticated') {

@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import AnimatedSection from '@/components/AnimatedSection';
 import InteractiveMemberCard from '@/components/InteractiveMemberCard';
@@ -52,6 +52,8 @@ interface Props {
 
 export default function PeopleSectionsClient({ members }: Props) {
   const { t } = useTranslation();
+  // State untuk filter Sekbid: 'all' atau nomor sekbid (1-6)
+  const [selectedSekbid, setSelectedSekbid] = useState<'all' | number>('all');
   
   // Role-based detection (robust even if sekbid assigned):
   // Core team roles: Ketua OSIS, Wakil Ketua (OSIS), Sekretaris (1/2), Bendahara (1/2)
@@ -145,7 +147,18 @@ export default function PeopleSectionsClient({ members }: Props) {
   });
   orderedKeys.push(...otherKeys);
 
-  const renderGroups = orderedKeys.map((key) => {
+  // Get available sekbid numbers for filter buttons
+  const availableSekbids = orderedKeys
+    .filter(k => k.startsWith('num-'))
+    .map(k => Number(k.split('-')[1]))
+    .filter(n => !isNaN(n));
+
+  // Filter orderedKeys based on selected filter
+  const filteredKeys = selectedSekbid === 'all' 
+    ? orderedKeys 
+    : orderedKeys.filter(k => k === `num-${selectedSekbid}`);
+
+  const renderGroups = filteredKeys.map((key) => {
     const group = groups.get(key) || [];
     group.sort((a, b) => {
       const aOrder = (a as any).display_order ?? 0;
@@ -300,11 +313,53 @@ export default function PeopleSectionsClient({ members }: Props) {
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.sekbidMembersDesc')}</p>
         </motion.div>
 
+        {/* Filter Buttons untuk Sekbid */}
+        {availableSekbids.length > 1 && (
+          <motion.div 
+            className="flex flex-wrap justify-center gap-2 mb-8"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <button
+              onClick={() => setSelectedSekbid('all')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                selectedSekbid === 'all'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg scale-105'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              {t('people.filterAll') || 'Semua Sekbid'}
+            </button>
+            {availableSekbids.map((num) => {
+              const key = `num-${num}`;
+              const meta = groupMeta.get(key);
+              const label = meta?.label || `Sekbid ${num}`;
+              // Extract short name: "Sekbid 1 - Kerohanian" -> "Sekbid 1"
+              const shortLabel = label.match(/sekbid\s*\d+/i)?.[0] || `Sekbid ${num}`;
+              return (
+                <button
+                  key={num}
+                  onClick={() => setSelectedSekbid(num)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    selectedSekbid === num
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg scale-105'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                  title={label}
+                >
+                  {shortLabel}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+
           <div className="space-y-8">
             {renderGroups}
 
-            {/* Orphaned members: no department and not core team */}
-            {orphanedMembers.length > 0 && (
+            {/* Orphaned members: only show when filter is 'all' */}
+            {selectedSekbid === 'all' && orphanedMembers.length > 0 && (
               <motion.div
                 initial="hidden"
                 animate="visible"
@@ -329,8 +384,8 @@ export default function PeopleSectionsClient({ members }: Props) {
               </motion.div>
             )}
 
-            {/* Members with no sekbid (appear after sekbid 1..6) */}
-            {anggotaNoSek.length > 0 && (
+            {/* Members with no sekbid: only show when filter is 'all' */}
+            {selectedSekbid === 'all' && anggotaNoSek.length > 0 && (
               <motion.div
                 initial="hidden"
                 animate="visible"

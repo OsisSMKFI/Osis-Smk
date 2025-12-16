@@ -105,7 +105,8 @@ const SETTINGS_GROUPS = {
 export default function AdminSettingsPage() {
   const { data: session, status } = useSession();
   const role = ((session?.user as any)?.role || '').toLowerCase();
-  const canAccessAdminPanel = ['super_admin','admin','osis'].includes(role);
+  // OSIS tidak boleh akses settings - hanya super_admin dan admin
+  const canAccessAdminPanel = ['super_admin','admin'].includes(role);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     ai: true,
     admin: false,

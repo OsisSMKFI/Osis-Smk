@@ -9,6 +9,10 @@ import AdminPageShell from '@/components/admin/AdminPageShell';
 
 export default function ToolsPage() {
   const { data: session, status } = useSession();
+  const role = ((session?.user as any)?.role || '').toLowerCase();
+  // OSIS tidak boleh akses tools - hanya super_admin dan admin
+  const canAccessAdminPanel = ['super_admin', 'admin'].includes(role);
+  
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -17,6 +21,10 @@ export default function ToolsPage() {
 
   if (status === 'unauthenticated') {
     redirect('/admin/login');
+  }
+  
+  if (status === 'authenticated' && !canAccessAdminPanel) {
+    redirect('/dashboard');
   }
 
   const runExport = async () => {
