@@ -178,11 +178,11 @@ export default function BiometricSetupWizard({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
-          <h2 className="text-2xl font-bold">🔐 Setup Biometric Authentication</h2>
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl">
+          <h2 className="text-lg sm:text-2xl font-bold">🔐 Setup Biometric Authentication</h2>
           <p className="text-blue-100 mt-2">
             {step === 'select' && 'Pilih metode autentikasi biometric'}
             {step === 'setup' && 'Mengatur biometric authentication...'}
@@ -191,7 +191,7 @@ export default function BiometricSetupWizard({
         </div>
 
         {/* Body */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Step Indicator */}
           <div className="flex items-center justify-center mb-6">
             <div className={`flex items-center ${step === 'select' ? 'text-blue-600' : 'text-gray-400'}`}>

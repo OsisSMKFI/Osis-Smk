@@ -162,11 +162,11 @@ export default function BiometricManagement({
 
       {/* Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className={`p-6 rounded-t-2xl ${showConfirm === 'reset' ? 'bg-red-50' : 'bg-blue-50'}`}>
-              <div className="text-4xl mb-2">{showConfirm === 'reset' ? '🗑️' : '🔄'}</div>
-              <h3 className="text-xl font-bold">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className={`p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl ${showConfirm === 'reset' ? 'bg-red-50' : 'bg-blue-50'}`}>
+              <div className="text-3xl sm:text-4xl mb-2">{showConfirm === 'reset' ? '🗑️' : '🔄'}</div>
+              <h3 className="text-lg sm:text-xl font-bold">
                 {showConfirm === 'reset' ? 'Request Data Reset?' : 'Re-enroll Biometric?'}
               </h3>
             </div>

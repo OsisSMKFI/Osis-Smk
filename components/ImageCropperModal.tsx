@@ -73,13 +73,13 @@ export default function ImageCropperModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-2 sm:p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-yellow-400 to-amber-500">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-yellow-400 to-amber-500">
           <div className="flex items-center gap-2">
-            <FaCrop className="text-slate-900 text-xl" />
-            <h3 className="text-lg font-bold text-slate-900">Crop Foto Profil</h3>
+            <FaCrop className="text-slate-900 text-lg sm:text-xl" />
+            <h3 className="text-base sm:text-lg font-bold text-slate-900">Crop Foto Profil</h3>
           </div>
           <button
             onClick={onCancel}
@@ -90,7 +90,7 @@ export default function ImageCropperModal({
         </div>
 
         {/* Crop Area */}
-        <div className="p-6 overflow-auto max-h-[calc(90vh-140px)]">
+        <div className="p-4 sm:p-6 overflow-auto max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-140px)]">
           <ReactCrop
             crop={crop}
             onChange={(c) => setCrop(c)}
@@ -108,17 +108,17 @@ export default function ImageCropperModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
+        <div className="flex items-center justify-end gap-2 sm:gap-3 p-3 sm:p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
           <button
             onClick={onCancel}
-            className="px-6 py-2.5 rounded-xl bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600 transition-all font-medium"
+            className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-slate-600 transition-all font-medium text-sm sm:text-base"
           >
             Batal
           </button>
           <button
             onClick={handleCropComplete}
             disabled={!completedCrop}
-            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-900 font-bold transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-900 font-bold transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
           >
             <FaCheck />
             Crop & Upload

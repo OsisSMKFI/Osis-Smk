@@ -311,9 +311,9 @@ export default function AdminContentPage() {
 
         {/* Add Form Modal */}
         {showAddForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6">
-              <h3 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Tambah Konten Baru</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-800 dark:text-white">Tambah Konten Baru</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Key (unik)</label>

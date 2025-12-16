@@ -66,7 +66,7 @@ export default function SocialMediaModal({ isOpen, onClose, type, data }: Social
 
   const modalContent = (
     <div 
-      className="fixed inset-0 flex items-center justify-center p-4 animate-fadeIn"
+      className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 animate-fadeIn"
       style={{ 
         zIndex: 999999,
         backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -76,7 +76,7 @@ export default function SocialMediaModal({ isOpen, onClose, type, data }: Social
     >
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn"
+        className="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleIn"
         onClick={(e) => e.stopPropagation()}
         style={{ pointerEvents: 'auto' }}
       >
