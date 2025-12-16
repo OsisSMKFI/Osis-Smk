@@ -20,6 +20,27 @@ interface StatItem {
   bgColor: string;
 }
 
+// Helper functions (same as PeopleSectionsClient for consistency)
+function isKetua(position: string): boolean {
+  const pos = (position || '').trim();
+  return /^ketua(\s+osis)?$/i.test(pos);
+}
+
+function isCoreTeamRole(position: string): boolean {
+  const pos = (position || '').trim();
+  return (
+    /^ketua(\s+osis)?$/i.test(pos) ||
+    /^wakil(\s+ketua(\s+osis)?)?$/i.test(pos) ||
+    /^sekretaris(\s*\d+)?$/i.test(pos) ||
+    /^bendahara(\s*\d+)?$/i.test(pos)
+  );
+}
+
+function isKoordinator(position: string): boolean {
+  const pos = (position || '').trim().toLowerCase();
+  return pos === 'koordinator sekbid' || pos === 'kepala departemen';
+}
+
 const MemberStats: React.FC = () => {
   const { t } = useTranslation();
   const [animatedStats, setAnimatedStats] = useState<Record<string, number>>({});
@@ -36,20 +57,60 @@ const MemberStats: React.FC = () => {
   const statsRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
 
-  // Fetch stats from API
+  // Fetch stats - try API first, fallback to calculating from members
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch('/api/stats');
-        const data = await res.json();
-        if (data.success && data.stats) {
+        // Try stats API first
+        const statsRes = await fetch('/api/stats');
+        const statsJson = await statsRes.json();
+        
+        if (statsJson.success && statsJson.stats && statsJson.stats.totalMembers > 0) {
           setStatsData({
-            totalMembers: data.stats.totalMembers || 0,
-            ketuaCount: data.stats.ketuaCount || 0,
-            coreTeamCount: data.stats.coreTeamCount || 0,
-            koordinatorCount: data.stats.koordinatorCount || 0,
-            anggotaSekbidCount: data.stats.anggotaSekbidCount || 0,
-            departments: data.stats.departments || 6,
+            totalMembers: statsJson.stats.totalMembers || 0,
+            ketuaCount: statsJson.stats.ketuaCount || 0,
+            coreTeamCount: statsJson.stats.coreTeamCount || 0,
+            koordinatorCount: statsJson.stats.koordinatorCount || 0,
+            anggotaSekbidCount: statsJson.stats.anggotaSekbidCount || 0,
+            departments: statsJson.stats.departments || 6,
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Fallback: calculate from members API
+        const membersRes = await fetch('/api/members');
+        const membersJson = await membersRes.json();
+        const members = membersJson.members || [];
+        
+        if (members.length > 0) {
+          let ketuaCount = 0;
+          let coreTeamCount = 0;
+          let koordinatorCount = 0;
+          let anggotaSekbidCount = 0;
+          
+          members.forEach((m: any) => {
+            const position = m.position || '';
+            const hasDepartment = !!m.sekbid || !!m.sekbid_id || !!m.department;
+            
+            if (isKetua(position)) {
+              ketuaCount++;
+            } else if (isCoreTeamRole(position)) {
+              coreTeamCount++;
+            } else if (isKoordinator(position)) {
+              koordinatorCount++;
+            } else if (hasDepartment) {
+              anggotaSekbidCount++;
+            }
+          });
+          
+          setStatsData({
+            totalMembers: members.length,
+            ketuaCount,
+            coreTeamCount,
+            koordinatorCount,
+            anggotaSekbidCount,
+            departments: 6,
           });
         }
       } catch (error) {
