@@ -31,11 +31,11 @@ export function SecurityAnalyzerProvider({ children }: { children: React.ReactNo
       console.log('[Security Analyzer] User authenticated, starting background analysis...');
       runBackgroundAnalysis(userId, userEmail);
 
-      // Re-run analysis every 2 minutes to keep data fresh
+      // Re-run analysis every 10 minutes to keep data fresh (was 2 min - too frequent)
       const interval = setInterval(() => {
         console.log('[Security Analyzer] Re-running analysis (scheduled)...');
         runBackgroundAnalysis(userId, userEmail, true);
-      }, 2 * 60 * 1000);
+      }, 10 * 60 * 1000);
 
       return () => clearInterval(interval);
     }

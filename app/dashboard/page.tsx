@@ -60,10 +60,10 @@ export default function UserDashboard() {
     if (session?.user) {
       loadProfile();
       
-      // Auto-refresh profile every 30 seconds to detect admin changes
+      // Auto-refresh profile every 5 minutes (was 30s - too frequent, causing performance issues)
       const interval = setInterval(() => {
         loadProfile();
-      }, 30000);
+      }, 300000);
       
       return () => clearInterval(interval);
     }

@@ -110,18 +110,18 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     setIsLoading(true);
     setProgress(0);
     
-    // Faster loading simulation
+    // OPTIMIZED: Faster loading - reduced delays significantly  
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 90) {
           clearInterval(progressInterval);
           return 90;
         }
-        return prev + 30;
+        return prev + 50; // Faster progress
       });
-    }, 50);
+    }, 30); // Faster interval
 
-    // Reduced loading time for faster navigation
+    // OPTIMIZED: Minimal loading time for instant navigation
     const timer = setTimeout(() => {
       setDisplayChildren(children);
       setProgress(100);
@@ -130,8 +130,8 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
         setIsLoading(false);
         setProgress(0);
         clearInterval(progressInterval);
-      }, 100);
-    }, 300);
+      }, 50); // Reduced from 100ms
+    }, 100); // Reduced from 300ms for faster navigation
 
     return () => {
       clearTimeout(timer);

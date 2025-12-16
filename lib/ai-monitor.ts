@@ -21,28 +21,25 @@ interface MonitoringData {
 
 /**
  * Initialize AI Monitoring (call in client components)
+ * DISABLED for performance - was causing browser crashes
+ * Keep trackAIEvent for manual logging only
  */
 export function initAIMonitoring() {
   if (typeof window === 'undefined') return;
+  
+  // DISABLED - causing performance issues and browser crashes
+  // These monitoring functions override console.error, fetch, add many event listeners,
+  // and run setInterval every 30 seconds which causes memory leaks
+  
+  console.log('[AI Monitor] Disabled for performance');
+  return;
 
-  console.log('[AI Monitor] Initializing...');
-
-  // 1. Performance Monitoring
-  monitorPerformance();
-
-  // 2. Error Monitoring
-  monitorErrors();
-
-  // 3. User Behavior Monitoring
-  monitorUserBehavior();
-
-  // 4. Network Monitoring
-  monitorNetwork();
-
-  // 5. Memory Monitoring
-  monitorMemory();
-
-  console.log('[AI Monitor] Active ✅');
+  // Original code (disabled):
+  // monitorPerformance();
+  // monitorErrors();
+  // monitorUserBehavior();
+  // monitorNetwork();
+  // monitorMemory();
 }
 
 /**
