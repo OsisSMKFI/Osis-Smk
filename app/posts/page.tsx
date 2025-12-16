@@ -6,6 +6,7 @@ import { FaNewspaper, FaCalendar, FaEye, FaArrowRight } from 'react-icons/fa';
 import MediaRenderer from '@/components/MediaRenderer';
 import ContentInteractions from '@/components/ContentInteractions';
 import Link from 'next/link';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface Post {
   id: string;
@@ -22,6 +23,7 @@ interface Post {
 }
 
 export default function PostsPage() {
+  const { t } = useTranslation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'featured'>('all');
@@ -53,7 +55,7 @@ export default function PostsPage() {
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Memuat berita...</p>
+            <p className="mt-4 text-gray-600">{t('posts.loading')}</p>
           </div>
         </div>
       </div>
@@ -71,10 +73,10 @@ export default function PostsPage() {
           <div className="text-center max-w-3xl mx-auto">
             <FaNewspaper className="text-6xl mx-auto mb-6" />
             <h1 className="text-5xl font-bold mb-6">
-              Berita & Artikel OSIS
+              {t('posts.title')}
             </h1>
             <p className="text-xl text-blue-100">
-              Temukan informasi terbaru, kegiatan, dan cerita inspiratif dari OSIS SMK Fithrah Insani
+              {t('posts.description')}
             </p>
           </div>
         </div>
@@ -93,7 +95,7 @@ export default function PostsPage() {
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                 }`}
               >
-                Semua Berita
+                {t('posts.allNews')}
               </button>
               <button
                 onClick={() => setFilter('featured')}
@@ -103,11 +105,11 @@ export default function PostsPage() {
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
                 }`}
               >
-                Unggulan
+                {t('posts.featured')}
               </button>
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              {posts.length} berita ditemukan
+              {posts.length} {t('posts.title').toLowerCase()}
             </div>
           </div>
         </div>
@@ -118,7 +120,7 @@ export default function PostsPage() {
         {posts.length === 0 ? (
           <div className="text-center py-16">
             <FaNewspaper className="text-6xl text-gray-300 mx-auto mb-4" />
-            <p className="text-xl text-gray-500">Belum ada berita tersedia</p>
+            <p className="text-xl text-gray-500">{t('posts.noNews')}</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -190,7 +192,7 @@ export default function PostsPage() {
                     href={`/posts/${post.slug}`}
                     className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold transition-colors group"
                   >
-                    Baca Selengkapnya
+                    {t('posts.readMore')}
                     <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
                   </Link>
                   

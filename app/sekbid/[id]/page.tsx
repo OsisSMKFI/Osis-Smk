@@ -7,6 +7,7 @@ import AnimatedSection from '@/components/AnimatedSection';
 import { getSekbidIcon } from '@/lib/sekbidIcons';
 import { FaCalendar, FaClock, FaCheckCircle, FaSpinner, FaBan, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface Proker {
   id: string;
@@ -19,18 +20,19 @@ interface Proker {
   created_at: string;
 }
 
-const STATUS_CONFIG = {
-  planned: { label: 'Direncanakan', icon: FaClock, color: 'text-gray-700', bg: 'bg-gray-100', ring: 'ring-gray-300' },
-  ongoing: { label: 'Berlangsung', icon: FaSpinner, color: 'text-blue-700', bg: 'bg-blue-100', ring: 'ring-blue-300' },
-  completed: { label: 'Selesai', icon: FaCheckCircle, color: 'text-green-700', bg: 'bg-green-100', ring: 'ring-green-300' },
-  cancelled: { label: 'Dibatalkan', icon: FaBan, color: 'text-red-700', bg: 'bg-red-100', ring: 'ring-red-300' },
-};
-
 export default function SekbidDetailPage() {
+  const { t } = useTranslation();
   const params = useParams();
   const sekbidId = parseInt(params?.id as string);
   const [prokerList, setProkerList] = useState<Proker[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const STATUS_CONFIG = {
+    planned: { label: t('proker.statusPlanned'), icon: FaClock, color: 'text-gray-700', bg: 'bg-gray-100', ring: 'ring-gray-300' },
+    ongoing: { label: t('proker.statusOngoing'), icon: FaSpinner, color: 'text-blue-700', bg: 'bg-blue-100', ring: 'ring-blue-300' },
+    completed: { label: t('proker.statusCompleted'), icon: FaCheckCircle, color: 'text-green-700', bg: 'bg-green-100', ring: 'ring-green-300' },
+    cancelled: { label: t('proker.statusCancelled'), icon: FaBan, color: 'text-red-700', bg: 'bg-red-100', ring: 'ring-red-300' },
+  };
 
   const sekbidInfo = getSekbidIcon(sekbidId);
   const Icon = sekbidInfo?.icon;
@@ -65,9 +67,9 @@ export default function SekbidDetailPage() {
   };
 
   const getDateRange = (start: string | null, end: string | null) => {
-    if (!start && !end) return 'Tanggal belum ditentukan';
-    if (start && !end) return `Mulai ${formatDate(start)}`;
-    if (!start && end) return `Sampai ${formatDate(end)}`;
+    if (!start && !end) return t('info.dateNotSet');
+    if (start && !end) return `${t('proker.startDate')} ${formatDate(start)}`;
+    if (!start && end) return `${t('proker.endDate')} ${formatDate(end)}`;
     return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
@@ -85,7 +87,7 @@ export default function SekbidDetailPage() {
                 href="/bidang"
                 className="inline-flex items-center gap-2 mb-6 sm:mb-8 text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                <FaArrowLeft /> Kembali ke Semua Program
+                <FaArrowLeft /> {t('proker.backToAll')}
               </Link>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -107,7 +109,7 @@ export default function SekbidDetailPage() {
               {!loading && (
                 <div className="inline-block px-4 sm:px-6 py-2 sm:py-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
                   <p className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">
-                    Total: <span className={sekbidInfo?.color}>{prokerList.length}</span> Program Kerja
+                    Total: <span className={sekbidInfo?.color}>{prokerList.length}</span> {t('proker.title')}
                   </p>
                 </div>
               )}
@@ -121,12 +123,12 @@ export default function SekbidDetailPage() {
             {loading ? (
               <div className="text-center py-16 sm:py-20">
                 <div className="animate-spin w-12 h-12 sm:w-16 sm:h-16 border-4 border-yellow-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Memuat program kerja...</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">{t('proker.loading')}</p>
               </div>
             ) : prokerList.length === 0 ? (
               <div className="text-center py-16 sm:py-20">
                 <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg">
-                  Belum ada program kerja untuk sekbid ini.
+                  {t('proker.noSekbidPrograms')}
                 </p>
               </div>
             ) : (
@@ -164,7 +166,7 @@ export default function SekbidDetailPage() {
                             <FaCalendar className="text-yellow-600 dark:text-yellow-400 mt-1 flex-shrink-0" />
                             <div>
                               <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                Periode Pelaksanaan
+                                {t('proker.executionPeriod')}
                               </p>
                               <p className="text-sm text-gray-600 dark:text-gray-400">
                                 {getDateRange(program.start_date, program.end_date)}
@@ -176,7 +178,7 @@ export default function SekbidDetailPage() {
                         {/* Footer */}
                         <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700">
                           <p className="text-xs text-gray-500 dark:text-gray-500">
-                            Ditambahkan: {formatDate(program.created_at)}
+                            {t('proker.addedAt')} {formatDate(program.created_at)}
                           </p>
                         </div>
                       </div>

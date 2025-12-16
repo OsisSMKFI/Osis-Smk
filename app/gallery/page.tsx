@@ -7,6 +7,7 @@ import MediaRenderer from '@/components/MediaRenderer';
 import { FaTimes, FaChevronLeft, FaChevronRight, FaImages } from 'react-icons/fa';
 import PageHero from '@/components/animations/PageHero';
 import { AnimatedSection, StaggerContainer, StaggerItem } from '@/components/animations/AnimatedSection';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface GalleryItem {
   id: string;
@@ -30,6 +31,7 @@ interface SekbidItem {
 }
 
 export default function GalleryPage() {
+  const { t } = useTranslation();
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
@@ -119,7 +121,7 @@ export default function GalleryPage() {
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Memuat galeri...</p>
+            <p className="mt-4 text-gray-600">{t('gallery.loading')}</p>
           </div>
         </div>
       </div>
@@ -130,9 +132,9 @@ export default function GalleryPage() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
       {/* Hero Section with Animation */}
       <PageHero
-        title="Galeri Kegiatan"
-        subtitle="Dokumentasi OSIS"
-        description="Dokumentasi kegiatan dan prestasi OSIS SMK Informatika"
+        title={t('gallery.activities')}
+        subtitle={t('gallery.documentation')}
+        description={t('gallery.documentationDesc')}
         icon={<FaImages className="w-10 h-10 text-purple-500" />}
         gradient="purple"
       />
@@ -143,13 +145,13 @@ export default function GalleryPage() {
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Event Filter */}
             <div className="flex-1">
-              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Event (Opsional)</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('gallery.eventOptional')}</label>
               <select
                 value={eventFilter}
                 onChange={(e) => setEventFilter(e.target.value as any)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">Semua Event</option>
+                <option value="all">{t('gallery.allEvents')}</option>
                 {events.map(ev => (
                   <option key={ev.id} value={ev.id}>{ev.title}</option>
                 ))}
@@ -157,7 +159,7 @@ export default function GalleryPage() {
             </div>
             {/* Sekbid Filter */}
           <div className="flex-1">
-            <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Sekbid (Opsional)</label>
+            <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">{t('gallery.sekbidOptional')}</label>
             <select
               value={sekbidFilter}
               onChange={(e) => {
@@ -166,7 +168,7 @@ export default function GalleryPage() {
               }}
               className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">Semua Sekbid</option>
+              <option value="all">{t('gallery.allSekbid')}</option>
               {sekbids.map(sb => (
                 <option key={sb.id} value={sb.id}>{sb.name}</option>
               ))}
@@ -182,7 +184,7 @@ export default function GalleryPage() {
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
-          >Semua</button>
+          >{t('gallery.all')}</button>
           {sekbids.map(sb => (
             <button
               key={`sekbtn-${sb.id}`}
@@ -204,7 +206,7 @@ export default function GalleryPage() {
           {filteredGallery.length === 0 ? (
             <div className="text-center py-12 sm:py-16 lg:py-20">
               <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400">
-                {sekbidFilter === 'all' && eventFilter === 'all' ? 'Belum ada foto di galeri' : 'Belum ada foto untuk filter ini'}
+                {sekbidFilter === 'all' && eventFilter === 'all' ? t('gallery.noPhotos') : t('gallery.noPhotosFilter')}
               </p>
             </div>
           ) : (

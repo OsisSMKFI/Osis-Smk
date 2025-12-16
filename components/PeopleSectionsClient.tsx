@@ -50,6 +50,8 @@ interface Props {
 }
 
 export default function PeopleSectionsClient({ members }: Props) {
+  const { t } = useTranslation();
+  
   // Role-based detection (robust even if sekbid assigned):
   // Core team roles: Ketua OSIS, Wakil Ketua (OSIS), Sekretaris (1/2), Bendahara (1/2)
   const ketua = members.find(m => /^ketua(\s+osis)?$/i.test(m.position.trim())) || null;
@@ -176,7 +178,7 @@ export default function PeopleSectionsClient({ members }: Props) {
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            Anggota aktif
+            {t('people.activeMembers')}
           </motion.p>
         </div>
         <motion.div 
@@ -210,8 +212,8 @@ export default function PeopleSectionsClient({ members }: Props) {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 bg-clip-text text-transparent mb-6">Ketua OSIS</h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Pemimpin organisasi</p>
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 bg-clip-text text-transparent mb-6">{t('people.ketuaOsis')}</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.organizationLeader')}</p>
         </motion.div>
 
         <motion.div 
@@ -220,7 +222,7 @@ export default function PeopleSectionsClient({ members }: Props) {
         >
           <div className="max-w-md">
             {ketua ? <InteractiveMemberCard member={ketua} isLeader delay={0} /> : (
-              <div className="text-center text-gray-500">Belum ada data Ketua</div>
+              <div className="text-center text-gray-500">{t('people.noKetuaData')}</div>
             )}
           </div>
         </motion.div>
@@ -241,8 +243,8 @@ export default function PeopleSectionsClient({ members }: Props) {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 bg-clip-text text-transparent mb-6">Pengurus Inti</h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Tim inti organisasi (Ketua, Wakil, Sekretaris, Bendahara)</p>
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 bg-clip-text text-transparent mb-6">{t('people.pengurusInti')}</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.coreTeamDesc')}</p>
         </motion.div>
 
         <motion.div 
@@ -272,8 +274,8 @@ export default function PeopleSectionsClient({ members }: Props) {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600 bg-clip-text text-transparent mb-6">{useTranslation().t('peopleWarnings.deptHeadTitle')}</h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{useTranslation().t('peopleWarnings.deptHeadDesc')}</p>
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600 bg-clip-text text-transparent mb-6">{t('people.deptHeadTitle')}</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.deptHeadDesc')}</p>
         </motion.div>
 
         <motion.div 
@@ -303,8 +305,8 @@ export default function PeopleSectionsClient({ members }: Props) {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-500 via-pink-500 to-rose-600 bg-clip-text text-transparent mb-6">Anggota Seksi Bidang</h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">Anggota aktif per sekbid</p>
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-500 via-pink-500 to-rose-600 bg-clip-text text-transparent mb-6">{t('people.sekbidMembers')}</h2>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">{t('people.sekbidMembersDesc')}</p>
         </motion.div>
 
           <div className="space-y-8">
@@ -319,9 +321,9 @@ export default function PeopleSectionsClient({ members }: Props) {
                 variants={containerVariants}
               >
                 <div className="text-center mb-6">
-                  <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">Anggota Belum Ditugaskan</h3>
+                  <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">{t('people.unassignedMembers')}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    Member berikut belum ditugaskan ke sekbid. Silakan hubungi admin untuk penempatan.
+                    {t('people.unassignedMembersDesc')}
                   </p>
                 </div>
                 <motion.div 
@@ -346,7 +348,7 @@ export default function PeopleSectionsClient({ members }: Props) {
                 variants={containerVariants}
               >
                 <div className="text-center mb-6">
-                  <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">Sekbid Lainnya</h3>
+                  <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">{t('people.otherSekbid')}</h3>
                 </div>
                 <motion.div 
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"

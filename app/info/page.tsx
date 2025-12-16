@@ -8,6 +8,7 @@ import MediaRenderer from '@/components/MediaRenderer';
 import ContentInteractions from '@/components/ContentInteractions';
 import Link from 'next/link';
 import PageHero from '@/components/animations/PageHero';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface Announcement {
   id: string;
@@ -58,6 +59,7 @@ interface Post {
 }
 
 export default function InfoPage() {
+  const { t } = useTranslation();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -161,7 +163,7 @@ export default function InfoPage() {
 
   const handleVote = async (pollId: string, optionId: string) => {
     if (votedPolls.has(pollId)) {
-      alert('Anda sudah vote di polling ini!');
+      alert(t('polls.alreadyVoted'));
       return;
     }
     
@@ -176,7 +178,7 @@ export default function InfoPage() {
       const result = await safeJson(response, { url: `/api/polls/${pollId}/vote`, method: 'POST' }).catch(() => ({}));
       
       if (!response.ok) {
-        throw new Error(result.error || 'Gagal vote');
+        throw new Error(result.error || t('polls.voteFailed'));
       }
       
       // Update local state
@@ -198,10 +200,10 @@ export default function InfoPage() {
       setVotedPolls(newVotedPolls);
       localStorage.setItem('votedPolls', JSON.stringify([...newVotedPolls]));
       
-      alert(`Vote berhasil! (${result.voter_role})`);
+      alert(`${t('polls.voteSuccess')} (${result.voter_role})`);
     } catch (error) {
       console.error('[Info Page] Vote error:', error);
-      alert('Gagal vote: ' + (error as Error).message);
+      alert(t('polls.voteFailed') + ': ' + (error as Error).message);
     } finally {
       setVotingPoll(null);
     }
@@ -213,7 +215,7 @@ export default function InfoPage() {
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Memuat informasi...</p>
+            <p className="mt-4 text-gray-600">{t('info.loading')}</p>
           </div>
         </div>
       </div>
@@ -224,9 +226,9 @@ export default function InfoPage() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
       {/* Hero Section with Animation */}
       <PageHero
-        title="Pusat Informasi"
-        subtitle="OSIS SMK Informatika"
-        description="Temukan pengumuman, acara, polling, dan informasi terbaru dari OSIS"
+        title={t('info.title')}
+        subtitle={t('info.subtitle')}
+        description={t('info.description')}
         icon={<FaInfoCircle className="w-10 h-10 text-blue-500" />}
         gradient="blue"
       />
@@ -247,12 +249,12 @@ export default function InfoPage() {
               transition={{ delay: 0.3 }}
             >
               <FaBullhorn className="text-2xl sm:text-3xl text-blue-600" />
-              <h2 className="text-2xl sm:text-3xl font-bold">Pengumuman</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold">{t('announcements.title')}</h2>
             </motion.div>
 
             {announcements.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
-                <p className="text-gray-500 dark:text-gray-400">Belum ada pengumuman</p>
+                <p className="text-gray-500 dark:text-gray-400">{t('info.noAnnouncements')}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -287,7 +289,7 @@ export default function InfoPage() {
                             : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
                         }`}
                       >
-                        {ann.priority === 'urgent' ? 'URGENT' : ann.priority === 'high' ? 'PENTING' : 'Info'}
+                        {ann.priority === 'urgent' ? 'URGENT' : ann.priority === 'high' ? t('announcements.important') : t('announcements.info')}
                       </span>
                     </div>
                     <div className="mb-4">
@@ -304,7 +306,7 @@ export default function InfoPage() {
                           }}
                           className="mt-2 px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
                         >
-                          {isExpanded ? '← Tutup' : 'Baca selengkapnya →'}
+                          {isExpanded ? t('common.close') : t('common.readMore')}
                         </button>
                       )}
                     </div>
@@ -337,12 +339,12 @@ export default function InfoPage() {
             {/* Events Section */}
             <div className="flex items-center gap-3 mb-6 mt-12 sm:mt-16">
               <FaCalendarAlt className="text-2xl sm:text-3xl text-green-600" />
-              <h2 className="text-2xl sm:text-3xl font-bold">Acara Mendatang</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold">{t('info.upcomingEvents')}</h2>
             </div>
 
             {events.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
-                <p className="text-gray-500 dark:text-gray-400">Belum ada acara</p>
+                <p className="text-gray-500 dark:text-gray-400">{t('info.noEvents')}</p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
@@ -388,7 +390,7 @@ export default function InfoPage() {
                               }}
                               className="mt-2 px-3 py-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
                             >
-                              {isExpanded ? '← Tutup' : 'Baca selengkapnya →'}
+                              {isExpanded ? t('common.close') : t('common.readMore')}
                             </button>
                           )}
                         </div>
@@ -400,7 +402,7 @@ export default function InfoPage() {
                             day: 'numeric',
                             month: 'long',
                             year: 'numeric',
-                          }) : 'Tanggal belum ditetapkan'}
+                          }) : t('info.dateNotSet')}
                         </p>
                         {event.location && <p>📍 {event.location}</p>}
                       </div>
@@ -411,7 +413,7 @@ export default function InfoPage() {
                           rel="noopener noreferrer"
                           className="mt-4 inline-block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                         >
-                          Daftar Sekarang
+                          {t('common.register')}
                         </a>
                       )}
                       
@@ -441,12 +443,12 @@ export default function InfoPage() {
               <div>
                 <div className="flex items-center gap-3 mb-6">
                   <FaPoll className="text-2xl sm:text-3xl text-purple-600" />
-                  <h2 className="text-xl sm:text-2xl font-bold">Polling Aktif</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold">{t('polls.title')}</h2>
                 </div>
 
                 {polls.length === 0 ? (
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-                    <p className="text-gray-500 dark:text-gray-400">Belum ada polling</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t('info.noPolls')}</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -486,7 +488,7 @@ export default function InfoPage() {
                                 );
                               })}
                               <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-semibold">
-                                ✓ Anda sudah vote
+                                ✓ {t('polls.voted')}
                               </p>
                             </div>
                           ) : (
@@ -509,7 +511,7 @@ export default function InfoPage() {
                               ))}
                               {isVoting && (
                                 <p className="text-xs text-blue-600 animate-pulse">
-                                  Mengirim vote...
+                                  {t('polls.sending')}
                                 </p>
                               )}
                             </div>
@@ -517,11 +519,11 @@ export default function InfoPage() {
                           
                           <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                             <p className="text-xs text-gray-500">
-                              Total voting: {totalVotes}
+                              {t('polls.totalVoting')}: {totalVotes}
                             </p>
                             {poll.expires_at && (
                               <p className="text-xs text-orange-600">
-                                Berakhir: {new Date(poll.expires_at).toLocaleDateString('id-ID')}
+                                {t('polls.endsAt')}: {new Date(poll.expires_at).toLocaleDateString('id-ID')}
                               </p>
                             )}
                           </div>
@@ -549,12 +551,12 @@ export default function InfoPage() {
               <div>
                 <div className="flex items-center gap-3 mb-6">
                   <FaFileAlt className="text-2xl sm:text-3xl text-indigo-600" />
-                  <h2 className="text-xl sm:text-2xl font-bold">Artikel Terbaru</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold">{t('info.latestArticles')}</h2>
                 </div>
 
                 {posts.length === 0 ? (
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-                    <p className="text-gray-500 dark:text-gray-400">Belum ada artikel</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t('info.noArticles')}</p>
                   </div>
                 ) : (
                   <>
@@ -601,7 +603,7 @@ export default function InfoPage() {
                                   href={`/posts/${post.slug}`}
                                   className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 text-xs font-medium hover:underline hover:decoration-2"
                                 >
-                                  Baca Selengkapnya
+                                  {t('common.readMore')}
                                   <span className="transition-transform group-hover:translate-x-0.5">→</span>
                                 </a>
                               </div>
@@ -629,7 +631,7 @@ export default function InfoPage() {
                         href="/posts"
                         className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-indigo-600 text-white text-sm font-semibold shadow hover:shadow-lg hover:bg-indigo-700 transition-colors"
                       >
-                        Lihat Semua Artikel
+                        {t('info.viewAllArticles')}
                         <span>→</span>
                       </a>
                     </div>
