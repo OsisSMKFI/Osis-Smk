@@ -21,6 +21,10 @@ export type Permission =
   | 'posts:create'
   | 'posts:edit'
   | 'posts:delete'
+  | 'content:read'
+  | 'content:create'
+  | 'content:update'
+  | 'content:delete'
   | 'events:read'
   | 'events:create'
   | 'events:edit'
@@ -71,6 +75,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   super_admin: [
     // Content
     'posts:read', 'posts:create', 'posts:edit', 'posts:delete',
+    'content:read', 'content:create', 'content:update', 'content:delete',
     'events:read', 'events:create', 'events:edit', 'events:delete',
     'gallery:read', 'gallery:create', 'gallery:edit', 'gallery:delete',
     // Data
@@ -89,6 +94,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
     // Content
     'posts:read', 'posts:create', 'posts:edit', 'posts:delete',
+    'content:read', 'content:create', 'content:update', 'content:delete',
     'events:read', 'events:create', 'events:edit', 'events:delete',
     'gallery:read', 'gallery:create', 'gallery:edit', 'gallery:delete',
     // Data
@@ -108,6 +114,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   moderator: [
     // Content (full moderation)
     'posts:read', 'posts:create', 'posts:edit', 'posts:delete',
+    'content:read', 'content:create', 'content:update', 'content:delete',
     'events:read', 'events:create', 'events:edit', 'events:delete',
     'gallery:read', 'gallery:create', 'gallery:edit', 'gallery:delete',
     'announcements:read', 'announcements:create', 'announcements:edit', 'announcements:delete',
@@ -146,6 +153,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   osis: [
     // Content (full CRUD)
     'posts:read', 'posts:create', 'posts:edit', 'posts:delete',
+    'content:read', 'content:create', 'content:update', 'content:delete',
     'events:read', 'events:create', 'events:edit', 'events:delete',
     'gallery:read', 'gallery:create', 'gallery:edit', 'gallery:delete',
     // Data (full CRUD)

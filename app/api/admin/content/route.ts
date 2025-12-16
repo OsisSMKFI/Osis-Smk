@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { requirePermission } from '@/lib/apiAuth';
 
 // API endpoint for managing page content
 export async function GET(request: NextRequest) {
@@ -55,6 +56,10 @@ export async function GET(request: NextRequest) {
 
 // Create new content
 export async function POST(request: NextRequest) {
+  // Check permission
+  const authError = await requirePermission('content:create');
+  if (authError) return authError;
+  
   try {
     const body = await request.json();
     const { page_key, category, title, content, published } = body;
@@ -90,6 +95,10 @@ export async function POST(request: NextRequest) {
 
 // Update content
 export async function PUT(request: NextRequest) {
+  // Check permission
+  const authError = await requirePermission('content:update');
+  if (authError) return authError;
+  
   try {
     const body = await request.json();
     const { id, page_key, category, title, content, published } = body;
@@ -131,6 +140,10 @@ export async function PUT(request: NextRequest) {
 
 // Delete content
 export async function DELETE(request: NextRequest) {
+  // Check permission
+  const authError = await requirePermission('content:delete');
+  if (authError) return authError;
+  
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
