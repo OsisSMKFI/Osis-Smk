@@ -136,15 +136,22 @@ export async function POST(request: NextRequest) {
       expiresAt: signedUrlResult.expiresAt
     });
 
+    // Get public URL for storage in database
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(filePath);
+
     return NextResponse.json({
       success: true,
       url: signedUrlResult.url,      // Client gets signed URL
+      publicUrl: publicUrl,          // Public URL for database storage
       signedUrl: signedUrlResult.url,
       expiresAt: signedUrlResult.expiresAt,
       bucket: signedUrlResult.bucket,
       path: data.path,
       data: {
         path: data.path,
+        publicUrl,
         signedUrl: signedUrlResult.url,
         url: signedUrlResult.url,
         expiresAt: signedUrlResult.expiresAt,

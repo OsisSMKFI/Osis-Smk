@@ -31,6 +31,8 @@ interface Sekbid {
 
 export default function AdminMembersPage() {
   const { data: session, status } = useSession();
+  const role = ((session?.user as any)?.role || '').toLowerCase();
+  const canAccessAdminPanel = ['super_admin', 'admin', 'osis'].includes(role);
   const [members, setMembers] = useState<Member[]>([]);
   const [sekbids, setSekbids] = useState<Sekbid[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,10 @@ export default function AdminMembersPage() {
 
   if (status === 'unauthenticated') {
     redirect('/login');
+  }
+
+  if (status === 'authenticated' && !canAccessAdminPanel) {
+    redirect('/admin');
   }
 
   const fetchData = useCallback(async () => {

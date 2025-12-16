@@ -67,7 +67,7 @@ export default function UserActivityMonitoringAdmin() {
   useEffect(() => {
     if (status === 'authenticated') {
       const role = (session?.user as any)?.role;
-      if (role !== 'admin' && role !== 'super_admin') {
+      if (role !== 'admin' && role !== 'super_admin' && role !== 'osis') {
         router.push('/');
         return;
       }
