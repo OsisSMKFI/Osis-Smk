@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FaTimes } from 'react-icons/fa';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -24,16 +24,39 @@ interface TeamMemberModalProps {
 
 const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClose }) => {
   const { t } = useTranslation();
+  const scrollPositionRef = useRef<number>(0);
   
   useEffect(() => {
     if (isOpen) {
+      // Save current scroll position before locking
+      scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      
+      // Lock body scroll with fixed position to prevent scroll jump
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollPositionRef.current}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      // Restore scroll position when closing
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      
+      // Restore scroll position
+      if (scrollPositionRef.current > 0) {
+        window.scrollTo(0, scrollPositionRef.current);
+      }
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
     };
   }, [isOpen]);
 
@@ -59,7 +82,7 @@ const TeamMemberModal: React.FC<TeamMemberModalProps> = ({ member, isOpen, onClo
   if (typeof document === 'undefined') return null;
   
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] overflow-y-auto cursor-default">
+    <div className="fixed inset-0 z-[100000] overflow-y-auto cursor-default">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0 cursor-default">
         {/* Background overlay */}
         <div 
