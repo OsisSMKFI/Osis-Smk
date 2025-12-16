@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 import { PostCard } from './cards/PostCard';
 import { useHomePageContext } from '@/contexts/HomePageDataContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function LatestPostsSection() {
+  const { t } = useTranslation();
   const { posts, loading } = useHomePageContext();
 
   if (loading) {
@@ -45,7 +47,7 @@ export default function LatestPostsSection() {
           {/* Header */}
           <div className="text-center mb-16">
             <h2 className="heading-primary text-5xl md:text-6xl lg:text-7xl text-gray-900 dark:text-gray-100 mb-6">
-              Berita <span className="text-yellow-600 dark:text-yellow-400">Terbaru</span>
+              {t('posts.title')} <span className="text-yellow-600 dark:text-yellow-400">{t('posts.latest')}</span>
             </h2>
             <div className="flex justify-center items-center space-x-4 mb-8">
               <div className="w-16 h-0.5 bg-gradient-to-r from-transparent to-yellow-400" />
@@ -53,7 +55,7 @@ export default function LatestPostsSection() {
               <div className="w-16 h-0.5 bg-gradient-to-l from-transparent to-yellow-400" />
             </div>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-              Informasi dan kegiatan terkini dari OSIS
+              {t('posts.description')}
             </p>
           </div>
 
@@ -70,7 +72,7 @@ export default function LatestPostsSection() {
               href="/posts"
               className="inline-flex items-center gap-2 px-8 py-4 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
             >
-              Lihat Semua Berita
+              {t('posts.viewAllNews')}
               <FaArrowRight />
             </Link>
           </div>

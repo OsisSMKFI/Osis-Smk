@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import { FaPoll, FaCheckCircle } from 'react-icons/fa';
 import { useHomePageContext, Poll as ContextPoll } from '@/contexts/HomePageDataContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface PollOption {
   id: string;
@@ -20,6 +21,7 @@ interface Poll {
 }
 
 export default function PollsWidget() {
+  const { t, language } = useTranslation();
   const { polls: contextPolls, loading } = useHomePageContext();
   const [polls, setPolls] = useState<Poll[]>([]);
   const [votedPolls, setVotedPolls] = useState<Set<string>>(new Set());
@@ -73,16 +75,16 @@ export default function PollsWidget() {
         // Show voter role
         if (result.voterRole) {
           const roleText = result.voterRole === 'anonymous' 
-            ? 'Terima kasih! Vote Anda dihitung sebagai pengunjung.' 
-            : `Terima kasih! Vote Anda dihitung sebagai ${result.voterRole}.`;
+            ? t('polls.voteVisitor')
+            : `${t('polls.voteSuccess')} (${result.voterRole})`;
           alert(roleText);
         }
       } else {
-        alert(result.error || 'Gagal vote');
+        alert(result.error || t('polls.voteFailed'));
       }
     } catch (error) {
       console.error('Error voting:', error);
-      alert('Terjadi kesalahan saat voting');
+      alert(t('polls.voteFailed'));
     } finally {
       setVoting(null);
     }
@@ -104,7 +106,7 @@ export default function PollsWidget() {
           <div className="text-center mb-12">
             <FaPoll className="text-5xl text-blue-600 mx-auto mb-4" />
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Polling Aktif
+              {t('polls.title')}
             </h2>
           </div>
           <div className="max-w-3xl mx-auto">
@@ -132,10 +134,10 @@ export default function PollsWidget() {
         <div className="text-center mb-12">
           <FaPoll className="text-5xl text-blue-600 mx-auto mb-4" />
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Polling Aktif
+            {t('polls.title')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Berikan suara Anda untuk topik-topik penting OSIS
+            {t('polls.subtitle')}
           </p>
         </div>
 
@@ -196,17 +198,17 @@ export default function PollsWidget() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                  <span>Total voting: {totalVotes}</span>
+                  <span>{t('polls.totalVoting')}: {totalVotes}</span>
                   {hasVoted && (
                     <span className="flex items-center gap-2 text-green-600 dark:text-green-400">
                       <FaCheckCircle />
-                      Anda sudah vote
+                      {t('polls.voted')}
                     </span>
                   )}
                 </div>
 
                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-                  Berakhir: {new Date(poll.expires_at).toLocaleDateString('id-ID', {
+                  {t('polls.endsAt')}: {new Date(poll.expires_at).toLocaleDateString(language === 'en' ? 'en-US' : 'id-ID', {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',

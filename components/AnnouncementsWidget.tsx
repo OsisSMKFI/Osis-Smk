@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { FaBullhorn, FaExclamationTriangle, FaExclamationCircle, FaInfoCircle, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { useHomePageContext, Announcement } from '@/contexts/HomePageDataContext';
+import { useTranslation } from '@/hooks/useTranslation';
 
 const priorityConfig = {
   urgent: { 
@@ -38,6 +39,7 @@ const priorityConfig = {
 };
 
 export default function AnnouncementsWidget() {
+  const { t } = useTranslation();
   const { announcements, loading } = useHomePageContext();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -50,10 +52,10 @@ export default function AnnouncementsWidget() {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-    if (diffInSeconds < 60) return 'Baru saja';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit lalu`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam lalu`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} hari lalu`;
+    if (diffInSeconds < 60) return t('announcements.justNow');
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} ${t('announcements.minutesAgo')}`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ${t('announcements.hoursAgo')}`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ${t('announcements.daysAgo')}`;
     
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
   };
@@ -64,7 +66,7 @@ export default function AnnouncementsWidget() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <FaBullhorn className="text-5xl text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Pengumuman</h2>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t('announcements.title')}</h2>
           </div>
           <div className="max-w-4xl mx-auto space-y-4">
             {[1, 2, 3].map((i) => (
@@ -89,10 +91,10 @@ export default function AnnouncementsWidget() {
         <div className="text-center mb-12">
           <FaBullhorn className="text-5xl text-yellow-500 mx-auto mb-4" />
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Pengumuman Penting
+            {t('announcements.important')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Informasi terkini dari OSIS SMK Fithrah Insani
+            {t('announcements.subtitle')}
           </p>
         </div>
 
@@ -136,11 +138,11 @@ export default function AnnouncementsWidget() {
                     >
                       {isExpanded ? (
                         <>
-                          Sembunyikan <FaChevronUp />
+                          {t('common.hide')} <FaChevronUp />
                         </>
                       ) : (
                         <>
-                          Selengkapnya <FaChevronDown />
+                          {t('common.showMore')} <FaChevronDown />
                         </>
                       )}
                     </button>

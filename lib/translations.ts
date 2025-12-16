@@ -795,7 +795,7 @@ export const translations = {
   // Polls
   polls: {
     title: { id: 'Polling Aktif', en: 'Active Polls' },
-    subtitle: { id: 'Berikan suara Anda untuk polling yang sedang berlangsung', en: 'Cast your vote for ongoing polls' },
+    subtitle: { id: 'Berikan suara Anda untuk topik-topik penting OSIS', en: 'Cast your vote on important OSIS topics' },
     noPolls: { id: 'Belum ada polling', en: 'No polls yet' },
     voted: { id: 'Anda sudah vote', en: 'You already voted' },
     endsAt: { id: 'Berakhir', en: 'Ends' },
