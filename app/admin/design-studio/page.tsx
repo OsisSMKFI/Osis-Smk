@@ -1281,7 +1281,13 @@ ${sourceCode.slice(0, 3000)}${sourceCode.length > 3000 ? '\n... (dipotong karena
             // Build enhanced prompt for AI - LIKE GITHUB COPILOT
             const enhancedMessage = `
 Kamu adalah AI Design Studio Assistant yang SANGAT PINTAR seperti GitHub Copilot.
-Kamu bisa membantu dengan SEMUA jenis kode: TSX, TS, CSS, Tailwind, dan lainnya.
+Kamu bisa membantu dengan SEMUA jenis kode dan file:
+- React/Next.js: TSX, JSX
+- TypeScript/JavaScript: TS, JS  
+- Styles: CSS, SCSS, Tailwind
+- Config: JSON, YAML, ENV
+- Data: SQL, GraphQL
+- Dan format lainnya
 
 ═══════════════════════════════════════════════════════════════
 ⚠️ INSTRUKSI PENTING - BACA DENGAN TELITI:
@@ -1291,7 +1297,8 @@ Kamu bisa membantu dengan SEMUA jenis kode: TSX, TS, CSS, Tailwind, dan lainnya.
    - Jika user BERTANYA (ada "?", "dimana", "ada gak", "bagaimana") → JAWAB pertanyaannya!
    - Jika user MINTA KODE → Berikan kode yang bisa langsung diterapkan
    - Jika user MINTA STYLE → Berikan CSS atau Tailwind classes
-   - JANGAN berikan CSS jika user tidak minta style!
+   - Jika user MINTA FUNGSI → Berikan TypeScript/JavaScript function
+   - Jika user MINTA KOMPONEN → Berikan React component lengkap
 
 2. JANGAN PERNAH:
    - Memberikan respons yang tidak sesuai dengan pertanyaan
@@ -1299,10 +1306,22 @@ Kamu bisa membantu dengan SEMUA jenis kode: TSX, TS, CSS, Tailwind, dan lainnya.
    - Menjawab dengan template yang tidak relevan
    - Mengabaikan konteks percakapan
 
-3. FORMAT RESPONS:
-   - Bahasa Indonesia yang ramah dan jelas
-   - Berikan path file yang tepat
-   - Sertakan kode dalam code block yang benar
+3. FORMAT KODE DENGAN PATH FILE:
+   Untuk setiap kode yang bisa diterapkan, gunakan format:
+   
+   \`\`\`tsx:app/components/MyComponent.tsx
+   // kode lengkap di sini
+   \`\`\`
+   
+   \`\`\`ts:lib/utils.ts
+   // kode lengkap di sini
+   \`\`\`
+   
+   \`\`\`css:app/globals.css
+   /* style di sini */
+   \`\`\`
+
+   Format: \`\`\`bahasa:path/ke/file.ext
 
 ═══════════════════════════════════════════════════════════════
 KONTEKS:
@@ -1351,33 +1370,58 @@ ${userQuery}
 CARA MENJAWAB:
 ═══════════════════════════════════════════════════════════════
 - Jika user bertanya "ada gak" atau "dimana" → Cari dan berikan info file
-- Jika user minta ubah kode → Berikan kode dengan format: \`\`\`tsx:path/file.tsx
-- Jika user minta style/design (glass, dark, neon, gradient, dll) → WAJIB berikan CSS!
+- Jika user minta ubah/buat kode → Berikan kode dengan format: \`\`\`tsx:path/file.tsx
+- Jika user minta style/design → Berikan CSS dengan format: \`\`\`css:app/globals.css
+- Jika user minta fungsi/hook → Berikan kode dengan format: \`\`\`ts:lib/fungsi.ts
 - SELALU berikan solusi yang bisa langsung diterapkan!
 
-⚠️ JIKA USER MINTA STYLE/DESIGN:
-Kamu HARUS memberikan kode CSS dalam format ini:
+═══════════════════════════════════════════════════════════════
+📝 CONTOH FORMAT KODE YANG BENAR:
+═══════════════════════════════════════════════════════════════
 
-\`\`\`css
-/* Style untuk [component name] */
-.selector {
-  property: value;
+1. KOMPONEN REACT:
+\`\`\`tsx:components/Button.tsx
+import React from 'react';
+
+export const Button = ({ children, onClick }) => {
+  return (
+    <button onClick={onClick} className="px-4 py-2 bg-blue-500 text-white rounded">
+      {children}
+    </button>
+  );
+};
+\`\`\`
+
+2. FUNGSI UTILITY:
+\`\`\`ts:lib/utils.ts
+export function formatDate(date: Date): string {
+  return date.toLocaleDateString('id-ID');
 }
 \`\`\`
 
-Contoh untuk glassmorphism:
-\`\`\`css
+3. CSS STYLE:
+\`\`\`css:app/globals.css
 /* Glassmorphism Effect */
-.card {
+.glass-card {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
 }
 \`\`\`
 
-INGAT: Jika user minta style, WAJIB sertakan CSS code block!`;
+4. REACT HOOK:
+\`\`\`ts:hooks/useLocalStorage.ts
+import { useState, useEffect } from 'react';
+
+export function useLocalStorage<T>(key: string, initialValue: T) {
+  const [value, setValue] = useState<T>(initialValue);
+  // ... implementation
+  return [value, setValue] as const;
+}
+\`\`\`
+
+INGAT: SELALU sertakan path file dalam code block agar bisa langsung diterapkan!`;
             
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
@@ -1455,13 +1499,18 @@ INGAT: Jika user minta style, WAJIB sertakan CSS code block!`;
             setChatMessages(prev => [...prev, aiMessage]);
             
             // ═══════════════════════════════════════════════════════════════
-            // 🚀 AUTO-APPLY: Automatically apply changes from AI response
+            // 🚀 AUTO-APPLY: Automatically apply ALL types of code changes
             // ═══════════════════════════════════════════════════════════════
-            const shouldAutoApply = /terapkan|apply|ubah|ganti|pasang|set|update|change|modify|edit|buatkan|buat|glass|neon|dark|gradient|style|hover|animasi|shadow|neumorphism/i.test(userQuery);
-            const hasStyleKeyword = /glass|neon|dark|gradient|style|hover|animasi|shadow|neumorphism|minimal|modern|elegan|bagus|keren/i.test(userQuery);
             
-            if (shouldAutoApply || hasStyleKeyword) {
-                // Auto-apply CSS if available - use detected or fallback component
+            // Detect if user wants changes applied
+            const wantsCodeChange = /terapkan|apply|ubah|ganti|pasang|set|update|change|modify|edit|buatkan|buat|tambah|hapus|perbaiki|fix|create|add|remove|delete/i.test(userQuery);
+            const hasStyleKeyword = /glass|neon|dark|gradient|style|hover|animasi|shadow|neumorphism|minimal|modern|elegan|bagus|keren|warna|color|theme/i.test(userQuery);
+            const hasCodeKeyword = /komponen|component|fungsi|function|hook|api|route|page|halaman|layout|button|form|input|card|navbar|footer|hero|modal/i.test(userQuery);
+            
+            const shouldAutoApply = wantsCodeChange || hasStyleKeyword || hasCodeKeyword;
+            
+            if (shouldAutoApply) {
+                // 1. Auto-apply CSS if available
                 if (cssCode) {
                     const applyTarget = targetComponent || selectedComponent || 'global';
                     setTimeout(async () => {
@@ -1476,18 +1525,39 @@ INGAT: Jika user minta style, WAJIB sertakan CSS code block!`;
                     }, 500);
                 }
                 
-                // Auto-apply file changes if available
+                // Auto-apply file changes if available (TSX, TS, JS, JSON, CSS, etc.)
                 if (fileChanges.length > 0) {
                     setTimeout(async () => {
                         await applyFileChanges(fileChanges);
+                        const fileList = fileChanges.map(f => {
+                            const icon = FILE_ICONS[f.language]?.icon || '📄';
+                            return `${icon} ${f.path}`;
+                        }).join('\n');
                         setChatMessages(prev => [...prev, {
                             id: Date.now().toString(),
                             role: 'system',
-                            content: `✅ **Auto-Applied!** ${fileChanges.length} file(s) sudah diupdate:\n${fileChanges.map(f => `• ${f.path}`).join('\n')}\n\n🔄 Refresh halaman untuk melihat perubahan.`,
+                            content: `✅ **Auto-Applied!** ${fileChanges.length} file(s) sudah diupdate:\n\n${fileList}\n\n🔄 Refresh halaman untuk melihat perubahan.`,
                             timestamp: new Date(),
                             actionType: 'action'
                         }]);
                     }, 500);
+                }
+                
+                // Auto-apply code blocks without file path (show in editor)
+                if (!cssCode && !fileChanges.length && codeBlocks.length > 0) {
+                    const mainBlock = codeBlocks[0];
+                    if (mainBlock && openSourceFile) {
+                        // If user has a file open, offer to apply to that file
+                        setTimeout(() => {
+                            setChatMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'system',
+                                content: `💡 **Kode siap diterapkan!**\n\nKlik tombol **Apply** di atas untuk menerapkan ke file yang sedang dibuka:\n📄 ${openSourceFile.path}`,
+                                timestamp: new Date(),
+                                actionType: 'info'
+                            }]);
+                        }, 300);
+                    }
                 }
             }
             
@@ -2772,14 +2842,37 @@ INGAT: Jika user minta style, WAJIB sertakan CSS code block!`;
                                                         <div key={i} className="bg-black/30 rounded-lg p-2 border border-white/10">
                                                             <div className="flex items-center justify-between mb-1">
                                                                 <span className="text-xs text-gray-400 uppercase">{block.language}</span>
-                                                                <button 
-                                                                    onClick={() => { navigator.clipboard.writeText(block.code); notify('info', `${block.language} copied!`); }}
-                                                                    className="text-xs text-gray-400 hover:text-white"
-                                                                >
-                                                                    <Copy className="w-3 h-3" />
-                                                                </button>
+                                                                <div className="flex items-center gap-2">
+                                                                    <button 
+                                                                        onClick={() => { navigator.clipboard.writeText(block.code); notify('info', `${block.language} copied!`); }}
+                                                                        className="text-xs text-gray-400 hover:text-white p-1"
+                                                                        title="Copy code"
+                                                                    >
+                                                                        <Copy className="w-3 h-3" />
+                                                                    </button>
+                                                                    {openSourceFile && (
+                                                                        <button 
+                                                                            onClick={async () => {
+                                                                                const success = await applyCodeToFile(openSourceFile.path, block.code, block.language);
+                                                                                if (success) {
+                                                                                    setSourceCode(block.code);
+                                                                                    setOriginalSourceCode(block.code);
+                                                                                }
+                                                                            }}
+                                                                            className="flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white rounded text-xs font-medium transition-all"
+                                                                            title={`Apply to ${openSourceFile.path}`}
+                                                                        >
+                                                                            <Play className="w-2.5 h-2.5" /> Apply
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                             <pre className="text-xs text-gray-300 overflow-x-auto max-h-32">{block.code.slice(0, 200)}{block.code.length > 200 ? '...' : ''}</pre>
+                                                            {openSourceFile && (
+                                                                <div className="mt-1 text-[10px] text-gray-500">
+                                                                    📄 Target: {openSourceFile.path}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
