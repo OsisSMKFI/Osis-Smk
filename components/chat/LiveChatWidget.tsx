@@ -164,6 +164,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   const [forwardTarget, setForwardTarget] = React.useState<ForwardTarget>('osis');
   const [forwardUrgent, setForwardUrgent] = React.useState(false);
   const [forwardSent, setForwardSent] = React.useState(false);
+  const [lastReplyCheck, setLastReplyCheck] = React.useState<string | null>(null);
   
   // 🎨 Design preview states (Super Admin only)
   const [showDesignPreview, setShowDesignPreview] = React.useState(false);
@@ -409,6 +410,52 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
       }
     }
   }, [messages, sessionId, open, provider]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📨 POLL FOR ADMIN REPLIES - Check if admin has replied to forwarded message
+  // ═══════════════════════════════════════════════════════════════════════════
+  React.useEffect(() => {
+    if (!sessionId || mode === 'admin') return; // Only for public users
+
+    const checkForReplies = async () => {
+      try {
+        const response = await fetch(`/api/admin/notifications/reply?sessionId=${sessionId}`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        if (data.replies && data.replies.length > 0) {
+          // Find new replies we haven't shown yet
+          data.replies.forEach((reply: any) => {
+            const replyId = reply.id || reply.created_at;
+            if (lastReplyCheck !== replyId) {
+              // Add reply as assistant message
+              setMessages(prev => {
+                // Check if we already have this reply
+                const alreadyHave = prev.some(m => 
+                  m.content.includes(reply.message) && 
+                  m.content.includes('Admin')
+                );
+                if (alreadyHave) return prev;
+                
+                return [...prev, {
+                  role: 'assistant' as const,
+                  content: `📨 **Balasan dari ${reply.sender_name || 'Admin'}:**\n\n${reply.message}`
+                }];
+              });
+              setLastReplyCheck(replyId);
+            }
+          });
+        }
+      } catch (e) {
+        // Silent fail
+      }
+    };
+
+    // Check immediately and then every 15 seconds
+    checkForReplies();
+    const interval = setInterval(checkForReplies, 15000);
+    return () => clearInterval(interval);
+  }, [sessionId, mode, lastReplyCheck]);
 
   // Drag handlers (desktop only)
   React.useEffect(() => {

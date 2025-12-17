@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔔 ADMIN NOTIFICATIONS API - Premium v5.0
+// ═══════════════════════════════════════════════════════════════════════════════
+// Unified notification system for:
+// - User messages forwarded from LiveChat
+// - System notifications
+// - Error alerts
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -9,32 +18,77 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userRole = session.user.role || 'user';
     const { searchParams } = new URL(request.url);
     const unreadOnly = searchParams.get('unread') === 'true';
+    const type = searchParams.get('type');
 
+    // Build query - get notifications for this user's role
     let query = supabaseAdmin
       .from('admin_notifications')
       .select('*')
-      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
 
+    // Filter by target based on user role
+    // Super Admin sees all, Admin sees admin+osis, etc
+    if (userRole === 'super_admin') {
+      // Super admin sees all notifications
+    } else if (userRole === 'admin') {
+      query = query.or(`target.eq.admin,target.eq.osis,target.is.null,user_id.eq.${session.user.id}`);
+    } else {
+      // Regular user only sees their own
+      query = query.eq('user_id', session.user.id);
+    }
+
     if (unreadOnly) {
-      query = query.eq('read', false);
+      // Support both column names for backwards compatibility
+      query = query.or('read.eq.false,is_read.eq.false');
+    }
+
+    if (type) {
+      query = query.eq('type', type);
     }
 
     const { data: notifications, error } = await query.limit(50);
 
     if (error) {
-      // If table doesn't exist or missing in schema cache, return empty array
       const code = (error as any).code || '';
       const msg = (error as any).message || '';
-      if (code === 'PGRST205' || msg.includes('schema cache') || msg.includes('relation') || msg.includes('does not exist')) {
-        return NextResponse.json({ notifications: [] });
+      // Graceful degradation
+      if (code === 'PGRST205' || code === '42P01' || msg.includes('schema cache') || msg.includes('relation') || msg.includes('does not exist')) {
+        return NextResponse.json({ ok: true, notifications: [], actions: [] });
       }
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
-    return NextResponse.json({ notifications: notifications || [] });
+    // Normalize notifications to consistent format
+    const normalizedNotifications = (notifications || []).map((n: any) => ({
+      id: n.id,
+      type: n.type || 'info',
+      target: n.target || 'admin',
+      title: n.title || 'Notification',
+      message: n.message || '',
+      sender_name: n.sender_name || 'System',
+      session_id: n.session_id,
+      is_urgent: n.is_urgent || false,
+      read: n.read ?? n.is_read ?? false,
+      link: n.link,
+      action: n.action || n.title,
+      status: (n.read ?? n.is_read) ? 'reviewed' : 'pending',
+      payload: {
+        message: n.message,
+        sender: n.sender_name,
+        urgent: n.is_urgent,
+      },
+      created_at: n.created_at,
+      metadata: n.metadata,
+    }));
+
+    return NextResponse.json({ 
+      ok: true,
+      notifications: normalizedNotifications,
+      actions: normalizedNotifications, // For backwards compatibility with AdminHeader
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
-import { FaBell, FaUser, FaChevronDown, FaMoon, FaSun, FaSearch } from 'react-icons/fa';
+import { FaBell, FaUser, FaChevronDown, FaMoon, FaSun, FaSearch, FaReply, FaCheck, FaExternalLinkAlt, FaExclamationTriangle } from 'react-icons/fa';
 import ThemeToggle from '@/components/ThemeToggle';
 import LanguageToggle from '@/components/LanguageToggle';
 import RoleBadge from '@/components/RoleBadge';
@@ -11,37 +11,143 @@ import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+interface Notification {
+  id: string;
+  type: string;
+  target: string;
+  title: string;
+  message: string;
+  sender_name?: string;
+  session_id?: string;
+  is_urgent?: boolean;
+  read: boolean;
+  link?: string;
+  action?: string;
+  status: string;
+  payload?: {
+    message?: string;
+    sender?: string;
+    urgent?: boolean;
+  };
+  created_at: string;
+}
+
 export default function AdminHeader() {
   const { data: session } = useSession();
   const { theme } = useTheme();
   const { language } = useLanguage();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
 
-  const [notifications, setNotifications] = useState<Array<any>>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
+    if (loadingNotifs) return;
     setLoadingNotifs(true);
     try {
       const res = await apiFetch('/api/admin/notifications', { credentials: 'include' } as any);
       if (!res.ok) return;
       const j = await safeJson(res, { url: '/api/admin/notifications', method: 'GET' }).catch(() => ({}));
-      if (j?.ok && Array.isArray(j.actions)) setNotifications(j.actions as any[]);
+      // Support both formats
+      const notifList = j?.notifications || j?.actions || [];
+      if (Array.isArray(notifList)) {
+        setNotifications(notifList);
+      }
     } catch (e) {
       // ignore
     } finally {
       setLoadingNotifs(false);
     }
-  };
+  }, [loadingNotifs]);
 
   useEffect(() => {
     fetchNotifications();
-    const iv = setInterval(fetchNotifications, 60000); // poll every 60s (was 10s - too frequent)
+    const iv = setInterval(fetchNotifications, 30000); // Poll every 30s
     return () => clearInterval(iv);
   }, []);
 
-  const unreadCount = notifications.filter((n) => n.status !== 'reviewed').length;
+  const unreadCount = notifications.filter((n) => !n.read && n.status !== 'reviewed').length;
+
+  // Mark notification as read
+  const markAsRead = async (notifId: string) => {
+    try {
+      await apiFetch(`/api/admin/notifications?id=${notifId}`, {
+        method: 'PUT',
+        credentials: 'include',
+      } as any);
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true, status: 'reviewed' } : n));
+    } catch (e) {
+      console.error('Failed to mark as read:', e);
+    }
+  };
+
+  // Mark all as read
+  const markAllAsRead = async () => {
+    try {
+      await apiFetch('/api/admin/notifications?markAllRead=true', {
+        method: 'PUT',
+        credentials: 'include',
+      } as any);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true, status: 'reviewed' })));
+    } catch (e) {
+      console.error('Failed to mark all as read:', e);
+    }
+  };
+
+  // Handle reply to user message
+  const handleReply = (notif: Notification) => {
+    setSelectedNotif(notif);
+    setReplyText('');
+    setShowReplyModal(true);
+    setShowNotifications(false);
+  };
+
+  // Send reply
+  const sendReply = async () => {
+    if (!selectedNotif || !replyText.trim()) return;
+    setSendingReply(true);
+    try {
+      // Store reply in database and mark original as read
+      await apiFetch('/api/admin/notifications/reply', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          originalNotifId: selectedNotif.id,
+          sessionId: selectedNotif.session_id,
+          message: replyText,
+          senderName: session?.user?.name || 'Admin',
+        }),
+      } as any);
+      
+      // Mark as read
+      await markAsRead(selectedNotif.id);
+      
+      setShowReplyModal(false);
+      setSelectedNotif(null);
+      setReplyText('');
+      
+      // Refresh notifications
+      fetchNotifications();
+    } catch (e) {
+      console.error('Failed to send reply:', e);
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  // Navigate to link
+  const handleNavigate = (notif: Notification) => {
+    if (notif.link) {
+      markAsRead(notif.id);
+      window.location.href = notif.link;
+    }
+  };
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/', redirect: true });
@@ -54,7 +160,18 @@ export default function AdminHeader() {
   const userPhoto = session?.user?.image || '';
   const userInitial = userName.charAt(0).toUpperCase();
 
+  // Get notification icon based on type
+  const getNotifIcon = (notif: Notification) => {
+    if (notif.type === 'user_message') return '💬';
+    if (notif.is_urgent) return '🚨';
+    if (notif.type === 'error') return '❌';
+    if (notif.type === 'warning') return '⚠️';
+    if (notif.type === 'success') return '✅';
+    return '🔔';
+  };
+
   return (
+    <>
     <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700" suppressHydrationWarning>
       <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4 ml-12 lg:ml-0">
         {/* Search Bar - hide on mobile */}
@@ -94,43 +211,120 @@ export default function AdminHeader() {
               <FaBell className="text-gray-600 dark:text-gray-300 text-lg md:text-xl" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-red-500 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                  {unreadCount}
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-                <div className="p-3 md:p-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 dark:text-white">
-                  <h3 className="font-bold text-base md:text-lg">Notifications</h3>
-                  <p className="text-xs md:text-sm opacity-80">{unreadCount} unread</p>
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden z-50">
+                <div className="p-3 md:p-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 flex justify-between items-center">
+                  <div>
+                    <h3 className="font-bold text-base md:text-lg">🔔 Notifications</h3>
+                    <p className="text-xs md:text-sm opacity-80">{unreadCount} unread</p>
+                  </div>
+                  {unreadCount > 0 && (
+                    <button 
+                      onClick={markAllAsRead}
+                      className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-all flex items-center gap-1"
+                    >
+                      <FaCheck className="text-[10px]" /> Mark all read
+                    </button>
+                  )}
                 </div>
-                <div className="max-h-72 md:max-h-96 overflow-y-auto">
-                  {loadingNotifs && <div className="p-4 text-sm text-stone-500">Loading...</div>}
+                <div className="max-h-80 md:max-h-[400px] overflow-y-auto">
+                  {loadingNotifs && (
+                    <div className="p-6 text-center">
+                      <div className="animate-spin w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                      <p className="text-sm text-gray-500">Loading...</p>
+                    </div>
+                  )}
                   {!loadingNotifs && notifications.length === 0 && (
-                    <div className="p-4 text-sm text-stone-500">No notifications</div>
+                    <div className="p-8 text-center">
+                      <div className="text-4xl mb-2">📭</div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No notifications yet</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">When users send messages, they'll appear here</p>
+                    </div>
                   )}
                   {!loadingNotifs && notifications.map((notif) => (
                     <div
                       key={notif.id}
-                      className={`p-3 md:p-4 border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all cursor-pointer ${
-                        notif.status !== 'reviewed' ? 'bg-yellow-50 dark:bg-slate-700/50' : ''
-                      }`}
+                      className={`p-3 md:p-4 border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all ${
+                        !notif.read ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''
+                      } ${notif.is_urgent ? 'border-l-4 border-l-red-500' : ''}`}
                     >
-                      <p className="text-xs md:text-sm text-gray-800 dark:text-white font-medium">
-                        {notif.payload?.message || notif.action || JSON.stringify(notif.payload || {}).slice(0, 80)}
+                      {/* Notification Header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="text-lg flex-shrink-0">{getNotifIcon(notif)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">
+                              {notif.title || notif.action}
+                            </p>
+                            {notif.sender_name && notif.type === 'user_message' && (
+                              <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                                From: {notif.sender_name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {!notif.read && (
+                          <span className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0 animate-pulse"></span>
+                        )}
+                      </div>
+                      
+                      {/* Message Content */}
+                      <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">
+                        {notif.message || notif.payload?.message || ''}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {new Date(notif.created_at).toLocaleString('id-ID')}
+                      
+                      {/* Timestamp */}
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                        {new Date(notif.created_at).toLocaleString('id-ID', { 
+                          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' 
+                        })}
                       </p>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 mt-2">
+                        {/* Reply button for user messages */}
+                        {notif.type === 'user_message' && (
+                          <button
+                            onClick={() => handleReply(notif)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all"
+                          >
+                            <FaReply className="text-[10px]" /> Reply
+                          </button>
+                        )}
+                        
+                        {/* Link button if has link */}
+                        {notif.link && (
+                          <button
+                            onClick={() => handleNavigate(notif)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-all"
+                          >
+                            <FaExternalLinkAlt className="text-[10px]" /> View
+                          </button>
+                        )}
+                        
+                        {/* Mark as read button */}
+                        {!notif.read && (
+                          <button
+                            onClick={() => markAsRead(notif.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all"
+                          >
+                            <FaCheck className="text-[10px]" /> Read
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-                <div className="p-3 bg-gray-50 dark:bg-slate-700 text-center">
-                  <button className="text-sm text-yellow-600 dark:text-yellow-400 font-medium hover:underline">
-                    View all notifications
-                  </button>
+                <div className="p-3 bg-gray-50 dark:bg-slate-700 text-center border-t border-gray-200 dark:border-slate-600">
+                  <a href="/admin/notifications" className="text-sm text-yellow-600 dark:text-yellow-400 font-medium hover:underline">
+                    View all notifications →
+                  </a>
                 </div>
               </div>
             )}
@@ -204,5 +398,79 @@ export default function AdminHeader() {
         </div>
       </div>
     </header>
+
+    {/* Reply Modal */}
+    {showReplyModal && selectedNotif && (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+          {/* Modal Header */}
+          <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <FaReply /> Reply to Message
+            </h3>
+            <p className="text-sm opacity-80">
+              Replying to: {selectedNotif.sender_name || 'User'}
+            </p>
+          </div>
+
+          {/* Original Message */}
+          <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Original message:</p>
+            <p className="text-sm text-gray-800 dark:text-white italic">
+              "{selectedNotif.message || selectedNotif.payload?.message}"
+            </p>
+          </div>
+
+          {/* Reply Input */}
+          <div className="p-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Your Reply:
+            </label>
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Type your reply here..."
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+              rows={4}
+              autoFocus
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              This reply will be stored and associated with the user's session.
+            </p>
+          </div>
+
+          {/* Modal Actions */}
+          <div className="p-4 bg-gray-50 dark:bg-slate-700 flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setShowReplyModal(false);
+                setSelectedNotif(null);
+                setReplyText('');
+              }}
+              className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={sendReply}
+              disabled={!replyText.trim() || sendingReply}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-all flex items-center gap-2"
+            >
+              {sendingReply ? (
+                <>
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <FaReply /> Send Reply
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
