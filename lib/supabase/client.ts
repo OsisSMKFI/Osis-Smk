@@ -466,20 +466,23 @@ export async function getActiveAnnouncements() {
   }
 }
 
-// EVENTS - Updated
+// EVENTS - Updated with proper time sync
+// Only returns events that haven't ended yet (using end_date if available, otherwise event_date)
 export async function getUpcomingEvents(limit?: number) {
   try {
     const now = new Date().toISOString();
+    const today = now.split('T')[0]; // Get date portion only for comparison
 
-    // Try event_date first (normalized column)
+    // Fetch all events first, then filter in JS for complex date logic
+    // This handles cases where end_date OR event_date should be checked
     let query = supabase
       .from('events')
       .select('*')
-      .gte('event_date', now)
+      .not('status', 'in', '("completed","cancelled")')
       .order('event_date', { ascending: true });
 
     if (limit) {
-      query = query.limit(limit);
+      query = query.limit(limit * 3); // Fetch more to filter
     }
 
     const { data, error } = await query;
@@ -488,7 +491,18 @@ export async function getUpcomingEvents(limit?: number) {
       console.error('Error fetching upcoming events:', error);
       return [];
     }
-    return data || [];
+
+    // Filter events that haven't ended yet
+    const filteredEvents = (data || []).filter(event => {
+      // Check end_date first, then event_date, then start_date
+      const endDate = event.end_date || event.event_date || event.start_date;
+      if (!endDate) return true; // No date = show it
+      
+      const eventEndDate = endDate.split('T')[0];
+      return eventEndDate >= today;
+    });
+
+    return limit ? filteredEvents.slice(0, limit) : filteredEvents;
   } catch (err) {
     console.error('Events fetch exception:', err);
     return [];

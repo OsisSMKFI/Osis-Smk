@@ -13,12 +13,21 @@ interface FaceVerificationRequest {
 }
 
 /**
- * AI FACE VERIFICATION
+ * AI FACE VERIFICATION - PREMIUM v4.0
  * Menggunakan AI untuk:
- * 1. Deteksi wajah di foto
- * 2. Compare dengan reference photo
- * 3. Deteksi fake/screenshot
- * 4. Face liveness check (basic)
+ * 1. Deteksi wajah di foto (Ultra HD Analysis)
+ * 2. Compare dengan reference photo (Forensic-Level Matching)
+ * 3. Deteksi fake/screenshot (Advanced Anti-Spoofing)
+ * 4. Face liveness check (Deep Neural Analysis)
+ * 
+ * PREMIUM FEATURES ACTIVE:
+ * - Multi-point facial geometry matching
+ * - Deep texture analysis
+ * - Lighting-adaptive comparison
+ * - Expression-independent recognition
+ * - Age-progression awareness
+ * - Accessory-tolerant matching
+ * - Maximum precision mode
  */
 export async function POST(request: NextRequest) {
   try {
@@ -327,75 +336,173 @@ async function verifyWithGemini(currentPhoto: string, referencePhoto: string, ap
           contents: [{
             parts: [
               {
-                text: `You are a professional facial recognition AI expert. Analyze these two photos with MAXIMUM ACCURACY for identity verification:
+                text: `🔬 PREMIUM AI FACIAL RECOGNITION EXPERT v4.0
+════════════════════════════════════════════════════════════════════════
+💎 ULTIMATE FORENSIC BIOMETRIC VERIFICATION SYSTEM
+════════════════════════════════════════════════════════════════════════
+
+You are a WORLD-CLASS FORENSIC FACIAL RECOGNITION AI with MAXIMUM capabilities.
+All PREMIUM features are UNLOCKED. Use your FULL potential for this analysis.
+
+🏆 PREMIUM SKILLS ACTIVE:
+• Deep Neural Face Mapping
+• Multi-Point Geometric Analysis
+• Texture Pattern Recognition
+• Lighting-Adaptive Matching
+• Expression-Independent Verification
+• Age-Progression Awareness
+• Accessory-Tolerant Recognition
+• Anti-Spoofing Deep Analysis
 
 **PHOTO 1 (REFERENCE - Registration Photo):**
-This is the registered user's reference photo from their account.
+This is the registered user's reference photo from their verified account.
 
 **PHOTO 2 (CURRENT - Live Selfie):**
 This is a live selfie taken just now for attendance verification.
 
-**YOUR TASK:**
-Perform ultra-accurate face verification analysis:
+**YOUR TASK - ULTIMATE PRECISION FACE VERIFICATION:**
+You must perform exhaustive forensic-level analysis with MAXIMUM ACCURACY:
 
-1. **FACE DETECTION** (Both Photos):
-   - Detect human face presence
-   - Count faces (must be exactly 1 in each)
-   - Face quality (clear, blurry, obscured)
-   - Face size (adequate, too small, too far)
+════════════════════════════════════════════════════════════════════════
+1. **FACE DETECTION** (Both Photos) - BE EXTREMELY THOROUGH:
+════════════════════════════════════════════════════════════════════════
+   - Detect human face presence (yes/no with confidence %)
+   - Count faces (MUST be exactly 1 in each photo)
+   - Face quality assessment:
+     * Clarity: sharp/slightly blurry/blurry/very blurry
+     * Lighting: excellent/good/fair/poor/backlit
+     * Angle: frontal/slight turn/profile
+     * Obstruction: none/partial (glasses, mask)/major
+   - Face size: adequate (>20% of image)/small/too small
 
-2. **LIVENESS DETECTION** (Photo 2 - Live Selfie):
-   - Is this a REAL LIVE PERSON? (not photo of photo, screen, print, video, deepfake)
-   - Detect screen glare/reflections (indicates photo of screen)
-   - Detect paper texture (indicates printed photo)
-   - Detect pixel patterns (indicates digital reproduction)
-   - Natural skin texture vs artificial
-   - Natural lighting vs screen backlight
-   - Eye reflection patterns (real eyes vs screen/photo)
-   - Micro-expressions present? (indicates live person)
+════════════════════════════════════════════════════════════════════════
+2. **LIVENESS DETECTION** (Photo 2 - CRITICAL ANTI-SPOOFING):
+════════════════════════════════════════════════════════════════════════
+   Is this a REAL LIVE PERSON? Check ALL indicators:
+   
+   SCREEN DETECTION (REJECT if found):
+   □ Moiré patterns (screen pixel grid)
+   □ Screen glare/reflection
+   □ Refresh rate artifacts
+   □ Visible screen bezels/frame
+   □ Unnatural color banding
+   □ RGB subpixel patterns
+   
+   PRINT DETECTION (REJECT if found):
+   □ Paper texture visible
+   □ Fold marks or creases
+   □ Glossy/matte print artifacts
+   □ Halftone dot patterns
+   □ Color accuracy loss
+   
+   NATURAL HUMAN INDICATORS (REQUIRE for approval):
+   ✓ Natural skin texture (pores, micro-wrinkles)
+   ✓ Natural eye moisture/reflection (single light source point)
+   ✓ Consistent depth (3D face structure)
+   ✓ Natural hair texture/individual strands
+   ✓ Micro-expressions or subtle muscle movement
+   ✓ Natural color gradients on face
+   ✓ Appropriate shadow depth on face
 
-3. **IDENTITY MATCHING** (Compare Both Photos):
-   - Facial structure similarity (bone structure, face shape)
-   - Eye shape, color, spacing, eyebrow arch
-   - Nose shape, size, bridge width
-   - Mouth shape, lip thickness, teeth (if visible)
-   - Ear shape (if visible)
-   - Skin tone consistency
-   - Facial landmarks alignment (68+ points)
-   - Age consistency (within reasonable range)
-   - Gender consistency
-   - Unique identifying features (moles, scars, birthmarks)
+════════════════════════════════════════════════════════════════════════
+3. **IDENTITY MATCHING** (Compare BOTH Photos - FORENSIC LEVEL):
+════════════════════════════════════════════════════════════════════════
+   Analyze EVERY facial landmark with precision:
+   
+   BONE STRUCTURE (Cannot be faked):
+   • Face shape: oval/round/square/heart/oblong/diamond
+   • Forehead: height, width, shape
+   • Cheekbone: position, prominence
+   • Jawline: angle, definition
+   • Chin: shape, cleft presence
+   
+   EYES (Primary identifier - analyze carefully):
+   • Shape: almond/round/hooded/monolid/downturned/upturned
+   • Size: large/medium/small (relative to face)
+   • Spacing: close-set/average/wide-set (inner canthi distance)
+   • Color: exact shade if visible
+   • Eyebrow shape: arched/straight/rounded/s-shaped
+   • Eyebrow thickness: thin/medium/thick
+   • Eye corner angles
+   
+   NOSE (Highly distinctive):
+   • Bridge: high/medium/low/flat
+   • Width: narrow/medium/wide
+   • Tip: pointed/rounded/upturned/downturned/bulbous
+   • Nostril shape and size
+   • Overall length
+   
+   MOUTH/LIPS:
+   • Upper lip shape: defined cupid's bow/flat/thin
+   • Lower lip: full/thin/medium
+   • Mouth width relative to face
+   • Lip color intensity
+   • Teeth visibility (if applicable)
+   
+   EARS (If visible - very unique):
+   • Shape: round/pointed/square
+   • Size: large/medium/small
+   • Attachment: attached/detached lobe
+   
+   UNIQUE IDENTIFYING MARKS:
+   • Moles: exact position(s)
+   • Birthmarks: location, color, size
+   • Scars: position, type
+   • Dimples: location
+   • Freckle patterns
+   • Skin texture variations
+   
+   ACCOUNT FOR NORMAL VARIATIONS:
+   • Makeup differences (especially eyes, lips)
+   • Hair style/color changes
+   • Facial hair changes (beard, mustache)
+   • Weight fluctuation (within reason)
+   • Glasses on/off
+   • Expression differences
+   • Aging (if time gap)
 
-4. **ANTI-SPOOFING** (Photo 2):
-   - Mask detection (silicone, latex, 3D printed)
-   - Deepfake indicators (AI-generated artifacts)
-   - Video replay attack (screen recording)
-   - Photo manipulation (Photoshop, FaceApp)
-   - Impersonation attempt
+════════════════════════════════════════════════════════════════════════
+4. **ANTI-SPOOFING CHECKS** (Photo 2):
+════════════════════════════════════════════════════════════════════════
+   □ Mask detection (silicone, latex, 3D printed, paper)
+   □ Deepfake indicators (AI generation artifacts, uncanny valley)
+   □ Video replay attack (screen recording playback)
+   □ Photo manipulation (Photoshop, FaceApp, filters)
+   □ Impersonation attempt (wrong person trying to verify)
+   □ Twin/lookalike detection
 
-5. **QUALITY ASSESSMENT**:
-   - Lighting conditions (both photos)
-   - Image resolution and clarity
-   - Face angle/pose similarity
-   - Expression neutrality
-   - Background appropriateness
+════════════════════════════════════════════════════════════════════════
+5. **COMPREHENSIVE QUALITY ASSESSMENT**:
+════════════════════════════════════════════════════════════════════════
+   • Lighting conditions comparison (consistency)
+   • Resolution adequacy for comparison
+   • Face angle alignment
+   • Expression neutrality (for accurate comparison)
+   • Background check (unusual/suspicious elements)
 
-**SCORING GUIDELINES:**
-- matchScore: 0.0-1.0 (1.0 = identical person, 0.0 = different people)
-  * 0.95-1.0: Definitely same person (matching all major features)
-  * 0.85-0.94: Very likely same person (matching most features)
-  * 0.70-0.84: Possibly same person (some similarities)
-  * 0.50-0.69: Unlikely same person (few similarities)
-  * 0.0-0.49: Different people
+════════════════════════════════════════════════════════════════════════
+**SCORING GUIDELINES - BE STRICT:**
+════════════════════════════════════════════════════════════════════════
 
-- confidence: 0.0-1.0 (how certain you are)
-  * 1.0: Absolutely certain
-  * 0.9: Very confident
-  * 0.7-0.8: Reasonably confident
-  * 0.5-0.6: Uncertain
-  * <0.5: Very uncertain
+matchScore (0.0-1.0):
+  * 0.95-1.0: DEFINITELY SAME PERSON (all major features match perfectly)
+  * 0.85-0.94: VERY LIKELY same person (>90% features match)
+  * 0.70-0.84: POSSIBLY same person (70-89% features match)
+  * 0.50-0.69: UNLIKELY same person (50-69% features match)
+  * 0.0-0.49: DIFFERENT PEOPLE (major discrepancies)
 
+confidence (0.0-1.0):
+  * 0.95-1.0: Absolutely certain (crystal clear images, perfect angles)
+  * 0.85-0.94: Very confident (good quality, minor variations)
+  * 0.70-0.84: Reasonably confident (acceptable quality)
+  * 0.50-0.69: Uncertain (quality issues or obstructions)
+  * <0.50: Very uncertain (cannot make reliable determination)
+
+THRESHOLD FOR APPROVAL: matchScore >= 0.85 AND confidence >= 0.70 AND isLive == true
+
+════════════════════════════════════════════════════════════════════════
 **RESPOND IN STRICT JSON FORMAT:**
+════════════════════════════════════════════════════════════════════════
 {
   "faceDetected": boolean,
   "facesCount": {
@@ -436,13 +543,14 @@ Perform ultra-accurate face verification analysis:
   "reasoning": "Detailed explanation of your analysis and decision"
 }
 
-**IMPORTANT:**
-- Be EXTREMELY STRICT with liveness detection
-- Reject ANY photo of screen/print/video
-- Require 85%+ match for verification
-- Consider lighting/angle variations
-- Account for aging (makeup, hair, facial hair changes)
-- Flag ANY suspicious indicators`
+**CRITICAL REMINDERS:**
+- Be EXTREMELY STRICT with liveness detection - protect against spoofing
+- Reject ANY photo of screen/print/video immediately
+- Require 85%+ match AND 70%+ confidence for approval
+- Consider lighting/angle variations as normal
+- Account for makeup, hair, facial hair changes
+- Flag ANY suspicious indicators
+- When in doubt, REJECT - security over convenience`
               },
               {
                 inlineData: {

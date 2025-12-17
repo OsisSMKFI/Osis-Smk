@@ -1,8 +1,112 @@
 "use client";
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { FaComments, FaTimes, FaRobot, FaTrash, FaPaperPlane, FaWindowMinimize, FaWindowMaximize, FaWindowRestore, FaGripVertical, FaPlus, FaImage, FaFileAlt } from 'react-icons/fa';
+import { FaComments, FaTimes, FaRobot, FaTrash, FaPaperPlane, FaWindowMinimize, FaWindowMaximize, FaWindowRestore, FaGripVertical, FaPlus, FaImage, FaFileAlt, FaExternalLinkAlt, FaArrowRight, FaInfoCircle, FaUsers, FaCalendarAlt, FaBook, FaBriefcase, FaImages, FaNewspaper, FaBullhorn, FaUserCircle, FaHome, FaHeart, FaQuestionCircle } from 'react-icons/fa';
 import ChatBoundary from './ChatBoundary';
+import Link from 'next/link';
+
+// 🔗 SMART LINK DETECTION SYSTEM - Premium Feature
+// Detects context in AI messages and provides quick navigation buttons
+type QuickLinkConfig = {
+  keywords: string[];
+  path: string;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+};
+
+// Comprehensive page mapping for smart link detection
+const QUICK_LINKS: QuickLinkConfig[] = [
+  // About & Philosophy
+  { keywords: ['filosofi', 'visi', 'misi', 'nilai', 'makna logo', 'sejarah osis', 'tentang osis', 'apa itu osis'], path: '/about', label: 'Tentang OSIS', icon: <FaInfoCircle size={12} />, description: 'Filosofi, visi, misi, dan nilai OSIS' },
+  // Members & People
+  { keywords: ['anggota', 'pengurus', 'ketua', 'wakil', 'sekretaris', 'bendahara', 'struktur organisasi', 'kepengurusan'], path: '/people', label: 'Pengurus OSIS', icon: <FaUsers size={12} />, description: 'Lihat semua pengurus dan anggota' },
+  // Sekbid
+  { keywords: ['sekbid', 'seksi bidang', 'bidang'], path: '/sekbid', label: 'Seksi Bidang', icon: <FaBriefcase size={12} />, description: 'Eksplorasi semua seksi bidang' },
+  { keywords: ['sekbid 1', 'keimanan', 'ketakwaan', 'imtaq', 'rohis'], path: '/sekbid/sekbid-1', label: 'Sekbid 1 - IMTAQ', icon: <FaHeart size={12} />, description: 'Keimanan & Ketakwaan' },
+  { keywords: ['sekbid 2', 'budi pekerti', 'karakter', 'akhlak'], path: '/sekbid/sekbid-2', label: 'Sekbid 2 - Budi Pekerti', icon: <FaHeart size={12} />, description: 'Pembinaan Budi Pekerti' },
+  { keywords: ['sekbid 3', 'kepribadian', 'wawasan kebangsaan'], path: '/sekbid/sekbid-3', label: 'Sekbid 3 - Kepribadian', icon: <FaHeart size={12} />, description: 'Kepribadian & Kebangsaan' },
+  { keywords: ['sekbid 4', 'kepemimpinan', 'leadership'], path: '/sekbid/sekbid-4', label: 'Sekbid 4 - Kepemimpinan', icon: <FaHeart size={12} />, description: 'Kepemimpinan' },
+  { keywords: ['sekbid 5', 'keterampilan', 'kewirausahaan'], path: '/sekbid/sekbid-5', label: 'Sekbid 5 - Keterampilan', icon: <FaHeart size={12} />, description: 'Keterampilan & Kewirausahaan' },
+  { keywords: ['sekbid 6', 'kesegaran jasmani', 'olahraga', 'sehat'], path: '/sekbid/sekbid-6', label: 'Sekbid 6 - Jasmani', icon: <FaHeart size={12} />, description: 'Kesegaran Jasmani' },
+  { keywords: ['sekbid 7', 'persepsi', 'apresiasi', 'seni', 'kreasi'], path: '/sekbid/sekbid-7', label: 'Sekbid 7 - Seni', icon: <FaHeart size={12} />, description: 'Persepsi, Apresiasi & Kreasi Seni' },
+  { keywords: ['sekbid 8', 'demokrasi', 'ham', 'hak asasi'], path: '/sekbid/sekbid-8', label: 'Sekbid 8 - Demokrasi', icon: <FaHeart size={12} />, description: 'Demokrasi & HAM' },
+  { keywords: ['sekbid 9', 'sastra', 'budaya', 'bahasa'], path: '/sekbid/sekbid-9', label: 'Sekbid 9 - Sastra Budaya', icon: <FaHeart size={12} />, description: 'Sastra & Budaya' },
+  { keywords: ['sekbid 10', 'ict', 'teknologi', 'informatika', 'komputer'], path: '/sekbid/sekbid-10', label: 'Sekbid 10 - ICT', icon: <FaHeart size={12} />, description: 'ICT & Komunikasi' },
+  // Events & Activities
+  { keywords: ['event', 'kegiatan', 'acara', 'agenda', 'jadwal', 'kalender'], path: '/info', label: 'Event & Info', icon: <FaCalendarAlt size={12} />, description: 'Event dan kegiatan terbaru' },
+  // Gallery
+  { keywords: ['galeri', 'gallery', 'foto', 'photo', 'dokumentasi', 'gambar kegiatan'], path: '/gallery', label: 'Galeri', icon: <FaImages size={12} />, description: 'Dokumentasi foto kegiatan' },
+  // Posts & News
+  { keywords: ['berita', 'artikel', 'post', 'news', 'update', 'informasi terbaru'], path: '/posts', label: 'Berita & Artikel', icon: <FaNewspaper size={12} />, description: 'Berita dan artikel terbaru' },
+  // Announcements
+  { keywords: ['pengumuman', 'announcement', 'pemberitahuan', 'info penting'], path: '/info', label: 'Pengumuman', icon: <FaBullhorn size={12} />, description: 'Pengumuman penting' },
+  // Profile
+  { keywords: ['profil', 'profile', 'akun saya', 'data diri', 'biodata'], path: '/profile', label: 'Profil Saya', icon: <FaUserCircle size={12} />, description: 'Lihat dan edit profil' },
+  // Home
+  { keywords: ['beranda', 'home', 'halaman utama', 'dashboard'], path: '/', label: 'Beranda', icon: <FaHome size={12} />, description: 'Kembali ke beranda' },
+  // Program Kerja
+  { keywords: ['proker', 'program kerja', 'rencana kerja', 'agenda kerja'], path: '/info', label: 'Program Kerja', icon: <FaBook size={12} />, description: 'Lihat program kerja OSIS' },
+  // Register/Enroll
+  { keywords: ['daftar', 'registrasi', 'gabung', 'join', 'pendaftaran anggota'], path: '/register', label: 'Daftar Anggota', icon: <FaUsers size={12} />, description: 'Daftar jadi anggota OSIS' },
+  // Contact/Social
+  { keywords: ['kontak', 'hubungi', 'contact', 'sosial media', 'instagram', 'social'], path: '/our-social-media', label: 'Sosial Media', icon: <FaExternalLinkAlt size={12} />, description: 'Ikuti media sosial kami' },
+];
+
+// Function to detect relevant links from message content
+function detectQuickLinks(content: string): QuickLinkConfig[] {
+  const lowerContent = content.toLowerCase();
+  const detected: QuickLinkConfig[] = [];
+  const addedPaths = new Set<string>();
+  
+  for (const link of QUICK_LINKS) {
+    for (const keyword of link.keywords) {
+      if (lowerContent.includes(keyword) && !addedPaths.has(link.path)) {
+        detected.push(link);
+        addedPaths.add(link.path);
+        break;
+      }
+    }
+  }
+  
+  // Limit to max 3 most relevant links
+  return detected.slice(0, 3);
+}
+
+// Quick action types for more interactivity
+type QuickAction = {
+  label: string;
+  action: string;
+  icon: React.ReactNode;
+};
+
+// Detect quick actions from AI response
+function detectQuickActions(content: string): QuickAction[] {
+  const lowerContent = content.toLowerCase();
+  const actions: QuickAction[] = [];
+  
+  // Suggest related questions based on content
+  if (lowerContent.includes('ketua') || lowerContent.includes('pengurus')) {
+    actions.push({ label: 'Lihat semua pengurus', action: 'Siapa saja pengurus OSIS?', icon: <FaUsers size={10} /> });
+  }
+  if (lowerContent.includes('event') || lowerContent.includes('kegiatan') || lowerContent.includes('acara')) {
+    actions.push({ label: 'Event mendatang', action: 'Apa event OSIS yang akan datang?', icon: <FaCalendarAlt size={10} /> });
+  }
+  if (lowerContent.includes('sekbid') || lowerContent.includes('seksi bidang')) {
+    actions.push({ label: 'Info sekbid lain', action: 'Jelaskan semua sekbid OSIS', icon: <FaBriefcase size={10} /> });
+  }
+  if (lowerContent.includes('filosofi') || lowerContent.includes('visi') || lowerContent.includes('misi')) {
+    actions.push({ label: 'Sejarah OSIS', action: 'Ceritakan sejarah OSIS SMK ini', icon: <FaBook size={10} /> });
+  }
+  if (lowerContent.includes('galeri') || lowerContent.includes('foto')) {
+    actions.push({ label: 'Lihat galeri', action: 'Tunjukkan galeri foto OSIS', icon: <FaImages size={10} /> });
+  }
+  if (lowerContent.includes('daftar') || lowerContent.includes('gabung')) {
+    actions.push({ label: 'Cara daftar', action: 'Bagaimana cara mendaftar jadi anggota OSIS?', icon: <FaQuestionCircle size={10} /> });
+  }
+  
+  return actions.slice(0, 2); // Max 2 quick actions
+}
 
 export default function LiveChatWidget({ role, showFloating = true }: { role?: 'super_admin' | 'member' | 'guest', showFloating?: boolean }) {
   const [open, setOpen] = React.useState(false);
@@ -672,6 +776,68 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                   })()}
                   {/* Render text content (strip markdown image syntax for cleaner display) */}
                   {m.content.replace(/!\[Generated Image\]\(https?:\/\/[^\)]+\)/g, '').trim()}
+                  
+                  {/* 🔗 SMART QUICK LINKS - Premium Feature */}
+                  {m.role === 'assistant' && (() => {
+                    const quickLinks = detectQuickLinks(m.content);
+                    if (quickLinks.length > 0) {
+                      return (
+                        <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-600/40">
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1">
+                            <FaExternalLinkAlt size={8} /> Quick Links
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {quickLinks.map((link, idx) => (
+                              <Link
+                                key={idx}
+                                href={link.path}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-700/50 hover:from-indigo-100 hover:to-blue-100 dark:hover:from-indigo-800/40 dark:hover:to-blue-800/40 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all duration-200 shadow-sm hover:shadow group"
+                                title={link.description}
+                              >
+                                <span className="opacity-70 group-hover:opacity-100">{link.icon}</span>
+                                <span className="font-medium">{link.label}</span>
+                                <FaArrowRight size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  
+                  {/* ⚡ QUICK ACTIONS - Follow-up suggestions */}
+                  {m.role === 'assistant' && (() => {
+                    const quickActions = detectQuickActions(m.content);
+                    if (quickActions.length > 0) {
+                      return (
+                        <div className="mt-2 pt-2 border-t border-slate-100/60 dark:border-slate-700/40">
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5">💡 Tanya lebih lanjut:</div>
+                          <div className="flex flex-wrap gap-1">
+                            {quickActions.map((action, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setInput(action.action);
+                                  // Auto send after small delay
+                                  setTimeout(() => {
+                                    const sendBtn = document.querySelector('[aria-label="Kirim pesan"]') as HTMLButtonElement;
+                                    sendBtn?.click();
+                                  }, 100);
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                title={action.action}
+                              >
+                                {action.icon}
+                                <span>{action.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
             ))}

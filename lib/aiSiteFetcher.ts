@@ -36,12 +36,20 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
     .order('created_at', { ascending: false })
     .limit(5);
 
-  // Fetch upcoming events
+  // Fetch upcoming events (only those that haven't ended yet)
+  const today = new Date().toISOString().split('T')[0];
   const { data: events } = await supabaseAdmin
     .from('events')
-    .select('title, event_date, description')
+    .select('title, event_date, start_date, end_date, description, status')
+    .not('status', 'in', '("completed","cancelled")')
     .order('event_date', { ascending: true })
-    .limit(5);
+    .limit(20); // Fetch more then filter
+  
+  // Filter events that haven't ended
+  const upcomingEvents = (events || []).filter((e: any) => {
+    const endDate = (e.end_date || e.event_date || e.start_date || '').split('T')[0];
+    return endDate >= today;
+  }).slice(0, 5);
 
   // Fetch sekbid (divisions)
   const { data: sekbid } = await supabaseAdmin
@@ -131,7 +139,7 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
 
   const snapshot: SiteSnapshot = {
     announcements: (announcements || []).map((a: any) => ({ title: truncate(a.title, 100), excerpt: truncate(a.content, 200) })),
-    events: (events || []).map((e: any) => ({ title: truncate(e.title, 120), date: e.event_date ? new Date(e.event_date).toISOString() : undefined, excerpt: truncate(e.description, 160) })),
+    events: upcomingEvents.map((e: any) => ({ title: truncate(e.title, 120), date: e.event_date ? new Date(e.event_date).toISOString() : undefined, excerpt: truncate(e.description, 160) })),
     sekbid: (sekbid || []).map((s: any) => ({ id: s.id, name: truncate(s.name, 80), description: truncate(s.description, 180), icon: s.icon })),
     contact,
     // seluruh anggota aktif
