@@ -47,6 +47,33 @@ interface ChatMessage {
     codeBlocks?: { language: string; code: string; filename?: string }[];
 }
 
+interface SourceFile {
+    path: string;
+    name: string;
+    content: string;
+    language: string;
+    size: number;
+    modified: string;
+}
+
+interface FileTree {
+    components: SourceFile[];
+    pages: SourceFile[];
+    styles: SourceFile[];
+    config: SourceFile[];
+    api: SourceFile[];
+}
+
+// File icon mapping by extension
+const FILE_ICONS: Record<string, { icon: string; color: string }> = {
+    tsx: { icon: '⚛️', color: 'text-blue-400' },
+    ts: { icon: '📘', color: 'text-blue-500' },
+    css: { icon: '🎨', color: 'text-purple-400' },
+    js: { icon: '📒', color: 'text-yellow-400' },
+    json: { icon: '📋', color: 'text-orange-400' },
+    md: { icon: '📝', color: 'text-gray-400' }
+};
+
 // CSS Templates - Complete
 const CSS_TEMPLATES: Record<string, { name: string; css: string; icon: string }> = {
     neumorphism: {
@@ -163,6 +190,15 @@ export default function DesignStudioPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedCategories, setExpandedCategories] = useState<string[]>(['active', 'templates']);
     
+    // File Explorer (Real Source Files)
+    const [fileTree, setFileTree] = useState<FileTree | null>(null);
+    const [openSourceFile, setOpenSourceFile] = useState<SourceFile | null>(null);
+    const [sourceCode, setSourceCode] = useState('');
+    const [originalSourceCode, setOriginalSourceCode] = useState('');
+    const [editorMode, setEditorMode] = useState<'css' | 'source'>('css');
+    const [expandedFolders, setExpandedFolders] = useState<string[]>(['components', 'pages', 'styles']);
+    const [isLoadingFile, setIsLoadingFile] = useState(false);
+    
     // Chat
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
         {
@@ -189,12 +225,17 @@ export default function DesignStudioPage() {
     
     useEffect(() => {
         loadDesigns();
+        loadFileTree();
         initializeAI();
     }, []);
     
     useEffect(() => {
-        setHasUnsavedChanges(code !== originalCode);
-    }, [code, originalCode]);
+        if (editorMode === 'css') {
+            setHasUnsavedChanges(code !== originalCode);
+        } else {
+            setHasUnsavedChanges(sourceCode !== originalSourceCode);
+        }
+    }, [code, originalCode, sourceCode, originalSourceCode, editorMode]);
     
     useEffect(() => {
         chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -205,20 +246,26 @@ export default function DesignStudioPage() {
         const handler = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
-                if (hasUnsavedChanges) saveDesign();
+                if (hasUnsavedChanges) {
+                    if (editorMode === 'source' && openSourceFile) {
+                        saveSourceFile();
+                    } else {
+                        saveDesign();
+                    }
+                }
             }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && editorMode === 'css') {
                 e.preventDefault();
                 undo();
             }
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z')) && editorMode === 'css') {
                 e.preventDefault();
                 redo();
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [hasUnsavedChanges, history, historyIndex]);
+    }, [hasUnsavedChanges, history, historyIndex, editorMode, openSourceFile]);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // DATA OPERATIONS
@@ -241,6 +288,91 @@ export default function DesignStudioPage() {
         } finally {
             setIsLoading(false);
         }
+    };
+    
+    // Load file tree with actual source files
+    const loadFileTree = async () => {
+        try {
+            const res = await fetch('/api/design/files?action=list');
+            const data = await res.json();
+            if (data.success) {
+                setFileTree(data.tree);
+            }
+        } catch (err) {
+            console.error('File tree error:', err);
+        }
+    };
+    
+    // Open a real source file
+    const openFile = async (filePath: string) => {
+        if (hasUnsavedChanges && !confirm('Perubahan belum disimpan. Buang perubahan?')) return;
+        
+        setIsLoadingFile(true);
+        try {
+            const res = await fetch(`/api/design/files?action=read&file=${encodeURIComponent(filePath)}`);
+            const data = await res.json();
+            
+            if (data.success) {
+                setOpenSourceFile(data.file);
+                setSourceCode(data.file.content);
+                setOriginalSourceCode(data.file.content);
+                setEditorMode('source');
+                setSelectedComponent(null); // Clear CSS component selection
+                notify('info', `Opened: ${data.file.name}`);
+            } else {
+                notify('error', data.error || 'Failed to open file');
+            }
+        } catch (err) {
+            console.error('Open file error:', err);
+            notify('error', 'Failed to read file');
+        } finally {
+            setIsLoadingFile(false);
+        }
+    };
+    
+    // Save source file
+    const saveSourceFile = async () => {
+        if (!openSourceFile) return;
+        
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/design/files', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'save',
+                    filePath: openSourceFile.path,
+                    content: sourceCode
+                })
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                setOriginalSourceCode(sourceCode);
+                setHasUnsavedChanges(false);
+                setLastSaved(new Date());
+                notify('success', `✅ Saved: ${openSourceFile.name}`);
+            } else {
+                notify('error', data.error || 'Save failed');
+            }
+        } catch (err) {
+            console.error('Save error:', err);
+            notify('error', 'Failed to save');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    // Toggle folder in file explorer
+    const toggleFolder = (folder: string) => {
+        setExpandedFolders(prev => 
+            prev.includes(folder) ? prev.filter(f => f !== folder) : [...prev, folder]
+        );
+    };
+    
+    // Get file extension
+    const getFileExtension = (filename: string): string => {
+        return filename.split('.').pop() || '';
     };
 
     const notify = (type: 'success' | 'error' | 'info', message: string) => {
@@ -1273,7 +1405,13 @@ INSTRUKSI:
                     <div className="w-px h-6 bg-gray-600 mx-1" />
                     
                     <button 
-                        onClick={saveDesign} 
+                        onClick={() => {
+                            if (editorMode === 'source' && openSourceFile) {
+                                saveSourceFile();
+                            } else {
+                                saveDesign();
+                            }
+                        }} 
                         disabled={!hasUnsavedChanges || isSaving}
                         className={`p-2 rounded flex items-center gap-1.5 transition-colors ${
                             hasUnsavedChanges ? 'text-orange-400 hover:bg-gray-700' : 'text-gray-500'
@@ -1283,10 +1421,10 @@ INSTRUKSI:
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     </button>
                     
-                    <button onClick={undo} disabled={historyIndex <= 0} className={`p-2 rounded transition-colors ${historyIndex > 0 ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600'}`} title="Undo (Ctrl+Z)">
+                    <button onClick={undo} disabled={historyIndex <= 0 || editorMode !== 'css'} className={`p-2 rounded transition-colors ${historyIndex > 0 && editorMode === 'css' ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600'}`} title="Undo (Ctrl+Z)">
                         <Undo className="w-4 h-4" />
                     </button>
-                    <button onClick={redo} disabled={historyIndex >= history.length - 1} className={`p-2 rounded transition-colors ${historyIndex < history.length - 1 ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600'}`} title="Redo (Ctrl+Y)">
+                    <button onClick={redo} disabled={historyIndex >= history.length - 1 || editorMode !== 'css'} className={`p-2 rounded transition-colors ${historyIndex < history.length - 1 && editorMode === 'css' ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600'}`} title="Redo (Ctrl+Y)">
                         <Redo className="w-4 h-4" />
                     </button>
                     
@@ -1304,7 +1442,22 @@ INSTRUKSI:
                 </div>
                 
                 {/* Center - File info */}
-                {selectedComponent && (
+                {editorMode === 'source' && openSourceFile ? (
+                    <div className="hidden md:flex items-center gap-2 text-sm">
+                        <span className={FILE_ICONS[getFileExtension(openSourceFile.name)]?.color || 'text-gray-400'}>
+                            {FILE_ICONS[getFileExtension(openSourceFile.name)]?.icon || '📄'}
+                        </span>
+                        <span className={`${hasUnsavedChanges ? 'text-orange-400' : 'text-gray-300'}`}>
+                            {openSourceFile.path}
+                            {hasUnsavedChanges && ' •'}
+                        </span>
+                        {lastSaved && (
+                            <span className="text-gray-500 text-xs">
+                                Saved: {lastSaved.toLocaleTimeString('id-ID')}
+                            </span>
+                        )}
+                    </div>
+                ) : selectedComponent && (
                     <div className="hidden md:flex items-center gap-2 text-sm">
                         <FileCode className="w-4 h-4 text-orange-400" />
                         <span className={`${hasUnsavedChanges ? 'text-orange-400' : 'text-gray-300'}`}>
@@ -1498,6 +1651,175 @@ INSTRUKSI:
                                                 )}
                                             </div>
                                         ))}
+                                        
+                                        {/* ═══════ SOURCE FILES (REAL FILES) ═══════ */}
+                                        <div className="border-t-2 border-purple-500/50 mt-2 pt-2">
+                                            <div className="px-3 py-1.5 flex items-center gap-2 text-xs text-purple-400 font-medium uppercase tracking-wider">
+                                                <FileCode className="w-3 h-3" />
+                                                Source Files (Real Code)
+                                            </div>
+                                            
+                                            {/* Components Folder */}
+                                            {fileTree && (
+                                                <>
+                                                    <div className="border-b border-gray-700/50">
+                                                        <button
+                                                            onClick={() => toggleFolder('components')}
+                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
+                                                        >
+                                                            {expandedFolders.includes('components') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                            <FolderOpen className="w-4 h-4 text-blue-400" />
+                                                            <span className="text-blue-300 font-medium">components/</span>
+                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.components?.length || 0}</span>
+                                                        </button>
+                                                        
+                                                        {expandedFolders.includes('components') && fileTree.components && (
+                                                            <div className="pb-2">
+                                                                {fileTree.components.filter(f => filterBySearch(f.name)).slice(0, 30).map(file => {
+                                                                    const ext = getFileExtension(file.name);
+                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📄', color: 'text-gray-400' };
+                                                                    const isOpen = openSourceFile?.path === file.path;
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={file.path}
+                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
+                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
+                                                                            }`}
+                                                                            onClick={() => openFile(file.path)}
+                                                                            title={file.path}
+                                                                        >
+                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
+                                                                            <span className="flex-1 truncate">{file.name}</span>
+                                                                            <span className="text-[10px] text-gray-600 uppercase">.{ext}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Pages Folder */}
+                                                    <div className="border-b border-gray-700/50">
+                                                        <button
+                                                            onClick={() => toggleFolder('pages')}
+                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
+                                                        >
+                                                            {expandedFolders.includes('pages') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                            <FolderOpen className="w-4 h-4 text-green-400" />
+                                                            <span className="text-green-300 font-medium">app/ (pages)</span>
+                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.pages?.length || 0}</span>
+                                                        </button>
+                                                        
+                                                        {expandedFolders.includes('pages') && fileTree.pages && (
+                                                            <div className="pb-2">
+                                                                {fileTree.pages.filter(f => filterBySearch(f.name) || filterBySearch(f.path)).slice(0, 20).map(file => {
+                                                                    const ext = getFileExtension(file.name);
+                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📄', color: 'text-gray-400' };
+                                                                    const isOpen = openSourceFile?.path === file.path;
+                                                                    const displayPath = file.path.replace('app/', '').replace('/page.tsx', '');
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={file.path}
+                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
+                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
+                                                                            }`}
+                                                                            onClick={() => openFile(file.path)}
+                                                                            title={file.path}
+                                                                        >
+                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
+                                                                            <span className="flex-1 truncate">{displayPath || 'home'}/</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Styles Folder */}
+                                                    <div className="border-b border-gray-700/50">
+                                                        <button
+                                                            onClick={() => toggleFolder('styles')}
+                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
+                                                        >
+                                                            {expandedFolders.includes('styles') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                            <Palette className="w-4 h-4 text-purple-400" />
+                                                            <span className="text-purple-300 font-medium">styles/</span>
+                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.styles?.length || 0}</span>
+                                                        </button>
+                                                        
+                                                        {expandedFolders.includes('styles') && fileTree.styles && (
+                                                            <div className="pb-2">
+                                                                {fileTree.styles.filter(f => filterBySearch(f.name)).map(file => {
+                                                                    const ext = getFileExtension(file.name);
+                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '🎨', color: 'text-purple-400' };
+                                                                    const isOpen = openSourceFile?.path === file.path;
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={file.path}
+                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
+                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
+                                                                            }`}
+                                                                            onClick={() => openFile(file.path)}
+                                                                            title={file.path}
+                                                                        >
+                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
+                                                                            <span className="flex-1 truncate">{file.name}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Config Folder */}
+                                                    <div className="border-b border-gray-700/50">
+                                                        <button
+                                                            onClick={() => toggleFolder('config')}
+                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
+                                                        >
+                                                            {expandedFolders.includes('config') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                            <Settings className="w-4 h-4 text-orange-400" />
+                                                            <span className="text-orange-300 font-medium">config/</span>
+                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.config?.length || 0}</span>
+                                                        </button>
+                                                        
+                                                        {expandedFolders.includes('config') && fileTree.config && (
+                                                            <div className="pb-2">
+                                                                {fileTree.config.filter(f => filterBySearch(f.name)).slice(0, 15).map(file => {
+                                                                    const ext = getFileExtension(file.name);
+                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '⚙️', color: 'text-orange-400' };
+                                                                    const isOpen = openSourceFile?.path === file.path;
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={file.path}
+                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
+                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
+                                                                            }`}
+                                                                            onClick={() => openFile(file.path)}
+                                                                            title={file.path}
+                                                                        >
+                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
+                                                                            <span className="flex-1 truncate">{file.name}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
+                                            
+                                            {!fileTree && (
+                                                <div className="px-4 py-3 text-gray-500 text-xs text-center">
+                                                    <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
+                                                    Loading files...
+                                                </div>
+                                            )}
+                                        </div>
                                     </>
                                 )}
                             </div>
@@ -1507,21 +1829,63 @@ INSTRUKSI:
 
                 {/* ═══════════ EDITOR & PREVIEW ═══════════ */}
                 <main className="flex-1 flex overflow-hidden">
-                    {/* Code Editor */}
+                    {/* Code Editor - Supports both CSS Override and Source Files */}
                     {(viewMode === 'split' || viewMode === 'code') && (
                         <div className={`${viewMode === 'split' ? 'w-1/2' : 'w-full'} flex flex-col border-r border-gray-700`}>
-                            {selectedComponent && (
-                                <div className="h-9 flex items-center bg-gray-800 border-b border-gray-700">
-                                    <div className="h-full flex items-center gap-2 px-4 bg-gray-900 border-t-2 border-blue-500">
-                                        <FileCode className="w-4 h-4 text-orange-400" />
-                                        <span className="text-sm text-white">{selectedComponent}.css</span>
-                                        {hasUnsavedChanges && <span className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />}
+                            {/* Tab Bar - Show open files */}
+                            <div className="h-9 flex items-center bg-gray-800 border-b border-gray-700 overflow-x-auto">
+                                {/* CSS Override Tab */}
+                                {selectedComponent && (
+                                    <div 
+                                        className={`h-full flex items-center gap-2 px-4 cursor-pointer transition-colors ${
+                                            editorMode === 'css' 
+                                                ? 'bg-gray-900 border-t-2 border-blue-500 text-white' 
+                                                : 'hover:bg-gray-700/50 text-gray-400 border-t-2 border-transparent'
+                                        }`}
+                                        onClick={() => setEditorMode('css')}
+                                    >
+                                        <span className="text-purple-400">🎨</span>
+                                        <span className="text-sm">{selectedComponent}.css</span>
+                                        {editorMode === 'css' && hasUnsavedChanges && <span className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />}
                                     </div>
-                                </div>
-                            )}
+                                )}
+                                
+                                {/* Source File Tab */}
+                                {openSourceFile && (
+                                    <div 
+                                        className={`h-full flex items-center gap-2 px-4 cursor-pointer transition-colors ${
+                                            editorMode === 'source' 
+                                                ? 'bg-gray-900 border-t-2 border-purple-500 text-white' 
+                                                : 'hover:bg-gray-700/50 text-gray-400 border-t-2 border-transparent'
+                                        }`}
+                                        onClick={() => setEditorMode('source')}
+                                    >
+                                        <span className={FILE_ICONS[getFileExtension(openSourceFile.name)]?.color || 'text-gray-400'}>
+                                            {FILE_ICONS[getFileExtension(openSourceFile.name)]?.icon || '📄'}
+                                        </span>
+                                        <span className="text-sm">{openSourceFile.name}</span>
+                                        {editorMode === 'source' && hasUnsavedChanges && <span className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />}
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setOpenSourceFile(null); setSourceCode(''); setEditorMode('css'); }}
+                                            className="ml-1 hover:bg-gray-600 rounded p-0.5"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                {/* Loading indicator */}
+                                {isLoadingFile && (
+                                    <div className="h-full flex items-center gap-2 px-4 text-gray-400">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span className="text-sm">Loading...</span>
+                                    </div>
+                                )}
+                            </div>
                             
                             <div className="flex-1 relative overflow-hidden bg-gray-900">
-                                {selectedComponent ? (
+                                {/* CSS Editor Mode */}
+                                {editorMode === 'css' && selectedComponent ? (
                                     <div className="absolute inset-0 flex font-mono text-sm">
                                         <div className="w-12 flex-shrink-0 text-right pr-3 pt-3 select-none bg-gray-900 text-gray-600 border-r border-gray-800">
                                             {code.split('\n').map((_, i) => (
@@ -1539,16 +1903,43 @@ INSTRUKSI:
                                             placeholder="/* Write CSS here... */"
                                         />
                                     </div>
+                                ) : editorMode === 'source' && openSourceFile ? (
+                                    /* Source File Editor Mode */
+                                    <div className="absolute inset-0 flex font-mono text-sm">
+                                        <div className="w-12 flex-shrink-0 text-right pr-3 pt-3 select-none bg-gray-900 text-gray-600 border-r border-gray-800 overflow-hidden">
+                                            {sourceCode.split('\n').map((_, i) => (
+                                                <div key={i} className="h-6 leading-6">{i + 1}</div>
+                                            ))}
+                                        </div>
+                                        
+                                        <textarea
+                                            value={sourceCode}
+                                            onChange={e => setSourceCode(e.target.value)}
+                                            className="flex-1 p-3 resize-none outline-none leading-6 bg-gray-900 text-gray-100 caret-white overflow-auto"
+                                            spellCheck={false}
+                                            style={{ tabSize: 2 }}
+                                            placeholder="// Source code..."
+                                        />
+                                    </div>
                                 ) : (
                                     <div className="h-full flex items-center justify-center text-gray-500">
                                         <div className="text-center">
                                             <Code className="w-16 h-16 mx-auto mb-4 opacity-20" />
                                             <p className="text-lg">No file open</p>
-                                            <p className="text-sm mt-2">Pilih komponen dari sidebar</p>
+                                            <p className="text-sm mt-2">Pilih file dari sidebar</p>
+                                            <div className="mt-4 space-y-2 text-xs text-gray-600">
+                                                <div>
+                                                    <span className="text-purple-400">🎨 CSS</span> - Override styles
+                                                </div>
+                                                <div>
+                                                    <span className="text-blue-400">⚛️ TSX</span> - React components
+                                                </div>
+                                                <div>
+                                                    <span className="text-blue-500">📘 TS</span> - TypeScript
+                                                </div>
+                                            </div>
                                             <div className="mt-4 text-xs text-gray-600">
                                                 <kbd className="px-2 py-1 bg-gray-800 rounded">Ctrl+S</kbd> Save
-                                                <kbd className="px-2 py-1 bg-gray-800 rounded ml-2">Ctrl+Z</kbd> Undo
-                                                <kbd className="px-2 py-1 bg-gray-800 rounded ml-2">Ctrl+Y</kbd> Redo
                                             </div>
                                         </div>
                                     </div>
@@ -1556,13 +1947,33 @@ INSTRUKSI:
                             </div>
                             
                             {/* Status Bar */}
-                            <div className="h-6 flex items-center justify-between px-3 bg-blue-600 text-white text-xs">
+                            <div className={`h-6 flex items-center justify-between px-3 text-white text-xs ${
+                                editorMode === 'source' ? 'bg-purple-600' : 'bg-blue-600'
+                            }`}>
                                 <div className="flex items-center gap-4">
-                                    <span>{selectedComponent ? 'CSS' : 'Ready'}</span>
-                                    {history.length > 1 && <span>History: {historyIndex + 1}/{history.length}</span>}
+                                    {editorMode === 'css' && selectedComponent && <span>CSS Override</span>}
+                                    {editorMode === 'source' && openSourceFile && (
+                                        <>
+                                            <span className="uppercase">{openSourceFile.language}</span>
+                                            <span className="text-gray-300">{openSourceFile.path}</span>
+                                        </>
+                                    )}
+                                    {!selectedComponent && !openSourceFile && <span>Ready</span>}
+                                    {history.length > 1 && editorMode === 'css' && <span>History: {historyIndex + 1}/{history.length}</span>}
                                 </div>
                                 <div className="flex items-center gap-4">
                                     {hasUnsavedChanges && <span className="text-orange-300">● Unsaved</span>}
+                                    {editorMode === 'source' && openSourceFile && (
+                                        <button 
+                                            onClick={saveSourceFile}
+                                            disabled={!hasUnsavedChanges || isSaving}
+                                            className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                                                hasUnsavedChanges ? 'bg-white/20 hover:bg-white/30' : 'opacity-50 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            {isSaving ? 'Saving...' : 'Save File'}
+                                        </button>
+                                    )}
                                     <span>UTF-8</span>
                                 </div>
                             </div>
