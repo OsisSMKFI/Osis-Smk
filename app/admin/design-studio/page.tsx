@@ -1127,6 +1127,46 @@ ${sel}:hover {
             const isRequestingStyle = /style|css|design|warna|color|glass|neon|gradient|animasi|hover/i.test(queryLower);
             const containsHTML = /<\w+[\s>]|class="|className=/i.test(userQuery);
             
+            // ═══════════════════════════════════════════════════════════════
+            // 🔍 SMART HTML DETECTION: Find source file for pasted HTML
+            // ═══════════════════════════════════════════════════════════════
+            if (containsHTML && (isRequestingCode || /ubah|ganti|perbaiki|fix|improve|redesign|update/i.test(queryLower))) {
+                // User pasted HTML and wants to modify it - let's find the source file
+                try {
+                    const searchRes = await fetch(`/api/design/files?action=search-content&content=${encodeURIComponent(userQuery.slice(0, 500))}`);
+                    const searchData = await searchRes.json();
+                    
+                    if (searchData.success && searchData.results && searchData.results.length > 0) {
+                        const foundFile = searchData.results[0];
+                        
+                        // Read the full file content
+                        const fileRes = await fetch(`/api/design/files?action=read&file=${encodeURIComponent(foundFile.path)}`);
+                        const fileData = await fileRes.json();
+                        
+                        if (fileData.success && fileData.file) {
+                            // Add file context to chat
+                            setChatMessages(prev => [...prev, {
+                                id: (Date.now() + 1).toString(),
+                                role: 'system',
+                                content: `🔍 **File Terdeteksi!**\n\n📍 Kode yang kamu tempelkan ditemukan di:\n📂 \`${foundFile.path}\` (baris ~${foundFile.lineNumber})\n\nSedang menganalisis untuk memberikan solusi...`,
+                                timestamp: new Date(),
+                                actionType: 'info'
+                            }]);
+                            
+                            // Store file info for the AI context
+                            setOpenSourceFile({
+                                path: foundFile.path,
+                                language: foundFile.path.endsWith('.tsx') ? 'tsx' : foundFile.path.endsWith('.ts') ? 'ts' : 'jsx'
+                            });
+                            setSourceCode(fileData.file.content);
+                            setOriginalSourceCode(fileData.file.content);
+                        }
+                    }
+                } catch (e) {
+                    console.log('Search content failed:', e);
+                }
+            }
+            
             // Extract file name if mentioned
             const fileMatch = userQuery.match(/([a-zA-Z0-9_\-]+\.(tsx?|jsx?|css|json))/i);
             const mentionedFile = fileMatch ? fileMatch[1] : null;
@@ -1290,94 +1330,158 @@ ${sel}:hover {
             
             // Get current source file context if open
             const currentFileContext = openSourceFile ? `
-FILE YANG SEDANG DIBUKA:
+═══════════════════════════════════════════════════════════════
+📂 FILE YANG SEDANG DIBUKA (BISA LANGSUNG DIEDIT):
+═══════════════════════════════════════════════════════════════
 - Path: ${openSourceFile.path}
 - Bahasa: ${openSourceFile.language}
-- Isi:
+- Ukuran: ${sourceCode.length} karakter, ${sourceCode.split('\n').length} baris
+
+ISI FILE:
 \`\`\`${openSourceFile.language}
-${sourceCode.slice(0, 3000)}${sourceCode.length > 3000 ? '\n... (dipotong karena terlalu panjang)' : ''}
+${sourceCode}
 \`\`\`
 ` : '';
             
-            // Build enhanced prompt for AI - LIKE GITHUB COPILOT
+            // Build enhanced prompt for AI - REAL CODE EDITOR like GitHub Copilot
             const enhancedMessage = `
 Kamu adalah AI Design Studio Assistant yang SANGAT PINTAR seperti GitHub Copilot.
-Kamu bisa membantu dengan SEMUA jenis kode dan file:
-- React/Next.js: TSX, JSX
-- TypeScript/JavaScript: TS, JS  
-- Styles: CSS, SCSS, Tailwind
-- Config: JSON, YAML, ENV
-- Data: SQL, GraphQL
-- Dan format lainnya
+Kamu BISA dan HARUS mengubah file source code secara langsung, bukan hanya memberikan CSS.
+
+═══════════════════════════════════════════════════════════════
+🚀 KEMAMPUAN KAMU (GUNAKAN!):
+═══════════════════════════════════════════════════════════════
+1. BACA file source code dari project
+2. TULIS/UBAH file source code langsung
+3. BUAT file baru
+4. HAPUS atau PERBAIKI kode yang bermasalah
+5. BERIKAN saran yang DETAIL dan LENGKAP
 
 ═══════════════════════════════════════════════════════════════
 ⚠️ INSTRUKSI PENTING - BACA DENGAN TELITI:
 ═══════════════════════════════════════════════════════════════
 
 1. PAHAMI DULU apa yang user minta:
-   - Jika user BERTANYA (ada "?", "dimana", "ada gak", "bagaimana") → JAWAB pertanyaannya!
-   - Jika user MINTA KODE → Berikan kode yang bisa langsung diterapkan
-   - Jika user MINTA STYLE → Berikan CSS atau Tailwind classes
-   - Jika user MINTA FUNGSI → Berikan TypeScript/JavaScript function
-   - Jika user MINTA KOMPONEN → Berikan React component lengkap
+   - Jika user BERTANYA → JAWAB dengan jelas dan lengkap
+   - Jika user MINTA UBAH → Berikan KODE LENGKAP dengan PATH FILE
+   - Jika user KASIH CONTOH HTML/JSX → CARI file yang berisi kode itu dan UBAH
 
-2. JANGAN PERNAH:
-   - Memberikan respons yang tidak sesuai dengan pertanyaan
-   - Menerapkan CSS jika user hanya bertanya
-   - Menjawab dengan template yang tidak relevan
-   - Mengabaikan konteks percakapan
+2. WAJIB BERIKAN:
+   - PATH FILE yang tepat dan lengkap
+   - KODE LENGKAP (bukan hanya snippet)
+   - PENJELASAN apa yang diubah dan kenapa
+   - LOKASI BARIS jika mungkin
 
-3. FORMAT KODE DENGAN PATH FILE:
-   Untuk setiap kode yang bisa diterapkan, gunakan format:
-   
-   \`\`\`tsx:app/components/MyComponent.tsx
-   // kode lengkap di sini
+3. FORMAT KODE YANG BENAR (WAJIB IKUTI!):
+   Untuk SETIAP kode yang diberikan, gunakan format ini:
+
+   \`\`\`tsx:components/NamaKomponen.tsx
+   // ISI FILE LENGKAP DISINI
+   // Jangan potong, berikan semua kode
    \`\`\`
-   
+
+   Contoh lain:
    \`\`\`ts:lib/utils.ts
-   // kode lengkap di sini
+   export function myFunction() { ... }
    \`\`\`
-   
+
    \`\`\`css:app/globals.css
-   /* style di sini */
+   .my-class { ... }
    \`\`\`
 
-   Format: \`\`\`bahasa:path/ke/file.ext
+4. JIKA USER KASIH CONTOH HTML:
+   - CARI file yang mengandung kode tersebut
+   - BERIKAN path file yang PASTI
+   - BERIKAN kode yang sudah diperbaiki LENGKAP
+   - JANGAN hanya kasih CSS override - UBAH FILE ASLINYA!
 
 ═══════════════════════════════════════════════════════════════
-KONTEKS:
+📂 MAPPING FILE PROJECT (GUNAKAN INI!):
 ═══════════════════════════════════════════════════════════════
+
+HALAMAN:
+- app/page.tsx → Homepage
+- app/bidang/page.tsx → Halaman Program Kerja
+- app/about/page.tsx → Halaman About
+- app/gallery/page.tsx → Gallery (filter sekbid ada di sini!)
+- app/people/page.tsx → Halaman Anggota
+- app/sekbid/page.tsx → Halaman Sekbid
+- app/admin/*.tsx → Dashboard Admin
+
+KOMPONEN:
+- components/Navbar.tsx → Navigation bar
+- components/Footer.tsx → Footer
+- components/DynamicHero.tsx → Hero section
+- components/ProkerSection.tsx → Section Program Kerja
+- components/PeopleSectionsClient.tsx → Filter tabs anggota (CONTOH BAGUS!)
+- components/cards/*.tsx → Card components
+- components/ui/*.tsx → UI primitives (Button, Input, dll)
+- components/chat/LiveChatWidget.tsx → Widget chat
+
+STYLES:
+- app/globals.css → Global styles
+- tailwind.config.ts → Tailwind config
+
+UTILS:
+- lib/*.ts → Helper functions
+- hooks/*.ts → React hooks
 
 ${currentFileContext}
 
 ${targetComponent ? `
-KOMPONEN TARGET:
+═══════════════════════════════════════════════════════════════
+🎯 KOMPONEN TARGET (dari sidebar):
+═══════════════════════════════════════════════════════════════
 - Nama: ${targetComponent}
 - Selector: ${selector}
 - Deskripsi: ${componentInfo?.description || 'N/A'}
+- File: ${COMPONENT_FILE_MAP[targetComponent]?.[0] || 'Tidak diketahui'}
 ` : ''}
 
-${code ? `CSS Override saat ini:\n\`\`\`css\n${code}\n\`\`\`` : ''}
+═══════════════════════════════════════════════════════════════
+💬 PERMINTAAN USER:
+═══════════════════════════════════════════════════════════════
+${userQuery}
 
 ═══════════════════════════════════════════════════════════════
-STRUKTUR FOLDER PROJECT:
+📝 CARA MENJAWAB:
 ═══════════════════════════════════════════════════════════════
-- app/ → Halaman (page.tsx)
-  - app/page.tsx → Homepage
-  - app/bidang/page.tsx → Halaman Program Kerja/Sekbid
-  - app/about/page.tsx → Halaman About
-  - app/gallery/page.tsx → Gallery
-  - app/admin/ → Dashboard Admin
-  - app/globals.css → Global styles
-  
-- components/ → Komponen React
-  - components/Navbar.tsx → Navigation bar
-  - components/Footer.tsx → Footer
-  - components/DynamicHero.tsx → Hero section
-  - components/cards/ → Card components
-  - components/ui/ → UI components (Button, Input, dll)
-  
-- lib/ → Utilities dan helpers
+
+JIKA USER KASIH CONTOH HTML DAN MINTA DIUBAH:
+1. Identifikasi file mana yang berisi kode tersebut
+2. Berikan PATH FILE yang PASTI
+3. Berikan KODE LENGKAP yang sudah diperbaiki dengan format:
+   \`\`\`tsx:path/ke/file.tsx
+   // kode lengkap
+   \`\`\`
+
+JIKA USER MINTA STYLE/DESIGN:
+1. Berikan KODE JSX/TSX yang sudah dimodifikasi (bukan CSS terpisah)
+2. Gunakan Tailwind classes langsung di komponen
+3. Berikan PATH FILE yang tepat
+
+JIKA USER BERTANYA:
+1. Jawab dengan JELAS dan LENGKAP
+2. Berikan PATH FILE jika relevan
+3. Berikan contoh kode jika membantu
+
+CONTOH RESPONS YANG BAGUS:
+"📍 **Lokasi File:** \`components/PeopleSectionsClient.tsx\` (baris 318-435)
+
+Berikut kode yang sudah saya perbaiki:
+
+\`\`\`tsx:components/PeopleSectionsClient.tsx
+// ... kode lengkap ...
+\`\`\`
+
+**Perubahan yang dilakukan:**
+1. Mengubah layout menjadi responsive grid
+2. Menambahkan icon emoji per sekbid
+3. Menambahkan glassmorphism effect
+
+Klik **Apply** untuk menerapkan perubahan!"
+
+INGAT: SELALU sertakan PATH FILE dalam code block agar bisa langsung diterapkan!`;
 - hooks/ → React hooks
 - contexts/ → React contexts
 - types/ → TypeScript types
@@ -1570,12 +1674,31 @@ INGAT: SELALU sertakan path file dalam code block agar bisa langsung diterapkan!
                     }, 500);
                 }
             } else if (cssCode || fileChanges.length > 0) {
-                // Show "ready to apply" message instead of auto-applying
+                // Show "ready to apply" message with details
                 setTimeout(() => {
+                    let readyMessage = `✨ **Perubahan Siap Diterapkan!**\n\n`;
+                    
+                    if (fileChanges.length > 0) {
+                        readyMessage += `📂 **File yang akan diubah:**\n`;
+                        fileChanges.forEach(f => {
+                            const icon = FILE_ICONS[f.language]?.icon || '📄';
+                            readyMessage += `${icon} \`${f.path}\`\n`;
+                        });
+                        readyMessage += `\n`;
+                    }
+                    
+                    if (cssCode) {
+                        readyMessage += `🎨 **CSS Override:** ${targetComponent || 'global'}\n\n`;
+                    }
+                    
+                    readyMessage += `---\n`;
+                    readyMessage += `👆 Klik tombol **Apply** di atas untuk menerapkan.\n`;
+                    readyMessage += `⚡ Atau ketik **"terapkan"** untuk auto-apply semua.`;
+                    
                     setChatMessages(prev => [...prev, {
                         id: Date.now().toString(),
                         role: 'system',
-                        content: `💡 **Kode siap diterapkan!**\n\nKlik tombol **Apply** di atas untuk menerapkan perubahan.\n\n⚠️ Atau ketik "terapkan" untuk auto-apply.`,
+                        content: readyMessage,
                         timestamp: new Date(),
                         actionType: 'info'
                     }]);

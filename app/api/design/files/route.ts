@@ -173,6 +173,21 @@ export async function GET(request: NextRequest) {
             });
         }
         
+        if (action === 'search-content') {
+            const content = searchParams.get('content') || '';
+            if (!content || content.length < 10) {
+                return NextResponse.json({ success: false, error: 'Content too short' }, { status: 400 });
+            }
+            
+            const results = await searchByContent(workspaceRoot, content);
+            
+            return NextResponse.json({
+                success: true,
+                results,
+                searchedContent: content.slice(0, 100)
+            });
+        }
+        
         return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
         
     } catch (error) {
@@ -430,4 +445,95 @@ async function searchFiles(root: string, query: string): Promise<any[]> {
     }
     
     return results.slice(0, 50); // Limit results
+}
+
+// Search files by content (for finding where HTML code is located)
+async function searchByContent(root: string, content: string): Promise<{ path: string; lineNumber: number; snippet: string }[]> {
+    const results: { path: string; lineNumber: number; snippet: string }[] = [];
+    
+    // Extract key identifiable parts from the content
+    const searchPatterns: string[] = [];
+    
+    // Extract class names
+    const classMatches = content.match(/(?:class|className)=["']([^"']+)["']/g);
+    if (classMatches) {
+        classMatches.forEach(m => {
+            const classes = m.match(/["']([^"']+)["']/);
+            if (classes && classes[1]) {
+                // Get the most unique class (longer, more specific)
+                const classList = classes[1].split(/\s+/).filter(c => c.length > 5);
+                classList.forEach(c => searchPatterns.push(c));
+            }
+        });
+    }
+    
+    // Extract element text content
+    const textMatches = content.match(/>([^<]{5,50})</g);
+    if (textMatches) {
+        textMatches.forEach(m => {
+            const text = m.slice(1, -1).trim();
+            if (text && text.length > 5) searchPatterns.push(text);
+        });
+    }
+    
+    // Use first few unique patterns
+    const uniquePatterns = [...new Set(searchPatterns)].slice(0, 3);
+    if (uniquePatterns.length === 0) return results;
+    
+    // Search directories
+    const dirs = ['components', 'app'];
+    const extensions = ['.tsx', '.jsx', '.ts', '.js'];
+    
+    const searchInDir = async (dir: string): Promise<void> => {
+        try {
+            const entries = await fs.readdir(path.join(root, dir), { withFileTypes: true });
+            
+            for (const entry of entries) {
+                if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+                
+                const fullPath = path.join(root, dir, entry.name);
+                const relativePath = `${dir}/${entry.name}`;
+                
+                if (entry.isDirectory()) {
+                    await searchInDir(relativePath);
+                } else if (entry.isFile() && extensions.some(ext => entry.name.endsWith(ext))) {
+                    try {
+                        const fileContent = await fs.readFile(fullPath, 'utf-8');
+                        
+                        // Check if any pattern matches
+                        for (const pattern of uniquePatterns) {
+                            const idx = fileContent.indexOf(pattern);
+                            if (idx !== -1) {
+                                // Count line number
+                                const beforeText = fileContent.slice(0, idx);
+                                const lineNumber = beforeText.split('\n').length;
+                                
+                                // Get snippet (a few lines around the match)
+                                const lines = fileContent.split('\n');
+                                const startLine = Math.max(0, lineNumber - 2);
+                                const endLine = Math.min(lines.length, lineNumber + 3);
+                                const snippet = lines.slice(startLine, endLine).join('\n');
+                                
+                                results.push({
+                                    path: relativePath,
+                                    lineNumber,
+                                    snippet: snippet.slice(0, 500)
+                                });
+                                break; // Found in this file, move to next
+                            }
+                        }
+                    } catch {}
+                }
+                
+                if (results.length >= 5) return; // Limit results
+            }
+        } catch {}
+    };
+    
+    for (const dir of dirs) {
+        await searchInDir(dir);
+        if (results.length >= 5) break;
+    }
+    
+    return results;
 }
