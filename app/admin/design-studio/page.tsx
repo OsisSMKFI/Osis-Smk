@@ -42,7 +42,7 @@ interface ChatMessage {
     content: string;
     timestamp: Date;
     cssCode?: string;
-    actionType?: 'css' | 'component' | 'style' | 'info' | 'action' | 'file-edit';
+    actionType?: 'css' | 'component' | 'style' | 'info' | 'action' | 'file-edit' | 'error';
     targetComponent?: string;
     targetFile?: string; // File path to apply changes
     codeBlocks?: { language: string; code: string; filename?: string }[];
@@ -1125,6 +1125,71 @@ ${sel}:hover {
             
             // Check for casual/short messages that should NOT trigger actions
             const isCasualMessage = /^(hi|hello|halo|hey|hai|apa kabar|selamat|good|ok|oke|okey|thanks|terima kasih|makasih|thx|ya|yup|yap)$/i.test(userQuery.trim());
+            
+            // ⚠️ CRITICAL: Check for APPLY/TERAPKAN command - apply last AI changes
+            const isApplyCommand = /^(terapkan|apply|lakukan|pasang|jalankan|execute)$/i.test(userQuery.trim()) || 
+                                   /\b(terapkan|apply)\s*(sekarang|ini|changes?|perubahan)?\s*$/i.test(queryLower);
+            
+            // Handle APPLY command - apply file changes from last AI message
+            if (isApplyCommand) {
+                // Find the last AI message with fileChanges or cssCode
+                const lastAIWithChanges = [...chatMessages].reverse().find(
+                    msg => msg.role === 'assistant' && (msg.fileChanges?.length || msg.cssCode)
+                );
+                
+                if (lastAIWithChanges) {
+                    setIsAILoading(false);
+                    
+                    // Apply file changes if available
+                    if (lastAIWithChanges.fileChanges && lastAIWithChanges.fileChanges.length > 0) {
+                        try {
+                            await applyFileChanges(lastAIWithChanges.fileChanges);
+                            const fileList = lastAIWithChanges.fileChanges.map(f => `• \`${f.path}\` (${f.action})`).join('\n');
+                            setChatMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'system',
+                                content: `✅ **Berhasil Diterapkan!**\n\n${fileList}\n\n🔄 Refresh halaman untuk melihat perubahan.`,
+                                timestamp: new Date(),
+                                actionType: 'action'
+                            }]);
+                        } catch (err) {
+                            setChatMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'system',
+                                content: `❌ **Gagal menerapkan perubahan:** ${err instanceof Error ? err.message : 'Unknown error'}\n\nCoba klik tombol "Apply" pada kode di atas.`,
+                                timestamp: new Date(),
+                                actionType: 'error'
+                            }]);
+                        }
+                        return;
+                    }
+                    
+                    // Apply CSS if available
+                    if (lastAIWithChanges.cssCode) {
+                        const applyTarget = lastAIWithChanges.targetComponent || selectedComponent || 'global';
+                        await applyCSSFromChat(lastAIWithChanges.cssCode, applyTarget);
+                        setChatMessages(prev => [...prev, {
+                            id: Date.now().toString(),
+                            role: 'system',
+                            content: `✅ **CSS Berhasil Diterapkan!**\n\nTarget: **${DESIGN_REGISTRY[applyTarget]?.displayName || applyTarget}**\n\n🔄 Refresh halaman untuk melihat perubahan.`,
+                            timestamp: new Date(),
+                            actionType: 'action'
+                        }]);
+                        return;
+                    }
+                } else {
+                    // No previous changes to apply
+                    setIsAILoading(false);
+                    setChatMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: 'assistant',
+                        content: `⚠️ **Tidak ada perubahan untuk diterapkan.**\n\nTidak ditemukan kode atau perubahan dari percakapan sebelumnya.\n\n💡 **Tips:**\n• Minta AI untuk membuat kode terlebih dahulu\n• Contoh: "Ubah header menjadi glassmorphism"\n• Lalu ketik "terapkan" untuk menerapkan kode tersebut`,
+                        timestamp: new Date(),
+                        actionType: 'info'
+                    }]);
+                    return;
+                }
+            }
             
             // Handle UNDO request immediately
             if (isCancelOrUndo) {
@@ -3100,7 +3165,12 @@ INGAT: SELALU sertakan PATH FILE dalam code block agar bisa langsung diterapkan!
                                                     <span className="w-2.5 h-2.5 bg-gradient-to-r from-pink-400 to-orange-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                                                     <span className="w-2.5 h-2.5 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                                                 </div>
-                                                <span className="text-xs text-gray-400">Generating CSS...</span>
+                                                <span className="text-xs text-gray-400">
+                                                    {chatInput.toLowerCase().includes('terapkan') || chatInput.toLowerCase().includes('apply') ? '✨ Menerapkan perubahan...' :
+                                                     chatInput.toLowerCase().includes('css') || chatInput.toLowerCase().includes('style') ? '🎨 Generating CSS...' :
+                                                     chatInput.toLowerCase().includes('file') || chatInput.toLowerCase().includes('code') ? '📝 Analyzing code...' :
+                                                     '🤔 Thinking...'}
+                                                </span>
                                             </div>
                                         </div>
                                     </motion.div>

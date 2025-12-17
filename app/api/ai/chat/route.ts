@@ -1897,9 +1897,14 @@ REMINDER: You have ALL the data above. Answer ONLY from this data. DO NOT halluc
       }
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
-    // Apply fact-check if query about identification / sekbid
+    
+    // Apply fact-check ONLY for identification queries and NOT for design_studio context
     let finalReply = result.text;
-    if (/(siapa|sekbid|jabatan|ini siapa|dia siapa)/i.test(userQuery)) {
+    const isDesignStudioContext = context === 'design_studio';
+    const isIdentificationQuery = /(siapa|ini siapa|dia siapa|anggota.*bernama|nama.*anggota)/i.test(userQuery) && 
+                                   !/(terapkan|apply|ubah|edit|perbaiki|buat|design|desain|css|code)/i.test(userQuery);
+    
+    if (isIdentificationQuery && !isDesignStudioContext) {
       finalReply = factCheckMemberSekbid(completeKnowledge, finalReply);
     }
     // Privacy & safety sanitization for public/anonymous users
