@@ -994,56 +994,100 @@ ${sel}:hover {
         setIsAILoading(true);
         
         try {
-            // Analyze what the user is asking for
+            // ═══════════════════════════════════════════════════════════════
+            // 🧠 SMART AI ANALYSIS - Like GitHub Copilot
+            // ═══════════════════════════════════════════════════════════════
             const queryLower = userQuery.toLowerCase();
             
-            // Check if user is asking a question (not requesting CSS)
-            const isQuestion = /\?|dimana|where|bagaimana|how|apa itu|what is|letak|lokasi|file|jelaskan|explain/i.test(userQuery);
-            const isAskingLocation = /dimana|where|letak|lokasi|file apa|di file/i.test(userQuery);
+            // Intent Detection
+            const isQuestion = /\?|dimana|where|bagaimana|how|apa itu|what is|letak|lokasi|file|jelaskan|explain|ada gak|ada tidak|cari|find/i.test(queryLower);
+            const isAskingAboutFile = /file|ada gak|ada tidak|dimana|lokasi|letak|cari file/i.test(queryLower);
+            const isRequestingCode = /buat(kan)?|tambah(kan)?|ubah|ganti|edit|update|create|modify/i.test(queryLower);
+            const isRequestingStyle = /style|css|design|warna|color|glass|neon|gradient|animasi|hover/i.test(queryLower);
             const containsHTML = /<\w+[\s>]|class="|className=/i.test(userQuery);
-            const isRequestingResponsive = /responsif|responsive|mobile|hp|handphone|tablet/i.test(userQuery);
+            
+            // Extract file name if mentioned
+            const fileMatch = userQuery.match(/([a-zA-Z0-9_\-]+\.(tsx?|jsx?|css|json))/i);
+            const mentionedFile = fileMatch ? fileMatch[1] : null;
+            
+            // If user is asking about a specific file - READ IT FIRST
+            if (isAskingAboutFile && mentionedFile) {
+                // Try to find and read the file
+                const possiblePaths = [
+                    `app/${mentionedFile}`,
+                    `app/bidang/${mentionedFile}`,
+                    `app/admin/${mentionedFile}`,
+                    `components/${mentionedFile}`,
+                    `lib/${mentionedFile}`,
+                    mentionedFile
+                ];
+                
+                let foundFile = null;
+                let fileContent = '';
+                
+                for (const filePath of possiblePaths) {
+                    try {
+                        const res = await fetch(`/api/design/files?action=read&file=${encodeURIComponent(filePath)}`);
+                        const data = await res.json();
+                        if (data.success && data.file) {
+                            foundFile = data.file;
+                            fileContent = data.file.content;
+                            break;
+                        }
+                    } catch {}
+                }
+                
+                if (foundFile) {
+                    // File found - give detailed response
+                    const preview = fileContent.slice(0, 1500);
+                    const lineCount = fileContent.split('\n').length;
+                    
+                    setChatMessages(prev => [...prev, {
+                        id: (Date.now() + 1).toString(),
+                        role: 'assistant',
+                        content: `✅ **File Ditemukan!**\n\n📁 **Path:** \`${foundFile.path}\`\n📊 **Ukuran:** ${foundFile.size} bytes (${lineCount} baris)\n\n**Preview Kode:**\n\`\`\`${foundFile.language}\n${preview}${fileContent.length > 1500 ? '\n... (terpotong)' : ''}\n\`\`\`\n\n💡 Klik file di sidebar **Source Files** untuk membuka dan edit!`,
+                        timestamp: new Date(),
+                        actionType: 'info',
+                        codeBlocks: [{ language: foundFile.language, code: fileContent, filename: foundFile.path }]
+                    }]);
+                    setIsAILoading(false);
+                    return;
+                } else {
+                    // Search for file
+                    try {
+                        const searchRes = await fetch(`/api/design/files?action=search&q=${encodeURIComponent(mentionedFile)}`);
+                        const searchData = await searchRes.json();
+                        
+                        if (searchData.results && searchData.results.length > 0) {
+                            const fileList = searchData.results.slice(0, 5).map((f: any) => `• \`${f.path}\``).join('\n');
+                            setChatMessages(prev => [...prev, {
+                                id: (Date.now() + 1).toString(),
+                                role: 'assistant',
+                                content: `🔍 **File "${mentionedFile}" tidak ditemukan langsung, tapi saya menemukan file serupa:**\n\n${fileList}\n\n💡 Klik file di sidebar **Source Files** untuk membukanya!`,
+                                timestamp: new Date(),
+                                actionType: 'info'
+                            }]);
+                            setIsAILoading(false);
+                            return;
+                        }
+                    } catch {}
+                    
+                    setChatMessages(prev => [...prev, {
+                        id: (Date.now() + 1).toString(),
+                        role: 'assistant',
+                        content: `❌ **File "${mentionedFile}" tidak ditemukan.**\n\n📂 Coba cek di sidebar **Source Files** atau gunakan search.\n\nFile yang mungkin maksud kamu:\n• \`app/bidang/page.tsx\` - Halaman Bidang/Sekbid\n• \`components/ProkerSection.tsx\` - Section Program Kerja\n• \`components/Navbar.tsx\` - Navigation Bar`,
+                        timestamp: new Date(),
+                        actionType: 'info'
+                    }]);
+                    setIsAILoading(false);
+                    return;
+                }
+            }
             
             // Auto-detect component from query if not selected
             let targetComponent = selectedComponent;
             let componentInfo = selectedComponent ? DESIGN_REGISTRY[selectedComponent] : null;
             let selector = componentInfo?.selectors?.[0] || '';
-            
-            // If user pasted HTML, try to identify the component
-            let identifiedFromHTML: { component: string; file: string; description: string } | null = null;
-            if (containsHTML) {
-                // Analyze HTML to identify component
-                if (userQuery.includes('sekbid') || userQuery.includes('Sekbid')) {
-                    identifiedFromHTML = {
-                        component: 'Sekbid Filter Tabs',
-                        file: 'app/bidang/page.tsx atau components/ProkerSection.tsx',
-                        description: 'Filter tabs untuk memilih sekbid di halaman Program Kerja'
-                    };
-                } else if (userQuery.includes('navbar') || userQuery.includes('nav')) {
-                    identifiedFromHTML = {
-                        component: 'Navbar',
-                        file: 'components/Navbar.tsx',
-                        description: 'Navigation bar utama website'
-                    };
-                } else if (userQuery.includes('footer')) {
-                    identifiedFromHTML = {
-                        component: 'Footer',
-                        file: 'components/Footer.tsx',
-                        description: 'Footer website'
-                    };
-                } else if (userQuery.includes('hero') || userQuery.includes('banner')) {
-                    identifiedFromHTML = {
-                        component: 'Hero Section',
-                        file: 'components/DynamicHero.tsx',
-                        description: 'Banner utama di homepage'
-                    };
-                } else if (userQuery.includes('card')) {
-                    identifiedFromHTML = {
-                        component: 'Card Component',
-                        file: 'components/cards/PostCard.tsx',
-                        description: 'Card untuk menampilkan konten'
-                    };
-                }
-            }
             
             // Try to detect component from user query
             const detected = detectComponentFromQuery(userQuery);
@@ -1059,61 +1103,6 @@ ${sel}:hover {
                 selector = '.target-component';
             } else {
                 selector = componentInfo?.selectors?.[0] || `[data-component="${targetComponent}"]`;
-            }
-            
-            // SMART RESPONSE: If user is asking about location or pasted HTML
-            if (isAskingLocation || (containsHTML && isQuestion)) {
-                let response = '';
-                
-                if (identifiedFromHTML) {
-                    response = `📍 **Komponen Teridentifikasi:**\n\n`;
-                    response += `**Nama:** ${identifiedFromHTML.component}\n`;
-                    response += `**File:** \`${identifiedFromHTML.file}\`\n`;
-                    response += `**Deskripsi:** ${identifiedFromHTML.description}\n\n`;
-                    
-                    if (isRequestingResponsive) {
-                        response += `📱 **Tips Responsive:**\n`;
-                        response += `Untuk membuat komponen ini lebih responsive, kamu bisa:\n\n`;
-                        response += `1. Buka file \`${identifiedFromHTML.file}\` di VS Code\n`;
-                        response += `2. Gunakan Tailwind breakpoints: \`sm:\`, \`md:\`, \`lg:\`\n`;
-                        response += `3. Contoh perubahan:\n`;
-                        response += `   - \`hidden sm:inline\` → tampil di mobile: \`inline\`\n`;
-                        response += `   - \`px-4\` → lebih kecil: \`px-2 sm:px-4\`\n`;
-                        response += `   - \`gap-2\` → lebih rapat: \`gap-1 sm:gap-2\`\n\n`;
-                        
-                        if (identifiedFromHTML.component.includes('Sekbid')) {
-                            response += `🎨 **Untuk mengubah emoji Sekbid:**\n`;
-                            response += `Cari array yang berisi emoji di file, biasanya seperti:\n`;
-                            response += `\`\`\`tsx
-const sekbidList = [
-  { id: 1, name: 'Keagamaan', emoji: '🎭' },
-  { id: 2, name: 'Kaderisasi', emoji: '📚' },
-  { id: 3, name: 'Akademik', emoji: '🏃' },
-  { id: 4, name: 'Ekonomi Kreatif', emoji: '💡' },
-  { id: 5, name: 'Kesehatan', emoji: '🎨' },
-  { id: 6, name: 'Kominfo', emoji: '🌿' },
-];
-\`\`\`\n\n`;
-                            response += `Ganti emoji sesuai keinginan! 🚀`;
-                        }
-                    }
-                } else if (containsHTML) {
-                    response = `🔍 **Analisis HTML:**\n\n`;
-                    response += `Saya melihat kamu menempelkan kode HTML. `;
-                    response += `Untuk membantu lebih baik, beritahu saya:\n\n`;
-                    response += `1. Dari halaman mana komponen ini?\n`;
-                    response += `2. Apa yang ingin kamu ubah?\n\n`;
-                    response += `💡 **Tip:** Kamu bisa mencari file dengan fitur Source Files di sidebar kiri!`;
-                }
-                
-                setChatMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    content: response,
-                    timestamp: new Date(),
-                    actionType: 'info'
-                }]);
-                return;
             }
             
             // ONLY use smart CSS patterns if user is EXPLICITLY requesting a style
@@ -1140,69 +1129,91 @@ const sekbidList = [
             
             // Get current source file context if open
             const currentFileContext = openSourceFile ? `
-File yang sedang dibuka: ${openSourceFile.path}
-Bahasa: ${openSourceFile.language}
-Isi file (ringkasan):
+FILE YANG SEDANG DIBUKA:
+- Path: ${openSourceFile.path}
+- Bahasa: ${openSourceFile.language}
+- Isi:
 \`\`\`${openSourceFile.language}
-${sourceCode.slice(0, 2000)}${sourceCode.length > 2000 ? '\n... (terpotong)' : ''}
+${sourceCode.slice(0, 3000)}${sourceCode.length > 3000 ? '\n... (dipotong karena terlalu panjang)' : ''}
 \`\`\`
 ` : '';
             
-            // Build enhanced prompt for AI - send to real AI for complex queries
+            // Build enhanced prompt for AI - LIKE GITHUB COPILOT
             const enhancedMessage = `
-Kamu adalah AI Design Studio Assistant - SAMA PERSIS seperti GitHub Copilot.
+Kamu adalah AI Design Studio Assistant yang SANGAT PINTAR seperti GitHub Copilot.
 Kamu bisa membantu dengan SEMUA jenis kode: TSX, TS, CSS, Tailwind, dan lainnya.
 
-${containsHTML ? `
-User menempelkan HTML code. Analisis dan identifikasi:
-1. Komponen apa ini
-2. Di file mana lokasinya (berikan path lengkap)
-3. Bagaimana cara mengubahnya dengan contoh kode
-` : ''}
+═══════════════════════════════════════════════════════════════
+⚠️ INSTRUKSI PENTING - BACA DENGAN TELITI:
+═══════════════════════════════════════════════════════════════
+
+1. PAHAMI DULU apa yang user minta:
+   - Jika user BERTANYA (ada "?", "dimana", "ada gak", "bagaimana") → JAWAB pertanyaannya!
+   - Jika user MINTA KODE → Berikan kode yang bisa langsung diterapkan
+   - Jika user MINTA STYLE → Berikan CSS atau Tailwind classes
+   - JANGAN berikan CSS jika user tidak minta style!
+
+2. JANGAN PERNAH:
+   - Memberikan respons yang tidak sesuai dengan pertanyaan
+   - Menerapkan CSS jika user hanya bertanya
+   - Menjawab dengan template yang tidak relevan
+   - Mengabaikan konteks percakapan
+
+3. FORMAT RESPONS:
+   - Bahasa Indonesia yang ramah dan jelas
+   - Berikan path file yang tepat
+   - Sertakan kode dalam code block yang benar
+
+═══════════════════════════════════════════════════════════════
+KONTEKS:
+═══════════════════════════════════════════════════════════════
 
 ${currentFileContext}
 
 ${targetComponent ? `
-Komponen target: ${targetComponent}
-Selector CSS: ${selector}
-Kategori: ${componentInfo?.category || 'other'}
-Deskripsi: ${componentInfo?.description || ''}
+KOMPONEN TARGET:
+- Nama: ${targetComponent}
+- Selector: ${selector}
+- Deskripsi: ${componentInfo?.description || 'N/A'}
 ` : ''}
 
 ${code ? `CSS Override saat ini:\n\`\`\`css\n${code}\n\`\`\`` : ''}
 
-Permintaan user: ${userQuery}
-
-STRUKTUR FOLDER WEBSITE:
-- components/ → Komponen React (Navbar.tsx, Footer.tsx, DynamicHero.tsx, dll)
-- app/ → Pages dan API routes
-- app/globals.css → Global styles
-- tailwind.config.ts → Tailwind configuration
+═══════════════════════════════════════════════════════════════
+STRUKTUR FOLDER PROJECT:
+═══════════════════════════════════════════════════════════════
+- app/ → Halaman (page.tsx)
+  - app/page.tsx → Homepage
+  - app/bidang/page.tsx → Halaman Program Kerja/Sekbid
+  - app/about/page.tsx → Halaman About
+  - app/gallery/page.tsx → Gallery
+  - app/admin/ → Dashboard Admin
+  - app/globals.css → Global styles
+  
+- components/ → Komponen React
+  - components/Navbar.tsx → Navigation bar
+  - components/Footer.tsx → Footer
+  - components/DynamicHero.tsx → Hero section
+  - components/cards/ → Card components
+  - components/ui/ → UI components (Button, Input, dll)
+  
 - lib/ → Utilities dan helpers
+- hooks/ → React hooks
+- contexts/ → React contexts
+- types/ → TypeScript types
 
-INSTRUKSI PENTING:
-1. Respons dalam bahasa Indonesia yang ramah
-2. Jika user BERTANYA, JAWAB pertanyaannya dengan jelas
-3. Jika diminta kode, berikan dalam code block yang tepat:
-   - TSX/JSX: \`\`\`tsx ... \`\`\`
-   - TypeScript: \`\`\`typescript ... \`\`\`
-   - CSS: \`\`\`css ... \`\`\`
-   - Tailwind classes langsung di JSX
-4. SELALU sertakan file path jika memberikan kode untuk file tertentu
-5. Untuk Tailwind, jelaskan classes yang digunakan
-6. Untuk responsive, gunakan breakpoints: sm:, md:, lg:, xl:
-7. Jika bisa, berikan solusi LENGKAP yang bisa langsung diterapkan
+═══════════════════════════════════════════════════════════════
+PERMINTAAN USER:
+═══════════════════════════════════════════════════════════════
+${userQuery}
 
-FORMAT KODE UNTUK APPLY:
-Jika memberikan kode yang harus diterapkan ke file, gunakan format:
-\`\`\`tsx:path/to/file.tsx
-// kode lengkap
-\`\`\`
-
-CONTOH RESPONS YANG BAIK:
-- "Untuk membuat responsive, ubah className di file \`components/Navbar.tsx\` seperti ini: ..."
-- "Berikut CSS untuk glassmorphism yang bisa di-apply: ..."
-- "File ini ada di \`app/bidang/page.tsx\`, berikut cara mengubahnya: ..."`;
+═══════════════════════════════════════════════════════════════
+CARA MENJAWAB:
+═══════════════════════════════════════════════════════════════
+- Jika user bertanya "ada gak" atau "dimana" → Cari dan berikan info file
+- Jika user minta ubah kode → Berikan kode dengan format: \`\`\`tsx:path/file.tsx
+- Jika user minta style → Berikan CSS yang sesuai
+- SELALU berikan solusi yang bisa langsung diterapkan!`;
             
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
