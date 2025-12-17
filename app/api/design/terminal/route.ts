@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exec, spawn } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
+import { execOnDevServer, isProduction, hasDevServer } from '@/lib/dev-server-client';
 
 const execAsync = promisify(exec);
 
@@ -17,13 +18,6 @@ const execAsync = promisify(exec);
  * - git commands
  * - File operations (mkdir, rm, mv, cp)
  */
-
-// Check if we're in production (Vercel)
-const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-
-// Dev Server configuration
-const DEV_SERVER_URL = process.env.DEV_SERVER_URL;
-const DEV_SERVER_TOKEN = process.env.DEV_SERVER_TOKEN;
 
 // Whitelist of allowed commands
 const ALLOWED_COMMANDS = [
@@ -86,44 +80,18 @@ export async function POST(request: NextRequest) {
         // 🌐 PRODUCTION MODE: Forward to Dev Server
         // ═══════════════════════════════════════════════════════════════════
         if (isProduction) {
-            // Check if Dev Server is configured
-            if (DEV_SERVER_URL && DEV_SERVER_TOKEN) {
-                console.log(`[Terminal API] Forwarding to Dev Server: ${DEV_SERVER_URL}`);
-                
-                try {
-                    const devRes = await fetch(`${DEV_SERVER_URL}/api/exec`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-auth-token': DEV_SERVER_TOKEN
-                        },
-                        body: JSON.stringify({ command, cwd })
-                    });
-                    
-                    const devData = await devRes.json();
-                    
-                    return NextResponse.json({
-                        ...devData,
-                        source: 'dev-server'
-                    });
-                    
-                } catch (devErr) {
-                    console.error('[Terminal API] Dev Server error:', devErr);
-                    return NextResponse.json({
-                        success: false,
-                        error: `Dev Server error: ${devErr instanceof Error ? devErr.message : 'Unknown error'}`,
-                        hint: 'Make sure Dev Server is running on Railway'
-                    }, { status: 200 });
-                }
+            if (!hasDevServer) {
+                return NextResponse.json({
+                    success: false,
+                    error: '⚠️ Terminal commands require Dev Server.\n\nDev Server belum dikonfigurasi.\n\n💡 Setup Dev Server:\n1. Deploy dev-server/ ke Railway\n2. Set DEV_SERVER_URL dan DEV_SERVER_TOKEN di Vercel',
+                    isProduction: true,
+                    hint: 'Run commands locally, or setup Dev Server'
+                }, { status: 200 });
             }
             
-            // No Dev Server configured
-            return NextResponse.json({
-                success: false,
-                error: '⚠️ Terminal commands require Dev Server.\n\nDev Server belum dikonfigurasi.\n\n💡 Setup Dev Server:\n1. Deploy dev-server/ ke Railway\n2. Set DEV_SERVER_URL dan DEV_SERVER_TOKEN di Vercel',
-                isProduction: true,
-                hint: 'Run commands locally, or setup Dev Server'
-            }, { status: 200 });
+            console.log(`[Terminal API] Forwarding to Dev Server`);
+            const result = await execOnDevServer(command, cwd);
+            return NextResponse.json(result);
         }
         
         // ═══════════════════════════════════════════════════════════════════
