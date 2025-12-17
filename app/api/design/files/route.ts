@@ -448,41 +448,80 @@ async function searchFiles(root: string, query: string): Promise<any[]> {
 }
 
 // Search files by content (for finding where HTML code is located)
-async function searchByContent(root: string, content: string): Promise<{ path: string; lineNumber: number; snippet: string }[]> {
-    const results: { path: string; lineNumber: number; snippet: string }[] = [];
+async function searchByContent(root: string, content: string): Promise<{ path: string; lineNumber: number; snippet: string; matchScore: number }[]> {
+    const results: { path: string; lineNumber: number; snippet: string; matchScore: number }[] = [];
     
-    // Extract key identifiable parts from the content
-    const searchPatterns: string[] = [];
+    // ═══════════════════════════════════════════════════════════════
+    // 🧠 SMART CONTENT EXTRACTION - More accurate pattern matching
+    // ═══════════════════════════════════════════════════════════════
     
-    // Extract class names
+    const searchPatterns: { pattern: string; weight: number; type: string }[] = [];
+    
+    // Priority 1: Extract SPECIFIC text content (highest weight) - like "Sekbid 1 - Keagamaan"
+    const textMatches = content.match(/>([^<]{5,80})</g);
+    if (textMatches) {
+        textMatches.forEach(m => {
+            const text = m.slice(1, -1).trim();
+            // Prioritize text with meaningful words (not just styling keywords)
+            if (text && text.length > 10 && !/^(bg-|text-|flex|grid|px-|py-)/i.test(text)) {
+                searchPatterns.push({ pattern: text, weight: 10, type: 'text' });
+            } else if (text && text.length > 5) {
+                searchPatterns.push({ pattern: text, weight: 5, type: 'text' });
+            }
+        });
+    }
+    
+    // Priority 2: Extract UNIQUE class combinations (not individual generic classes)
     const classMatches = content.match(/(?:class|className)=["']([^"']+)["']/g);
     if (classMatches) {
         classMatches.forEach(m => {
             const classes = m.match(/["']([^"']+)["']/);
             if (classes && classes[1]) {
-                // Get the most unique class (longer, more specific)
-                const classList = classes[1].split(/\s+/).filter(c => c.length > 5);
-                classList.forEach(c => searchPatterns.push(c));
+                // Get the FULL class string as a pattern (more unique)
+                const fullClassString = classes[1];
+                if (fullClassString.length > 30) {
+                    // Long class strings are more unique
+                    searchPatterns.push({ pattern: fullClassString, weight: 8, type: 'fullClass' });
+                }
+                
+                // Also extract specific/unique individual classes
+                const classList = classes[1].split(/\s+/);
+                classList.forEach(c => {
+                    // Skip generic utility classes, keep specific ones
+                    const genericPatterns = /^(flex|grid|bg-|text-|px-|py-|p-|m-|mt-|mb-|ml-|mr-|mx-|my-|rounded|transition|hover:|dark:|sm:|md:|lg:|xl:|w-|h-)$/;
+                    if (c.length > 10 && !genericPatterns.test(c)) {
+                        searchPatterns.push({ pattern: c, weight: 3, type: 'class' });
+                    }
+                });
             }
         });
     }
     
-    // Extract element text content
-    const textMatches = content.match(/>([^<]{5,50})</g);
-    if (textMatches) {
-        textMatches.forEach(m => {
-            const text = m.slice(1, -1).trim();
-            if (text && text.length > 5) searchPatterns.push(text);
+    // Priority 3: Extract function/component names
+    const funcMatches = content.match(/function\s+(\w+)|const\s+(\w+)\s*=/g);
+    if (funcMatches) {
+        funcMatches.forEach(m => {
+            const name = m.match(/(?:function|const)\s+(\w+)/);
+            if (name && name[1] && name[1].length > 3) {
+                searchPatterns.push({ pattern: name[1], weight: 7, type: 'function' });
+            }
         });
     }
     
-    // Use first few unique patterns
-    const uniquePatterns = [...new Set(searchPatterns)].slice(0, 3);
-    if (uniquePatterns.length === 0) return results;
+    // Sort patterns by weight and take top unique ones
+    const sortedPatterns = searchPatterns
+        .sort((a, b) => b.weight - a.weight)
+        .filter((p, i, arr) => arr.findIndex(x => x.pattern === p.pattern) === i)
+        .slice(0, 5);
     
-    // Search directories
+    if (sortedPatterns.length === 0) return results;
+    
+    // Search directories - prioritize components and app pages
     const dirs = ['components', 'app'];
     const extensions = ['.tsx', '.jsx', '.ts', '.js'];
+    
+    // Skip files that are unlikely to be the source
+    const skipFiles = ['WebGLIntro.tsx', 'LoadingScreen.tsx', 'ParticleBackground.tsx', '3d/', 'animations/'];
     
     const searchInDir = async (dir: string): Promise<void> => {
         try {
@@ -494,46 +533,63 @@ async function searchByContent(root: string, content: string): Promise<{ path: s
                 const fullPath = path.join(root, dir, entry.name);
                 const relativePath = `${dir}/${entry.name}`;
                 
+                // Skip unlikely source files
+                if (skipFiles.some(skip => relativePath.includes(skip))) continue;
+                
                 if (entry.isDirectory()) {
                     await searchInDir(relativePath);
                 } else if (entry.isFile() && extensions.some(ext => entry.name.endsWith(ext))) {
                     try {
                         const fileContent = await fs.readFile(fullPath, 'utf-8');
                         
-                        // Check if any pattern matches
-                        for (const pattern of uniquePatterns) {
+                        // Calculate match score based on weighted patterns
+                        let matchScore = 0;
+                        let firstMatchLine = 0;
+                        let bestSnippet = '';
+                        
+                        for (const { pattern, weight } of sortedPatterns) {
                             const idx = fileContent.indexOf(pattern);
                             if (idx !== -1) {
-                                // Count line number
-                                const beforeText = fileContent.slice(0, idx);
-                                const lineNumber = beforeText.split('\n').length;
+                                matchScore += weight;
                                 
-                                // Get snippet (a few lines around the match)
-                                const lines = fileContent.split('\n');
-                                const startLine = Math.max(0, lineNumber - 2);
-                                const endLine = Math.min(lines.length, lineNumber + 3);
-                                const snippet = lines.slice(startLine, endLine).join('\n');
-                                
-                                results.push({
-                                    path: relativePath,
-                                    lineNumber,
-                                    snippet: snippet.slice(0, 500)
-                                });
-                                break; // Found in this file, move to next
+                                // Track first match for line number
+                                if (firstMatchLine === 0) {
+                                    const beforeText = fileContent.slice(0, idx);
+                                    firstMatchLine = beforeText.split('\n').length;
+                                    
+                                    // Get snippet
+                                    const lines = fileContent.split('\n');
+                                    const startLine = Math.max(0, firstMatchLine - 3);
+                                    const endLine = Math.min(lines.length, firstMatchLine + 5);
+                                    bestSnippet = lines.slice(startLine, endLine).join('\n');
+                                }
                             }
+                        }
+                        
+                        // Only include files with significant matches
+                        if (matchScore >= 5) {
+                            results.push({
+                                path: relativePath,
+                                lineNumber: firstMatchLine,
+                                snippet: bestSnippet.slice(0, 500),
+                                matchScore
+                            });
                         }
                     } catch {}
                 }
                 
-                if (results.length >= 5) return; // Limit results
+                if (results.length >= 10) return; // Get more candidates for sorting
             }
         } catch {}
     };
     
     for (const dir of dirs) {
         await searchInDir(dir);
-        if (results.length >= 5) break;
     }
     
-    return results;
+    // Sort results by match score (highest first)
+    results.sort((a, b) => b.matchScore - a.matchScore);
+    
+    // Return top 5 results
+    return results.slice(0, 5);
 }

@@ -1130,33 +1130,57 @@ ${sel}:hover {
             // ═══════════════════════════════════════════════════════════════
             // 🔍 SMART HTML DETECTION: Find source file for pasted HTML
             // ═══════════════════════════════════════════════════════════════
-            if (containsHTML && (isRequestingCode || /ubah|ganti|perbaiki|fix|improve|redesign|update/i.test(queryLower))) {
+            // Only search if:
+            // 1. User pasted HTML/JSX code
+            // 2. User is requesting code changes (ubah, ganti, perbaiki, etc.)
+            // 3. The content has MEANINGFUL text (not just styling)
+            const hasMeaningfulText = /Sekbid|Anggota|Keagamaan|Kaderisasi|Akademik|Kominfo|Kesehatan|Ekonomi|Filter|Semua|Gallery|Galeri|People|Members/i.test(userQuery);
+            
+            if (containsHTML && (isRequestingCode || /ubah|ganti|perbaiki|fix|improve|redesign|update|bagus/i.test(queryLower)) && hasMeaningfulText) {
                 // User pasted HTML and wants to modify it - let's find the source file
                 try {
                     const searchRes = await fetch(`/api/design/files?action=search-content&content=${encodeURIComponent(userQuery.slice(0, 500))}`);
                     const searchData = await searchRes.json();
                     
                     if (searchData.success && searchData.results && searchData.results.length > 0) {
+                        // Get the BEST match (highest score)
                         const foundFile = searchData.results[0];
+                        const matchScore = foundFile.matchScore || 0;
                         
-                        // Read the full file content
-                        const fileRes = await fetch(`/api/design/files?action=read&file=${encodeURIComponent(foundFile.path)}`);
-                        const fileData = await fileRes.json();
-                        
-                        if (fileData.success && fileData.file) {
-                            // Add file context to chat
+                        // Only proceed if match score is high enough (confident match)
+                        if (matchScore >= 8) {
+                            // Read the full file content
+                            const fileRes = await fetch(`/api/design/files?action=read&file=${encodeURIComponent(foundFile.path)}`);
+                            const fileData = await fileRes.json();
+                            
+                            if (fileData.success && fileData.file) {
+                                // Add file context to chat
+                                setChatMessages(prev => [...prev, {
+                                    id: (Date.now() + 1).toString(),
+                                    role: 'system',
+                                    content: `🔍 **File Terdeteksi dengan Akurat!** (confidence: ${matchScore}/15)\n\n📍 Kode yang kamu tempelkan ditemukan di:\n📂 \`${foundFile.path}\` (baris ~${foundFile.lineNumber})\n\nSedang menganalisis untuk memberikan solusi...`,
+                                    timestamp: new Date(),
+                                    actionType: 'info'
+                                }]);
+                                
+                                // Store file info for the AI context - use full file data
+                                setOpenSourceFile(fileData.file);
+                                setSourceCode(fileData.file.content);
+                                setOriginalSourceCode(fileData.file.content);
+                            }
+                        } else if (matchScore >= 3 && searchData.results.length > 0) {
+                            // Low confidence - show possible matches but ask user to confirm
+                            const possibleFiles = searchData.results.slice(0, 3).map((r: { path: string; matchScore: number }) => 
+                                `• \`${r.path}\` (score: ${r.matchScore})`
+                            ).join('\n');
+                            
                             setChatMessages(prev => [...prev, {
                                 id: (Date.now() + 1).toString(),
                                 role: 'system',
-                                content: `🔍 **File Terdeteksi!**\n\n📍 Kode yang kamu tempelkan ditemukan di:\n📂 \`${foundFile.path}\` (baris ~${foundFile.lineNumber})\n\nSedang menganalisis untuk memberikan solusi...`,
+                                content: `🔎 **Kemungkinan Lokasi File:**\n\n${possibleFiles}\n\n⚠️ Confidence rendah. Mohon konfirmasi file mana yang ingin diubah, atau sebutkan nama file-nya.`,
                                 timestamp: new Date(),
                                 actionType: 'info'
                             }]);
-                            
-                            // Store file info for the AI context - use full file data
-                            setOpenSourceFile(fileData.file);
-                            setSourceCode(fileData.file.content);
-                            setOriginalSourceCode(fileData.file.content);
                         }
                     }
                 } catch (e) {
@@ -1489,14 +1513,46 @@ ${targetComponent ? `
 ${userQuery}
 
 ═══════════════════════════════════════════════════════════════════════════
+⚠️ ATURAN PENTING (WAJIB DIIKUTI!)
+═══════════════════════════════════════════════════════════════════════════
+
+1. ❌ JANGAN pernah menerapkan kode ke file yang SALAH
+   - Jika user paste HTML sekbid filter, cari di gallery/page.tsx atau PeopleSectionsClient.tsx
+   - JANGAN apply ke WebGLIntro.tsx, LoadingScreen.tsx, atau file 3D lainnya
+   
+2. ✅ PASTIKAN file yang benar SEBELUM memberikan kode:
+   - Filter sekbid → app/gallery/page.tsx atau components/PeopleSectionsClient.tsx
+   - Navbar → components/Navbar.tsx
+   - Footer → components/Footer.tsx
+   - Hero → components/DynamicHero.tsx
+   - Posts/Berita → app/posts/page.tsx
+   
+3. 📝 JELASKAN dengan detail:
+   - Apa yang akan diubah
+   - Di file mana
+   - Mengapa perubahan ini baik
+   - Bagaimana hasilnya akan terlihat
+   
+4. 🔒 JIKA TIDAK YAKIN lokasi file:
+   - TANYAKAN ke user: "File mana yang ingin kamu ubah?"
+   - Berikan PILIHAN file yang mungkin
+   - JANGAN langsung apply ke sembarang file
+
+5. ✨ JIKA user minta "seperti halaman anggota/people":
+   - Lihat design di PeopleSectionsClient.tsx (sudah upgraded)
+   - Salin pattern: glassmorphism, gradient active, emoji icons
+   - Apply ke file yang BENAR
+
+═══════════════════════════════════════════════════════════════════════════
 🎨 COMMUNICATION STYLE
 ═══════════════════════════════════════════════════════════════════════════
 
 • Profesional, ramah, dan SANGAT kompeten
 • Berikan solusi LENGKAP dengan kode yang bisa langsung di-apply
-• Jelaskan APA yang diubah dan MENGAPA
+• Jelaskan APA yang diubah dan MENGAPA secara DETAIL
 • Gunakan emoji untuk visual clarity
 • Format response dengan rapi (headers, bullets, code blocks)
+• SELALU konfirmasi file yang akan diubah sebelum memberikan kode
 
 INGAT: SELALU sertakan PATH FILE dalam code block agar bisa langsung diterapkan!`;
             
