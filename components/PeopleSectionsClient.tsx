@@ -321,9 +321,10 @@ export default function PeopleSectionsClient({ members }: Props) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
           >
-            {/* Elegant Tab Navigation */}
-            <div className="relative flex justify-center">
-              <div className="inline-flex items-center p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-purple-500/10 dark:shadow-purple-500/5 border border-gray-100/50 dark:border-slate-700/50">
+            {/* Elegant Tab Navigation - Responsive */}
+            <div className="relative flex justify-center px-4">
+              {/* Desktop: Horizontal Tabs */}
+              <div className="hidden sm:inline-flex items-center p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-purple-500/10 dark:shadow-purple-500/5 border border-gray-100/50 dark:border-slate-700/50">
                 {/* All Tab */}
                 <button
                   onClick={() => setSelectedSekbid('all')}
@@ -351,15 +352,16 @@ export default function PeopleSectionsClient({ members }: Props) {
                 {/* Divider */}
                 <div className="w-px h-6 bg-gray-200 dark:bg-slate-600 mx-1" />
                 
-                {/* Sekbid Tabs */}
+                {/* Sekbid Tabs - Desktop */}
                 {availableSekbids.map((num, idx) => {
                   const key = `num-${num}`;
                   const meta = groupMeta.get(key);
                   const label = meta?.label || `Sekbid ${num}`;
-                  // Extract full label for tooltip
                   const fullLabel = label;
-                  // Get icon based on sekbid number
-                  const icons = ['🎭', '📚', '🏃', '💡', '🎨', '🌿'];
+                  // ⚠️ ICON EMOJI PER SEKBID - SESUAIKAN DI SINI:
+                  // Sekbid 1: Keagamaan, Sekbid 2: Kaderisasi, Sekbid 3: Akademik
+                  // Sekbid 4: Ekonomi Kreatif, Sekbid 5: Kesehatan, Sekbid 6: Kominfo
+                  const icons = ['🕌', '👥', '📖', '💡', '🏥', '💻'];
                   const icon = icons[(num - 1) % icons.length];
                   
                   return (
@@ -382,11 +384,60 @@ export default function PeopleSectionsClient({ members }: Props) {
                       )}
                       <span className="relative z-10 flex items-center gap-1.5">
                         <span className="text-base">{icon}</span>
-                        <span className="hidden sm:inline">{num}</span>
+                        <span>{num}</span>
                       </span>
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Mobile: Grid Layout */}
+              <div className="sm:hidden w-full max-w-sm">
+                <div className="grid grid-cols-4 gap-2 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-purple-500/10 dark:shadow-purple-500/5 border border-gray-100/50 dark:border-slate-700/50">
+                  {/* All Tab - Mobile */}
+                  <button
+                    onClick={() => setSelectedSekbid('all')}
+                    className={`relative col-span-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                      selectedSekbid === 'all'
+                        ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                      </svg>
+                      {t('people.filterAll') || 'Semua Sekbid'}
+                    </span>
+                  </button>
+                  
+                  {/* Sekbid Tabs - Mobile Grid (2 per row) */}
+                  {availableSekbids.map((num) => {
+                    const key = `num-${num}`;
+                    const meta = groupMeta.get(key);
+                    const shortLabel = meta?.label?.split('-')[1]?.trim() || `Sekbid ${num}`;
+                    // ⚠️ ICON EMOJI PER SEKBID - SESUAIKAN DI SINI:
+                    const icons = ['🕌', '👥', '📖', '💡', '🏥', '💻'];
+                    const icon = icons[(num - 1) % icons.length];
+                    
+                    return (
+                      <button
+                        key={num}
+                        onClick={() => setSelectedSekbid(num)}
+                        className={`relative col-span-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-300 ${
+                          selectedSekbid === num
+                            ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        <span className="flex items-center justify-center gap-1.5">
+                          <span className="text-lg">{icon}</span>
+                          <span className="truncate">{shortLabel}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             
