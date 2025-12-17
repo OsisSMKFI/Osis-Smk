@@ -57,8 +57,22 @@ app.use(express.json({ limit: '10mb' }));
 // Auth middleware
 const authMiddleware = (req: any, res: any, next: any) => {
     const token = req.headers['x-auth-token'] || req.query.token;
-    if (token !== AUTH_TOKEN) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    const trimmedToken = token?.trim();
+    const expectedToken = AUTH_TOKEN?.trim();
+    
+    console.log(`Auth check - received: "${trimmedToken?.slice(0, 4)}...${trimmedToken?.slice(-4)}", expected: "${expectedToken?.slice(0, 4)}...${expectedToken?.slice(-4)}"`);
+    
+    if (trimmedToken !== expectedToken) {
+        return res.status(401).json({ 
+            success: false, 
+            error: 'Unauthorized',
+            debug: {
+                receivedLength: trimmedToken?.length || 0,
+                expectedLength: expectedToken?.length || 0,
+                receivedPreview: trimmedToken ? `${trimmedToken.slice(0, 4)}...` : 'none',
+                expectedPreview: expectedToken ? `${expectedToken.slice(0, 4)}...` : 'none'
+            }
+        });
     }
     next();
 };
