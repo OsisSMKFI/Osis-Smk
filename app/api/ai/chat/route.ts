@@ -809,10 +809,58 @@ export async function POST(request: NextRequest) {
     
     const isForwardRequest = forwardPatterns.some(p => p.test(userQuery));
     
+    // Helper: Clean message from HTML/CSS for forwarding
+    const cleanMessageForForward = (msg: string): string => {
+      let cleaned = msg;
+      // Remove HTML tags
+      cleaned = cleaned.replace(/<[^>]*>/g, '');
+      // Remove CSS-like content (class="...", style="...")
+      cleaned = cleaned.replace(/class="[^"]*"/g, '').replace(/style="[^"]*"/g, '');
+      // Remove excessive whitespace
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      // Truncate long messages
+      if (cleaned.length > 300) {
+        cleaned = cleaned.slice(0, 300) + '...';
+      }
+      return cleaned;
+    };
+    
+    // Helper: Summarize user intent for forwarding
+    const summarizeUserIntent = (messages: Array<{role: string; content: string}>): string => {
+      // Get last few user messages and extract the main request
+      const userMsgs = messages.filter(m => m.role === 'user').slice(-3);
+      if (userMsgs.length === 0) return '';
+      
+      // Try to find the main request/complaint
+      const combinedText = userMsgs.map(m => m.content).join(' ');
+      
+      // Look for key intent phrases
+      const intents: string[] = [];
+      if (/desain|design|tampilan|lebih (bagus|keren|modern|indah)/i.test(combinedText)) {
+        intents.push('Permintaan perubahan desain/tampilan website');
+      }
+      if (/error|bug|rusak|tidak (bisa|berfungsi)/i.test(combinedText)) {
+        intents.push('Laporan error/bug');
+      }
+      if (/saran|masukan|feedback/i.test(combinedText)) {
+        intents.push('Saran/masukan untuk website');
+      }
+      if (/pertanyaan|tanya/i.test(combinedText)) {
+        intents.push('Pertanyaan yang perlu dijawab admin');
+      }
+      
+      // Get cleaned content
+      const cleanedContent = cleanMessageForForward(combinedText);
+      
+      if (intents.length > 0) {
+        return `[${intents.join(', ')}]\n\nDetail: ${cleanedContent}`;
+      }
+      return cleanedContent;
+    };
+    
     if (isForwardRequest && mode === 'public') {
-      // Extract what to forward - look at previous messages for context
-      const previousMessages = baseMessages.slice(-5).filter(m => m.role === 'user').map(m => m.content).join(' ');
-      const messageToForward = previousMessages || userQuery;
+      // Extract and clean what to forward
+      const messageToForward = summarizeUserIntent(baseMessages);
       
       // Determine target
       let target = 'admin'; // default
@@ -822,14 +870,16 @@ export async function POST(request: NextRequest) {
       // Actually call the forward API
       try {
         const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
+        const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        
         const forwardRes = await fetch(`${baseUrl}/api/notifications/forward`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             target,
-            message: messageToForward.slice(0, 500),
+            message: messageToForward,
             urgent: /urgent|penting|segera/i.test(userQuery),
-            sessionId: sessionId || 'web-' + Date.now(),
+            sessionId: userSessionId,
             senderName: session?.user?.name || 'Pengunjung Website',
             timestamp: new Date().toISOString(),
           }),
@@ -839,25 +889,95 @@ export async function POST(request: NextRequest) {
         
         if (forwardResult.success) {
           const targetName = target === 'super_admin' ? 'Super Admin' : target === 'osis' ? 'OSIS' : 'Admin';
+          // Show cleaner confirmation
+          const shortSummary = messageToForward.split('\n')[0].slice(0, 100);
           return NextResponse.json({
-            reply: `✅ **Pesan Berhasil Diteruskan!**
+            reply: `✅ **Pesan Berhasil Diteruskan ke ${targetName}!** 📨
 
-Saya sudah menyampaikan pesan kamu ke ${targetName}. 📨
+📋 **Ringkasan:** ${shortSummary}
 
-📝 **Isi pesan yang diteruskan:**
-"${messageToForward.slice(0, 200)}${messageToForward.length > 200 ? '...' : ''}"
+⏳ ${targetName} akan menerima notifikasi dan dapat membalas langsung ke chat ini.
 
-⏳ ${targetName} akan melihat pesan ini di panel notifikasi mereka dan dapat membalas langsung.
-
-💡 *Tip: Kamu bisa terus chat di sini, dan jika ${targetName} membalas, pesannya akan muncul di chat ini!*`,
+💡 Balasan akan otomatis muncul di sini jika ${targetName} merespons.`,
             forwarded: true,
             forwardTarget: target,
+            sessionId: userSessionId,
           });
         } else {
           console.error('[AI Chat] Forward failed:', forwardResult);
         }
       } catch (forwardErr) {
         console.error('[AI Chat] Forward error:', forwardErr);
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🎨 AUTO-APPLY DESIGN REQUEST - When user confirms design change
+    // ═══════════════════════════════════════════════════════════════════════════
+    const applyDesignPatterns = [
+      /ayo\s+(terapkan|coba|lakukan)/i,
+      /terapkan\s+(saja|aja|dong)/i,
+      /coba\s+terapkan/i,
+      /lakukan\s+(saja|aja)/i,
+      /apply\s+(design|it)/i,
+      /setuju.*terapkan/i,
+    ];
+    
+    const isApplyDesignRequest = applyDesignPatterns.some(p => p.test(userQuery));
+    
+    // Check if previous conversation was about design
+    const previousMsgs = baseMessages.slice(-6);
+    const wasDiscussingDesign = previousMsgs.some(m => 
+      /(desain|design|tampilan|css|style|warna|font|border|modern|indah|bagus)/i.test(m.content)
+    );
+    
+    if (isApplyDesignRequest && wasDiscussingDesign && mode === 'public') {
+      // User wants to apply design changes - forward to admin as design request
+      try {
+        const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
+        const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        
+        // Extract design context from conversation
+        const designContext = previousMsgs
+          .filter(m => m.role === 'user' || m.role === 'assistant')
+          .map(m => m.content)
+          .join('\n')
+          .slice(-1000);
+        
+        const forwardRes = await fetch(`${baseUrl}/api/notifications/forward`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target: 'super_admin',
+            message: `🎨 [DESIGN REQUEST]\n\nUser meminta perubahan desain website.\n\nKonteks percakapan:\n${cleanMessageForForward(designContext)}`,
+            urgent: false,
+            sessionId: userSessionId,
+            senderName: session?.user?.name || 'Pengunjung Website',
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        
+        if (forwardRes.ok) {
+          return NextResponse.json({
+            reply: `🎨 **Permintaan Desain Diteruskan!**
+
+Saya sudah mengirimkan permintaan perubahan desain kamu ke Super Admin. 👨‍💻
+
+📋 **Yang akan dilakukan:**
+• Super Admin akan review permintaan desain
+• Jika disetujui, perubahan akan diterapkan ke website
+• Kamu akan melihat hasilnya saat website di-update
+
+⏳ Mohon tunggu konfirmasi dari Super Admin ya!
+
+💡 *Terima kasih sudah memberikan masukan untuk website OSIS!* 🙏`,
+            forwarded: true,
+            forwardTarget: 'super_admin',
+            sessionId: userSessionId,
+          });
+        }
+      } catch (err) {
+        console.error('[AI Chat] Design request forward error:', err);
       }
     }
 
