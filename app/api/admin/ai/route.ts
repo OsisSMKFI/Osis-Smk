@@ -73,11 +73,11 @@ export async function POST(request: NextRequest) {
     const trimmedPrompt = (prompt || '').trim();
     if (trimmedPrompt.startsWith('/')) {
       const origin = request.headers.get('origin') || '';
-      const result = await handleAdminCommand(
-        trimmedPrompt,
-        sessionId || 'api-session',
-        origin
-      );
+      const result = await handleAdminCommand({
+        input: trimmedPrompt,
+        sessionId: sessionId || 'api-session',
+        origin,
+      });
       
       return NextResponse.json({
         success: true,
@@ -105,7 +105,11 @@ export async function POST(request: NextRequest) {
     for (const { pattern, command } of nlpCommands) {
       if (pattern.test(trimmedPrompt)) {
         const origin = request.headers.get('origin') || '';
-        const result = await handleAdminCommand(command, sessionId || 'api-session', origin);
+        const result = await handleAdminCommand({
+          input: command,
+          sessionId: sessionId || 'api-session',
+          origin,
+        });
         return NextResponse.json({
           success: true,
           response: result.text,

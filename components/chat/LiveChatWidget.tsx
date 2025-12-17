@@ -168,6 +168,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   // 🎨 Design preview states (Super Admin only)
   const [showDesignPreview, setShowDesignPreview] = React.useState(false);
   const [designPreview, setDesignPreview] = React.useState<DesignPreview | null>(null);
+  const [designLoading, setDesignLoading] = React.useState(false);
+  const [designApplying, setDesignApplying] = React.useState(false);
   
   // Image upload state
   const [uploadedImage, setUploadedImage] = React.useState<string | null>(null);
@@ -240,6 +242,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   const requestDesignChange = async (component: string, changes: string) => {
     if (mode !== 'admin') return null;
     
+    setDesignLoading(true);
     try {
       const response = await fetch('/api/admin/design-preview', {
         method: 'POST',
@@ -257,28 +260,44 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
     } catch (error) {
       console.error('Design preview error:', error);
       return null;
+    } finally {
+      setDesignLoading(false);
     }
   };
   
   const applyDesignChange = async () => {
     if (!designPreview || mode !== 'admin') return false;
     
+    setDesignApplying(true);
     try {
-      const response = await fetch('/api/admin/design-apply', {
+      const response = await fetch('/api/admin/design/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(designPreview),
+        body: JSON.stringify({
+          component: designPreview.component,
+          cssCode: designPreview.preview,
+          styles: designPreview.styles,
+          preset: 'custom',
+          description: `AI Design change for ${designPreview.component}`,
+        }),
       });
       
       if (response.ok) {
         setDesignPreview(null);
         setShowDesignPreview(false);
+        // Add success message to chat
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `✅ Design untuk **${designPreview.component}** berhasil diterapkan! Refresh halaman untuk melihat perubahan.`
+        }]);
         return true;
       }
       return false;
     } catch (error) {
       console.error('Design apply error:', error);
       return false;
+    } finally {
+      setDesignApplying(false);
     }
   };
 
@@ -1159,6 +1178,52 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                     <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                     <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                     <span className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* 🎨 Design Loading - Fancy Animation */}
+            {designLoading && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 flex items-center justify-center flex-shrink-0 animate-pulse">
+                  <FaPalette className="text-white text-sm" />
+                </div>
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl rounded-bl-md px-5 py-4 shadow-lg border-2 border-indigo-200/60 dark:border-indigo-700/60">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full border-4 border-indigo-200 border-t-indigo-500 animate-spin" />
+                      <FaMagic className="absolute inset-0 m-auto text-indigo-500 text-xs" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">✨ Mendesain...</p>
+                      <p className="text-xs text-indigo-500/70">AI sedang membuat preview</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* 🎨 Design Applying - Progress Animation */}
+            {designApplying && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0">
+                  <FaCog className="text-white text-sm animate-spin" />
+                </div>
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl rounded-bl-md px-5 py-4 shadow-lg border-2 border-emerald-200/60 dark:border-emerald-700/60">
+                  <div className="flex items-center gap-3">
+                    <div className="space-y-1">
+                      <div className="h-1.5 w-32 bg-emerald-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full animate-[progress_1.5s_ease-in-out_infinite]" style={{ width: '60%' }} />
+                      </div>
+                      <div className="h-1.5 w-24 bg-emerald-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full animate-[progress_2s_ease-in-out_infinite]" style={{ width: '80%' }} />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">🚀 Menerapkan Design...</p>
+                      <p className="text-xs text-emerald-500/70">Sedang update komponen</p>
+                    </div>
                   </div>
                 </div>
               </div>
