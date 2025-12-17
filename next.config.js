@@ -2,6 +2,15 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Exclude dev-server from Next.js compilation
+  webpack: (config, { isServer }) => {
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/dev-server/**', '**/node_modules/**', '**/.git/**'],
+    };
+    return config;
+  },
+  
   // Force new build ID to invalidate all caches
   generateBuildId: async () => {
     // Use timestamp to ensure unique build ID every time

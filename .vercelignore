@@ -15,6 +15,13 @@ test/
 .github/
 migrations/
 
+# Dev Server (separate Railway deployment)
+dev-server/
+
+# Docker files (not used on Vercel)
+Dockerfile.bak
+docker-compose.yml.bak
+
 # Include app files (don't ignore app/admin/tools)
 !app/
 !app/**/*
