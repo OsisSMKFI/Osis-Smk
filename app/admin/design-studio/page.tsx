@@ -12,7 +12,8 @@ import {
     Paintbrush, PanelLeftClose, PanelLeft,
     Zap, Download, Upload, Settings, Wand2,
     Sparkles, MessageCircle, Bot, User,
-    RotateCcw, Type, Box, Layers, Grid3X3
+    RotateCcw, Type, Box, Layers, Grid3X3,
+    ArrowRight, Command, Cpu
 } from 'lucide-react';
 import { DESIGN_REGISTRY } from '@/lib/design-registry';
 
@@ -521,7 +522,7 @@ ${selector}:hover {
     // ═══════════════════════════════════════════════════════════════════════════
     
     const sendChatMessage = async () => {
-        if (!chatInput.trim() || isAILoading) return;
+        if (!chatInput.trim() || isAILoading || !selectedComponent) return;
         
         const userMessage: ChatMessage = {
             id: Date.now().toString(),
@@ -536,26 +537,42 @@ ${selector}:hover {
         setIsAILoading(true);
         
         try {
-            // Build context for AI
-            const context = {
-                selectedComponent,
-                currentCSS: code,
-                componentInfo: selectedComponent ? DESIGN_REGISTRY[selectedComponent] : null,
-                availableTemplates: Object.keys(CSS_TEMPLATES),
-            };
+            const componentInfo = DESIGN_REGISTRY[selectedComponent];
+            const selector = componentInfo?.selectors?.[0] || `.${selectedComponent}`;
+            
+            // Enhanced prompt for CSS generation
+            const enhancedMessage = `
+Kamu adalah AI Design Assistant untuk Design Studio.
+Komponen yang dipilih: ${selectedComponent}
+Selector CSS: ${selector}
+Kategori: ${componentInfo?.category || 'other'}
+Deskripsi: ${componentInfo?.description || ''}
+
+CSS saat ini:
+${code || '(kosong)'}
+
+Permintaan user: ${userQuery}
+
+Berikan respons dalam bahasa Indonesia. Jika diminta membuat/modifikasi CSS, sertakan kode CSS lengkap dalam format:
+\`\`\`css
+/* kode CSS di sini */
+\`\`\`
+
+Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/focus states jika relevan.`;
             
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: userQuery,
+                    message: enhancedMessage,
                     context: 'design_studio',
-                    systemContext: JSON.stringify(context),
-                    selectedComponent,
-                    currentCSS: code,
                     mode: 'admin'
                 })
             });
+            
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
             
             const data = await res.json();
             
@@ -566,10 +583,16 @@ ${selector}:hover {
                 cssCode = cssMatch[1].trim();
             }
             
+            // Clean up response for display
+            let displayContent = data.reply || 'Maaf, tidak ada respons dari AI.';
+            if (cssCode) {
+                displayContent = displayContent.replace(/```css\n[\s\S]*?```/g, '✅ CSS berhasil di-generate! Klik tombol Apply untuk menerapkan.');
+            }
+            
             const aiMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: data.reply || 'Maaf, terjadi kesalahan. Coba lagi.',
+                content: displayContent,
                 timestamp: new Date(),
                 cssCode
             };
@@ -578,12 +601,117 @@ ${selector}:hover {
             
         } catch (err) {
             console.error('AI Chat error:', err);
-            setChatMessages(prev => [...prev, {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: '❌ Gagal terhubung ke AI. Periksa koneksi dan coba lagi.',
-                timestamp: new Date()
-            }]);
+            
+            // Fallback: Generate CSS locally based on common patterns
+            let fallbackCSS = '';
+            const componentInfo = DESIGN_REGISTRY[selectedComponent];
+            const selector = componentInfo?.selectors?.[0] || `.${selectedComponent}`;
+            
+            if (userQuery.toLowerCase().includes('glassmorphism') || userQuery.toLowerCase().includes('glass')) {
+                fallbackCSS = `${selector} {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+}
+
+${selector}:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}`;
+            } else if (userQuery.toLowerCase().includes('dark')) {
+                fallbackCSS = `${selector} {
+    background: #1a1a2e;
+    color: #eaeaea;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+}
+
+${selector}:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}`;
+            } else if (userQuery.toLowerCase().includes('hover')) {
+                fallbackCSS = `${selector}:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+${selector}:active {
+    transform: translateY(-2px);
+}`;
+            } else if (userQuery.toLowerCase().includes('neon')) {
+                fallbackCSS = `${selector} {
+    background: #0a0a0a;
+    color: #00ff88;
+    border: 2px solid #00ff88;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 0 10px #00ff88, 0 0 20px rgba(0, 255, 136, 0.3);
+    text-shadow: 0 0 10px currentColor;
+}
+
+${selector}:hover {
+    box-shadow: 0 0 20px #00ff88, 0 0 40px rgba(0, 255, 136, 0.5);
+}`;
+            } else if (userQuery.toLowerCase().includes('gradient')) {
+                fallbackCSS = `${selector} {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+}
+
+${selector}:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+}`;
+            } else if (userQuery.toLowerCase().includes('responsive') || userQuery.toLowerCase().includes('mobile')) {
+                fallbackCSS = `/* Desktop */
+${selector} {
+    padding: 24px;
+    font-size: 16px;
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+    ${selector} {
+        padding: 16px;
+        font-size: 15px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    ${selector} {
+        padding: 12px;
+        font-size: 14px;
+    }
+}`;
+            }
+            
+            if (fallbackCSS) {
+                setChatMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: `✨ CSS untuk "${userQuery}" berhasil dibuat! Klik Apply untuk menerapkan.`,
+                    timestamp: new Date(),
+                    cssCode: fallbackCSS
+                }]);
+            } else {
+                setChatMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: `Maaf, saya belum bisa memproses permintaan "${userQuery}". \n\nCoba perintah seperti:\n• "Buat glassmorphism"\n• "Tambahkan hover effect"\n• "Convert ke dark mode"\n• "Buat responsive"\n• "Tambahkan neon glow"\n• "Buat gradient style"`,
+                    timestamp: new Date()
+                }]);
+            }
         } finally {
             setIsAILoading(false);
         }
@@ -1121,86 +1249,136 @@ ${selector}:hover {
                     )}
                 </main>
 
-                {/* ═══════════ AI CHAT PANEL ═══════════ */}
+                {/* ═══════════ AI CHAT PANEL - MODERN MINIMALIST ═══════════ */}
                 <AnimatePresence>
                     {chatOpen && (
                         <motion.aside
                             initial={{ width: 0, opacity: 0 }}
-                            animate={{ width: 320, opacity: 1 }}
+                            animate={{ width: 340, opacity: 1 }}
                             exit={{ width: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="flex-shrink-0 flex flex-col bg-gray-850 border-l border-gray-700 overflow-hidden"
-                            style={{ backgroundColor: '#1f2937' }}
+                            className="flex-shrink-0 flex flex-col overflow-hidden"
+                            style={{ backgroundColor: '#111827' }}
                         >
-                            {/* Header */}
-                            <div className="h-10 flex items-center justify-between px-3 bg-gray-800 border-b border-gray-700">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-purple-400" />
-                                    <span className="font-medium text-white text-sm">AI Design Assistant</span>
+                            {/* Header - Minimalist */}
+                            <div className="px-4 py-3 border-b border-gray-800">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                            <Sparkles className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-medium text-white">Design AI</div>
+                                            <div className="text-xs text-green-400 flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                                                Online
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setChatOpen(false)} className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                                        <X className="w-4 h-4" />
+                                    </button>
                                 </div>
-                                <button onClick={() => setChatOpen(false)} className="p-1 text-gray-400 hover:bg-gray-700 rounded">
-                                    <X className="w-4 h-4" />
-                                </button>
                             </div>
                             
-                            {/* Messages */}
-                            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+                            {/* Quick Actions */}
+                            {selectedComponent && (
+                                <div className="px-3 py-2 border-b border-gray-800 flex flex-wrap gap-1.5">
+                                    {['Glassmorphism', 'Dark Mode', 'Hover Effect', 'Responsive'].map(action => (
+                                        <button
+                                            key={action}
+                                            onClick={() => { setChatInput(`Buat ${action} untuk ${selectedComponent}`); }}
+                                            className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full transition-colors"
+                                        >
+                                            {action}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            
+                            {/* Messages - Clean Design */}
+                            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                                 {chatMessages.map(msg => (
                                     <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[90%] rounded-lg text-sm ${
+                                        {msg.role !== 'user' && (
+                                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mr-2">
+                                                <Bot className="w-3.5 h-3.5 text-white" />
+                                            </div>
+                                        )}
+                                        <div className={`max-w-[85%] ${
                                             msg.role === 'user' 
-                                                ? 'bg-blue-600 text-white px-3 py-2' 
+                                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-2xl rounded-br-sm px-4 py-2.5' 
                                                 : msg.role === 'system'
-                                                    ? 'bg-purple-900/30 text-purple-200 border border-purple-700/50 px-3 py-2'
-                                                    : 'bg-gray-800 text-gray-200 px-3 py-2'
+                                                    ? 'bg-gray-800/50 text-gray-300 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-700'
+                                                    : 'bg-gray-800 text-gray-200 rounded-2xl rounded-bl-sm px-4 py-2.5'
                                         }`}>
-                                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                                            <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
                                             {msg.cssCode && (
-                                                <button 
-                                                    onClick={() => applyCSSFromChat(msg.cssCode!)}
-                                                    className="mt-2 flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded text-xs transition-colors"
-                                                >
-                                                    <Play className="w-3 h-3" /> Apply CSS
-                                                </button>
+                                                <div className="mt-3 flex gap-2">
+                                                    <button 
+                                                        onClick={() => applyCSSFromChat(msg.cssCode!)}
+                                                        className="flex-1 flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-400 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+                                                    >
+                                                        <Play className="w-3 h-3" /> Apply
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => { navigator.clipboard.writeText(msg.cssCode!); notify('info', 'CSS copied!'); }}
+                                                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-xs transition-colors"
+                                                    >
+                                                        <Copy className="w-3 h-3" />
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
+                                        {msg.role === 'user' && (
+                                            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 ml-2">
+                                                <User className="w-3.5 h-3.5 text-white" />
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                                 
                                 {isAILoading && (
                                     <div className="flex justify-start">
-                                        <div className="bg-gray-800 px-4 py-3 rounded-lg">
-                                            <div className="flex items-center gap-2 text-gray-300">
-                                                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                                                <span className="text-sm">Thinking...</span>
+                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mr-2">
+                                            <Bot className="w-3.5 h-3.5 text-white" />
+                                        </div>
+                                        <div className="bg-gray-800 px-4 py-3 rounded-2xl rounded-bl-sm">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex gap-1">
+                                                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 )}
                             </div>
                             
-                            {/* Input */}
-                            <div className="p-3 border-t border-gray-700">
-                                <div className="flex items-center gap-2 bg-gray-800 rounded-lg p-2">
+                            {/* Input - Modern Minimalist */}
+                            <div className="p-4 border-t border-gray-800">
+                                <div className="relative">
                                     <input
                                         type="text"
                                         value={chatInput}
                                         onChange={e => setChatInput(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
-                                        placeholder="Ask AI... (Enter to send)"
-                                        className="flex-1 bg-transparent outline-none text-sm text-white placeholder-gray-500"
+                                        placeholder={selectedComponent ? `Tanya tentang ${selectedComponent}...` : 'Pilih komponen dulu...'}
+                                        disabled={!selectedComponent}
+                                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 disabled:opacity-50 transition-all"
                                     />
                                     <button 
                                         onClick={sendChatMessage}
-                                        disabled={!chatInput.trim() || isAILoading}
-                                        className="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg disabled:opacity-50 transition-colors"
+                                        disabled={!chatInput.trim() || isAILoading || !selectedComponent}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                                     >
                                         <Send className="w-4 h-4" />
                                     </button>
                                 </div>
-                                <div className="mt-2 text-xs text-gray-500">
-                                    Try: "glassmorphism", "hover effect", "responsive"
-                                </div>
+                                {!selectedComponent && (
+                                    <p className="mt-2 text-xs text-gray-500 text-center">👈 Pilih komponen dari sidebar terlebih dahulu</p>
+                                )}
                             </div>
                         </motion.aside>
                     )}
