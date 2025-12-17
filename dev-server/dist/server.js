@@ -124,24 +124,27 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
-// Execute any command
+// Execute any command - SUPER ADMIN MODE (no restrictions)
 app.post('/api/exec', authMiddleware, async (req, res) => {
     try {
         const { command, cwd } = req.body;
         if (!command) {
             return res.status(400).json({ success: false, error: 'Command required' });
         }
-        // Security: Block dangerous commands
-        const blockedPatterns = ['rm -rf /', 'mkfs', 'dd if=', ':(){', 'chmod -R 777 /', '> /dev/sda'];
-        if (blockedPatterns.some(p => command.includes(p))) {
-            return res.status(403).json({ success: false, error: 'Command blocked for security' });
-        }
+        // No command blocking - Super admin has full access
+        // Security is handled by AUTH_TOKEN authentication
         const workDir = cwd ? path_1.default.join(REPO_DIR, cwd) : REPO_DIR;
         console.log(`🖥️ Executing: ${command}`);
         const { stdout, stderr } = await execAsync(command, {
             cwd: workDir,
-            timeout: 120000, // 2 min timeout
-            maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+            timeout: 300000, // 5 min timeout for long operations
+            maxBuffer: 50 * 1024 * 1024, // 50MB buffer
+            env: {
+                ...process.env,
+                // Inject GitHub token for git commands
+                GIT_ASKPASS: 'echo',
+                GIT_TERMINAL_PROMPT: '0'
+            }
         });
         res.json({
             success: true,
@@ -231,6 +234,13 @@ app.post('/api/git', authMiddleware, async (req, res) => {
                     const remoteUrl = REPO_URL.replace('https://', `https://${GITHUB_TOKEN}@`);
                     await execAsync(`git remote set-url origin ${remoteUrl}`, { cwd: REPO_DIR });
                 }
+                else {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'GITHUB_TOKEN not configured on Railway. Please add it to environment variables.',
+                        help: 'Go to Railway Dashboard → Variables → Add GITHUB_TOKEN with your Personal Access Token'
+                    });
+                }
                 command = `git push origin ${branch || 'main'}`;
                 break;
             case 'pull':
@@ -247,12 +257,31 @@ app.post('/api/git', authMiddleware, async (req, res) => {
                 if (!message) {
                     return res.status(400).json({ success: false, error: 'Commit message required' });
                 }
-                await execAsync('git add -A', { cwd: REPO_DIR });
-                await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { cwd: REPO_DIR });
-                if (GITHUB_TOKEN) {
-                    const remoteUrl = REPO_URL.replace('https://', `https://${GITHUB_TOKEN}@`);
-                    await execAsync(`git remote set-url origin ${remoteUrl}`, { cwd: REPO_DIR });
+                if (!GITHUB_TOKEN) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'GITHUB_TOKEN not configured on Railway. Please add it to environment variables.',
+                        help: 'Go to Railway Dashboard → Variables → Add GITHUB_TOKEN with your Personal Access Token'
+                    });
                 }
+                await execAsync('git add -A', { cwd: REPO_DIR });
+                try {
+                    await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { cwd: REPO_DIR });
+                }
+                catch (commitErr) {
+                    // If nothing to commit, that's ok
+                    if (!commitErr.message?.includes('nothing to commit')) {
+                        throw commitErr;
+                    }
+                    return res.json({
+                        success: true,
+                        action: 'commit-push',
+                        message: 'No changes to commit',
+                        stdout: 'Already up to date'
+                    });
+                }
+                const remoteUrl = REPO_URL.replace('https://', `https://${GITHUB_TOKEN}@`);
+                await execAsync(`git remote set-url origin ${remoteUrl}`, { cwd: REPO_DIR });
                 const pushResult = await execAsync(`git push origin ${branch || 'main'}`, { cwd: REPO_DIR });
                 return res.json({
                     success: true,
