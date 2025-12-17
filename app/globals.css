@@ -616,3 +616,85 @@ html.dark {
     transform: rotate(360deg);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🎨 3D ANIMATED ICON STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Container for animated icons */
+.animated-icon-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 2rem;
+}
+
+/* Icon container with perspective for 3D effects */
+.animated-icon-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+/* Fallback animation for icons without Framer Motion */
+.animated-icon-fallback {
+  animation: icon3d 4s ease-in-out infinite, iconGlow 3s ease-in-out infinite;
+  transform-origin: center;
+  filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.6));
+}
+
+@keyframes icon3d {
+  0%, 100% {
+    transform: rotateY(0deg) rotateX(0deg) translateY(0);
+  }
+  25% {
+    transform: rotateY(15deg) rotateX(10deg) translateY(-8px);
+  }
+  50% {
+    transform: rotateY(0deg) rotateX(0deg) translateY(0);
+  }
+  75% {
+    transform: rotateY(-15deg) rotateX(-10deg) translateY(8px);
+  }
+}
+
+@keyframes iconGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 30px rgba(250, 204, 21, 0.8));
+  }
+}
+
+/* Color shift animation */
+@keyframes colorShift {
+  0%, 100% {
+    fill: #facc15; /* yellow-500 */
+  }
+  33% {
+    fill: #a3e635; /* lime-400 */
+  }
+  66% {
+    fill: #fb923c; /* orange-400 */
+  }
+}
+
+/* Floating particle effect */
+@keyframes floatParticle {
+  0%, 100% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-10px) translateX(5px) scale(1.2);
+    opacity: 0.7;
+  }
+}
+
+.floating-particle {
+  animation: floatParticle 2s ease-in-out infinite;
+}

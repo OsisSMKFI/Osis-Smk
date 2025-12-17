@@ -214,7 +214,11 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ success: false, error: 'Invalid path' }, { status: 400 });
             }
             
-            // Create backup before saving
+            // Ensure directory exists (for new files)
+            const dir = path.dirname(fullPath);
+            await fs.mkdir(dir, { recursive: true });
+            
+            // Create backup before saving (only if file exists)
             try {
                 const existing = await fs.readFile(fullPath, 'utf-8');
                 const backupDir = path.join(workspaceRoot, 'backups', 'design-studio');
@@ -223,17 +227,21 @@ export async function POST(request: NextRequest) {
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
                 const backupPath = path.join(backupDir, `${path.basename(filePath)}.${timestamp}.bak`);
                 await fs.writeFile(backupPath, existing, 'utf-8');
+                console.log(`[Design Files] Backup created: ${backupPath}`);
             } catch {
-                // No existing file to backup
+                // No existing file to backup (new file creation)
+                console.log(`[Design Files] Creating new file: ${filePath}`);
             }
             
             // Save the file
             await fs.writeFile(fullPath, content, 'utf-8');
+            console.log(`[Design Files] File saved successfully: ${filePath}`);
             
             return NextResponse.json({
                 success: true,
                 message: `File saved: ${filePath}`,
-                path: filePath
+                path: filePath,
+                created: true
             });
         }
         
