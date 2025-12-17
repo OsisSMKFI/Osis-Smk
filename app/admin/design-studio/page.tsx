@@ -1226,13 +1226,16 @@ ${sel}:hover {
                 selector = componentInfo?.selectors?.[0] || `[data-component="${targetComponent}"]`;
             }
             
-            // Use smart CSS patterns if user is requesting a style (more inclusive detection)
+            // Use smart CSS patterns ONLY if:
+            // 1. User explicitly requests to apply (terapkan/apply/lakukan)
+            // 2. User mentions a style keyword
+            // 3. User is NOT asking a question
             const styleKeywords = /glass|dark|neon|gradient|hover|animasi|responsive|shadow|neumorphism|minimal|modern|elegan|transparan|blur|glow|colorful|efek|effect/i;
-            const requestWords = /buat(kan)?|terapkan|apply|style|tambah(kan)?|ubah|ganti|pasang|set|kasih|tolong/i;
-            const isExplicitStyleRequest = styleKeywords.test(userQuery) && !isQuestion;
-            const wantsAutoApply = requestWords.test(userQuery) || styleKeywords.test(userQuery);
+            const explicitApply = /\b(terapkan|apply|lakukan|pasang)\b/i.test(userQuery);
+            const isStyleRequest = styleKeywords.test(userQuery) && !isQuestion;
             
-            if (isExplicitStyleRequest) {
+            // Only use smart CSS if user explicitly wants to apply AND mentions a style
+            if (isStyleRequest && explicitApply) {
                 // Use fallback selector if no component detected
                 const applySel = selector || '.component, .card, .button, [class*="card"], [class*="button"]';
                 const applyComp = targetComponent || selectedComponent || 'global';
@@ -1244,14 +1247,14 @@ ${sel}:hover {
                     setChatMessages(prev => [...prev, {
                         id: (Date.now() + 1).toString(),
                         role: 'assistant',
-                        content: `🎯 Komponen target: **${DESIGN_REGISTRY[applyComp]?.displayName || applyComp}**\n\n${smartResult.message}\n\n✅ CSS akan otomatis diterapkan...`,
+                        content: `🎯 Komponen target: **${DESIGN_REGISTRY[applyComp]?.displayName || applyComp}**\n\n${smartResult.message}\n\n✅ Menerapkan CSS...`,
                         timestamp: new Date(),
                         cssCode: smartResult.css,
                         targetComponent: applyComp,
                         actionType: 'css'
                     }]);
                     
-                    // AUTO-APPLY the smart CSS immediately
+                    // Apply the smart CSS
                     setTimeout(async () => {
                         await applyCSSFromChat(smartResult.css, applyComp);
                         setChatMessages(prev => [...prev, {
@@ -1263,6 +1266,24 @@ ${sel}:hover {
                         }]);
                     }, 300);
                     
+                    return;
+                }
+            } else if (isStyleRequest && !explicitApply) {
+                // Show CSS preview WITHOUT auto-applying
+                const applySel = selector || '.component';
+                const applyComp = targetComponent || selectedComponent || 'global';
+                const smartResult = generateSmartCSS(userQuery, applySel, componentInfo?.category || 'other');
+                
+                if (smartResult) {
+                    setChatMessages(prev => [...prev, {
+                        id: (Date.now() + 1).toString(),
+                        role: 'assistant',
+                        content: `🎯 Komponen: **${DESIGN_REGISTRY[applyComp]?.displayName || applyComp}**\n\n${smartResult.message}\n\n👆 Klik **Apply** untuk menerapkan, atau ketik "**terapkan**" untuk konfirmasi.`,
+                        timestamp: new Date(),
+                        cssCode: smartResult.css,
+                        targetComponent: applyComp,
+                        actionType: 'css'
+                    }]);
                     return;
                 }
             }
@@ -1499,15 +1520,21 @@ INGAT: SELALU sertakan path file dalam code block agar bisa langsung diterapkan!
             setChatMessages(prev => [...prev, aiMessage]);
             
             // ═══════════════════════════════════════════════════════════════
-            // 🚀 AUTO-APPLY: Automatically apply ALL types of code changes
+            // 🚀 AUTO-APPLY: Only apply if user EXPLICITLY requests it
             // ═══════════════════════════════════════════════════════════════
             
-            // Detect if user wants changes applied
-            const wantsCodeChange = /terapkan|apply|ubah|ganti|pasang|set|update|change|modify|edit|buatkan|buat|tambah|hapus|perbaiki|fix|create|add|remove|delete/i.test(userQuery);
-            const hasStyleKeyword = /glass|neon|dark|gradient|style|hover|animasi|shadow|neumorphism|minimal|modern|elegan|bagus|keren|warna|color|theme/i.test(userQuery);
-            const hasCodeKeyword = /komponen|component|fungsi|function|hook|api|route|page|halaman|layout|button|form|input|card|navbar|footer|hero|modal/i.test(userQuery);
+            // Only auto-apply if user explicitly says "terapkan", "apply", "lakukan"
+            // NOT just because they mention a style keyword
+            const explicitApplyRequest = /\b(terapkan|apply|lakukan|pasang|execute|jalankan)\b/i.test(userQuery);
             
-            const shouldAutoApply = wantsCodeChange || hasStyleKeyword || hasCodeKeyword;
+            // Check if user is asking a QUESTION (should NOT auto-apply)
+            const isAskingQuestion = /\?|dimana|where|letak|lokasi|ada (gak|tidak|nggak)|bagaimana|how|apa itu|what is|beritahu|kasih tau|jelaskan/i.test(userQuery);
+            
+            // Only auto-apply if:
+            // 1. User explicitly says "terapkan/apply/lakukan"
+            // 2. AND user is NOT asking a question
+            // 3. AND there is actual code to apply
+            const shouldAutoApply = explicitApplyRequest && !isAskingQuestion;
             
             if (shouldAutoApply) {
                 // 1. Auto-apply CSS if available
@@ -1518,7 +1545,7 @@ INGAT: SELALU sertakan path file dalam code block agar bisa langsung diterapkan!
                         setChatMessages(prev => [...prev, {
                             id: Date.now().toString(),
                             role: 'system',
-                            content: `✅ **Auto-Applied!** CSS untuk **${DESIGN_REGISTRY[applyTarget]?.displayName || applyTarget}** sudah diterapkan ke website.\n\n🔄 Refresh halaman untuk melihat perubahan.`,
+                            content: `✅ **Applied!** CSS untuk **${DESIGN_REGISTRY[applyTarget]?.displayName || applyTarget}** sudah diterapkan.\n\n🔄 Refresh halaman untuk melihat perubahan.`,
                             timestamp: new Date(),
                             actionType: 'action'
                         }]);
@@ -1536,29 +1563,36 @@ INGAT: SELALU sertakan path file dalam code block agar bisa langsung diterapkan!
                         setChatMessages(prev => [...prev, {
                             id: Date.now().toString(),
                             role: 'system',
-                            content: `✅ **Auto-Applied!** ${fileChanges.length} file(s) sudah diupdate:\n\n${fileList}\n\n🔄 Refresh halaman untuk melihat perubahan.`,
+                            content: `✅ **Applied!** ${fileChanges.length} file(s) sudah diupdate:\n\n${fileList}\n\n🔄 Refresh halaman untuk melihat perubahan.`,
                             timestamp: new Date(),
                             actionType: 'action'
                         }]);
                     }, 500);
                 }
-                
-                // Auto-apply code blocks without file path (show in editor)
-                if (!cssCode && !fileChanges.length && codeBlocks.length > 0) {
-                    const mainBlock = codeBlocks[0];
-                    if (mainBlock && openSourceFile) {
-                        // If user has a file open, offer to apply to that file
-                        setTimeout(() => {
-                            setChatMessages(prev => [...prev, {
-                                id: Date.now().toString(),
-                                role: 'system',
-                                content: `💡 **Kode siap diterapkan!**\n\nKlik tombol **Apply** di atas untuk menerapkan ke file yang sedang dibuka:\n📄 ${openSourceFile.path}`,
-                                timestamp: new Date(),
-                                actionType: 'info'
-                            }]);
-                        }, 300);
-                    }
-                }
+            } else if (cssCode || fileChanges.length > 0) {
+                // Show "ready to apply" message instead of auto-applying
+                setTimeout(() => {
+                    setChatMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: 'system',
+                        content: `💡 **Kode siap diterapkan!**\n\nKlik tombol **Apply** di atas untuk menerapkan perubahan.\n\n⚠️ Atau ketik "terapkan" untuk auto-apply.`,
+                        timestamp: new Date(),
+                        actionType: 'info'
+                    }]);
+                }, 300);
+            }
+            
+            // Show prompt for code blocks without file path
+            if (!cssCode && !fileChanges.length && codeBlocks.length > 0 && openSourceFile) {
+                setTimeout(() => {
+                    setChatMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: 'system',
+                        content: `💡 **Kode siap diterapkan!**\n\nKlik tombol **Apply** untuk menerapkan ke:\n📄 ${openSourceFile.path}`,
+                        timestamp: new Date(),
+                        actionType: 'info'
+                    }]);
+                }, 300);
             }
             
         } catch (err) {
