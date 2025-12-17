@@ -172,6 +172,9 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   const [designLoading, setDesignLoading] = React.useState(false);
   const [designApplying, setDesignApplying] = React.useState(false);
   
+  // 🎨 Dynamic design CSS from database
+  const [customDesignCSS, setCustomDesignCSS] = React.useState<string | null>(null);
+  
   // Image upload state
   const [uploadedImage, setUploadedImage] = React.useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = React.useState<string>('');
@@ -204,6 +207,38 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
       });
     }
   }, []);
+
+  // 🎨 Load custom design CSS from database on mount
+  React.useEffect(() => {
+    const loadCustomDesign = async () => {
+      try {
+        const response = await fetch('/api/ai/execute-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'get_status',
+            params: { taskSessionId: 'design_chat_input' },
+          }),
+        });
+        
+        // Also try to get design from page_content
+        const designRes = await fetch('/api/public/background?key=design_override_chat_input');
+        if (designRes.ok) {
+          const data = await designRes.json();
+          if (data.content_value) {
+            setCustomDesignCSS(data.content_value);
+            console.log('[LiveChat] ✅ Custom design loaded from database');
+          }
+        }
+      } catch (e) {
+        console.warn('[LiveChat] Failed to load custom design:', e);
+      }
+    };
+    
+    if (mounted) {
+      loadCustomDesign();
+    }
+  }, [mounted]);
 
   const mode: 'admin' | 'public' = role === 'super_admin' ? 'admin' : 'public';
   const suggestionsEnabled = process.env.NEXT_PUBLIC_CHAT_SUGGESTIONS !== '0';
@@ -789,6 +824,11 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
 
   const content = (
     <>
+      {/* 🎨 DYNAMIC CSS INJECTION - Apply custom design from database */}
+      {customDesignCSS && (
+        <style dangerouslySetInnerHTML={{ __html: customDesignCSS }} />
+      )}
+      
       {/* ═══════════════════════════════════════════════════════════════════════════
           🎯 FLOATING BUTTON - Elegant Premium Design
           ═══════════════════════════════════════════════════════════════════════════ */}

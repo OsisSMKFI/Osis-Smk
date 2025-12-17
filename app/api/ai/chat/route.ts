@@ -1179,28 +1179,146 @@ export async function POST(request: NextRequest) {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // 🎨 AUTO-APPLY DESIGN REQUEST - When user confirms design change
+    // 🎨 REAL DESIGN EXECUTION - Actually apply design changes
     // ═══════════════════════════════════════════════════════════════════════════
-    const applyDesignPatterns = [
-      /ayo\s+(terapkan|coba|lakukan)/i,
-      /terapkan\s+(saja|aja|dong)/i,
+    const designExecutePatterns = [
+      /ayo\s+(terapkan|coba|lakukan|pasang)/i,
+      /terapkan\s+(saja|aja|dong|sekarang)/i,
       /coba\s+terapkan/i,
-      /lakukan\s+(saja|aja)/i,
-      /apply\s+(design|it)/i,
+      /lakukan\s+(saja|aja|sekarang)/i,
+      /apply\s+(design|it|sekarang)/i,
       /setuju.*terapkan/i,
+      /ok\s+ayo\s+(lakukan|terapkan)/i,
+      /efek\s+3d.*terapkan/i,
+      /neumorphism/i,
+      /glassmorphism/i,
     ];
     
-    const isApplyDesignRequest = applyDesignPatterns.some(p => p.test(userQuery));
+    const isDesignExecuteRequest = designExecutePatterns.some(p => p.test(userQuery));
     
     // Check if previous conversation was about design
     const previousMsgs = baseMessages.slice(-6);
     const wasDiscussingDesign = previousMsgs.some(m => 
-      /(desain|design|tampilan|css|style|warna|font|border|modern|indah|bagus)/i.test(m.content)
+      /(desain|design|tampilan|css|style|warna|font|border|modern|indah|bagus|3d|neumorphism|glassmorphism|input|chat)/i.test(m.content)
     );
     
-    if (isApplyDesignRequest && wasDiscussingDesign && mode === 'public') {
-      // User wants to apply design changes - forward to admin as design request
-      console.log('[AI Action] 🎨 Starting design request forward');
+    // Detect specific design type from conversation
+    const detectDesignType = (): string => {
+      const allContent = previousMsgs.map(m => m.content).join(' ').toLowerCase();
+      if (/neumorphism|3d|efek 3d/i.test(allContent)) return 'neumorphism';
+      if (/glassmorphism|glass|blur|transparan/i.test(allContent)) return 'glassmorphism';
+      if (/modern|minimal|minimalis/i.test(allContent)) return 'modern_minimal';
+      return 'neumorphism'; // default
+    };
+    
+    // Detect which component to redesign
+    const detectComponent = (): string => {
+      const allContent = previousMsgs.map(m => m.content).join(' ').toLowerCase();
+      if (/chat.*input|input.*chat|mengisi pesan|input pesan|kotak.*chat/i.test(allContent)) return 'chat_input';
+      if (/header/i.test(allContent)) return 'header';
+      if (/footer/i.test(allContent)) return 'footer';
+      if (/card/i.test(allContent)) return 'card';
+      return 'chat_input'; // default based on user's request
+    };
+    
+    if (isDesignExecuteRequest && wasDiscussingDesign) {
+      // ACTUALLY EXECUTE THE DESIGN CHANGE
+      console.log('[AI Action] 🎨 EXECUTING REAL DESIGN CHANGE');
+      try {
+        const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
+        const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const designType = detectDesignType();
+        const component = detectComponent();
+        
+        console.log(`[AI Action] Component: ${component}, Design: ${designType}`);
+        
+        // Call the execute-action API to ACTUALLY apply the design
+        const executeRes = await fetch(`${baseUrl}/api/ai/execute-action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'apply_design',
+            params: {
+              component,
+              designType,
+            },
+            sessionId: userSessionId,
+          }),
+        });
+        
+        const executeResult = await executeRes.json();
+        const actionVerification = await verifyAndLogAction('execute_design', executeResult);
+        
+        if (actionVerification.success && executeResult.success) {
+          // Also send notification to confirm
+          await fetch(`${baseUrl}/api/ai/execute-action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'send_notification',
+              params: {
+                targetSessionId: userSessionId,
+                title: '🎨 Design Berhasil Diterapkan!',
+                message: `Design ${designType} untuk ${component} sudah aktif. Refresh halaman untuk melihat perubahan.`,
+                type: 'design_applied',
+              },
+              sessionId: userSessionId,
+            }),
+          });
+          
+          const structuredReply = formatStructuredResponse({
+            greeting: '✅ **Design Berhasil Diterapkan!** 🎨',
+            mainContent: `Saya sudah menerapkan design **${designType}** untuk komponen **${component}**.
+
+📋 **Yang Sudah Dilakukan:**
+• CSS dengan efek ${designType === 'neumorphism' ? '3D lembut dengan bayangan halus' : designType === 'glassmorphism' ? 'kaca transparan dengan blur' : 'modern minimalis'} disimpan ke database
+• Perubahan siap ditampilkan
+
+🔄 **Langkah Selanjutnya:**
+Refresh halaman (tekan F5 atau Ctrl+R) untuk melihat perubahan!`,
+            actionTaken: `Design diterapkan pada ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+            followUp: 'Jika ingin style lain, bilang saja! Tersedia: neumorphism, glassmorphism, modern_minimal',
+          });
+          
+          return NextResponse.json({
+            reply: structuredReply,
+            designApplied: true,
+            designType,
+            component,
+            sessionId: userSessionId,
+            actionVerified: true,
+          });
+        } else {
+          // Failed - be honest
+          return NextResponse.json({
+            reply: `⚠️ **Gagal Menerapkan Design**\n\n${executeResult.details || 'Terjadi kesalahan saat menerapkan design.'}\n\n🔄 Silakan coba lagi atau hubungi admin.`,
+            designApplied: false,
+            error: true,
+          });
+        }
+      } catch (err) {
+        console.error('[AI Chat] Design execute error:', err);
+        return NextResponse.json({
+          reply: `⚠️ **Terjadi kesalahan teknis saat menerapkan design.**\n\nError: ${(err as Error).message}\n\n🔄 Silakan coba lagi nanti.`,
+          designApplied: false,
+          error: true,
+        });
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 📨 FORWARD TO ADMIN - For requests that need admin attention
+    // ═══════════════════════════════════════════════════════════════════════════
+    const applyDesignPatterns = [
+      /sampaikan.*desain/i,
+      /forward.*design/i,
+    ];
+    
+    const isForwardDesignRequest = applyDesignPatterns.some(p => p.test(userQuery)) && !isDesignExecuteRequest;
+    
+    if (isForwardDesignRequest && mode === 'public') {
+      // User wants to forward design request to admin (not execute directly)
+      console.log('[AI Action] 🎨 Forwarding design request to admin');
       try {
         const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
         const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
