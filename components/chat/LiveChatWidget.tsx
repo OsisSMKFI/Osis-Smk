@@ -1,9 +1,20 @@
 "use client";
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { FaComments, FaTimes, FaRobot, FaTrash, FaPaperPlane, FaWindowMinimize, FaWindowMaximize, FaWindowRestore, FaGripVertical, FaPlus, FaImage, FaFileAlt, FaExternalLinkAlt, FaArrowRight, FaInfoCircle, FaUsers, FaCalendarAlt, FaBook, FaBriefcase, FaImages, FaNewspaper, FaBullhorn, FaUserCircle, FaHome, FaHeart, FaQuestionCircle } from 'react-icons/fa';
+import { FaComments, FaTimes, FaRobot, FaTrash, FaPaperPlane, FaWindowMinimize, FaWindowMaximize, FaWindowRestore, FaGripVertical, FaPlus, FaImage, FaFileAlt, FaExternalLinkAlt, FaArrowRight, FaInfoCircle, FaUsers, FaCalendarAlt, FaBook, FaBriefcase, FaImages, FaNewspaper, FaBullhorn, FaUserCircle, FaHome, FaHeart, FaQuestionCircle, FaBell, FaEnvelope, FaPalette, FaEye, FaUserShield, FaMagic, FaCheck, FaCog } from 'react-icons/fa';
 import ChatBoundary from './ChatBoundary';
 import Link from 'next/link';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔥 WEBOSIS LIVE CHAT WIDGET - ULTIMATE PREMIUM v5.0
+// ═══════════════════════════════════════════════════════════════════════════════
+// Features:
+// - Elegant minimalist responsive design
+// - Message forwarding to admin/super admin
+// - Design preview & realtime editing
+// - Full AI conversation capabilities
+// - Admin notification system
+// ═══════════════════════════════════════════════════════════════════════════════
 
 // 🔗 SMART LINK DETECTION SYSTEM - Premium Feature
 // Detects context in AI messages and provides quick navigation buttons
@@ -14,6 +25,26 @@ type QuickLinkConfig = {
   icon: React.ReactNode;
   description: string;
 };
+
+// Message forwarding types
+type ForwardTarget = 'osis' | 'admin' | 'super_admin';
+type MessageForward = {
+  target: ForwardTarget;
+  message: string;
+  senderName?: string;
+  urgent: boolean;
+  timestamp: string;
+};
+
+// Design preview types
+type DesignPreview = {
+  component: string;
+  styles: Record<string, string>;
+  preview: string;
+  approved: boolean;
+};
+
+// Comprehensive page mapping for smart link detection
 
 // Comprehensive page mapping for smart link detection
 const QUICK_LINKS: QuickLinkConfig[] = [
@@ -112,7 +143,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   const [open, setOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [input, setInput] = React.useState('');
-  const [messages, setMessages] = React.useState<{ role: 'user' | 'assistant'; content: string; image?: string }[]>([]);
+  const [messages, setMessages] = React.useState<{ role: 'user' | 'assistant'; content: string; image?: string; isForward?: boolean; forwardTarget?: ForwardTarget }[]>([]);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [provider, setProvider] = React.useState<'auto'|'anthropic'|'gemini'|'openai'>('auto');
@@ -126,6 +157,17 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   // Minimal mode toggle (default true for elegant compact design)
   const [minimal, setMinimal] = React.useState(true);
+  
+  // 🔔 Message forwarding & notification states
+  const [showForwardModal, setShowForwardModal] = React.useState(false);
+  const [forwardMessage, setForwardMessage] = React.useState('');
+  const [forwardTarget, setForwardTarget] = React.useState<ForwardTarget>('osis');
+  const [forwardUrgent, setForwardUrgent] = React.useState(false);
+  const [forwardSent, setForwardSent] = React.useState(false);
+  
+  // 🎨 Design preview states (Super Admin only)
+  const [showDesignPreview, setShowDesignPreview] = React.useState(false);
+  const [designPreview, setDesignPreview] = React.useState<DesignPreview | null>(null);
   
   // Image upload state
   const [uploadedImage, setUploadedImage] = React.useState<string | null>(null);
@@ -163,20 +205,103 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   const mode: 'admin' | 'public' = role === 'super_admin' ? 'admin' : 'public';
   const suggestionsEnabled = process.env.NEXT_PUBLIC_CHAT_SUGGESTIONS !== '0';
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📨 MESSAGE FORWARDING SYSTEM - Forward to Admin/OSIS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const forwardToAdmin = async (target: ForwardTarget, message: string, urgent: boolean = false) => {
+    try {
+      const response = await fetch('/api/notifications/forward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target,
+          message,
+          urgent,
+          sessionId,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      
+      if (response.ok) {
+        setForwardSent(true);
+        setTimeout(() => setForwardSent(false), 3000);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Forward error:', error);
+      return false;
+    }
+  };
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🎨 DESIGN PREVIEW SYSTEM - Realtime Design Changes (Super Admin)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const requestDesignChange = async (component: string, changes: string) => {
+    if (mode !== 'admin') return null;
+    
+    try {
+      const response = await fetch('/api/admin/design-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ component, changes }),
+      });
+      
+      if (response.ok) {
+        const preview = await response.json();
+        setDesignPreview(preview);
+        setShowDesignPreview(true);
+        return preview;
+      }
+      return null;
+    } catch (error) {
+      console.error('Design preview error:', error);
+      return null;
+    }
+  };
+  
+  const applyDesignChange = async () => {
+    if (!designPreview || mode !== 'admin') return false;
+    
+    try {
+      const response = await fetch('/api/admin/design-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(designPreview),
+      });
+      
+      if (response.ok) {
+        setDesignPreview(null);
+        setShowDesignPreview(false);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Design apply error:', error);
+      return false;
+    }
+  };
+
   type Command = { cmd: string; desc: string; template?: string };
   const adminCommands: Command[] = React.useMemo(() => ([
-    { cmd: '/help', desc: 'Daftar perintah', template: '/help' },
-    { cmd: '/errors list', desc: 'Daftar error terbaru', template: '/errors list' },
-    { cmd: '/analyze', desc: 'Analisa error oleh AI', template: '/analyze <error_id>' },
-    { cmd: '/fix', desc: 'Terapkan perbaikan otomatis', template: '/fix <error_id>' },
+    { cmd: '/help', desc: 'Daftar perintah lengkap', template: '/help' },
+    { cmd: '/errors list', desc: 'Dashboard error terbaru', template: '/errors list' },
+    { cmd: '/analyze', desc: 'Deep AI analysis error', template: '/analyze <error_id>' },
+    { cmd: '/fix', desc: 'Auto-fix dengan AI Premium', template: '/fix <error_id>' },
     { cmd: '/generate', desc: 'Generate gambar dengan AI', template: '/generate <prompt>' },
+    { cmd: '/design', desc: '🎨 Redesign komponen realtime', template: '/design <component> <perubahan>' },
+    { cmd: '/preview', desc: '👁️ Preview perubahan design', template: '/preview' },
+    { cmd: '/apply-design', desc: '✅ Terapkan design baru', template: '/apply-design' },
     { cmd: '/sql', desc: 'Execute SQL query', template: '/sql SELECT * FROM posts LIMIT 5' },
     { cmd: '/query', desc: 'Query table dengan filter', template: '/query posts status=published limit=10' },
     { cmd: '/schema', desc: 'Show database schema', template: '/schema' },
     { cmd: '/stats', desc: 'Show system statistics', template: '/stats' },
-    { cmd: '/confirm', desc: 'Konfirmasi aksi pending terakhir', template: '/confirm' },
+    { cmd: '/notifications', desc: '🔔 Lihat notifikasi masuk', template: '/notifications' },
+    { cmd: '/reply', desc: '💬 Balas pesan user', template: '/reply <user_id> <pesan>' },
+    { cmd: '/broadcast', desc: '📢 Broadcast ke semua user', template: '/broadcast <pesan>' },
+    { cmd: '/confirm', desc: 'Konfirmasi aksi pending', template: '/confirm' },
     { cmd: '/cancel', desc: 'Batalkan aksi pending', template: '/cancel' },
-    { cmd: '/run', desc: 'Jalankan perintah terminal', template: '/run <command>' },
+    { cmd: '/run', desc: 'Jalankan terminal command', template: '/run <command>' },
     { cmd: '/config get', desc: 'Lihat konfigurasi', template: '/config get <KEY>' },
     { cmd: '/config set', desc: 'Update konfigurasi', template: '/config set <KEY>=<VALUE>' },
     { cmd: '/clear', desc: 'Hapus riwayat chat', template: '/clear' },
@@ -598,22 +723,30 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
 
   const content = (
     <>
+      {/* ═══════════════════════════════════════════════════════════════════════════
+          🎯 FLOATING BUTTON - Elegant Premium Design
+          ═══════════════════════════════════════════════════════════════════════════ */}
       {showFloating && !open && (
         <button
           onClick={() => setOpen(true)}
           style={{ 
             position: 'fixed', 
-            bottom: isMobile ? '1rem' : '1.25rem', 
-            right: isMobile ? '1rem' : '1.25rem', 
+            bottom: isMobile ? '1rem' : '1.5rem', 
+            right: isMobile ? '1rem' : '1.5rem', 
             zIndex: 2147483647 
           }}
-          className={`flex items-center justify-center ${isMobile ? 'w-12 h-12' : 'w-12 h-12'} rounded-xl bg-white/80 dark:bg-slate-800/80 shadow-lg shadow-black/10 border border-slate-300/60 dark:border-slate-700/60 backdrop-blur-sm hover:shadow-xl hover:bg-white dark:hover:bg-slate-700 transition duration-150`}
+          className={`group flex items-center justify-center ${isMobile ? 'w-14 h-14' : 'w-14 h-14'} rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all duration-300 ease-out`}
           aria-label="Open AI Chat"
         >
-          <FaComments className="text-slate-600 dark:text-slate-200" size={isMobile ? 18 : 18} />
+          <FaComments className="text-white drop-shadow-sm" size={isMobile ? 22 : 24} />
+          {/* Pulse animation ring */}
+          <span className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 animate-ping opacity-20" />
         </button>
       )}
 
+      {/* ═══════════════════════════════════════════════════════════════════════════
+          💬 CHAT WINDOW - Elegant Minimalist Responsive
+          ═══════════════════════════════════════════════════════════════════════════ */}
       {open && (
         <div 
           ref={dragRef}
@@ -621,12 +754,12 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
             position: 'fixed',
             ...(isMobile ? {
               bottom: 0,
-              left: '0.5rem',
-              right: '0.5rem',
-              width: 'calc(100% - 1rem)',
-              height: '60vh',
-              borderRadius: '12px 12px 0 0',
-              margin: '0 auto',
+              left: 0,
+              right: 0,
+              width: '100%',
+              height: '75vh',
+              maxHeight: '75vh',
+              borderRadius: '20px 20px 0 0',
             } : isMaximized ? {
               top: 0,
               left: 0,
@@ -640,18 +773,22 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               left: position.x,
               width: `${size.width}px`,
               height: isMinimized ? 'auto' : `${size.height}px`,
-              borderRadius: '16px',
+              minWidth: '360px',
+              maxWidth: '90vw',
+              borderRadius: '20px',
             }),
             zIndex: 2147483647,
           }}
-          className={`bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-slate-200/60 dark:border-slate-700 flex flex-col overflow-hidden ${isMobile ? 'rounded-t-xl' : isMaximized ? '' : 'rounded-2xl'} ${!isMobile && !isDragging ? 'transition-all duration-200' : ''}`}
+          className={`bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-black/20 dark:shadow-black/40 border border-white/20 dark:border-slate-700/50 flex flex-col overflow-hidden ${isMobile ? 'rounded-t-3xl' : isMaximized ? '' : 'rounded-3xl'} ${!isMobile && !isDragging ? 'transition-all duration-300 ease-out' : ''}`}
         >
+          {/* ═══════════════════════════════════════════════════════════════════
+              📌 HEADER - Clean & Modern
+              ═══════════════════════════════════════════════════════════════════ */}
           <div 
-            className={`flex items-center justify-between px-4 ${isMobile ? 'py-2 min-h-[52px]' : 'py-3 min-h-[60px]'} border-b border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md flex-shrink-0 ${!isMobile && !isMaximized ? 'cursor-move select-none' : ''}`}
+            className={`flex items-center justify-between px-4 ${isMobile ? 'py-3 min-h-[56px]' : 'py-3 min-h-[60px]'} border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 to-slate-50/80 dark:from-slate-900/80 dark:to-slate-800/80 backdrop-blur-xl flex-shrink-0 ${!isMobile && !isMaximized ? 'cursor-move select-none' : ''}`}
             onMouseDown={(e) => {
               if (!isMobile && !isMaximized && e.button === 0) {
                 const target = e.target as HTMLElement;
-                // Only drag if clicking on header background (not buttons or selects)
                 if (target === e.currentTarget || target.closest('.pointer-events-none')) {
                   setIsDragging(true);
                   setDragStart({
@@ -663,72 +800,242 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
             }}
           > 
             <div className="flex items-center gap-3 pointer-events-none min-w-0 flex-shrink">
-              <div className="rounded-md bg-slate-100 dark:bg-slate-800 p-1.5 flex-shrink-0 border border-slate-200/70 dark:border-slate-700/70">
-                <FaRobot className="text-slate-600 dark:text-slate-300" />
+              {/* AI Avatar with gradient */}
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
+                  <FaRobot className="text-white text-lg" />
+                </div>
+                {/* Online indicator */}
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-white dark:border-slate-900 rounded-full" />
               </div>
               <div className="flex flex-col min-w-0">
-                <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{mode === 'admin' ? 'AI Admin' : 'AI Assistant'}</div>
-                {!isMobile && !isMinimized && <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">{minimal ? 'Minimal Mode' : (mode === 'admin' ? 'Full Access' : 'Public Info')}</div>}
+                <div className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                  {mode === 'admin' ? '🔥 Super Admin AI' : 'WEBOSIS AI'}
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  <span>{mode === 'admin' ? 'Premium v5.0' : 'Online'}</span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 pointer-events-auto flex-shrink-0">{!isMobile && (
+            
+            {/* Header Controls */}
+            <div className="flex items-center gap-0.5 pointer-events-auto flex-shrink-0">
+              {/* Forward Message Button (Public only) */}
+              {mode === 'public' && (
+                <button
+                  onClick={() => setShowForwardModal(true)}
+                  className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                  aria-label="Kirim Pesan ke Admin"
+                  title="Kirim Pesan ke Admin/OSIS"
+                >
+                  <FaEnvelope size={14} />
+                </button>
+              )}
+              
+              {/* Design Mode (Admin only) */}
+              {mode === 'admin' && !isMobile && (
+                <button
+                  onClick={() => setShowDesignPreview(!showDesignPreview)}
+                  className={`text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 ${showDesignPreview ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600' : ''}`}
+                  aria-label="Design Mode"
+                  title="🎨 Design Preview Mode"
+                >
+                  <FaPalette size={14} />
+                </button>
+              )}
+              
+              {!isMobile && (
                 <>
                   <button
                     onClick={() => setIsMinimized(!isMinimized)}
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition p-1.5 rounded-md"
+                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                     aria-label="Minimize"
                     title="Minimize"
                   ><FaWindowMinimize size={11} /></button>
                   <button
                     onClick={() => setIsMaximized(!isMaximized)}
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition p-1.5 rounded-md"
+                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                     aria-label={isMaximized ? "Restore" : "Maximize"}
                     title={isMaximized ? "Restore" : "Maximize"}
                   >{isMaximized ? <FaWindowRestore size={12} /> : <FaWindowMaximize size={12} />}</button>
                 </>
               )}
               <button
-                onClick={() => setMinimal(!minimal)}
-                className="text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition p-1.5 rounded-md"
-                aria-label="Toggle Minimal Mode"
-                title="Toggle Minimal Mode"
-              >{minimal ? <FaWindowRestore size={12} /> : <FaWindowMinimize size={12} />}</button>
-              <button
                 onClick={clearChat}
-                className="text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition p-1.5 rounded-md"
+                className="text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                 aria-label="Clear Chat"
-                title="Clear Chat (/clear)"
+                title="Clear Chat"
               ><FaTrash size={12} /></button>
-              {!isMinimized && (
-                <div className="hidden md:flex items-center gap-1">
-                  <select
-                    value={provider}
-                    onChange={e=> setProvider(e.target.value as any)}
-                    className="text-[10px] px-1.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
-                    title="AI Provider"
-                  >
-                    <option value="auto">Auto</option>
-                    <option value="anthropic">Anthropic</option>
-                    <option value="gemini">Gemini</option>
-                    <option value="openai">OpenAI</option>
-                  </select>
-                </div>
+              {!isMinimized && !isMobile && (
+                <select
+                  value={provider}
+                  onChange={e=> setProvider(e.target.value as any)}
+                  className="text-[10px] px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 ml-1"
+                  title="AI Provider"
+                >
+                  <option value="auto">Auto</option>
+                  <option value="anthropic">Claude</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="openai">GPT</option>
+                </select>
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-500 transition p-1.5 rounded-md"
+                className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 ml-1"
                 aria-label="Close Chat"
-              ><FaTimes size={14} /></button>
+              ><FaTimes size={16} /></button>
             </div>
           </div>
 
+          {/* ═══════════════════════════════════════════════════════════════════
+              📨 MESSAGE FORWARD MODAL
+              ═══════════════════════════════════════════════════════════════════ */}
+          {showForwardModal && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <FaEnvelope className="text-indigo-500" />
+                    Kirim Pesan
+                  </h3>
+                  <button onClick={() => setShowForwardModal(false)} className="text-slate-400 hover:text-slate-600">
+                    <FaTimes />
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2 block">Kirim ke:</label>
+                    <div className="flex gap-2">
+                      {(['osis', 'admin', 'super_admin'] as ForwardTarget[]).map((target) => (
+                        <button
+                          key={target}
+                          onClick={() => setForwardTarget(target)}
+                          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition ${
+                            forwardTarget === target
+                              ? 'bg-indigo-500 text-white'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                          }`}
+                        >
+                          {target === 'osis' ? '🏫 OSIS' : target === 'admin' ? '👤 Admin' : '👑 Super Admin'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2 block">Pesan:</label>
+                    <textarea
+                      value={forwardMessage}
+                      onChange={(e) => setForwardMessage(e.target.value)}
+                      placeholder="Tulis pesan Anda di sini..."
+                      className="w-full h-24 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    />
+                  </div>
+                  
+                  <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={forwardUrgent}
+                      onChange={(e) => setForwardUrgent(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-red-500 focus:ring-red-400"
+                    />
+                    <span>🚨 Tandai sebagai Urgent</span>
+                  </label>
+                  
+                  <button
+                    onClick={async () => {
+                      if (forwardMessage.trim()) {
+                        const success = await forwardToAdmin(forwardTarget, forwardMessage, forwardUrgent);
+                        if (success) {
+                          setMessages(prev => [...prev, {
+                            role: 'assistant',
+                            content: `✅ Pesan Anda telah dikirim ke ${forwardTarget === 'osis' ? 'OSIS' : forwardTarget === 'admin' ? 'Admin' : 'Super Admin'}. Mereka akan segera merespons!`,
+                            isForward: true,
+                            forwardTarget
+                          }]);
+                          setForwardMessage('');
+                          setShowForwardModal(false);
+                        }
+                      }
+                    }}
+                    disabled={!forwardMessage.trim()}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:from-slate-400 disabled:to-slate-500 text-white font-medium rounded-xl transition shadow-lg shadow-indigo-500/30 disabled:shadow-none flex items-center justify-center gap-2"
+                  >
+                    <FaPaperPlane />
+                    Kirim Pesan
+                  </button>
+                </div>
+                
+                {forwardSent && (
+                  <div className="mt-4 p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm flex items-center gap-2">
+                    <FaCheck /> Pesan terkirim!
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════
+              🎨 DESIGN PREVIEW PANEL (Super Admin)
+              ═══════════════════════════════════════════════════════════════════ */}
+          {showDesignPreview && mode === 'admin' && designPreview && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <FaPalette className="text-purple-500" />
+                    Design Preview
+                  </h3>
+                  <button onClick={() => setShowDesignPreview(false)} className="text-slate-400 hover:text-slate-600">
+                    <FaTimes />
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-xl">
+                    <div className="text-sm text-slate-500 dark:text-slate-400 mb-2">Component: {designPreview.component}</div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600">
+                      {/* Preview would render here */}
+                      <div className="text-center text-slate-400">Preview Area</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDesignPreview(false)}
+                      className="flex-1 py-2 px-4 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={applyDesignChange}
+                      className="flex-1 py-2 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-xl hover:from-purple-600 hover:to-pink-600 transition shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
+                    >
+                      <FaMagic />
+                      Terapkan Design
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════════════════════
+              💬 MESSAGES AREA - Elegant & Responsive
+              ═══════════════════════════════════════════════════════════════════ */}
           {!isMinimized && (
             <>
-              <div className={`flex-1 ${isMobile ? 'px-3 py-3' : 'p-4'} space-y-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent`}>
+              <div className={`flex-1 ${isMobile ? 'px-3 py-3' : 'px-4 py-4'} space-y-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300/50 dark:scrollbar-thumb-slate-700/50 scrollbar-track-transparent`}>
             {messages.map((m, i) => (
-              <div key={i} className="space-y-2">
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`whitespace-pre-wrap break-words rounded-xl overflow-wrap-anywhere shadow-sm ${m.role === 'user' ? 'ml-14 md:ml-14' : 'mr-14 md:mr-14'} ${m.role === 'user' ? (minimal ? 'bg-indigo-100 dark:bg-indigo-800/40 text-slate-900 dark:text-slate-100' : 'bg-amber-100 dark:bg-amber-900/30 text-slate-900 dark:text-slate-100') : (minimal ? 'bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200' : 'bg-white/70 dark:bg-slate-700/70 text-slate-800 dark:text-slate-100')} ${isMobile ? 'text-[13px] px-3 py-2' : 'text-sm px-4 py-2'} border border-slate-200/60 dark:border-slate-700/60`}
+                  className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl shadow-sm ${
+                    m.role === 'user' 
+                      ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-br-md' 
+                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 rounded-bl-md'
+                  } ${isMobile ? 'text-[13px] px-3.5 py-2.5' : 'text-sm px-4 py-3'}`}
                   style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                 >
                   {m.image && (
@@ -841,34 +1148,48 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                 </div>
               </div>
             ))}
-            {loading && <div className="text-xs text-gray-500">AI mengetik...</div>}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className={`p-3 border-t border-slate-200/70 dark:border-slate-700 flex flex-col gap-2 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md flex-shrink-0`}>
-            {/* Image Preview */}
-            {uploadedImage && (
-              <div className="relative inline-block max-w-xs">
-                <img 
-                  src={uploadedImage} 
-                  alt={uploadedFileName} 
-                  className="max-h-32 rounded-lg border border-slate-300 dark:border-slate-600"
-                />
-                <button
-                  onClick={removeUploadedImage}
-                  className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-rose-600 shadow-md transition"
-                  aria-label="Remove image"
-                >
-                  <FaTimes size={12} />
-                </button>
-                <div className="text-xs text-slate-600 dark:text-slate-400 mt-1 truncate max-w-xs">
-                  {uploadedFileName}
+            {/* Elegant Loading Indicator */}
+            {loading && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                  <FaRobot className="text-white text-sm animate-pulse" />
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm border border-slate-200/60 dark:border-slate-700/60">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
+          </div>
 
-            {/* Input Area */}
-            <div className={`flex items-end gap-2 ${isMobile ? 'space-x-2' : ''}`}>
+          {/* ═══════════════════════════════════════════════════════════════════
+              ⌨️ INPUT AREA - Modern & Clean
+              ═══════════════════════════════════════════════════════════════════ */}
+          <div className={`${isMobile ? 'p-3' : 'p-4'} border-t border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-t from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur-xl flex-shrink-0`}>
+            {/* Image Preview */}
+            {uploadedImage && (
+              <div className="relative inline-block max-w-xs mb-3">
+                <img 
+                  src={uploadedImage} 
+                  alt={uploadedFileName} 
+                  className="max-h-28 rounded-xl border-2 border-indigo-200 dark:border-indigo-700 shadow-md"
+                />
+                <button
+                  onClick={removeUploadedImage}
+                  className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-rose-600 shadow-lg transition transform hover:scale-110"
+                  aria-label="Remove image"
+                >
+                  <FaTimes size={10} />
+                </button>
+              </div>
+            )}
+
+            {/* Input Row */}
+            <div className="flex items-end gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -876,45 +1197,49 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                 onChange={handleFileUpload}
                 className="hidden"
               />
+              
+              {/* Upload Button */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition shadow-sm flex-shrink-0"
-                title="Upload gambar/dokumen"
+                className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all duration-200 flex items-center justify-center flex-shrink-0 hover:scale-105"
+                title="Upload gambar"
                 aria-label="Upload file"
               >
-                <FaPlus size={14} />
+                <FaImage size={16} />
               </button>
-            <div className="relative flex-1 min-w-0">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e)=>{ setInput(e.target.value); if (paletteOpen && e.target.value.trim() === '') { setInput('/'); } }}
-                onKeyDown={(e)=>{
-                  if (e.key === 'Escape' && paletteOpen) { e.preventDefault(); closePalette(); return; }
-                  if ((e.key === '/' && input === '') || (e.key === 'k' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); openPalette(); return; }
-                  if (paletteOpen) {
-                    if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i=> Math.min((i<0?0:i)+1, paletteCommands.length-1)); return; }
-                    if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i=> Math.max((i<=0?0:i-1), 0)); return; }
-                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (selectedIndex >=0 && selectedIndex < paletteCommands.length) { handleCommandSelect(paletteCommands[selectedIndex]); } else { closePalette(); } return; }
-                    if (e.key === 'Tab') { e.preventDefault(); if (selectedIndex >=0 && selectedIndex < paletteCommands.length) { handleCommandSelect(paletteCommands[selectedIndex]); } return; }
-                    return;
-                  }
-                  if (suggestionsEnabled && showSuggestions) {
-                    if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex((i)=> Math.min((i<0?0:i)+1, filteredSuggestions.length-1)); return; }
-                    if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex((i)=> Math.max((i<=0?0:i-1), 0)); return; }
-                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (selectedIndex >= 0) { pickSuggestion(selectedIndex); } else { send(); } return; }
-                    if (e.key === 'Escape') { setShowSuggestions(false); setSelectedIndex(-1); return; }
-                  } else if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    send();
-                    return;
-                  }
-                }}
-                rows={1}
-                placeholder={mode === 'admin' ? 'Ketik pesan atau / untuk perintah…' : 'Tanya info OSIS...'}
-                className={`flex-1 min-w-0 w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-800 text-slate-900 dark:text-white ${isMobile ? 'text-base' : 'text-sm'} focus:outline-none focus:ring-2 focus:ring-indigo-400/50 caret-indigo-500 placeholder:text-slate-500 dark:placeholder:text-slate-400 resize-none overflow-y-auto hide-scrollbar`}
-                style={{ height: '40px', maxHeight: '128px' }}
-              />
+              
+              {/* Text Input */}
+              <div className="relative flex-1 min-w-0">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e)=>{ setInput(e.target.value); if (paletteOpen && e.target.value.trim() === '') { setInput('/'); } }}
+                  onKeyDown={(e)=>{
+                    if (e.key === 'Escape' && paletteOpen) { e.preventDefault(); closePalette(); return; }
+                    if ((e.key === '/' && input === '') || (e.key === 'k' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); openPalette(); return; }
+                    if (paletteOpen) {
+                      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i=> Math.min((i<0?0:i)+1, paletteCommands.length-1)); return; }
+                      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i=> Math.max((i<=0?0:i-1), 0)); return; }
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (selectedIndex >=0 && selectedIndex < paletteCommands.length) { handleCommandSelect(paletteCommands[selectedIndex]); } else { closePalette(); } return; }
+                      if (e.key === 'Tab') { e.preventDefault(); if (selectedIndex >=0 && selectedIndex < paletteCommands.length) { handleCommandSelect(paletteCommands[selectedIndex]); } return; }
+                      return;
+                    }
+                    if (suggestionsEnabled && showSuggestions) {
+                      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex((i)=> Math.min((i<0?0:i)+1, filteredSuggestions.length-1)); return; }
+                      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex((i)=> Math.max((i<=0?0:i-1), 0)); return; }
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (selectedIndex >= 0) { pickSuggestion(selectedIndex); } else { send(); } return; }
+                      if (e.key === 'Escape') { setShowSuggestions(false); setSelectedIndex(-1); return; }
+                    } else if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      send();
+                      return;
+                    }
+                  }}
+                  rows={1}
+                  placeholder={mode === 'admin' ? '💬 Ketik pesan atau / untuk perintah...' : '💬 Tanyakan sesuatu...'}
+                  className={`w-full px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white ${isMobile ? 'text-base' : 'text-sm'} focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-4 focus:ring-indigo-400/20 caret-indigo-500 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none transition-all duration-200`}
+                  style={{ height: '44px', maxHeight: '120px' }}
+                />
 
               {paletteOpen && suggestionsEnabled && (
                 <div className="absolute bottom-full mb-2 left-0 w-full max-h-72 overflow-auto rounded-lg border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 shadow-xl z-[2147483647] backdrop-blur-sm">
@@ -947,72 +1272,62 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               )}
 
               {suggestionsEnabled && showSuggestions && !paletteOpen && (
-                <div className="absolute bottom-full mb-2 left-0 w-full max-h-56 overflow-auto rounded-lg border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 shadow-xl z-[2147483647]">
+                <div className="absolute bottom-full mb-2 left-0 w-full max-h-56 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl z-[2147483647]">
                   {filteredSuggestions.map((s, idx) => (
                     <button
                       key={s.cmd+idx}
                       type="button"
                       onClick={()=>pickSuggestion(idx)}
-                      className={`w-full text-left px-3 py-2 text-sm flex items-start gap-2 ${idx===selectedIndex? 'bg-indigo-100 dark:bg-indigo-900/40' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}`}
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-start gap-2 transition ${idx===selectedIndex? 'bg-indigo-50 dark:bg-indigo-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
                     >
-                      <span className="font-mono text-slate-700 dark:text-slate-300">{s.cmd}</span>
+                      <span className="font-mono text-indigo-600 dark:text-indigo-400">{s.cmd}</span>
                       <span className="text-slate-500 dark:text-slate-400">{s.desc}</span>
                     </button>
                   ))}
-                  {filteredSuggestions.length === 0 && (
-                    <div className="px-3 py-2 text-xs text-slate-500">Tidak ada perintah cocok.</div>
-                  )}
                 </div>
               )}
             </div>
 
-            {mode === 'admin' && suggestionsEnabled && !isMobile && (
+              {/* Send Button */}
               <button
-                onClick={openPalette}
-                className="px-3 py-2 rounded-md bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-medium shadow-sm transition flex items-center gap-1"
-                title="Buka Command Palette (Ctrl+K)"
+                onClick={send}
+                disabled={loading || (!input.trim() && !uploadedImage)}
+                className="w-10 h-10 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:from-slate-300 disabled:to-slate-400 text-white shadow-lg shadow-indigo-500/30 disabled:shadow-none transition-all duration-200 flex items-center justify-center flex-shrink-0 hover:scale-105 disabled:hover:scale-100"
+                aria-label="Kirim pesan"
               >
-                <span className="text-xs">⚡</span>
-                <span className="hidden sm:inline">Perintah</span>
+                <FaPaperPlane size={14} />
               </button>
-            )}
-
-            <button
-              onClick={send}
-              disabled={loading || (!input.trim() && !uploadedImage)}
-              className={`${isMobile ? 'w-10 h-10 p-0.5 rounded-lg' : 'px-4 py-2 rounded-md'} bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white text-sm font-medium disabled:opacity-60 shadow-sm transition flex items-center justify-center flex-none`}
-            >
-              {isMobile ? <FaPaperPlane size={16} /> : 'Kirim'}
-            </button>
-            {isMobile && (
-              <select
-                value={provider}
-                onChange={e=> setProvider(e.target.value as any)}
-                className="text-[10px] px-1 py-1 rounded-md bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
-                title="Provider AI"
-              >
-                <option value="auto">Auto</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="gemini">Gemini</option>
-                <option value="openai">OpenAI</option>
-              </select>
-            )}
+              
+              {/* Mobile Provider Select */}
+              {isMobile && (
+                <select
+                  value={provider}
+                  onChange={e=> setProvider(e.target.value as any)}
+                  className="text-[10px] px-2 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                  title="Provider AI"
+                >
+                  <option value="auto">Auto</option>
+                  <option value="anthropic">Claude</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="openai">GPT</option>
+                </select>
+              )}
             </div>
           </div>
             </>
           )}
           
-          {/* Resize handle (desktop only, bottom-right corner) */}
+          {/* Resize handle (desktop only) */}
           {!isMobile && !isMaximized && !isMinimized && (
             <div
-              className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize bg-slate-200/40 hover:bg-slate-300/60 dark:bg-slate-700/40 dark:hover:bg-slate-600/60 transition"
-              style={{ borderBottomRightRadius: '16px' }}
+              className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize opacity-50 hover:opacity-100 transition"
+              style={{ borderBottomRightRadius: '20px' }}
               onMouseDown={(e) => {
                 e.preventDefault();
                 setIsResizing(true);
               }}
             >
-              <FaGripVertical className="absolute bottom-1 right-1 text-slate-500/60 dark:text-slate-400/60" size={10} />
+              <FaGripVertical className="absolute bottom-1 right-1 text-slate-400 dark:text-slate-500" size={10} />
             </div>
           )}
         </div>
