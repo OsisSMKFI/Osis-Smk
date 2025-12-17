@@ -2068,6 +2068,21 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
             });
             
             const data = await res.json();
+            
+            // Check if running on production (Vercel)
+            if (data.isProduction) {
+                // Show informative message for production environment
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `⚠️ **Production Environment Detected**\n\nFile editing is disabled on Vercel production.\n\n📋 **Copy the code below and paste in your local editor:**\n\n**File:** \`${filePath}\`\n\n\`\`\`${language || 'typescript'}\n${code.slice(0, 2000)}${code.length > 2000 ? '\n// ... (code truncated, copy from code block above)' : ''}\n\`\`\`\n\n💡 **Steps:**\n1. Copy the code above\n2. Open \`${filePath}\` in VS Code\n3. Paste and save\n4. \`git push\` to deploy`,
+                    timestamp: new Date(),
+                    actionType: 'action'
+                }]);
+                notify('info', '📋 Code shown in chat - copy to local editor');
+                return false;
+            }
+            
             if (data.success) {
                 notify('success', `✅ File saved: ${filePath}`);
                 
@@ -2114,7 +2129,7 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
     // 🖥️ TERMINAL EXECUTION - Run commands from AI
     // ═══════════════════════════════════════════════════════════════════════════
     
-    const runTerminalCommand = async (command: string): Promise<{ success: boolean; output: string; error?: string }> => {
+    const runTerminalCommand = async (command: string): Promise<{ success: boolean; output: string; error?: string; isProduction?: boolean }> => {
         try {
             notify('info', `🖥️ Running: ${command}`);
             
@@ -2125,6 +2140,19 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
             });
             
             const data = await res.json();
+            
+            // Check if running on production (Vercel)
+            if (data.isProduction) {
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `⚠️ **Production Environment Detected**\n\nTerminal commands are disabled on Vercel.\n\n📋 **Run this command locally:**\n\n\`\`\`bash\n${command}\n\`\`\`\n\n💡 **Steps:**\n1. Open terminal in your local project\n2. Run the command above\n3. \`git push\` to deploy`,
+                    timestamp: new Date(),
+                    actionType: 'action'
+                }]);
+                notify('info', '📋 Command shown in chat - run locally');
+                return { success: false, output: '', error: 'Production environment', isProduction: true };
+            }
             
             if (data.success) {
                 notify('success', `✅ Command completed: ${command.slice(0, 30)}...`);
