@@ -7,6 +7,128 @@ import { getConfig } from '@/lib/adminConfig';
 import { logActivity } from '@/lib/activity-logger';
 import { getAIGatewayStatus, chat as gatewayChat } from '@/lib/vercel/ai-gateway';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔍 TYPO DETECTION - Deteksi kesalahan ketik untuk konfirmasi
+// ═══════════════════════════════════════════════════════════════════════════
+interface TypoDetectionResult {
+  hasTypo: boolean;
+  original: string;
+  suggestions: string[];
+  confidence: number;
+}
+
+function detectTypos(query: string, knownTerms: string[]): TypoDetectionResult {
+  // Common OSIS-related words that might have typos
+  const commonWords = [
+    'sekbid', 'osis', 'ketua', 'wakil', 'anggota', 'event', 'kegiatan',
+    'proker', 'program', 'kerja', 'galeri', 'pengumuman', 'jadwal',
+    'pendaftaran', 'registrasi', 'visi', 'misi', 'filosofi', 'tentang',
+    'sekretaris', 'bendahara', 'koordinator', 'quote', 'motivasi',
+    ...knownTerms
+  ];
+  
+  const words = query.toLowerCase().split(/\s+/);
+  const suggestions: string[] = [];
+  let hasTypo = false;
+  
+  for (const word of words) {
+    if (word.length < 3) continue;
+    
+    // Skip if it's a known word
+    if (commonWords.includes(word)) continue;
+    
+    // Check for similar words using Levenshtein-like distance
+    for (const known of commonWords) {
+      if (known.length < 3) continue;
+      const distance = getEditDistance(word, known);
+      const maxDist = Math.max(1, Math.floor(known.length / 3));
+      
+      if (distance > 0 && distance <= maxDist && distance < word.length - 1) {
+        hasTypo = true;
+        if (!suggestions.includes(known)) {
+          suggestions.push(known);
+        }
+      }
+    }
+  }
+  
+  return {
+    hasTypo,
+    original: query,
+    suggestions: suggestions.slice(0, 3),
+    confidence: hasTypo ? 0.7 : 1.0
+  };
+}
+
+// Simple edit distance for typo detection
+function getEditDistance(a: string, b: string): number {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  
+  const matrix: number[][] = [];
+  
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  
+  return matrix[b.length][a.length];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ✅ ACTION VERIFICATION - Pastikan AI benar-benar melakukan action
+// ═══════════════════════════════════════════════════════════════════════════
+interface ActionResult {
+  action: string;
+  success: boolean;
+  details: string;
+  timestamp: string;
+}
+
+async function verifyAndLogAction(action: string, result: any): Promise<ActionResult> {
+  const actionResult: ActionResult = {
+    action,
+    success: false,
+    details: '',
+    timestamp: new Date().toISOString()
+  };
+  
+  if (result && typeof result === 'object') {
+    if ('success' in result) {
+      actionResult.success = result.success === true;
+      actionResult.details = result.message || result.details || 'Action completed';
+    } else if ('ok' in result) {
+      actionResult.success = result.ok === true;
+      actionResult.details = JSON.stringify(result).slice(0, 200);
+    } else if ('error' in result) {
+      actionResult.success = false;
+      actionResult.details = `Error: ${result.error}`;
+    } else {
+      actionResult.success = true;
+      actionResult.details = 'Action executed';
+    }
+  }
+  
+  console.log(`[AI Action] ${actionResult.success ? '✅' : '❌'} ${action}: ${actionResult.details}`);
+  return actionResult;
+}
+
 // Clean formatter to align chat with vision formatting (remove markdown bold etc.)
 function formatCleanResponse(text: string, opts: { emphasis?: boolean } = {}): string {
   let out = text || '';
@@ -29,6 +151,71 @@ function formatCleanResponse(text: string, opts: { emphasis?: boolean } = {}): s
     out = out.replace(/^(\s*)([A-Za-z0-9 ]{3,40}:)$/gm, (m, sp, head) => sp + head.toUpperCase());
   }
   return out.trim();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 📋 STRUCTURED RESPONSE FORMATTER - Format respons yang rapi dan tersusun
+// ═══════════════════════════════════════════════════════════════════════════
+interface StructuredResponse {
+  greeting?: string;
+  mainContent: string;
+  actionTaken?: string;
+  followUp?: string;
+  quickLinks?: string[];
+}
+
+function formatStructuredResponse(response: StructuredResponse): string {
+  const parts: string[] = [];
+  
+  // 1. Greeting (optional, warm opener)
+  if (response.greeting) {
+    parts.push(response.greeting);
+    parts.push(''); // Empty line
+  }
+  
+  // 2. Main content (the actual answer)
+  if (response.mainContent) {
+    // Clean up excessive formatting
+    let content = response.mainContent;
+    // Limit consecutive bullet points
+    content = content.replace(/(•[^\n]+\n){6,}/g, (match) => {
+      const lines = match.trim().split('\n').slice(0, 5);
+      return lines.join('\n') + '\n• ...dan lainnya\n';
+    });
+    parts.push(content);
+  }
+  
+  // 3. Action confirmation (if action was taken)
+  if (response.actionTaken) {
+    parts.push('');
+    parts.push(`✅ **Status:** ${response.actionTaken}`);
+  }
+  
+  // 4. Follow-up suggestion (optional)
+  if (response.followUp) {
+    parts.push('');
+    parts.push(`💡 ${response.followUp}`);
+  }
+  
+  // 5. Quick links (max 3, optional)
+  if (response.quickLinks && response.quickLinks.length > 0) {
+    const links = response.quickLinks.slice(0, 3);
+    parts.push('');
+    parts.push('🔗 ' + links.join(' | '));
+  }
+  
+  return parts.join('\n').trim();
+}
+
+// Helper to create typo confirmation message
+function createTypoConfirmation(typoResult: TypoDetectionResult): string | null {
+  if (!typoResult.hasTypo || typoResult.suggestions.length === 0) return null;
+  
+  return `🤔 **Konfirmasi:** Sepertinya ada kemungkinan typo di pertanyaanmu.
+
+Apakah maksudmu **"${typoResult.suggestions.join('"** atau **"')}"**?
+
+Jika pertanyaanmu sudah benar, silakan ulangi dan saya akan bantu! 😊`;
 }
 
 // Sanitize AI output for public/anonymous users to prevent PII & sensitive leakage
@@ -792,6 +979,68 @@ export async function POST(request: NextRequest) {
     
     console.log('[/api/ai/chat] Request:', { mode, userQuery: userQuery.substring(0, 50), hasSession: !!session });
     
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🔍 TYPO DETECTION - Konfirmasi jika ada kemungkinan typo
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Get known terms from database for typo checking
+    const knownTerms: string[] = [];
+    try {
+      const { data: members } = await supabaseAdmin
+        .from('members')
+        .select('name,nama')
+        .limit(100);
+      if (members) {
+        members.forEach(m => {
+          const name = m.name || m.nama;
+          if (name) {
+            // Add first names and full names
+            knownTerms.push(name.toLowerCase());
+            const firstName = name.split(' ')[0];
+            if (firstName.length > 2) knownTerms.push(firstName.toLowerCase());
+          }
+        });
+      }
+      const { data: sekbids } = await supabaseAdmin
+        .from('sekbid')
+        .select('name')
+        .limit(20);
+      if (sekbids) {
+        sekbids.forEach(s => {
+          if (s.name) knownTerms.push(s.name.toLowerCase());
+        });
+      }
+    } catch (e) {
+      console.warn('[AI] Failed to fetch known terms for typo detection:', e);
+    }
+    
+    // Check for potential typos (only for public mode, not commands)
+    if (mode === 'public' && userQuery && !userQuery.startsWith('/')) {
+      const typoResult = detectTypos(userQuery, knownTerms);
+      // Only show typo confirmation for significant typos in key words
+      const isAskingAboutPerson = /(siapa|sekbid|anggota|ketua|wakil)/i.test(userQuery);
+      if (typoResult.hasTypo && isAskingAboutPerson && typoResult.suggestions.length > 0) {
+        // Check if this looks like a name typo
+        const words = userQuery.toLowerCase().split(/\s+/);
+        const hasUnrecognizedName = words.some(w => 
+          w.length > 3 && 
+          !knownTerms.includes(w) && 
+          !/^(siapa|sekbid|anggota|ketua|wakil|apa|di|yang|dari|untuk|ini|itu)$/i.test(w)
+        );
+        
+        if (hasUnrecognizedName && typoResult.confidence < 0.8) {
+          console.log('[AI] Typo detected:', typoResult);
+          const typoConfirmation = createTypoConfirmation(typoResult);
+          if (typoConfirmation) {
+            return NextResponse.json({
+              reply: typoConfirmation,
+              typoDetected: true,
+              suggestions: typoResult.suggestions,
+            });
+          }
+        }
+      }
+    }
+    
     const aiContext = await buildAIContext(userId ?? null, role ?? null, mode);
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -867,7 +1116,8 @@ export async function POST(request: NextRequest) {
       if (/super\s*admin/i.test(userQuery)) target = 'super_admin';
       else if (/osis/i.test(userQuery)) target = 'osis';
       
-      // Actually call the forward API
+      // Actually call the forward API with action verification
+      console.log('[AI Action] 🚀 Starting forward action to:', target);
       try {
         const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
         const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -887,27 +1137,44 @@ export async function POST(request: NextRequest) {
         
         const forwardResult = await forwardRes.json();
         
-        if (forwardResult.success) {
+        // Verify action was actually executed
+        const actionVerification = await verifyAndLogAction('forward_message', forwardResult);
+        
+        if (actionVerification.success && forwardResult.success) {
           const targetName = target === 'super_admin' ? 'Super Admin' : target === 'osis' ? 'OSIS' : 'Admin';
-          // Show cleaner confirmation
+          // Show cleaner confirmation with structured format
           const shortSummary = messageToForward.split('\n')[0].slice(0, 100);
+          
+          const structuredReply = formatStructuredResponse({
+            greeting: `✅ **Pesan Berhasil Diteruskan ke ${targetName}!** 📨`,
+            mainContent: `**Ringkasan Pesanmu:**\n${shortSummary}`,
+            actionTaken: `Terkirim ke ${targetName} pada ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+            followUp: `${targetName} akan menerima notifikasi dan dapat membalas langsung ke chat ini. Balasan akan otomatis muncul di sini!`,
+          });
+          
           return NextResponse.json({
-            reply: `✅ **Pesan Berhasil Diteruskan ke ${targetName}!** 📨
-
-📋 **Ringkasan:** ${shortSummary}
-
-⏳ ${targetName} akan menerima notifikasi dan dapat membalas langsung ke chat ini.
-
-💡 Balasan akan otomatis muncul di sini jika ${targetName} merespons.`,
+            reply: structuredReply,
             forwarded: true,
             forwardTarget: target,
             sessionId: userSessionId,
+            actionVerified: true,
           });
         } else {
-          console.error('[AI Chat] Forward failed:', forwardResult);
+          // Forward failed - be honest about it
+          console.error('[AI Chat] Forward failed:', forwardResult, actionVerification);
+          return NextResponse.json({
+            reply: `⚠️ **Maaf, gagal mengirim pesan ke Admin.**\n\n❌ ${actionVerification.details || 'Terjadi kesalahan saat forward.'}\n\n🔄 Silakan coba lagi atau hubungi admin langsung melalui Instagram.`,
+            forwarded: false,
+            error: true,
+          });
         }
       } catch (forwardErr) {
         console.error('[AI Chat] Forward error:', forwardErr);
+        return NextResponse.json({
+          reply: `⚠️ **Terjadi kesalahan teknis saat mengirim pesan.**\n\n🔄 Silakan coba lagi nanti atau hubungi admin langsung.`,
+          forwarded: false,
+          error: true,
+        });
       }
     }
     
@@ -933,6 +1200,7 @@ export async function POST(request: NextRequest) {
     
     if (isApplyDesignRequest && wasDiscussingDesign && mode === 'public') {
       // User wants to apply design changes - forward to admin as design request
+      console.log('[AI Action] 🎨 Starting design request forward');
       try {
         const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
         const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -957,27 +1225,38 @@ export async function POST(request: NextRequest) {
           }),
         });
         
-        if (forwardRes.ok) {
+        const forwardResult = await forwardRes.json();
+        const actionVerification = await verifyAndLogAction('design_request_forward', forwardResult);
+        
+        if (actionVerification.success) {
+          const structuredReply = formatStructuredResponse({
+            greeting: '🎨 **Permintaan Desain Diteruskan!**',
+            mainContent: `Saya sudah mengirimkan permintaan perubahan desain kamu ke Super Admin. 👨‍💻`,
+            actionTaken: `Terkirim pada ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
+            followUp: 'Super Admin akan review dan menerapkan perubahan jika disetujui. Terima kasih sudah memberikan masukan! 🙏',
+          });
+          
           return NextResponse.json({
-            reply: `🎨 **Permintaan Desain Diteruskan!**
-
-Saya sudah mengirimkan permintaan perubahan desain kamu ke Super Admin. 👨‍💻
-
-📋 **Yang akan dilakukan:**
-• Super Admin akan review permintaan desain
-• Jika disetujui, perubahan akan diterapkan ke website
-• Kamu akan melihat hasilnya saat website di-update
-
-⏳ Mohon tunggu konfirmasi dari Super Admin ya!
-
-💡 *Terima kasih sudah memberikan masukan untuk website OSIS!* 🙏`,
+            reply: structuredReply,
             forwarded: true,
             forwardTarget: 'super_admin',
             sessionId: userSessionId,
+            actionVerified: true,
+          });
+        } else {
+          return NextResponse.json({
+            reply: `⚠️ **Gagal mengirim permintaan desain.**\n\n${actionVerification.details}\n\n🔄 Silakan coba lagi nanti.`,
+            forwarded: false,
+            error: true,
           });
         }
       } catch (err) {
         console.error('[AI Chat] Design request forward error:', err);
+        return NextResponse.json({
+          reply: `⚠️ **Terjadi kesalahan saat mengirim permintaan desain.**\n\n🔄 Silakan coba lagi nanti.`,
+          forwarded: false,
+          error: true,
+        });
       }
     }
 
