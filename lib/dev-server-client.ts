@@ -30,6 +30,7 @@ export async function execOnDevServer(command: string, cwd?: string): Promise<De
     
     try {
         console.log(`[DevServer] Executing: ${command}`);
+        console.log(`[DevServer] URL: ${DEV_SERVER_URL}/api/exec`);
         
         const res = await fetch(`${DEV_SERVER_URL}/api/exec`, {
             method: 'POST',
@@ -39,6 +40,18 @@ export async function execOnDevServer(command: string, cwd?: string): Promise<De
             },
             body: JSON.stringify({ command, cwd })
         });
+        
+        // Check if response is HTML (error page) instead of JSON
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error('[DevServer] Non-JSON response:', text.slice(0, 200));
+            return {
+                success: false,
+                error: `⚠️ Dev Server tidak merespons dengan benar.\n\nStatus: ${res.status}\nURL: ${DEV_SERVER_URL}\n\n💡 Pastikan:\n1. Railway Dev Server sudah deploy\n2. Root Directory = "dev-server"\n3. Service sudah running`,
+                hint: 'Check Railway deployment'
+            };
+        }
         
         const data = await res.json();
         return {
@@ -50,7 +63,7 @@ export async function execOnDevServer(command: string, cwd?: string): Promise<De
         console.error('[DevServer] Error:', err);
         return {
             success: false,
-            error: `Dev Server error: ${err instanceof Error ? err.message : 'Unknown error'}`
+            error: `⚠️ Tidak bisa connect ke Dev Server.\n\nError: ${err instanceof Error ? err.message : 'Unknown error'}\nURL: ${DEV_SERVER_URL}\n\n💡 Pastikan Railway Dev Server sudah online.`
         };
     }
 }
