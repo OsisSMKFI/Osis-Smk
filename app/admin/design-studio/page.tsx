@@ -1226,24 +1226,43 @@ ${sel}:hover {
                 selector = componentInfo?.selectors?.[0] || `[data-component="${targetComponent}"]`;
             }
             
-            // ONLY use smart CSS patterns if user is EXPLICITLY requesting a style
-            const isExplicitStyleRequest = /buat(kan)?|terapkan|apply|style|tambah(kan)?|ubah.*jadi|make.*look/i.test(userQuery) && 
-                                          !isQuestion && 
-                                          /glass|dark|neon|gradient|hover|animasi|responsive|shadow|neumorphism|minimal/i.test(userQuery);
+            // Use smart CSS patterns if user is requesting a style (more inclusive detection)
+            const styleKeywords = /glass|dark|neon|gradient|hover|animasi|responsive|shadow|neumorphism|minimal|modern|elegan|transparan|blur|glow|colorful|efek|effect/i;
+            const requestWords = /buat(kan)?|terapkan|apply|style|tambah(kan)?|ubah|ganti|pasang|set|kasih|tolong/i;
+            const isExplicitStyleRequest = styleKeywords.test(userQuery) && !isQuestion;
+            const wantsAutoApply = requestWords.test(userQuery) || styleKeywords.test(userQuery);
             
-            if (targetComponent && isExplicitStyleRequest) {
-                const smartResult = generateSmartCSS(userQuery, selector, componentInfo?.category || 'other');
+            if (isExplicitStyleRequest) {
+                // Use fallback selector if no component detected
+                const applySel = selector || '.component, .card, .button, [class*="card"], [class*="button"]';
+                const applyComp = targetComponent || selectedComponent || 'global';
+                
+                const smartResult = generateSmartCSS(userQuery, applySel, componentInfo?.category || 'other');
                 
                 if (smartResult) {
+                    // Add message to chat
                     setChatMessages(prev => [...prev, {
                         id: (Date.now() + 1).toString(),
                         role: 'assistant',
-                        content: `🎯 Komponen terdeteksi: **${componentInfo?.displayName || targetComponent}**\n\n${smartResult.message}\n\n✅ Klik **Apply** untuk menerapkan ke website.`,
+                        content: `🎯 Komponen target: **${DESIGN_REGISTRY[applyComp]?.displayName || applyComp}**\n\n${smartResult.message}\n\n✅ CSS akan otomatis diterapkan...`,
                         timestamp: new Date(),
                         cssCode: smartResult.css,
-                        targetComponent,
+                        targetComponent: applyComp,
                         actionType: 'css'
                     }]);
+                    
+                    // AUTO-APPLY the smart CSS immediately
+                    setTimeout(async () => {
+                        await applyCSSFromChat(smartResult.css, applyComp);
+                        setChatMessages(prev => [...prev, {
+                            id: Date.now().toString(),
+                            role: 'system',
+                            content: `✅ **Berhasil!** CSS untuk **${DESIGN_REGISTRY[applyComp]?.displayName || applyComp}** sudah diterapkan!\n\n🔄 Refresh halaman untuk melihat perubahan.`,
+                            timestamp: new Date(),
+                            actionType: 'action'
+                        }]);
+                    }, 300);
+                    
                     return;
                 }
             }
@@ -1333,8 +1352,32 @@ CARA MENJAWAB:
 ═══════════════════════════════════════════════════════════════
 - Jika user bertanya "ada gak" atau "dimana" → Cari dan berikan info file
 - Jika user minta ubah kode → Berikan kode dengan format: \`\`\`tsx:path/file.tsx
-- Jika user minta style → Berikan CSS yang sesuai
-- SELALU berikan solusi yang bisa langsung diterapkan!`;
+- Jika user minta style/design (glass, dark, neon, gradient, dll) → WAJIB berikan CSS!
+- SELALU berikan solusi yang bisa langsung diterapkan!
+
+⚠️ JIKA USER MINTA STYLE/DESIGN:
+Kamu HARUS memberikan kode CSS dalam format ini:
+
+\`\`\`css
+/* Style untuk [component name] */
+.selector {
+  property: value;
+}
+\`\`\`
+
+Contoh untuk glassmorphism:
+\`\`\`css
+/* Glassmorphism Effect */
+.card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+}
+\`\`\`
+
+INGAT: Jika user minta style, WAJIB sertakan CSS code block!`;
             
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
@@ -1410,6 +1453,43 @@ CARA MENJAWAB:
             };
             
             setChatMessages(prev => [...prev, aiMessage]);
+            
+            // ═══════════════════════════════════════════════════════════════
+            // 🚀 AUTO-APPLY: Automatically apply changes from AI response
+            // ═══════════════════════════════════════════════════════════════
+            const shouldAutoApply = /terapkan|apply|ubah|ganti|pasang|set|update|change|modify|edit|buatkan|buat|glass|neon|dark|gradient|style|hover|animasi|shadow|neumorphism/i.test(userQuery);
+            const hasStyleKeyword = /glass|neon|dark|gradient|style|hover|animasi|shadow|neumorphism|minimal|modern|elegan|bagus|keren/i.test(userQuery);
+            
+            if (shouldAutoApply || hasStyleKeyword) {
+                // Auto-apply CSS if available - use detected or fallback component
+                if (cssCode) {
+                    const applyTarget = targetComponent || selectedComponent || 'global';
+                    setTimeout(async () => {
+                        await applyCSSFromChat(cssCode, applyTarget);
+                        setChatMessages(prev => [...prev, {
+                            id: Date.now().toString(),
+                            role: 'system',
+                            content: `✅ **Auto-Applied!** CSS untuk **${DESIGN_REGISTRY[applyTarget]?.displayName || applyTarget}** sudah diterapkan ke website.\n\n🔄 Refresh halaman untuk melihat perubahan.`,
+                            timestamp: new Date(),
+                            actionType: 'action'
+                        }]);
+                    }, 500);
+                }
+                
+                // Auto-apply file changes if available
+                if (fileChanges.length > 0) {
+                    setTimeout(async () => {
+                        await applyFileChanges(fileChanges);
+                        setChatMessages(prev => [...prev, {
+                            id: Date.now().toString(),
+                            role: 'system',
+                            content: `✅ **Auto-Applied!** ${fileChanges.length} file(s) sudah diupdate:\n${fileChanges.map(f => `• ${f.path}`).join('\n')}\n\n🔄 Refresh halaman untuk melihat perubahan.`,
+                            timestamp: new Date(),
+                            actionType: 'action'
+                        }]);
+                    }, 500);
+                }
+            }
             
         } catch (err) {
             console.error('AI Chat error:', err);
