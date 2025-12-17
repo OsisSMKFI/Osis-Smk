@@ -255,7 +255,11 @@ async function buildFileTree(root: string) {
         pages: [],
         styles: [],
         config: [],
-        api: []
+        api: [],
+        lib: [],
+        hooks: [],
+        contexts: [],
+        types: []
     };
     
     // Scan components directory
@@ -290,11 +294,32 @@ async function buildFileTree(root: string) {
         }
     } catch {}
     
-    // Add lib directory to config
+    // Scan lib directory - utility functions
     try {
         const libDir = path.join(root, 'lib');
         const libFiles = await scanDirectory(libDir, root);
-        tree.config.push(...libFiles.filter(f => f.path.endsWith('.ts')));
+        tree.lib = libFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx'));
+    } catch {}
+    
+    // Scan hooks directory - React hooks
+    try {
+        const hooksDir = path.join(root, 'hooks');
+        const hookFiles = await scanDirectory(hooksDir, root);
+        tree.hooks = hookFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx'));
+    } catch {}
+    
+    // Scan contexts directory - React contexts
+    try {
+        const contextsDir = path.join(root, 'contexts');
+        const contextFiles = await scanDirectory(contextsDir, root);
+        tree.contexts = contextFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx'));
+    } catch {}
+    
+    // Scan types directory - TypeScript types
+    try {
+        const typesDir = path.join(root, 'types');
+        const typeFiles = await scanDirectory(typesDir, root);
+        tree.types = typeFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.d.ts'));
     } catch {}
     
     return tree;

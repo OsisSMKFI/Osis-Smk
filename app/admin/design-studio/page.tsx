@@ -42,9 +42,11 @@ interface ChatMessage {
     content: string;
     timestamp: Date;
     cssCode?: string;
-    actionType?: 'css' | 'component' | 'style' | 'info' | 'action';
+    actionType?: 'css' | 'component' | 'style' | 'info' | 'action' | 'file-edit';
     targetComponent?: string;
+    targetFile?: string; // File path to apply changes
     codeBlocks?: { language: string; code: string; filename?: string }[];
+    fileChanges?: { path: string; language: string; code: string; action: 'create' | 'update' | 'append' }[];
 }
 
 interface SourceFile {
@@ -62,6 +64,10 @@ interface FileTree {
     styles: SourceFile[];
     config: SourceFile[];
     api: SourceFile[];
+    lib: SourceFile[];          // Utility functions and helpers
+    hooks: SourceFile[];         // React hooks
+    contexts: SourceFile[];      // React contexts
+    types: SourceFile[];         // TypeScript types
 }
 
 // File icon mapping by extension
@@ -1132,40 +1138,71 @@ const sekbidList = [
                 }
             }
             
+            // Get current source file context if open
+            const currentFileContext = openSourceFile ? `
+File yang sedang dibuka: ${openSourceFile.path}
+Bahasa: ${openSourceFile.language}
+Isi file (ringkasan):
+\`\`\`${openSourceFile.language}
+${sourceCode.slice(0, 2000)}${sourceCode.length > 2000 ? '\n... (terpotong)' : ''}
+\`\`\`
+` : '';
+            
             // Build enhanced prompt for AI - send to real AI for complex queries
             const enhancedMessage = `
-Kamu adalah AI Design Assistant yang powerful dan fleksibel seperti GitHub Copilot.
-Kamu HARUS merespons dengan cerdas dan membantu, BUKAN hanya memberikan CSS template.
+Kamu adalah AI Design Studio Assistant - SAMA PERSIS seperti GitHub Copilot.
+Kamu bisa membantu dengan SEMUA jenis kode: TSX, TS, CSS, Tailwind, dan lainnya.
 
 ${containsHTML ? `
 User menempelkan HTML code. Analisis dan identifikasi:
 1. Komponen apa ini
-2. Di file mana lokasinya
-3. Bagaimana cara mengubahnya
+2. Di file mana lokasinya (berikan path lengkap)
+3. Bagaimana cara mengubahnya dengan contoh kode
 ` : ''}
+
+${currentFileContext}
 
 ${targetComponent ? `
 Komponen target: ${targetComponent}
 Selector CSS: ${selector}
 Kategori: ${componentInfo?.category || 'other'}
 Deskripsi: ${componentInfo?.description || ''}
-` : `
-Tidak ada komponen spesifik yang dipilih.
-`}
+` : ''}
 
-CSS saat ini di editor:
-${code || '(tidak ada)'}
+${code ? `CSS Override saat ini:\n\`\`\`css\n${code}\n\`\`\`` : ''}
 
 Permintaan user: ${userQuery}
 
+STRUKTUR FOLDER WEBSITE:
+- components/ → Komponen React (Navbar.tsx, Footer.tsx, DynamicHero.tsx, dll)
+- app/ → Pages dan API routes
+- app/globals.css → Global styles
+- tailwind.config.ts → Tailwind configuration
+- lib/ → Utilities dan helpers
+
 INSTRUKSI PENTING:
-1. Berikan respons dalam bahasa Indonesia yang ramah dan informatif
-2. Jika user BERTANYA (ada tanda ?, kata "dimana", "bagaimana", dll), JAWAB pertanyaannya
-3. Jika user paste HTML, identifikasi komponennya dan jelaskan lokasinya
-4. JANGAN langsung berikan CSS jika user hanya bertanya
-5. Jika diminta CSS, sertakan kode lengkap dalam blok \`\`\`css ... \`\`\`
-6. Jika user minta responsive, jelaskan cara mengubah dengan Tailwind breakpoints
-7. Berikan jawaban yang RELEVAN dengan pertanyaan, bukan template generik`;
+1. Respons dalam bahasa Indonesia yang ramah
+2. Jika user BERTANYA, JAWAB pertanyaannya dengan jelas
+3. Jika diminta kode, berikan dalam code block yang tepat:
+   - TSX/JSX: \`\`\`tsx ... \`\`\`
+   - TypeScript: \`\`\`typescript ... \`\`\`
+   - CSS: \`\`\`css ... \`\`\`
+   - Tailwind classes langsung di JSX
+4. SELALU sertakan file path jika memberikan kode untuk file tertentu
+5. Untuk Tailwind, jelaskan classes yang digunakan
+6. Untuk responsive, gunakan breakpoints: sm:, md:, lg:, xl:
+7. Jika bisa, berikan solusi LENGKAP yang bisa langsung diterapkan
+
+FORMAT KODE UNTUK APPLY:
+Jika memberikan kode yang harus diterapkan ke file, gunakan format:
+\`\`\`tsx:path/to/file.tsx
+// kode lengkap
+\`\`\`
+
+CONTOH RESPONS YANG BAIK:
+- "Untuk membuat responsive, ubah className di file \`components/Navbar.tsx\` seperti ini: ..."
+- "Berikut CSS untuk glassmorphism yang bisa di-apply: ..."
+- "File ini ada di \`app/bidang/page.tsx\`, berikut cara mengubahnya: ..."`;
             
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
@@ -1184,14 +1221,16 @@ INSTRUKSI PENTING:
             
             const data = await res.json();
             
-            // Extract all code blocks (CSS, TSX, etc)
-            const codeBlocks: { language: string; code: string }[] = [];
-            const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+            // Extract all code blocks (CSS, TSX, etc) - including file paths
+            const codeBlocks: { language: string; code: string; filename?: string }[] = [];
+            // Match both ```language and ```language:filepath formats
+            const codeBlockRegex = /```(\w+)?(?::([^\n]+))?\n([\s\S]*?)```/g;
             let match;
             while ((match = codeBlockRegex.exec(data.reply)) !== null) {
                 codeBlocks.push({
                     language: match[1] || 'text',
-                    code: match[2].trim()
+                    filename: match[2]?.trim(),
+                    code: match[3].trim()
                 });
             }
             
@@ -1202,7 +1241,27 @@ INSTRUKSI PENTING:
                 cssCode = cssBlock.code;
             }
             
-            // Keep the response as-is, don't strip code blocks for informational responses
+            // Extract file changes (code blocks with file paths)
+            const fileChanges = codeBlocks
+                .filter(b => b.filename)
+                .map(b => ({
+                    path: b.filename!,
+                    language: b.language,
+                    code: b.code,
+                    action: 'update' as const
+                }));
+            
+            // Determine action type
+            let actionType: ChatMessage['actionType'] = 'info';
+            if (fileChanges.length > 0) {
+                actionType = 'file-edit';
+            } else if (cssCode) {
+                actionType = 'css';
+            } else if (codeBlocks.length > 0) {
+                actionType = 'component';
+            }
+            
+            // Keep the response as-is for display
             let displayContent = data.reply || 'Maaf, tidak ada respons dari AI.';
             
             const aiMessage: ChatMessage = {
@@ -1212,8 +1271,10 @@ INSTRUKSI PENTING:
                 timestamp: new Date(),
                 cssCode,
                 targetComponent: targetComponent || undefined,
+                targetFile: fileChanges.length > 0 ? fileChanges[0].path : undefined,
                 codeBlocks: codeBlocks.length > 0 ? codeBlocks : undefined,
-                actionType: cssCode ? 'css' : (codeBlocks.length > 0 ? 'component' : 'info')
+                fileChanges: fileChanges.length > 0 ? fileChanges : undefined,
+                actionType
             };
             
             setChatMessages(prev => [...prev, aiMessage]);
@@ -1321,6 +1382,62 @@ INSTRUKSI PENTING:
         } catch (err) {
             console.error('Auto-save error:', err);
             notify('info', 'CSS applied locally - Save manually to apply');
+        }
+    };
+    
+    // Apply code to any file (TSX, TS, CSS, etc)
+    const applyCodeToFile = async (filePath: string, code: string, language: string) => {
+        try {
+            const res = await fetch('/api/design/files', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'save',
+                    filePath: filePath,
+                    content: code
+                })
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                notify('success', `✅ File saved: ${filePath}`);
+                
+                // If it's a file we have open, update the editor
+                if (openSourceFile?.path === filePath) {
+                    setSourceCode(code);
+                    setOriginalSourceCode(code);
+                }
+                
+                // Reload file tree to show updated file
+                await loadFileTree();
+                
+                return true;
+            } else {
+                notify('error', data.error || 'Failed to save file');
+                return false;
+            }
+        } catch (err) {
+            console.error('Apply code error:', err);
+            notify('error', 'Failed to apply code to file');
+            return false;
+        }
+    };
+    
+    // Apply multiple file changes from AI
+    const applyFileChanges = async (changes: { path: string; language: string; code: string; action: string }[]) => {
+        let successCount = 0;
+        
+        for (const change of changes) {
+            const success = await applyCodeToFile(change.path, change.code, change.language);
+            if (success) successCount++;
+        }
+        
+        if (successCount === changes.length) {
+            notify('success', `✅ All ${successCount} files updated successfully!`);
+        } else if (successCount > 0) {
+            notify('info', `${successCount}/${changes.length} files updated`);
+        } else {
+            notify('error', 'Failed to update files');
         }
     };
 
@@ -1947,6 +2064,154 @@ INSTRUKSI PENTING:
                                                             </div>
                                                         )}
                                                     </div>
+                                                    
+                                                    {/* Lib Folder - Utilities */}
+                                                    <div className="border-b border-gray-700/50">
+                                                        <button
+                                                            onClick={() => toggleFolder('lib')}
+                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
+                                                        >
+                                                            {expandedFolders.includes('lib') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                            <Command className="w-4 h-4 text-teal-400" />
+                                                            <span className="text-teal-300 font-medium">lib/</span>
+                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.lib?.length || 0}</span>
+                                                        </button>
+                                                        
+                                                        {expandedFolders.includes('lib') && fileTree.lib && (
+                                                            <div className="pb-2">
+                                                                {fileTree.lib.filter(f => filterBySearch(f.name)).slice(0, 20).map(file => {
+                                                                    const ext = getFileExtension(file.name);
+                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📘', color: 'text-blue-400' };
+                                                                    const isOpen = openSourceFile?.path === file.path;
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={file.path}
+                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
+                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
+                                                                            }`}
+                                                                            onClick={() => openFile(file.path)}
+                                                                            title={file.path}
+                                                                        >
+                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
+                                                                            <span className="flex-1 truncate">{file.name}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Hooks Folder */}
+                                                    <div className="border-b border-gray-700/50">
+                                                        <button
+                                                            onClick={() => toggleFolder('hooks')}
+                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
+                                                        >
+                                                            {expandedFolders.includes('hooks') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                            <Cpu className="w-4 h-4 text-pink-400" />
+                                                            <span className="text-pink-300 font-medium">hooks/</span>
+                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.hooks?.length || 0}</span>
+                                                        </button>
+                                                        
+                                                        {expandedFolders.includes('hooks') && fileTree.hooks && (
+                                                            <div className="pb-2">
+                                                                {fileTree.hooks.filter(f => filterBySearch(f.name)).map(file => {
+                                                                    const ext = getFileExtension(file.name);
+                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📘', color: 'text-blue-400' };
+                                                                    const isOpen = openSourceFile?.path === file.path;
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={file.path}
+                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
+                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
+                                                                            }`}
+                                                                            onClick={() => openFile(file.path)}
+                                                                            title={file.path}
+                                                                        >
+                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
+                                                                            <span className="flex-1 truncate">{file.name}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Contexts Folder */}
+                                                    <div className="border-b border-gray-700/50">
+                                                        <button
+                                                            onClick={() => toggleFolder('contexts')}
+                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
+                                                        >
+                                                            {expandedFolders.includes('contexts') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                            <Layers className="w-4 h-4 text-indigo-400" />
+                                                            <span className="text-indigo-300 font-medium">contexts/</span>
+                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.contexts?.length || 0}</span>
+                                                        </button>
+                                                        
+                                                        {expandedFolders.includes('contexts') && fileTree.contexts && (
+                                                            <div className="pb-2">
+                                                                {fileTree.contexts.filter(f => filterBySearch(f.name)).map(file => {
+                                                                    const ext = getFileExtension(file.name);
+                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📘', color: 'text-blue-400' };
+                                                                    const isOpen = openSourceFile?.path === file.path;
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={file.path}
+                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
+                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
+                                                                            }`}
+                                                                            onClick={() => openFile(file.path)}
+                                                                            title={file.path}
+                                                                        >
+                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
+                                                                            <span className="flex-1 truncate">{file.name}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Types Folder */}
+                                                    <div className="border-b border-gray-700/50">
+                                                        <button
+                                                            onClick={() => toggleFolder('types')}
+                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
+                                                        >
+                                                            {expandedFolders.includes('types') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                                            <Type className="w-4 h-4 text-cyan-400" />
+                                                            <span className="text-cyan-300 font-medium">types/</span>
+                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.types?.length || 0}</span>
+                                                        </button>
+                                                        
+                                                        {expandedFolders.includes('types') && fileTree.types && (
+                                                            <div className="pb-2">
+                                                                {fileTree.types.filter(f => filterBySearch(f.name)).map(file => {
+                                                                    const ext = getFileExtension(file.name);
+                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📘', color: 'text-blue-400' };
+                                                                    const isOpen = openSourceFile?.path === file.path;
+                                                                    
+                                                                    return (
+                                                                        <div
+                                                                            key={file.path}
+                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
+                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
+                                                                            }`}
+                                                                            onClick={() => openFile(file.path)}
+                                                                            title={file.path}
+                                                                        >
+                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
+                                                                            <span className="flex-1 truncate">{file.name}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </>
                                             )}
                                             
@@ -2231,10 +2496,59 @@ INSTRUKSI PENTING:
                                                     </button>
                                                 </div>
                                             )}
-                                            {/* Show code blocks for other languages */}
-                                            {msg.codeBlocks && msg.codeBlocks.filter(b => b.language !== 'css').length > 0 && (
+                                            {/* Show file changes with Apply button */}
+                                            {msg.fileChanges && msg.fileChanges.length > 0 && (
                                                 <div className="mt-3 space-y-2">
-                                                    {msg.codeBlocks.filter(b => b.language !== 'css').map((block, i) => (
+                                                    <div className="flex items-center gap-2 text-xs text-cyan-400 mb-2">
+                                                        <FileCode className="w-3.5 h-3.5" />
+                                                        <span className="font-medium">File Changes ({msg.fileChanges.length})</span>
+                                                    </div>
+                                                    {msg.fileChanges.map((change, i) => (
+                                                        <div key={i} className="bg-black/40 rounded-lg overflow-hidden border border-cyan-500/20">
+                                                            <div className="flex items-center justify-between px-3 py-2 bg-cyan-500/10 border-b border-cyan-500/20">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={FILE_ICONS[change.language]?.color || 'text-gray-400'}>
+                                                                        {FILE_ICONS[change.language]?.icon || '📄'}
+                                                                    </span>
+                                                                    <span className="text-xs text-cyan-300 font-mono">{change.path}</span>
+                                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${change.action === 'create' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                                                        {change.action}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <button 
+                                                                        onClick={() => { navigator.clipboard.writeText(change.code); notify('info', 'Code copied!'); }}
+                                                                        className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                                                                        title="Copy code"
+                                                                    >
+                                                                        <Copy className="w-3 h-3" />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => applyCodeToFile(change.path, change.code, change.language)}
+                                                                        className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded text-xs font-medium transition-all hover:scale-[1.02] shadow-lg shadow-cyan-500/20"
+                                                                    >
+                                                                        <Play className="w-3 h-3" /> Apply
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <pre className="text-xs text-gray-300 p-3 overflow-x-auto max-h-40 font-mono">{change.code.slice(0, 400)}{change.code.length > 400 ? '\n...' : ''}</pre>
+                                                        </div>
+                                                    ))}
+                                                    {/* Apply All button */}
+                                                    {msg.fileChanges.length > 1 && (
+                                                        <button 
+                                                            onClick={() => applyFileChanges(msg.fileChanges!)}
+                                                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:scale-[1.02]"
+                                                        >
+                                                            <Zap className="w-4 h-4" /> Apply All {msg.fileChanges.length} Files
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {/* Show code blocks for other languages (without file path) */}
+                                            {msg.codeBlocks && msg.codeBlocks.filter(b => b.language !== 'css' && !b.filename).length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                    {msg.codeBlocks.filter(b => b.language !== 'css' && !b.filename).map((block, i) => (
                                                         <div key={i} className="bg-black/30 rounded-lg p-2 border border-white/10">
                                                             <div className="flex items-center justify-between mb-1">
                                                                 <span className="text-xs text-gray-400 uppercase">{block.language}</span>
