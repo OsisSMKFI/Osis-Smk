@@ -10,19 +10,24 @@ import {
     ChevronDown, ChevronRight, Play, Copy, Check,
     Trash2, Plus, Search, Filter, History, X, Send,
     Monitor, Smartphone, Tablet, Moon, Sun, Zap,
-    Command, Terminal, Database, AlertCircle, Info
+    Command, Terminal, Database, AlertCircle, Info,
+    File, Folder, FolderOpen, FileCode, FilePlus,
+    Split, Maximize2, Minimize2, RotateCcw, Clock,
+    PanelLeft, PanelRight, Columns
 } from 'lucide-react';
 import { DESIGN_REGISTRY, getAllComponentNames, findComponent } from '@/lib/design-registry';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎨 DESIGN STUDIO PRO - Full Access AI-Powered Design System
+// 🎨 DESIGN STUDIO PRO v2.0 - VS Code-like Design Editor
 // ═══════════════════════════════════════════════════════════════════════════════
 // Features:
-// - Full AI Access (same as LiveChat)
-// - Inline CSS Editor with Live Preview
-// - Command Palette with all AI commands
-// - Real-time Design Application
-// - Component Tree Navigator
+// - VS Code-like interface with file explorer
+// - Monaco-style code editor with syntax highlighting
+// - Split view: Code + Live Preview
+// - Full undo/redo history
+// - Load existing designs from database
+// - AI Chat integration
+// - Real-time preview
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface DesignOverride {
@@ -31,6 +36,13 @@ interface DesignOverride {
     content: string;
     category: string;
     updated_at: string;
+    id?: number;
+}
+
+interface HistoryEntry {
+    css: string;
+    timestamp: Date;
+    description: string;
 }
 
 interface ChatMessage {
@@ -38,147 +50,152 @@ interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
-    action?: {
-        type: string;
-        component?: string;
-        status: 'pending' | 'success' | 'failed';
-    };
     cssCode?: string;
 }
 
-// AI Command definitions (same as LiveChat)
-const AI_COMMANDS = [
-    { cmd: '/help', desc: 'Daftar perintah lengkap' },
-    { cmd: '/design', desc: '🎨 Redesign komponen', template: '/design <component> <style>' },
-    { cmd: '/preview', desc: '👁️ Preview CSS untuk komponen', template: '/preview <component>' },
-    { cmd: '/apply', desc: '✅ Terapkan design langsung', template: '/apply <component> <css>' },
-    { cmd: '/template', desc: '📋 Gunakan template style', template: '/template <style> <component>' },
-    { cmd: '/reset', desc: '🔄 Reset ke default', template: '/reset <component>' },
-    { cmd: '/list', desc: '📝 List semua override aktif', template: '/list' },
-    { cmd: '/export', desc: '📦 Export semua CSS', template: '/export' },
-    { cmd: '/sql', desc: '🔍 Query database', template: '/sql SELECT * FROM page_content WHERE category=\'design\'' },
-    { cmd: '/generate', desc: '🖼️ Generate design dengan AI', template: '/generate <deskripsi>' },
-    { cmd: '/analyze', desc: '🔬 Analyze komponen', template: '/analyze <component>' },
-    { cmd: '/clear', desc: '🗑️ Hapus chat history' },
-];
-
-const DESIGN_STYLES = [
-    { id: 'neumorphism', name: 'Neumorphism', desc: '3D soft shadows', preview: 'box-shadow: 8px 8px 16px #d1d9e6, -8px -8px 16px #ffffff; border-radius: 12px;' },
-    { id: 'glassmorphism', name: 'Glassmorphism', desc: 'Frosted glass effect', preview: 'background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);' },
-    { id: 'modern', name: 'Modern', desc: 'Clean minimal design', preview: 'background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);' },
-    { id: 'dark', name: 'Dark', desc: 'Dark theme', preview: 'background: #1a1a2e; color: #eee; border: 1px solid #333;' },
-    { id: 'gradient', name: 'Gradient', desc: 'Colorful gradients', preview: 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;' },
-    { id: 'minimal', name: 'Minimal', desc: 'Simple and clean', preview: 'background: #fafafa; border: 1px solid #eee; border-radius: 4px;' },
-    { id: 'neon', name: 'Neon', desc: 'Glowing effects', preview: 'background: #0a0a0a; box-shadow: 0 0 20px #00ff88, inset 0 0 20px rgba(0,255,136,0.1); border: 1px solid #00ff88;' },
-    { id: 'retro', name: 'Retro', desc: 'Vintage look', preview: 'background: #f4e4ba; border: 3px solid #2d2d2d; font-family: monospace;' },
-];
+const DESIGN_TEMPLATES: Record<string, string> = {
+    neumorphism: `/* Neumorphism Style */
+.component {
+    background: #e0e5ec;
+    border-radius: 12px;
+    box-shadow: 
+        8px 8px 16px #b8bec7,
+        -8px -8px 16px #ffffff;
+    padding: 20px;
+}`,
+    glassmorphism: `/* Glassmorphism Style */
+.component {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 20px;
+}`,
+    modern: `/* Modern Clean Style */
+.component {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 20px;
+    transition: all 0.2s ease;
+}
+.component:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}`,
+    dark: `/* Dark Theme Style */
+.component {
+    background: #1a1a2e;
+    color: #eaeaea;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+}`,
+    gradient: `/* Gradient Style */
+.component {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}`,
+    neon: `/* Neon Glow Style */
+.component {
+    background: #0a0a0a;
+    color: #00ff88;
+    border: 1px solid #00ff88;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 
+        0 0 10px #00ff88,
+        0 0 20px rgba(0, 255, 136, 0.3),
+        inset 0 0 20px rgba(0, 255, 136, 0.1);
+}`,
+    retro: `/* Retro Style */
+.component {
+    background: #f4e4ba;
+    color: #2d2d2d;
+    border: 3px solid #2d2d2d;
+    font-family: 'Courier New', monospace;
+    padding: 20px;
+    box-shadow: 4px 4px 0 #2d2d2d;
+}`,
+    minimal: `/* Minimal Style */
+.component {
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 16px;
+}`,
+};
 
 export default function DesignStudioPage() {
-    // State
-    const [activeTab, setActiveTab] = useState<'visual' | 'code' | 'chat'>('chat');
-    const [selectedComponent, setSelectedComponent] = useState<string>('');
-    const [selectedStyle, setSelectedStyle] = useState<string>('modern');
-    const [customCSS, setCustomCSS] = useState<string>('');
-    const [designs, setDesigns] = useState<DesignOverride[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STATE MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // Layout state
+    const [showSidebar, setShowSidebar] = useState(true);
+    const [showChatPanel, setShowChatPanel] = useState(false);
+    const [activeView, setActiveView] = useState<'split' | 'code' | 'preview'>('split');
+    const [darkMode, setDarkMode] = useState(true);
     const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-    const [darkMode, setDarkMode] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [expandedCategories, setExpandedCategories] = useState<string[]>(['layout', 'form', 'chat', 'button', 'card']);
-    const [history, setHistory] = useState<string[]>([]);
+    
+    // File explorer state
+    const [designs, setDesigns] = useState<DesignOverride[]>([]);
+    const [selectedFile, setSelectedFile] = useState<string | null>(null);
+    const [expandedFolders, setExpandedFolders] = useState<string[]>(['active', 'templates']);
+    const [isLoading, setIsLoading] = useState(true);
+    
+    // Editor state
+    const [code, setCode] = useState<string>('');
+    const [originalCode, setOriginalCode] = useState<string>('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [hasChanges, setHasChanges] = useState(false);
+    
+    // History state (Undo/Redo)
+    const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
-    const [showPreview, setShowPreview] = useState(true);
-    const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+    const MAX_HISTORY = 50;
     
-    // Command palette state
-    const [showCommands, setShowCommands] = useState(false);
-    const [commandFilter, setCommandFilter] = useState('');
-    
-    // Chat state - now with enhanced AI capabilities
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-        {
-            id: '1',
-            role: 'assistant',
-            content: `🎨 **Selamat datang di Design Studio Pro!**
-
-Saya AI Design Assistant dengan **full access** untuk:
-
-• **Redesign komponen** - "/design button glassmorphism"
-• **Preview CSS** - "/preview chat_input"  
-• **Apply langsung** - "/apply card .card { ... }"
-• **Template siap pakai** - "/template neon sidebar"
-• **Query database** - "/sql SELECT * FROM page_content"
-
-Ketik \`/help\` untuk daftar lengkap perintah.
-
-**Quick Start:** Pilih komponen dari sidebar, lalu ketik gaya yang diinginkan!`,
-            timestamp: new Date(),
-        }
-    ]);
+    // Chat state
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatInput, setChatInput] = useState('');
     const [isAITyping, setIsAITyping] = useState(false);
+    
+    // Notification
+    const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+    
+    // Refs
+    const editorRef = useRef<HTMLTextAreaElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLTextAreaElement>(null);
 
-    // Load existing designs
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DATA LOADING
+    // ═══════════════════════════════════════════════════════════════════════════
+    
     useEffect(() => {
         loadDesigns();
     }, []);
-
-    // Auto-scroll chat
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatMessages]);
-
-    // Load component CSS when selected
-    useEffect(() => {
-        if (selectedComponent) {
-            const existing = designs.find(d => d.page_key === `design_override_${selectedComponent}`);
-            if (existing) {
-                setCustomCSS(existing.content);
-                addSystemMessage(`📂 Loaded CSS for **${selectedComponent}** (${existing.content.length} chars)`);
-            } else {
-                setCustomCSS('');
-            }
-        }
-    }, [selectedComponent]);
     
-    // Show command suggestions
     useEffect(() => {
-        if (chatInput.startsWith('/')) {
-            setShowCommands(true);
-            setCommandFilter(chatInput.slice(1).toLowerCase());
-        } else {
-            setShowCommands(false);
-        }
-    }, [chatInput]);
-
-    const addSystemMessage = (content: string) => {
-        setChatMessages(prev => [...prev, {
-            id: Date.now().toString(),
-            role: 'assistant',
-            content,
-            timestamp: new Date(),
-        }]);
-    };
+        setHasChanges(code !== originalCode);
+    }, [code, originalCode]);
 
     const loadDesigns = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/design/load-all');
+            const res = await fetch('/api/design/studio');
             const data = await res.json();
-            if (data.components) {
-                // Fetch full design data
-                const designRes = await fetch('/api/admin/content?category=design');
-                const designData = await designRes.json();
-                if (designData.data) {
-                    setDesigns(designData.data);
-                }
+            
+            if (data.success && data.designs) {
+                setDesigns(data.designs);
+                showNotification('info', `Loaded ${data.designs.length} design overrides`);
             }
         } catch (error) {
             console.error('Failed to load designs:', error);
-            showNotification('error', 'Gagal memuat design');
+            showNotification('error', 'Failed to load designs');
         } finally {
             setIsLoading(false);
         }
@@ -186,1200 +203,764 @@ Ketik \`/help\` untuk daftar lengkap perintah.
 
     const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
         setNotification({ type, message });
-        setTimeout(() => setNotification(null), 3000);
+        setTimeout(() => setNotification(null), 4000);
     };
 
-    const applyDesign = async (component: string, style: string, css?: string) => {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FILE OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const openFile = (pageKey: string) => {
+        if (hasChanges && selectedFile) {
+            if (!confirm('You have unsaved changes. Discard them?')) {
+                return;
+            }
+        }
+        
+        const design = designs.find(d => d.page_key === pageKey);
+        if (design) {
+            setSelectedFile(pageKey);
+            setCode(design.content || '');
+            setOriginalCode(design.content || '');
+            setHistory([{ css: design.content || '', timestamp: new Date(), description: 'Loaded from database' }]);
+            setHistoryIndex(0);
+            showNotification('info', `Opened: ${design.title || pageKey}`);
+        }
+    };
+
+    const createNewFile = (componentName: string) => {
+        if (hasChanges && selectedFile) {
+            if (!confirm('You have unsaved changes. Discard them?')) {
+                return;
+            }
+        }
+        
+        const template = `/* CSS Override for ${componentName} */
+/* Created: ${new Date().toLocaleString()} */
+
+.${componentName} {
+    /* Add your styles here */
+}`;
+        
+        setSelectedFile(`design_override_${componentName}`);
+        setCode(template);
+        setOriginalCode('');
+        setHistory([{ css: template, timestamp: new Date(), description: 'New file created' }]);
+        setHistoryIndex(0);
+    };
+
+    const saveFile = async () => {
+        if (!selectedFile) return;
+        
         setIsSaving(true);
         try {
-            const res = await fetch('/api/ai/execute-action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'apply_design',
-                    params: {
-                        component,
-                        designType: style,
-                        customCss: css,
-                    },
-                }),
-            });
-
-            const result = await res.json();
+            const componentName = selectedFile.replace('design_override_', '');
             
-            if (result.success) {
-                showNotification('success', `Design ${style} untuk ${component} berhasil diterapkan!`);
-                await loadDesigns();
-                
-                // Add to history
-                setHistory(prev => [...prev.slice(0, historyIndex + 1), customCSS]);
-                setHistoryIndex(prev => prev + 1);
-                
-                // Trigger global design reload
-                if (typeof window !== 'undefined' && (window as any).reloadDesigns) {
-                    (window as any).reloadDesigns();
-                }
-            } else {
-                showNotification('error', result.details || 'Gagal menerapkan design');
-            }
-        } catch (error) {
-            console.error('Apply design error:', error);
-            showNotification('error', 'Terjadi kesalahan saat menerapkan design');
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleSaveCSS = async () => {
-        if (!selectedComponent) {
-            showNotification('error', 'Pilih komponen terlebih dahulu');
-            return;
-        }
-        await applyDesign(selectedComponent, 'custom', customCSS);
-    };
-
-    const handleUndo = () => {
-        if (historyIndex > 0) {
-            setHistoryIndex(prev => prev - 1);
-            setCustomCSS(history[historyIndex - 1]);
-        }
-    };
-
-    const handleRedo = () => {
-        if (historyIndex < history.length - 1) {
-            setHistoryIndex(prev => prev + 1);
-            setCustomCSS(history[historyIndex + 1]);
-        }
-    };
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // 🤖 ENHANCED AI CHAT HANDLER - Full Access Commands
-    // ═══════════════════════════════════════════════════════════════════════════
-    const handleSendMessage = async () => {
-        if (!chatInput.trim() || isAITyping) return;
-
-        const userMessage: ChatMessage = {
-            id: Date.now().toString(),
-            role: 'user',
-            content: chatInput,
-            timestamp: new Date(),
-        };
-
-        const inputText = chatInput.trim();
-        setChatMessages(prev => [...prev, userMessage]);
-        setChatInput('');
-        setShowCommands(false);
-        setIsAITyping(true);
-
-        try {
-            // Handle slash commands locally first
-            if (inputText.startsWith('/')) {
-                const handled = await handleSlashCommand(inputText);
-                if (handled) {
-                    setIsAITyping(false);
-                    return;
-                }
-            }
-
-            // Send to AI chat API with enhanced context
-            const res = await fetch('/api/ai/chat', {
+            const res = await fetch('/api/design/studio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: inputText,
-                    context: 'design_studio',
-                    selectedComponent,
-                    mode: 'admin',
-                    history: chatMessages.slice(-10).map(m => ({
-                        role: m.role,
-                        content: m.content,
-                    })),
+                    component: componentName,
+                    css: code,
+                    style: 'custom',
                 }),
             });
 
             const data = await res.json();
             
-            const aiMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: data.reply || 'Maaf, terjadi kesalahan.',
-                timestamp: new Date(),
-                action: data.designApplied ? {
-                    type: 'apply_design',
-                    component: data.component,
-                    status: 'success',
-                } : undefined,
-                cssCode: data.cssCode,
-            };
-
-            setChatMessages(prev => [...prev, aiMessage]);
-            
-            // If CSS code was generated, update editor
-            if (data.cssCode && selectedComponent) {
-                setCustomCSS(data.cssCode);
-                setActiveTab('code');
-            }
-            
-            // If design was applied, reload
-            if (data.designApplied) {
+            if (data.success) {
+                setOriginalCode(code);
+                setHasChanges(false);
                 await loadDesigns();
+                showNotification('success', `Saved: ${componentName}`);
+                
+                // Trigger global reload
                 if (typeof window !== 'undefined' && (window as any).reloadDesigns) {
                     (window as any).reloadDesigns();
                 }
-                showNotification('success', `Design untuk ${data.component} berhasil diterapkan!`);
+            } else {
+                showNotification('error', data.error || 'Failed to save');
             }
         } catch (error) {
-            const errorMessage: ChatMessage = {
+            console.error('Save error:', error);
+            showNotification('error', 'Failed to save file');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const deleteFile = async (pageKey: string) => {
+        if (!confirm('Delete this design override?')) return;
+        
+        try {
+            const componentName = pageKey.replace('design_override_', '');
+            
+            const res = await fetch('/api/design/studio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    component: componentName,
+                    action: 'delete',
+                }),
+            });
+
+            if ((await res.json()).success) {
+                if (selectedFile === pageKey) {
+                    setSelectedFile(null);
+                    setCode('');
+                    setOriginalCode('');
+                }
+                await loadDesigns();
+                showNotification('success', 'Deleted');
+            }
+        } catch (error) {
+            showNotification('error', 'Failed to delete');
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // UNDO/REDO SYSTEM
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const addToHistory = useCallback((css: string, description: string) => {
+        setHistory(prev => {
+            const newHistory = prev.slice(0, historyIndex + 1);
+            newHistory.push({ css, timestamp: new Date(), description });
+            if (newHistory.length > MAX_HISTORY) newHistory.shift();
+            return newHistory;
+        });
+        setHistoryIndex(prev => Math.min(prev + 1, MAX_HISTORY - 1));
+    }, [historyIndex]);
+
+    const handleCodeChange = (newCode: string) => {
+        setCode(newCode);
+    };
+    
+    // Debounced history
+    useEffect(() => {
+        if (code && code !== history[historyIndex]?.css) {
+            const timeout = setTimeout(() => {
+                addToHistory(code, 'Code edit');
+            }, 1500);
+            return () => clearTimeout(timeout);
+        }
+    }, [code]);
+
+    const undo = () => {
+        if (historyIndex > 0) {
+            setHistoryIndex(prev => prev - 1);
+            setCode(history[historyIndex - 1].css);
+        }
+    };
+
+    const redo = () => {
+        if (historyIndex < history.length - 1) {
+            setHistoryIndex(prev => prev + 1);
+            setCode(history[historyIndex + 1].css);
+        }
+    };
+
+    const canUndo = historyIndex > 0;
+    const canRedo = historyIndex < history.length - 1;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TEMPLATE APPLICATION
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const applyTemplate = (templateName: string) => {
+        if (!selectedFile) {
+            showNotification('error', 'Select or create a file first');
+            return;
+        }
+        
+        const template = DESIGN_TEMPLATES[templateName];
+        if (template) {
+            const componentName = selectedFile.replace('design_override_', '');
+            const customizedTemplate = template.replace(/\.component/g, `.${componentName}`);
+            setCode(customizedTemplate);
+            addToHistory(customizedTemplate, `Applied ${templateName} template`);
+            showNotification('info', `Applied ${templateName} template`);
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AI CHAT
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const handleChatSubmit = async () => {
+        if (!chatInput.trim() || isAITyping) return;
+        
+        const userMsg: ChatMessage = {
+            id: Date.now().toString(),
+            role: 'user',
+            content: chatInput,
+            timestamp: new Date(),
+        };
+        
+        setChatMessages(prev => [...prev, userMsg]);
+        setChatInput('');
+        setIsAITyping(true);
+        
+        try {
+            const res = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: chatInput,
+                    context: 'design_studio',
+                    selectedComponent: selectedFile?.replace('design_override_', ''),
+                    currentCSS: code,
+                    mode: 'admin',
+                }),
+            });
+            
+            const data = await res.json();
+            
+            const aiMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: '⚠️ Terjadi kesalahan. Silakan coba lagi.',
+                content: data.reply || 'Sorry, something went wrong.',
                 timestamp: new Date(),
+                cssCode: data.cssCode,
             };
-            setChatMessages(prev => [...prev, errorMessage]);
+            
+            setChatMessages(prev => [...prev, aiMsg]);
+            
+            if (data.cssCode && selectedFile) {
+                setCode(data.cssCode);
+                addToHistory(data.cssCode, 'AI generated CSS');
+            }
+        } catch (error) {
+            setChatMessages(prev => [...prev, {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: '❌ Error connecting to AI.',
+                timestamp: new Date(),
+            }]);
         } finally {
             setIsAITyping(false);
         }
     };
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ⚡ SLASH COMMAND HANDLER - Full Access Commands
+    // KEYBOARD SHORTCUTS
     // ═══════════════════════════════════════════════════════════════════════════
-    const handleSlashCommand = async (input: string): Promise<boolean> => {
-        const parts = input.slice(1).split(' ');
-        const cmd = parts[0].toLowerCase();
-        const args = parts.slice(1).join(' ');
-
-        switch (cmd) {
-            case 'help':
-                addSystemMessage(`📚 **Design Studio Commands**
-
-**Design Commands:**
-• \`/design <component> <style>\` - Apply design template
-• \`/preview <component>\` - Show current CSS
-• \`/apply <component> <css>\` - Apply custom CSS directly
-• \`/template <style> <component>\` - Use preset template
-• \`/reset <component>\` - Remove custom design
-
-**Data Commands:**
-• \`/list\` - Show all active overrides
-• \`/export\` - Export all CSS as file
-• \`/sql <query>\` - Run database query
-
-**AI Commands:**
-• \`/generate <desc>\` - AI generate design
-• \`/analyze <component>\` - Analyze component
-
-**Other:**
-• \`/clear\` - Clear chat history
-
-**Available Styles:** ${DESIGN_STYLES.map(s => s.id).join(', ')}`);
-                return true;
-
-            case 'clear':
-                setChatMessages([{
-                    id: Date.now().toString(),
-                    role: 'assistant',
-                    content: '🗑️ Chat history cleared. Ready for new commands!',
-                    timestamp: new Date(),
-                }]);
-                return true;
-
-            case 'list':
-                const activeDesigns = designs.filter(d => d.page_key.startsWith('design_override_'));
-                if (activeDesigns.length === 0) {
-                    addSystemMessage('📝 No active design overrides found.');
-                } else {
-                    const list = activeDesigns.map(d => {
-                        const name = d.page_key.replace('design_override_', '');
-                        return `• **${name}** - ${d.content.length} chars (${new Date(d.updated_at).toLocaleDateString()})`;
-                    }).join('\n');
-                    addSystemMessage(`📝 **Active Design Overrides (${activeDesigns.length}):**\n\n${list}`);
-                }
-                return true;
-
-            case 'preview':
-                const previewComp = args || selectedComponent;
-                if (!previewComp) {
-                    addSystemMessage('⚠️ Please specify a component: `/preview button`');
-                    return true;
-                }
-                const previewDesign = designs.find(d => d.page_key === `design_override_${previewComp}`);
-                if (previewDesign) {
-                    addSystemMessage(`👁️ **CSS for ${previewComp}:**\n\n\`\`\`css\n${previewDesign.content}\n\`\`\``);
-                    setSelectedComponent(previewComp);
-                    setCustomCSS(previewDesign.content);
-                } else {
-                    addSystemMessage(`ℹ️ No custom CSS found for **${previewComp}**`);
-                }
-                return true;
-
-            case 'reset':
-                const resetComp = args || selectedComponent;
-                if (!resetComp) {
-                    addSystemMessage('⚠️ Please specify component: `/reset button`');
-                    return true;
-                }
-                try {
-                    const res = await fetch('/api/design/studio', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ component: resetComp }),
-                    });
-                    if (res.ok) {
-                        addSystemMessage(`✅ Design reset for **${resetComp}**`);
-                        await loadDesigns();
-                        setCustomCSS('');
-                    } else {
-                        addSystemMessage(`❌ Failed to reset ${resetComp}`);
-                    }
-                } catch (e) {
-                    addSystemMessage(`❌ Error resetting design`);
-                }
-                return true;
-
-            case 'design':
-            case 'template':
-                const [comp, style] = args.split(' ').filter(Boolean);
-                if (!comp || !style) {
-                    addSystemMessage(`⚠️ Usage: \`/${cmd} <component> <style>\`\n\nStyles: ${DESIGN_STYLES.map(s => s.id).join(', ')}`);
-                    return true;
-                }
-                const styleInfo = DESIGN_STYLES.find(s => s.id === style.toLowerCase());
-                if (!styleInfo) {
-                    addSystemMessage(`⚠️ Unknown style: ${style}\n\nAvailable: ${DESIGN_STYLES.map(s => s.id).join(', ')}`);
-                    return true;
-                }
-                addSystemMessage(`⏳ Applying **${styleInfo.name}** to **${comp}**...`);
-                await applyDesign(comp, style);
-                addSystemMessage(`✅ **${styleInfo.name}** applied to **${comp}**!\n\nPreview: \`${styleInfo.preview}\``);
-                setSelectedComponent(comp);
-                return true;
-
-            case 'apply':
-                const applyMatch = args.match(/^(\S+)\s+(.+)$/s);
-                if (!applyMatch) {
-                    addSystemMessage('⚠️ Usage: `/apply <component> <css>`\n\nExample: `/apply button .btn { background: blue; }`');
-                    return true;
-                }
-                const [, applyComp, applyCss] = applyMatch;
-                addSystemMessage(`⏳ Applying custom CSS to **${applyComp}**...`);
-                await applyDesign(applyComp, 'custom', applyCss);
-                addSystemMessage(`✅ Custom CSS applied to **${applyComp}**!`);
-                setSelectedComponent(applyComp);
-                setCustomCSS(applyCss);
-                return true;
-
-            case 'export':
-                const allCss = designs
-                    .filter(d => d.page_key.startsWith('design_override_'))
-                    .map(d => `/* ${d.page_key} */\n${d.content}`)
-                    .join('\n\n');
-                if (allCss) {
-                    navigator.clipboard.writeText(allCss);
-                    addSystemMessage(`📦 **All CSS exported to clipboard!** (${allCss.length} chars)`);
-                } else {
-                    addSystemMessage('📦 No design overrides to export');
-                }
-                return true;
-
-            case 'sql':
-                if (!args) {
-                    addSystemMessage('⚠️ Usage: `/sql SELECT * FROM page_content WHERE category=\'design\'`');
-                    return true;
-                }
-                addSystemMessage(`🔍 Executing query...\n\n\`${args}\``);
-                try {
-                    const sqlRes = await fetch('/api/ai/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            message: `/sql ${args}`,
-                            mode: 'admin',
-                        }),
-                    });
-                    const sqlData = await sqlRes.json();
-                    addSystemMessage(sqlData.reply || '❌ Query failed');
-                } catch (e) {
-                    addSystemMessage('❌ SQL query error');
-                }
-                return true;
-
-            case 'analyze':
-                const analyzeComp = args || selectedComponent;
-                if (!analyzeComp) {
-                    addSystemMessage('⚠️ Usage: `/analyze <component>`');
-                    return true;
-                }
-                const compInfo = findComponent(analyzeComp);
-                if (compInfo) {
-                    const existing = designs.find(d => d.page_key === `design_override_${analyzeComp}`);
-                    addSystemMessage(`🔬 **Component Analysis: ${compInfo.displayName}**
-
-**Category:** ${compInfo.category}
-**CSS Selectors:** ${compInfo.selectors.join(', ')}
-**Has Override:** ${existing ? 'Yes (' + existing.content.length + ' chars)' : 'No'}
-**Description:** ${compInfo.description}`);
-                } else {
-                    addSystemMessage(`⚠️ Component not found: ${analyzeComp}`);
-                }
-                return true;
-
-            case 'generate':
-                // Let AI handle generation
-                return false;
-
-            default:
-                // Unknown command, let AI handle it
-                return false;
-        }
-    };
-
-    // Quick apply design from chat
-    const handleQuickApply = async (component: string, style: string) => {
-        const msg: ChatMessage = {
-            id: Date.now().toString(),
-            role: 'user',
-            content: `Terapkan design ${style} untuk ${component}`,
-            timestamp: new Date(),
+    
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                saveFile();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                redo();
+            }
         };
-        setChatMessages(prev => [...prev, msg]);
         
-        setIsAITyping(true);
-        await applyDesign(component, style);
-        
-        const successMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: `✅ Design **${style}** berhasil diterapkan untuk **${component}**! Refresh halaman untuk melihat perubahan.`,
-            timestamp: new Date(),
-            action: { type: 'apply_design', component, status: 'success' },
-        };
-        setChatMessages(prev => [...prev, successMsg]);
-        setIsAITyping(false);
-    };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [code, history, historyIndex, selectedFile]);
 
-    // Group components by category
-    const groupedComponents = Object.entries(DESIGN_REGISTRY).reduce((acc, [key, info]) => {
-        if (!acc[info.category]) acc[info.category] = [];
-        acc[info.category].push({ key, ...info });
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GROUP DESIGNS BY CATEGORY
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const groupedDesigns = designs.reduce((acc, d) => {
+        const componentName = d.page_key.replace('design_override_', '');
+        const componentInfo = findComponent(componentName);
+        const category = componentInfo?.category || 'other';
+        
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(d);
         return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, DesignOverride[]>);
 
-    // Filter components
-    const filteredComponents = searchQuery
-        ? Object.values(DESIGN_REGISTRY).filter(c => 
-            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.displayName.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        : null;
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RENDER
+    // ═══════════════════════════════════════════════════════════════════════════
 
     return (
-        <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-            {/* Header */}
-            <header className={`sticky top-0 z-50 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b`}>
-                <div className="flex items-center justify-between px-4 py-3">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
-                            <Paintbrush className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold">Design Studio</h1>
-                            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                AI-Powered Design System
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        {/* Preview mode */}
-                        <div className={`flex rounded-lg p-1 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                            <button
-                                onClick={() => setPreviewMode('desktop')}
-                                className={`p-2 rounded ${previewMode === 'desktop' ? 'bg-white shadow text-purple-600' : ''}`}
-                            >
-                                <Monitor className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => setPreviewMode('tablet')}
-                                className={`p-2 rounded ${previewMode === 'tablet' ? 'bg-white shadow text-purple-600' : ''}`}
-                            >
-                                <Tablet className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => setPreviewMode('mobile')}
-                                className={`p-2 rounded ${previewMode === 'mobile' ? 'bg-white shadow text-purple-600' : ''}`}
-                            >
-                                <Smartphone className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        <button
-                            onClick={() => setDarkMode(!darkMode)}
-                            className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
-                        >
-                            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                        </button>
-
-                        <button
-                            onClick={loadDesigns}
-                            className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}
-                            disabled={isLoading}
-                        >
-                            <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-                        </button>
-                    </div>
+        <div className={`h-screen flex flex-col ${darkMode ? 'bg-[#1e1e1e] text-gray-200' : 'bg-white text-gray-800'}`}>
+            {/* TITLE BAR */}
+            <header className={`h-8 flex items-center justify-between px-2 text-xs ${darkMode ? 'bg-[#323233]' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div className="flex items-center gap-2">
+                    <Paintbrush className="w-4 h-4 text-purple-500" />
+                    <span className="font-medium">Design Studio</span>
+                    {selectedFile && (
+                        <>
+                            <span className="text-gray-500">—</span>
+                            <span className={hasChanges ? 'text-orange-400' : ''}>{selectedFile.replace('design_override_', '')}{hasChanges ? ' •' : ''}</span>
+                        </>
+                    )}
                 </div>
-
-                {/* Tabs */}
-                <div className="flex px-4 gap-1">
-                    {[
-                        { id: 'visual', icon: Layers, label: 'Visual Editor' },
-                        { id: 'code', icon: Code, label: 'Code Editor' },
-                        { id: 'chat', icon: MessageSquare, label: 'AI Assistant' },
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-all ${
-                                activeTab === tab.id
-                                    ? darkMode
-                                        ? 'bg-gray-900 text-white'
-                                        : 'bg-gray-50 text-purple-600'
-                                    : darkMode
-                                        ? 'text-gray-400 hover:text-gray-300'
-                                        : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            <tab.icon className="w-4 h-4" />
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-1">
+                    <button onClick={() => setDarkMode(!darkMode)} className="p-1 hover:bg-gray-600 rounded" title="Toggle Theme">
+                        {darkMode ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+                    </button>
                 </div>
             </header>
 
-            {/* Notification */}
-            <AnimatePresence>
-                {notification && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
-                            notification.type === 'success'
-                                ? 'bg-green-500 text-white'
-                                : 'bg-red-500 text-white'
-                        }`}
-                    >
-                        {notification.message}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* TOOLBAR */}
+            <div className={`h-10 flex items-center justify-between px-2 border-b ${darkMode ? 'bg-[#252526] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center gap-1">
+                    <button onClick={() => setShowSidebar(!showSidebar)} className={`p-1.5 rounded ${showSidebar ? 'bg-purple-600 text-white' : 'hover:bg-gray-600'}`} title="Toggle Explorer">
+                        <PanelLeft className="w-4 h-4" />
+                    </button>
+                    <div className={`w-px h-5 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`} />
+                    
+                    <button onClick={saveFile} disabled={!hasChanges || isSaving} className={`p-1.5 rounded ${hasChanges ? 'text-orange-400 hover:bg-gray-600' : 'opacity-50'}`} title="Save (Ctrl+S)">
+                        {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    </button>
+                    
+                    <button onClick={undo} disabled={!canUndo} className={`p-1.5 rounded ${canUndo ? 'hover:bg-gray-600' : 'opacity-30'}`} title="Undo (Ctrl+Z)">
+                        <Undo className="w-4 h-4" />
+                    </button>
+                    <button onClick={redo} disabled={!canRedo} className={`p-1.5 rounded ${canRedo ? 'hover:bg-gray-600' : 'opacity-30'}`} title="Redo (Ctrl+Y)">
+                        <Redo className="w-4 h-4" />
+                    </button>
+                    
+                    <div className={`w-px h-5 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`} />
+                    
+                    <button onClick={() => setActiveView('split')} className={`p-1.5 rounded ${activeView === 'split' ? 'bg-purple-600 text-white' : 'hover:bg-gray-600'}`} title="Split View">
+                        <Columns className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setActiveView('code')} className={`p-1.5 rounded ${activeView === 'code' ? 'bg-purple-600 text-white' : 'hover:bg-gray-600'}`} title="Code Only">
+                        <Code className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setActiveView('preview')} className={`p-1.5 rounded ${activeView === 'preview' ? 'bg-purple-600 text-white' : 'hover:bg-gray-600'}`} title="Preview Only">
+                        <Eye className="w-4 h-4" />
+                    </button>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                    <button onClick={() => setPreviewMode('desktop')} className={`p-1.5 rounded ${previewMode === 'desktop' ? 'bg-purple-600 text-white' : 'hover:bg-gray-600'}`}>
+                        <Monitor className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setPreviewMode('tablet')} className={`p-1.5 rounded ${previewMode === 'tablet' ? 'bg-purple-600 text-white' : 'hover:bg-gray-600'}`}>
+                        <Tablet className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setPreviewMode('mobile')} className={`p-1.5 rounded ${previewMode === 'mobile' ? 'bg-purple-600 text-white' : 'hover:bg-gray-600'}`}>
+                        <Smartphone className="w-4 h-4" />
+                    </button>
+                    
+                    <div className={`w-px h-5 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`} />
+                    
+                    <button onClick={() => setShowChatPanel(!showChatPanel)} className={`p-1.5 rounded ${showChatPanel ? 'bg-purple-600 text-white' : 'hover:bg-gray-600'}`} title="AI Assistant">
+                        <MessageSquare className="w-4 h-4" />
+                    </button>
+                    
+                    <button onClick={loadDesigns} className="p-1.5 rounded hover:bg-gray-600" title="Refresh">
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
+            </div>
 
-            {/* Main Content */}
-            <div className="flex h-[calc(100vh-120px)]">
-                {/* Sidebar - Component List */}
-                <aside className={`w-72 border-r ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} overflow-y-auto`}>
-                    {/* Search */}
-                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                            <Search className="w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Cari komponen..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="flex-1 bg-transparent border-none outline-none text-sm"
-                            />
+            {/* MAIN CONTENT */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* SIDEBAR */}
+                {showSidebar && (
+                    <aside className={`w-64 flex flex-col border-r ${darkMode ? 'bg-[#252526] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                        <div className={`px-3 py-2 text-xs uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'} flex items-center justify-between`}>
+                            <span>Explorer</span>
+                            <button onClick={() => {
+                                const name = prompt('Component name:');
+                                if (name) createNewFile(name);
+                            }} className="p-1 hover:bg-gray-600 rounded" title="New File">
+                                <FilePlus className="w-3.5 h-3.5" />
+                            </button>
                         </div>
-                    </div>
-
-                    {/* Component Tree */}
-                    <div className="p-2">
-                        {filteredComponents ? (
-                            <div className="space-y-1">
-                                {filteredComponents.map((comp) => (
-                                    <button
-                                        key={comp.name}
-                                        onClick={() => setSelectedComponent(comp.name)}
-                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-all ${
-                                            selectedComponent === comp.name
-                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                                                : darkMode
-                                                    ? 'hover:bg-gray-700'
-                                                    : 'hover:bg-gray-100'
-                                        }`}
-                                    >
-                                        <Box className="w-4 h-4" />
-                                        <span>{comp.displayName}</span>
-                                        {designs.some(d => d.page_key === `design_override_${comp.name}`) && (
-                                            <span className="ml-auto w-2 h-2 bg-green-500 rounded-full" />
+                        
+                        <div className="flex-1 overflow-y-auto text-sm">
+                            {isLoading ? (
+                                <div className="px-3 py-2 text-gray-500">Loading...</div>
+                            ) : (
+                                <>
+                                    {/* Active Overrides */}
+                                    <div>
+                                        <button
+                                            onClick={() => setExpandedFolders(prev => 
+                                                prev.includes('active') ? prev.filter(f => f !== 'active') : [...prev, 'active']
+                                            )}
+                                            className="w-full px-2 py-1 flex items-center gap-1 hover:bg-gray-600/30"
+                                        >
+                                            {expandedFolders.includes('active') ? <FolderOpen className="w-4 h-4 text-yellow-500" /> : <Folder className="w-4 h-4 text-yellow-500" />}
+                                            <span>Active Overrides</span>
+                                            <span className="ml-auto text-xs text-gray-500">{designs.length}</span>
+                                        </button>
+                                        
+                                        {expandedFolders.includes('active') && (
+                                            <div className="ml-4">
+                                                {Object.entries(groupedDesigns).map(([category, categoryDesigns]) => (
+                                                    <div key={category}>
+                                                        <div className={`px-2 py-0.5 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} uppercase`}>{category}</div>
+                                                        {categoryDesigns.map((design) => {
+                                                            const name = design.page_key.replace('design_override_', '');
+                                                            const isSelected = selectedFile === design.page_key;
+                                                            return (
+                                                                <div
+                                                                    key={design.page_key}
+                                                                    className={`group px-2 py-1 flex items-center gap-2 cursor-pointer ${isSelected ? 'bg-purple-600/30' : 'hover:bg-gray-600/30'}`}
+                                                                    onClick={() => openFile(design.page_key)}
+                                                                >
+                                                                    <FileCode className="w-4 h-4 text-purple-400" />
+                                                                    <span className="flex-1 truncate">{name}</span>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); deleteFile(design.page_key); }}
+                                                                        className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-red-600 rounded"
+                                                                    >
+                                                                        <Trash2 className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ))}
+                                                {designs.length === 0 && (
+                                                    <div className="px-2 py-1 text-gray-500 text-xs">No overrides yet</div>
+                                                )}
+                                            </div>
                                         )}
-                                    </button>
-                                ))}
-                            </div>
-                        ) : (
-                            Object.entries(groupedComponents).map(([category, components]) => (
-                                <div key={category} className="mb-2">
-                                    <button
-                                        onClick={() => setExpandedCategories(prev =>
-                                            prev.includes(category)
-                                                ? prev.filter(c => c !== category)
-                                                : [...prev, category]
-                                        )}
-                                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-semibold uppercase tracking-wider ${
-                                            darkMode ? 'text-gray-400' : 'text-gray-500'
-                                        }`}
-                                    >
-                                        {expandedCategories.includes(category) ? (
-                                            <ChevronDown className="w-4 h-4" />
-                                        ) : (
-                                            <ChevronRight className="w-4 h-4" />
-                                        )}
-                                        {category}
-                                        <span className="ml-auto text-xs bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">
-                                            {components.length}
-                                        </span>
-                                    </button>
+                                    </div>
                                     
-                                    {expandedCategories.includes(category) && (
-                                        <div className="ml-2 space-y-1">
-                                            {components.map((comp) => (
-                                                <button
-                                                    key={comp.key}
-                                                    onClick={() => setSelectedComponent(comp.key)}
-                                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-all ${
-                                                        selectedComponent === comp.key
-                                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                                                            : darkMode
-                                                                ? 'hover:bg-gray-700'
-                                                                : 'hover:bg-gray-100'
-                                                    }`}
-                                                >
-                                                    <Box className="w-4 h-4 opacity-50" />
-                                                    <span>{comp.displayName}</span>
-                                                    {designs.some(d => d.page_key === `design_override_${comp.key}`) && (
-                                                        <span className="ml-auto w-2 h-2 bg-green-500 rounded-full" title="Has custom design" />
-                                                    )}
-                                                </button>
+                                    {/* Templates */}
+                                    <div className="mt-2">
+                                        <button
+                                            onClick={() => setExpandedFolders(prev => 
+                                                prev.includes('templates') ? prev.filter(f => f !== 'templates') : [...prev, 'templates']
+                                            )}
+                                            className="w-full px-2 py-1 flex items-center gap-1 hover:bg-gray-600/30"
+                                        >
+                                            {expandedFolders.includes('templates') ? <FolderOpen className="w-4 h-4 text-blue-500" /> : <Folder className="w-4 h-4 text-blue-500" />}
+                                            <span>Templates</span>
+                                        </button>
+                                        
+                                        {expandedFolders.includes('templates') && (
+                                            <div className="ml-4">
+                                                {Object.keys(DESIGN_TEMPLATES).map((template) => (
+                                                    <div
+                                                        key={template}
+                                                        onClick={() => applyTemplate(template)}
+                                                        className="px-2 py-1 flex items-center gap-2 cursor-pointer hover:bg-gray-600/30"
+                                                    >
+                                                        <Palette className="w-4 h-4 text-cyan-400" />
+                                                        <span className="capitalize">{template}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* All Components */}
+                                    <div className="mt-2">
+                                        <button
+                                            onClick={() => setExpandedFolders(prev => 
+                                                prev.includes('components') ? prev.filter(f => f !== 'components') : [...prev, 'components']
+                                            )}
+                                            className="w-full px-2 py-1 flex items-center gap-1 hover:bg-gray-600/30"
+                                        >
+                                            {expandedFolders.includes('components') ? <FolderOpen className="w-4 h-4 text-green-500" /> : <Folder className="w-4 h-4 text-green-500" />}
+                                            <span>All Components</span>
+                                            <span className="ml-auto text-xs text-gray-500">{Object.keys(DESIGN_REGISTRY).length}</span>
+                                        </button>
+                                        
+                                        {expandedFolders.includes('components') && (
+                                            <div className="ml-4 max-h-64 overflow-y-auto">
+                                                {Object.entries(DESIGN_REGISTRY).map(([key, info]) => {
+                                                    const hasOverride = designs.some(d => d.page_key === `design_override_${key}`);
+                                                    return (
+                                                        <div
+                                                            key={key}
+                                                            onClick={() => createNewFile(key)}
+                                                            className="px-2 py-1 flex items-center gap-2 cursor-pointer hover:bg-gray-600/30"
+                                                        >
+                                                            <Box className={`w-4 h-4 ${hasOverride ? 'text-green-400' : 'text-gray-500'}`} />
+                                                            <span className="truncate">{info.displayName}</span>
+                                                            {hasOverride && <Check className="w-3 h-3 text-green-400" />}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </aside>
+                )}
+
+                {/* MAIN EDITOR */}
+                <main className="flex-1 flex overflow-hidden">
+                    {/* Code Editor */}
+                    {(activeView === 'split' || activeView === 'code') && (
+                        <div className={`${activeView === 'split' ? 'w-1/2' : 'w-full'} flex flex-col border-r ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                            {selectedFile && (
+                                <div className={`h-9 flex items-center px-2 ${darkMode ? 'bg-[#2d2d2d]' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                                    <div className={`flex items-center gap-2 px-3 py-1 ${darkMode ? 'bg-[#1e1e1e]' : 'bg-white'} border-t-2 border-purple-500`}>
+                                        <FileCode className="w-4 h-4 text-purple-400" />
+                                        <span className="text-sm">{selectedFile.replace('design_override_', '')}.css</span>
+                                        {hasChanges && <span className="w-2 h-2 bg-orange-400 rounded-full" />}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <div className="flex-1 relative overflow-hidden">
+                                {selectedFile ? (
+                                    <div className="absolute inset-0 flex font-mono text-sm">
+                                        <div className={`w-12 flex-shrink-0 text-right pr-3 pt-2 select-none ${darkMode ? 'bg-[#1e1e1e] text-gray-600' : 'bg-gray-50 text-gray-400'}`}>
+                                            {code.split('\n').map((_, i) => (
+                                                <div key={i} className="h-6 leading-6">{i + 1}</div>
                                             ))}
                                         </div>
-                                    )}
+                                        
+                                        <textarea
+                                            ref={editorRef}
+                                            value={code}
+                                            onChange={(e) => handleCodeChange(e.target.value)}
+                                            className={`flex-1 p-2 resize-none outline-none leading-6 ${darkMode ? 'bg-[#1e1e1e] text-gray-200 caret-white' : 'bg-white text-gray-800'}`}
+                                            spellCheck={false}
+                                            style={{ tabSize: 2 }}
+                                            placeholder="/* Start typing CSS here... */"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-gray-500">
+                                        <div className="text-center">
+                                            <FileCode className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                                            <p>Select a file from Explorer</p>
+                                            <p className="text-sm mt-1">or create a new one</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className={`h-6 flex items-center justify-between px-3 text-xs ${darkMode ? 'bg-[#007acc] text-white' : 'bg-blue-600 text-white'}`}>
+                                <div className="flex items-center gap-3">
+                                    <span>{selectedFile ? 'CSS' : 'No file'}</span>
+                                    {history.length > 0 && <span>History: {historyIndex + 1}/{history.length}</span>}
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </aside>
-
-                {/* Main Panel */}
-                <main className="flex-1 flex flex-col overflow-hidden">
-                    {activeTab === 'visual' && (
-                        <VisualEditor
-                            selectedComponent={selectedComponent}
-                            selectedStyle={selectedStyle}
-                            setSelectedStyle={setSelectedStyle}
-                            onApply={applyDesign}
-                            isSaving={isSaving}
-                            darkMode={darkMode}
-                            previewMode={previewMode}
-                        />
+                                <div className="flex items-center gap-3">
+                                    {hasChanges && <span className="text-orange-300">● Modified</span>}
+                                    <span>UTF-8</span>
+                                </div>
+                            </div>
+                        </div>
                     )}
 
-                    {activeTab === 'code' && (
-                        <CodeEditor
-                            selectedComponent={selectedComponent}
-                            customCSS={customCSS}
-                            setCustomCSS={setCustomCSS}
-                            onSave={handleSaveCSS}
-                            onUndo={handleUndo}
-                            onRedo={handleRedo}
-                            canUndo={historyIndex > 0}
-                            canRedo={historyIndex < history.length - 1}
-                            isSaving={isSaving}
-                            darkMode={darkMode}
-                        />
-                    )}
-
-                    {activeTab === 'chat' && (
-                        <ChatPanel
-                            messages={chatMessages}
-                            input={chatInput}
-                            setInput={setChatInput}
-                            onSend={handleSendMessage}
-                            isTyping={isAITyping}
-                            darkMode={darkMode}
-                            chatEndRef={chatEndRef}
-                            onQuickApply={handleQuickApply}
-                            selectedComponent={selectedComponent}
-                            showCommands={showCommands}
-                            commandFilter={commandFilter}
-                        />
+                    {/* Live Preview */}
+                    {(activeView === 'split' || activeView === 'preview') && (
+                        <div className={`${activeView === 'split' ? 'w-1/2' : 'w-full'} flex flex-col`}>
+                            <div className={`h-9 flex items-center justify-between px-3 ${darkMode ? 'bg-[#2d2d2d]' : 'bg-gray-100'} border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                                <div className="flex items-center gap-2">
+                                    <Eye className="w-4 h-4" />
+                                    <span className="text-sm">Live Preview</span>
+                                </div>
+                                <div className="text-xs text-gray-500">{previewMode}</div>
+                            </div>
+                            
+                            <div className={`flex-1 overflow-auto p-4 ${darkMode ? 'bg-[#1e1e1e]' : 'bg-gray-50'}`}>
+                                <style dangerouslySetInnerHTML={{ __html: code }} />
+                                
+                                <div className={`mx-auto transition-all ${
+                                    previewMode === 'mobile' ? 'max-w-[375px]' : 
+                                    previewMode === 'tablet' ? 'max-w-[768px]' : 'max-w-full'
+                                }`}>
+                                    <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                                        {selectedFile ? (
+                                            <PreviewContent componentName={selectedFile.replace('design_override_', '')} />
+                                        ) : (
+                                            <div className="text-center text-gray-500 py-8">
+                                                <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                                <p>Select a component to preview</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </main>
 
-                {/* Preview Panel */}
-                {showPreview && (
-                    <aside className={`w-96 border-l ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} overflow-hidden flex flex-col`}>
-                        <div className={`flex items-center justify-between px-4 py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                {/* AI CHAT PANEL */}
+                {showChatPanel && (
+                    <aside className={`w-80 flex flex-col border-l ${darkMode ? 'bg-[#252526] border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                        <div className={`px-3 py-2 flex items-center justify-between border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             <div className="flex items-center gap-2">
-                                <Eye className="w-4 h-4" />
-                                <span className="font-medium">Live Preview</span>
+                                <Sparkles className="w-4 h-4 text-purple-400" />
+                                <span className="font-medium text-sm">AI Assistant</span>
                             </div>
-                            <button onClick={() => setShowPreview(false)}>
+                            <button onClick={() => setShowChatPanel(false)} className="p-1 hover:bg-gray-600 rounded">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <div className="flex-1 p-4 overflow-auto">
-                            <LivePreview
-                                component={selectedComponent}
-                                css={customCSS}
-                                previewMode={previewMode}
-                                darkMode={darkMode}
-                            />
+                        
+                        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                            {chatMessages.length === 0 && (
+                                <div className="text-center text-gray-500 text-sm py-8">
+                                    <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                    <p>Ask AI to help with design</p>
+                                    <p className="text-xs mt-1">Example: "Make it glassmorphism"</p>
+                                </div>
+                            )}
+                            
+                            {chatMessages.map((msg) => (
+                                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[90%] px-3 py-2 rounded-lg text-sm ${
+                                        msg.role === 'user' 
+                                            ? 'bg-purple-600 text-white' 
+                                            : darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                                    }`}>
+                                        {msg.content}
+                                        {msg.cssCode && (
+                                            <button 
+                                                onClick={() => {
+                                                    if (selectedFile) {
+                                                        setCode(msg.cssCode!);
+                                                        addToHistory(msg.cssCode!, 'Applied from chat');
+                                                    }
+                                                }}
+                                                className="mt-2 flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200"
+                                            >
+                                                <Play className="w-3 h-3" /> Apply CSS
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            
+                            {isAITyping && (
+                                <div className="flex justify-start">
+                                    <div className={`px-3 py-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                        <div className="flex gap-1">
+                                            <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
+                                            <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                                            <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
+                        </div>
+                        
+                        <div className={`p-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                            <div className={`flex items-center gap-2 p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-white border'}`}>
+                                <input
+                                    type="text"
+                                    value={chatInput}
+                                    onChange={(e) => setChatInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+                                    placeholder="Ask AI..."
+                                    className="flex-1 bg-transparent outline-none text-sm"
+                                />
+                                <button onClick={handleChatSubmit} disabled={!chatInput.trim() || isAITyping} className="p-1 text-purple-400 hover:text-purple-300 disabled:opacity-50">
+                                    <Send className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     </aside>
                 )}
             </div>
-        </div>
-    );
-}
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 🎨 VISUAL EDITOR COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
-function VisualEditor({
-    selectedComponent,
-    selectedStyle,
-    setSelectedStyle,
-    onApply,
-    isSaving,
-    darkMode,
-    previewMode,
-}: {
-    selectedComponent: string;
-    selectedStyle: string;
-    setSelectedStyle: (style: string) => void;
-    onApply: (component: string, style: string) => void;
-    isSaving: boolean;
-    darkMode: boolean;
-    previewMode: string;
-}) {
-    const componentInfo = selectedComponent ? findComponent(selectedComponent) : null;
-
-    if (!selectedComponent) {
-        return (
-            <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                    <Layers className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <h2 className="text-xl font-semibold mb-2">Pilih Komponen</h2>
-                    <p className="text-gray-500">Pilih komponen dari sidebar untuk mulai mendesain</p>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex-1 overflow-auto p-6">
-            <div className="max-w-4xl mx-auto">
-                {/* Component Info */}
-                <div className={`mb-6 p-4 rounded-xl ${darkMode ? 'bg-gray-700' : 'bg-white'} shadow`}>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                            <Box className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold">{componentInfo?.displayName || selectedComponent}</h2>
-                            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {componentInfo?.description}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-600 rounded">
-                            Category: {componentInfo?.category}
-                        </span>
-                        {componentInfo?.selectors.slice(0, 3).map((sel, i) => (
-                            <code key={i} className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded">
-                                {sel}
-                            </code>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Style Selection */}
-                <h3 className="font-semibold mb-3">Pilih Style</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-                    {DESIGN_STYLES.map((style) => (
-                        <button
-                            key={style.id}
-                            onClick={() => setSelectedStyle(style.id)}
-                            className={`p-4 rounded-xl border-2 transition-all text-left ${
-                                selectedStyle === style.id
-                                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                                    : darkMode
-                                        ? 'border-gray-600 hover:border-gray-500 bg-gray-700'
-                                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                            }`}
-                        >
-                            <Palette className={`w-5 h-5 mb-2 ${selectedStyle === style.id ? 'text-purple-500' : ''}`} />
-                            <div className="font-medium">{style.name}</div>
-                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                {style.desc}
-                            </div>
-                        </button>
-                    ))}
-                </div>
-
-                {/* Apply Button */}
-                <button
-                    onClick={() => onApply(selectedComponent, selectedStyle)}
-                    disabled={isSaving}
-                    className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                    {isSaving ? (
-                        <RefreshCw className="w-5 h-5 animate-spin" />
-                    ) : (
-                        <Wand2 className="w-5 h-5" />
-                    )}
-                    {isSaving ? 'Menerapkan...' : 'Terapkan Design'}
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 💻 CODE EDITOR COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
-function CodeEditor({
-    selectedComponent,
-    customCSS,
-    setCustomCSS,
-    onSave,
-    onUndo,
-    onRedo,
-    canUndo,
-    canRedo,
-    isSaving,
-    darkMode,
-}: {
-    selectedComponent: string;
-    customCSS: string;
-    setCustomCSS: (css: string) => void;
-    onSave: () => void;
-    onUndo: () => void;
-    onRedo: () => void;
-    canUndo: boolean;
-    canRedo: boolean;
-    isSaving: boolean;
-    darkMode: boolean;
-}) {
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(customCSS);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    if (!selectedComponent) {
-        return (
-            <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                    <Code className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <h2 className="text-xl font-semibold mb-2">Pilih Komponen</h2>
-                    <p className="text-gray-500">Pilih komponen untuk mengedit CSS</p>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Toolbar */}
-            <div className={`flex items-center justify-between px-4 py-2 border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={onUndo}
-                        disabled={!canUndo}
-                        className={`p-2 rounded ${canUndo ? 'hover:bg-gray-200 dark:hover:bg-gray-700' : 'opacity-50'}`}
+            {/* NOTIFICATION */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+                            notification.type === 'success' ? 'bg-green-600' :
+                            notification.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+                        } text-white`}
                     >
-                        <Undo className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={onRedo}
-                        disabled={!canRedo}
-                        className={`p-2 rounded ${canRedo ? 'hover:bg-gray-200 dark:hover:bg-gray-700' : 'opacity-50'}`}
-                    >
-                        <Redo className="w-4 h-4" />
-                    </button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2" />
-                    <button
-                        onClick={handleCopy}
-                        className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-                    >
-                        {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                        {selectedComponent}.css
-                    </span>
-                    <button
-                        onClick={onSave}
-                        disabled={isSaving}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50"
-                    >
-                        {isSaving ? (
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <Save className="w-4 h-4" />
-                        )}
-                        Simpan
-                    </button>
-                </div>
-            </div>
-
-            {/* Editor */}
-            <div className="flex-1 overflow-hidden">
-                <textarea
-                    value={customCSS}
-                    onChange={(e) => setCustomCSS(e.target.value)}
-                    placeholder={`/* CSS untuk ${selectedComponent} */\n\n.${selectedComponent} {\n  /* tambahkan style di sini */\n}`}
-                    className={`w-full h-full p-4 font-mono text-sm resize-none outline-none ${
-                        darkMode
-                            ? 'bg-gray-900 text-gray-100'
-                            : 'bg-white text-gray-800'
-                    }`}
-                    style={{ tabSize: 2 }}
-                    spellCheck={false}
-                />
-            </div>
-        </div>
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 💬 CHAT PANEL COMPONENT - Enhanced with Command Palette
-// ═══════════════════════════════════════════════════════════════════════════════
-function ChatPanel({
-    messages,
-    input,
-    setInput,
-    onSend,
-    isTyping,
-    darkMode,
-    chatEndRef,
-    onQuickApply,
-    selectedComponent,
-    showCommands,
-    commandFilter,
-}: {
-    messages: ChatMessage[];
-    input: string;
-    setInput: (val: string) => void;
-    onSend: () => void;
-    isTyping: boolean;
-    darkMode: boolean;
-    chatEndRef: React.RefObject<HTMLDivElement | null>;
-    onQuickApply: (component: string, style: string) => void;
-    selectedComponent: string;
-    showCommands?: boolean;
-    commandFilter?: string;
-}) {
-    const [selectedCmdIndex, setSelectedCmdIndex] = useState(0);
-    
-    const filteredCommands = AI_COMMANDS.filter(c => 
-        !commandFilter || c.cmd.toLowerCase().includes(commandFilter) || c.desc.toLowerCase().includes(commandFilter)
-    );
-    
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (showCommands && filteredCommands.length > 0) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setSelectedCmdIndex(prev => (prev + 1) % filteredCommands.length);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setSelectedCmdIndex(prev => (prev - 1 + filteredCommands.length) % filteredCommands.length);
-            } else if (e.key === 'Tab' || (e.key === 'Enter' && filteredCommands.length > 0)) {
-                e.preventDefault();
-                const cmd = filteredCommands[selectedCmdIndex];
-                setInput(cmd.template || cmd.cmd + ' ');
-            }
-        } else if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            onSend();
-        }
-    };
-    
-    return (
-        <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Command Palette */}
-            {showCommands && filteredCommands.length > 0 && (
-                <div className={`absolute bottom-20 left-4 right-4 z-50 rounded-xl shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}>
-                    <div className={`px-3 py-2 text-xs font-medium ${darkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
-                        <Command className="w-3 h-3 inline mr-1" /> AI Commands
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                        {filteredCommands.map((cmd, i) => (
-                            <button
-                                key={cmd.cmd}
-                                onClick={() => setInput(cmd.template || cmd.cmd + ' ')}
-                                className={`w-full flex items-center gap-3 px-4 py-2 text-left transition-colors ${
-                                    i === selectedCmdIndex
-                                        ? darkMode ? 'bg-purple-900/50' : 'bg-purple-50'
-                                        : darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
-                                }`}
-                            >
-                                <code className="text-purple-500 font-mono text-sm">{cmd.cmd}</code>
-                                <span className={`flex-1 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{cmd.desc}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Quick Actions Bar */}
-            <div className={`flex items-center gap-2 px-4 py-2 border-b overflow-x-auto ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-purple-50 border-purple-100'}`}>
-                <span className="text-xs font-medium whitespace-nowrap opacity-60">Quick:</span>
-                {selectedComponent ? (
-                    <>
-                        {DESIGN_STYLES.slice(0, 5).map((style) => (
-                            <button
-                                key={style.id}
-                                onClick={() => onQuickApply(selectedComponent, style.id)}
-                                className="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-700 rounded-full text-xs border border-gray-200 dark:border-gray-600 hover:border-purple-400 whitespace-nowrap transition-colors"
-                            >
-                                <Sparkles className="w-3 h-3" />
-                                {style.name}
-                            </button>
-                        ))}
-                    </>
-                ) : (
-                    <>
-                        <button
-                            onClick={() => setInput('/help')}
-                            className="px-2 py-1 bg-white dark:bg-gray-700 rounded-full text-xs border border-gray-200 dark:border-gray-600 hover:border-purple-400"
-                        >
-                            /help
-                        </button>
-                        <button
-                            onClick={() => setInput('/list')}
-                            className="px-2 py-1 bg-white dark:bg-gray-700 rounded-full text-xs border border-gray-200 dark:border-gray-600 hover:border-purple-400"
-                        >
-                            /list
-                        </button>
-                        <button
-                            onClick={() => setInput('/design button ')}
-                            className="px-2 py-1 bg-white dark:bg-gray-700 rounded-full text-xs border border-gray-200 dark:border-gray-600 hover:border-purple-400"
-                        >
-                            /design
-                        </button>
-                    </>
+                        {notification.type === 'success' && <Check className="w-4 h-4" />}
+                        {notification.type === 'error' && <AlertCircle className="w-4 h-4" />}
+                        {notification.type === 'info' && <Info className="w-4 h-4" />}
+                        {notification.message}
+                    </motion.div>
                 )}
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((msg) => (
-                    <div
-                        key={msg.id}
-                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                        <div
-                            className={`max-w-[85%] px-4 py-3 rounded-2xl ${
-                                msg.role === 'user'
-                                    ? 'bg-purple-600 text-white rounded-br-md'
-                                    : darkMode
-                                        ? 'bg-gray-700 rounded-bl-md'
-                                        : 'bg-gray-100 rounded-bl-md'
-                            }`}
-                        >
-                            <div className="whitespace-pre-wrap text-sm" dangerouslySetInnerHTML={{
-                                __html: msg.content
-                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-black/10 rounded text-xs font-mono">$1</code>')
-                                    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="mt-2 p-2 bg-black/20 rounded text-xs overflow-x-auto"><code>$2</code></pre>')
-                                    .replace(/\n/g, '<br/>')
-                            }} />
-                            {msg.action && (
-                                <div className={`mt-2 pt-2 border-t ${msg.role === 'user' ? 'border-purple-400' : 'border-gray-300 dark:border-gray-600'} flex items-center gap-2 text-xs`}>
-                                    {msg.action.status === 'success' ? (
-                                        <Check className="w-4 h-4 text-green-400" />
-                                    ) : (
-                                        <RefreshCw className="w-4 h-4 animate-spin" />
-                                    )}
-                                    <span>Design applied: {msg.action.component}</span>
-                                </div>
-                            )}
-                            {msg.cssCode && (
-                                <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
-                                    <button 
-                                        onClick={() => navigator.clipboard.writeText(msg.cssCode!)}
-                                        className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300"
-                                    >
-                                        <Copy className="w-3 h-3" /> Copy CSS
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))}
-                
-                {isTyping && (
-                    <div className="flex justify-start">
-                        <div className={`px-4 py-3 rounded-2xl rounded-bl-md ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                            <div className="flex gap-1">
-                                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                            </div>
-                        </div>
-                    </div>
-                )}
-                <div ref={chatEndRef} />
-            </div>
-
-            {/* Enhanced Input */}
-            <div className={`p-4 border-t ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-                <div className={`flex items-end gap-2 p-2 rounded-xl ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={selectedComponent 
-                            ? `Design ${selectedComponent}... (cth: buat glassmorphism)` 
-                            : "Ketik / untuk commands atau tanya AI..."
-                        }
-                        rows={1}
-                        className="flex-1 bg-transparent border-none outline-none px-2 resize-none max-h-32 min-h-[40px]"
-                        style={{ height: 'auto' }}
-                    />
-                    <button
-                        onClick={onSend}
-                        disabled={!input.trim() || isTyping}
-                        className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
-                    >
-                        {isTyping ? (
-                            <RefreshCw className="w-5 h-5 animate-spin" />
-                        ) : (
-                            <Send className="w-5 h-5" />
-                        )}
-                    </button>
-                </div>
-                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                    <span>Tip: Ketik <code className="px-1 bg-gray-200 dark:bg-gray-600 rounded">/</code> untuk commands</span>
-                    <span>•</span>
-                    <span>Enter untuk kirim</span>
-                </div>
-            </div>
+            </AnimatePresence>
         </div>
     );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 👁️ LIVE PREVIEW COMPONENT
+// PREVIEW CONTENT COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
-function LivePreview({
-    component,
-    css,
-    previewMode,
-    darkMode,
-}: {
-    component: string;
-    css: string;
-    previewMode: string;
-    darkMode: boolean;
-}) {
-    const getPreviewContent = () => {
-        const componentInfo = component ? findComponent(component) : null;
-        
-        if (!component) {
+
+function PreviewContent({ componentName }: { componentName: string }) {
+    const componentInfo = findComponent(componentName);
+    
+    switch (componentInfo?.category) {
+        case 'button':
             return (
-                <div className="text-center py-12 text-gray-400">
-                    <Eye className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Pilih komponen untuk preview</p>
+                <div className="space-y-4">
+                    <h3 className="font-bold mb-4">Button Preview</h3>
+                    <button className={`${componentName} px-4 py-2 rounded`}>Primary Button</button>
+                    <button className={`${componentName} px-4 py-2 rounded ml-2`} disabled>Disabled</button>
                 </div>
             );
-        }
-
-        // Generate preview based on component type
-        switch (componentInfo?.category) {
-            case 'button':
-                return (
-                    <div className="space-y-4">
-                        <button className="btn">Primary Button</button>
-                        <button className="btn btn-secondary">Secondary</button>
-                        <button className="btn" disabled>Disabled</button>
+        case 'card':
+            return (
+                <div className={`${componentName} p-4`}>
+                    <h3 className="font-bold">Card Title</h3>
+                    <p className="mt-2 text-sm opacity-70">Sample card content to preview your design.</p>
+                    <button className="mt-4 px-3 py-1 bg-purple-600 text-white rounded text-sm">Action</button>
+                </div>
+            );
+        case 'form':
+            return (
+                <div className={`${componentName} space-y-3`}>
+                    <div>
+                        <label className="block text-sm mb-1">Email</label>
+                        <input type="email" placeholder="you@example.com" className="w-full px-3 py-2 border rounded" />
                     </div>
-                );
-            case 'card':
-                return (
-                    <div className="card">
-                        <div className="card-header">Card Header</div>
-                        <div className="card-body">
-                            <p>This is the card body content.</p>
-                        </div>
-                        <div className="card-footer">Card Footer</div>
+                    <div>
+                        <label className="block text-sm mb-1">Password</label>
+                        <input type="password" placeholder="••••••" className="w-full px-3 py-2 border rounded" />
                     </div>
-                );
-            case 'form':
-                return (
-                    <form className="space-y-4">
-                        <div>
-                            <label>Name</label>
-                            <input type="text" placeholder="Enter name..." className="input" />
-                        </div>
-                        <div>
-                            <label>Email</label>
-                            <input type="email" placeholder="Enter email..." className="input" />
-                        </div>
-                        <textarea placeholder="Message..." className="textarea" rows={3} />
-                        <button type="submit" className="btn">Submit</button>
-                    </form>
-                );
-            case 'chat':
-                return (
-                    <div className="chat-widget space-y-3">
-                        <div className="chat-message">Hello! How can I help?</div>
-                        <div className="chat-message user">I need help with design</div>
-                        <div className="chat-input-container">
-                            <input type="text" placeholder="Type a message..." className="chat-input" />
-                            <button className="chat-button">Send</button>
-                        </div>
+                    <button className="w-full py-2 bg-purple-600 text-white rounded">Submit</button>
+                </div>
+            );
+        case 'chat':
+            return (
+                <div className={`${componentName} space-y-2`}>
+                    <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg max-w-[80%]">
+                        Hello! How can I help?
                     </div>
-                );
-            default:
-                return (
-                    <div className={`p-4 rounded-lg border ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-                        <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Component: {componentInfo?.displayName || component}
-                        </div>
-                        <div className="mt-2">
-                            <code className="text-xs">{componentInfo?.selectors.join(', ')}</code>
+                    <div className="bg-purple-600 text-white p-3 rounded-lg max-w-[80%] ml-auto">
+                        I need help with design
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                        <input placeholder="Type here..." className="flex-1 px-3 py-2 border rounded" />
+                        <button className="px-4 py-2 bg-purple-600 text-white rounded">Send</button>
+                    </div>
+                </div>
+            );
+        case 'navigation':
+            return (
+                <nav className={`${componentName} flex gap-4 p-3`}>
+                    <a href="#" className="hover:text-purple-600">Home</a>
+                    <a href="#" className="hover:text-purple-600">About</a>
+                    <a href="#" className="hover:text-purple-600">Services</a>
+                    <a href="#" className="hover:text-purple-600">Contact</a>
+                </nav>
+            );
+        default:
+            return (
+                <div className={componentName}>
+                    <div className="p-4 border border-dashed border-gray-400 rounded text-center">
+                        <p className="font-medium">{componentInfo?.displayName || componentName}</p>
+                        <p className="text-sm text-gray-500 mt-1">{componentInfo?.description || 'Component preview'}</p>
+                        <div className="mt-3 text-xs text-gray-400">
+                            Selectors: {componentInfo?.selectors.slice(0, 3).join(', ')}
                         </div>
                     </div>
-                );
-        }
-    };
-
-    const getPreviewWidth = () => {
-        switch (previewMode) {
-            case 'mobile': return 'max-w-[320px]';
-            case 'tablet': return 'max-w-[768px]';
-            default: return 'w-full';
-        }
-    };
-
-    return (
-        <div className="h-full">
-            {/* Inject custom CSS */}
-            {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
-            
-            <div className={`${getPreviewWidth()} mx-auto transition-all duration-300`}>
-                {getPreviewContent()}
-            </div>
-        </div>
-    );
+                </div>
+            );
+    }
 }
