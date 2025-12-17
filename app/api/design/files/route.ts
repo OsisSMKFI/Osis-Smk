@@ -250,6 +250,7 @@ function getLanguage(ext: string): string {
 }
 
 async function buildFileTree(root: string) {
+    // Build a proper tree structure like VS Code
     const tree: Record<string, any[]> = {
         components: [],
         pages: [],
@@ -259,37 +260,48 @@ async function buildFileTree(root: string) {
         lib: [],
         hooks: [],
         contexts: [],
-        types: []
+        types: [],
+        data: [],
+        public: []
     };
     
-    // Scan components directory
+    // Scan components directory - with subdirectories
     try {
         const componentsDir = path.join(root, 'components');
-        const componentFiles = await scanDirectory(componentsDir, root);
-        tree.components = componentFiles.filter(f => f.path.endsWith('.tsx') || f.path.endsWith('.ts'));
+        const componentFiles = await scanDirectoryRecursive(componentsDir, root, 3); // depth 3
+        tree.components = componentFiles.filter(f => 
+            f.path.endsWith('.tsx') || f.path.endsWith('.ts') || f.isFolder
+        );
     } catch {}
     
-    // Scan app directory for pages
+    // Scan app directory for pages - full structure
     try {
         const appDir = path.join(root, 'app');
-        const appFiles = await scanDirectory(appDir, root);
-        tree.pages = appFiles.filter(f => f.name === 'page.tsx');
+        const appFiles = await scanDirectoryRecursive(appDir, root, 4); // depth 4
+        tree.pages = appFiles.filter(f => f.name === 'page.tsx' || f.name === 'layout.tsx' || f.isFolder);
         tree.styles = appFiles.filter(f => f.path.endsWith('.css'));
-        tree.api = appFiles.filter(f => f.path.includes('/api/') && f.path.endsWith('.ts'));
+        tree.api = appFiles.filter(f => f.path.includes('/api/') && (f.path.endsWith('.ts') || f.isFolder));
     } catch {}
     
     // Scan root for config files
     try {
         const rootFiles = await fs.readdir(root);
         for (const file of rootFiles) {
-            if (file.endsWith('.config.ts') || file.endsWith('.config.js') || file === 'tailwind.config.ts') {
-                const stats = await fs.stat(path.join(root, file));
-                tree.config.push({
-                    name: file,
-                    path: file,
-                    size: stats.size,
-                    modified: stats.mtime.toISOString()
-                });
+            const ext = path.extname(file);
+            if (ext === '.ts' || ext === '.js' || ext === '.json' || ext === '.mjs' || ext === '.cjs') {
+                if (file.includes('config') || file === 'package.json' || file === 'tsconfig.json' || 
+                    file === 'next.config.js' || file === 'tailwind.config.ts' || file === 'biome.json') {
+                    try {
+                        const stats = await fs.stat(path.join(root, file));
+                        tree.config.push({
+                            name: file,
+                            path: file,
+                            size: stats.size,
+                            modified: stats.mtime.toISOString(),
+                            isFolder: false
+                        });
+                    } catch {}
+                }
             }
         }
     } catch {}
@@ -297,63 +309,101 @@ async function buildFileTree(root: string) {
     // Scan lib directory - utility functions
     try {
         const libDir = path.join(root, 'lib');
-        const libFiles = await scanDirectory(libDir, root);
-        tree.lib = libFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx'));
+        const libFiles = await scanDirectoryRecursive(libDir, root, 2);
+        tree.lib = libFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx') || f.isFolder);
     } catch {}
     
     // Scan hooks directory - React hooks
     try {
         const hooksDir = path.join(root, 'hooks');
-        const hookFiles = await scanDirectory(hooksDir, root);
-        tree.hooks = hookFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx'));
+        const hookFiles = await scanDirectoryRecursive(hooksDir, root, 2);
+        tree.hooks = hookFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx') || f.isFolder);
     } catch {}
     
     // Scan contexts directory - React contexts
     try {
         const contextsDir = path.join(root, 'contexts');
-        const contextFiles = await scanDirectory(contextsDir, root);
-        tree.contexts = contextFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx'));
+        const contextFiles = await scanDirectoryRecursive(contextsDir, root, 2);
+        tree.contexts = contextFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.tsx') || f.isFolder);
     } catch {}
     
     // Scan types directory - TypeScript types
     try {
         const typesDir = path.join(root, 'types');
-        const typeFiles = await scanDirectory(typesDir, root);
-        tree.types = typeFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.d.ts'));
+        const typeFiles = await scanDirectoryRecursive(typesDir, root, 2);
+        tree.types = typeFiles.filter(f => f.path.endsWith('.ts') || f.path.endsWith('.d.ts') || f.isFolder);
+    } catch {}
+    
+    // Scan data directory
+    try {
+        const dataDir = path.join(root, 'data');
+        const dataFiles = await scanDirectoryRecursive(dataDir, root, 2);
+        tree.data = dataFiles;
+    } catch {}
+    
+    // Scan public directory (images, assets)
+    try {
+        const publicDir = path.join(root, 'public');
+        const publicFiles = await scanDirectoryRecursive(publicDir, root, 2);
+        tree.public = publicFiles.filter(f => 
+            f.path.endsWith('.svg') || f.path.endsWith('.png') || f.path.endsWith('.jpg') || 
+            f.path.endsWith('.ico') || f.path.endsWith('.webp') || f.isFolder
+        ).slice(0, 50); // Limit public files
     } catch {}
     
     return tree;
 }
 
-async function scanDirectory(dir: string, root: string): Promise<any[]> {
+// Recursive scan with proper folder structure
+async function scanDirectoryRecursive(dir: string, root: string, maxDepth: number, currentDepth = 0): Promise<any[]> {
     const results: any[] = [];
+    
+    if (currentDepth > maxDepth) return results;
     
     try {
         const entries = await fs.readdir(dir, { withFileTypes: true });
         
-        for (const entry of entries) {
+        // Sort: folders first, then files
+        const sorted = entries.sort((a, b) => {
+            if (a.isDirectory() && !b.isDirectory()) return -1;
+            if (!a.isDirectory() && b.isDirectory()) return 1;
+            return a.name.localeCompare(b.name);
+        });
+        
+        for (const entry of sorted) {
             const fullPath = path.join(dir, entry.name);
             const relativePath = path.relative(root, fullPath).replace(/\\/g, '/');
             
-            // Skip node_modules, .next, backups
+            // Skip hidden files, node_modules, .next, backups, etc
             if (entry.name.startsWith('.') || 
                 entry.name === 'node_modules' || 
                 entry.name === '.next' ||
-                entry.name === 'backups') {
+                entry.name === 'backups' ||
+                entry.name === '.git' ||
+                entry.name === '.vercel') {
                 continue;
             }
             
             if (entry.isDirectory()) {
-                const subFiles = await scanDirectory(fullPath, root);
-                results.push(...subFiles);
-            } else if (entry.isFile()) {
-                const stats = await fs.stat(fullPath);
+                const children = await scanDirectoryRecursive(fullPath, root, maxDepth, currentDepth + 1);
                 results.push({
                     name: entry.name,
                     path: relativePath,
-                    size: stats.size,
-                    modified: stats.mtime.toISOString()
+                    isFolder: true,
+                    children: children,
+                    expanded: false
                 });
+            } else if (entry.isFile()) {
+                try {
+                    const stats = await fs.stat(fullPath);
+                    results.push({
+                        name: entry.name,
+                        path: relativePath,
+                        size: stats.size,
+                        modified: stats.mtime.toISOString(),
+                        isFolder: false
+                    });
+                } catch {}
             }
         }
     } catch {}
@@ -370,7 +420,7 @@ async function searchFiles(root: string, query: string): Promise<any[]> {
     
     for (const dir of dirs) {
         try {
-            const files = await scanDirectory(path.join(root, dir), root);
+            const files = await scanDirectoryRecursive(path.join(root, dir), root, 3);
             for (const file of files) {
                 if (file.name.toLowerCase().includes(q) || file.path.toLowerCase().includes(q)) {
                     results.push(file);

@@ -56,6 +56,9 @@ interface SourceFile {
     language: string;
     size: number;
     modified: string;
+    isFolder?: boolean;
+    children?: SourceFile[];
+    expanded?: boolean;
 }
 
 interface FileTree {
@@ -64,10 +67,12 @@ interface FileTree {
     styles: SourceFile[];
     config: SourceFile[];
     api: SourceFile[];
-    lib: SourceFile[];          // Utility functions and helpers
-    hooks: SourceFile[];         // React hooks
-    contexts: SourceFile[];      // React contexts
-    types: SourceFile[];         // TypeScript types
+    lib: SourceFile[];
+    hooks: SourceFile[];
+    contexts: SourceFile[];
+    types: SourceFile[];
+    data: SourceFile[];
+    public: SourceFile[];
 }
 
 // File icon mapping by extension
@@ -76,8 +81,116 @@ const FILE_ICONS: Record<string, { icon: string; color: string }> = {
     ts: { icon: '📘', color: 'text-blue-500' },
     css: { icon: '🎨', color: 'text-purple-400' },
     js: { icon: '📒', color: 'text-yellow-400' },
+    jsx: { icon: '⚛️', color: 'text-cyan-400' },
     json: { icon: '📋', color: 'text-orange-400' },
-    md: { icon: '📝', color: 'text-gray-400' }
+    md: { icon: '📝', color: 'text-gray-400' },
+    svg: { icon: '🖼️', color: 'text-pink-400' },
+    png: { icon: '🖼️', color: 'text-green-400' },
+    jpg: { icon: '🖼️', color: 'text-green-400' },
+    ico: { icon: '🎯', color: 'text-yellow-400' },
+    mjs: { icon: '📒', color: 'text-yellow-500' },
+    cjs: { icon: '📒', color: 'text-yellow-600' },
+    html: { icon: '🌐', color: 'text-orange-500' },
+    sql: { icon: '🗄️', color: 'text-blue-300' },
+    sh: { icon: '⚡', color: 'text-green-500' },
+    ps1: { icon: '⚡', color: 'text-blue-400' }
+};
+
+// Folder icon mapping
+const FOLDER_ICONS: Record<string, { icon: string; color: string; openColor: string }> = {
+    components: { icon: '📦', color: 'text-blue-400', openColor: 'text-blue-300' },
+    pages: { icon: '📄', color: 'text-green-400', openColor: 'text-green-300' },
+    app: { icon: '📱', color: 'text-green-400', openColor: 'text-green-300' },
+    lib: { icon: '📚', color: 'text-teal-400', openColor: 'text-teal-300' },
+    hooks: { icon: '🪝', color: 'text-pink-400', openColor: 'text-pink-300' },
+    contexts: { icon: '🎯', color: 'text-indigo-400', openColor: 'text-indigo-300' },
+    types: { icon: '📐', color: 'text-cyan-400', openColor: 'text-cyan-300' },
+    api: { icon: '🔌', color: 'text-orange-400', openColor: 'text-orange-300' },
+    styles: { icon: '🎨', color: 'text-purple-400', openColor: 'text-purple-300' },
+    config: { icon: '⚙️', color: 'text-gray-400', openColor: 'text-gray-300' },
+    public: { icon: '🌐', color: 'text-yellow-400', openColor: 'text-yellow-300' },
+    data: { icon: '💾', color: 'text-emerald-400', openColor: 'text-emerald-300' },
+    ui: { icon: '🎛️', color: 'text-violet-400', openColor: 'text-violet-300' },
+    cards: { icon: '🃏', color: 'text-amber-400', openColor: 'text-amber-300' },
+    admin: { icon: '👑', color: 'text-red-400', openColor: 'text-red-300' },
+    default: { icon: '📁', color: 'text-gray-400', openColor: 'text-gray-300' }
+};
+
+// FileTreeNode Component - Recursive like VS Code
+interface FileTreeNodeProps {
+    file: SourceFile;
+    depth: number;
+    openFile: (path: string) => void;
+    openSourceFile: SourceFile | null;
+    expandedPaths: string[];
+    togglePath: (path: string) => void;
+}
+
+const FileTreeNode = ({ file, depth, openFile, openSourceFile, expandedPaths, togglePath }: FileTreeNodeProps) => {
+    const isExpanded = expandedPaths.includes(file.path);
+    const isOpen = openSourceFile?.path === file.path;
+    const ext = file.name.split('.').pop() || '';
+    const folderInfo = FOLDER_ICONS[file.name] || FOLDER_ICONS.default;
+    const fileInfo = FILE_ICONS[ext] || { icon: '📄', color: 'text-gray-400' };
+    
+    const paddingLeft = 8 + (depth * 12);
+    
+    if (file.isFolder) {
+        return (
+            <div>
+                <div
+                    className={`flex items-center gap-1.5 py-1 cursor-pointer hover:bg-gray-700/50 transition-colors`}
+                    style={{ paddingLeft: `${paddingLeft}px` }}
+                    onClick={() => togglePath(file.path)}
+                >
+                    {isExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                    ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                    )}
+                    <span className={`text-sm ${isExpanded ? folderInfo.openColor : folderInfo.color}`}>
+                        {folderInfo.icon}
+                    </span>
+                    <span className={`text-xs font-medium ${isExpanded ? folderInfo.openColor : 'text-gray-300'}`}>
+                        {file.name}
+                    </span>
+                    {file.children && (
+                        <span className="text-[10px] text-gray-600 ml-auto mr-2">{file.children.length}</span>
+                    )}
+                </div>
+                {isExpanded && file.children && (
+                    <div>
+                        {file.children.map((child) => (
+                            <FileTreeNode
+                                key={child.path}
+                                file={child}
+                                depth={depth + 1}
+                                openFile={openFile}
+                                openSourceFile={openSourceFile}
+                                expandedPaths={expandedPaths}
+                                togglePath={togglePath}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+    
+    return (
+        <div
+            className={`flex items-center gap-1.5 py-1 cursor-pointer transition-colors ${
+                isOpen ? 'bg-purple-600/30 text-purple-200' : 'hover:bg-gray-700/50 text-gray-400'
+            }`}
+            style={{ paddingLeft: `${paddingLeft + 16}px` }}
+            onClick={() => openFile(file.path)}
+            title={file.path}
+        >
+            <span className={`text-sm ${fileInfo.color}`}>{fileInfo.icon}</span>
+            <span className="text-xs truncate flex-1">{file.name}</span>
+            {file.size && <span className="text-[9px] text-gray-600 mr-2">{(file.size / 1024).toFixed(1)}kb</span>}
+        </div>
+    );
 };
 
 // CSS Templates - Complete
@@ -203,6 +316,7 @@ export default function DesignStudioPage() {
     const [originalSourceCode, setOriginalSourceCode] = useState('');
     const [editorMode, setEditorMode] = useState<'css' | 'source'>('css');
     const [expandedFolders, setExpandedFolders] = useState<string[]>(['components', 'pages', 'styles']);
+    const [expandedPaths, setExpandedPaths] = useState<string[]>([]); // For tree node expansion
     const [isLoadingFile, setIsLoadingFile] = useState(false);
     
     // Chat
@@ -373,6 +487,13 @@ export default function DesignStudioPage() {
     const toggleFolder = (folder: string) => {
         setExpandedFolders(prev => 
             prev.includes(folder) ? prev.filter(f => f !== folder) : [...prev, folder]
+        );
+    };
+    
+    // Toggle path in file tree (for recursive tree)
+    const togglePath = (path: string) => {
+        setExpandedPaths(prev => 
+            prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]
         );
     };
     
@@ -1917,313 +2038,321 @@ CARA MENJAWAB:
                                             </div>
                                         ))}
                                         
-                                        {/* ═══════ SOURCE FILES (REAL FILES) ═══════ */}
+                                        {/* ═══════ SOURCE FILES (REAL FILES) - VS CODE STYLE ═══════ */}
                                         <div className="border-t-2 border-purple-500/50 mt-2 pt-2">
                                             <div className="px-3 py-1.5 flex items-center gap-2 text-xs text-purple-400 font-medium uppercase tracking-wider">
                                                 <FileCode className="w-3 h-3" />
-                                                Source Files (Real Code)
+                                                Explorer - Source Files
                                             </div>
                                             
-                                            {/* Components Folder */}
                                             {fileTree && (
-                                                <>
-                                                    <div className="border-b border-gray-700/50">
-                                                        <button
-                                                            onClick={() => toggleFolder('components')}
-                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
-                                                        >
-                                                            {expandedFolders.includes('components') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                                            <FolderOpen className="w-4 h-4 text-blue-400" />
-                                                            <span className="text-blue-300 font-medium">components/</span>
-                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.components?.length || 0}</span>
-                                                        </button>
-                                                        
-                                                        {expandedFolders.includes('components') && fileTree.components && (
-                                                            <div className="pb-2">
-                                                                {fileTree.components.filter(f => filterBySearch(f.name)).slice(0, 30).map(file => {
-                                                                    const ext = getFileExtension(file.name);
-                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📄', color: 'text-gray-400' };
-                                                                    const isOpen = openSourceFile?.path === file.path;
-                                                                    
-                                                                    return (
-                                                                        <div
-                                                                            key={file.path}
-                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
-                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
-                                                                            }`}
-                                                                            onClick={() => openFile(file.path)}
-                                                                            title={file.path}
-                                                                        >
-                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
-                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                            <span className="text-[10px] text-gray-600 uppercase">.{ext}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                <div className="max-h-[500px] overflow-y-auto">
+                                                    {/* Components Folder - with tree structure */}
+                                                    {fileTree.components && fileTree.components.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('components')}
+                                                            >
+                                                                {expandedFolders.includes('components') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-blue-400">📦</span>
+                                                                <span className="text-xs font-medium text-blue-300">components</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.components.length}</span>
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                            {expandedFolders.includes('components') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.components.filter(f => filterBySearch(f.name) || filterBySearch(f.path)).map(file => (
+                                                                        <FileTreeNode
+                                                                            key={file.path}
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     
-                                                    {/* Pages Folder */}
-                                                    <div className="border-b border-gray-700/50">
-                                                        <button
-                                                            onClick={() => toggleFolder('pages')}
-                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
-                                                        >
-                                                            {expandedFolders.includes('pages') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                                            <FolderOpen className="w-4 h-4 text-green-400" />
-                                                            <span className="text-green-300 font-medium">app/ (pages)</span>
-                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.pages?.length || 0}</span>
-                                                        </button>
-                                                        
-                                                        {expandedFolders.includes('pages') && fileTree.pages && (
-                                                            <div className="pb-2">
-                                                                {fileTree.pages.filter(f => filterBySearch(f.name) || filterBySearch(f.path)).slice(0, 20).map(file => {
-                                                                    const ext = getFileExtension(file.name);
-                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📄', color: 'text-gray-400' };
-                                                                    const isOpen = openSourceFile?.path === file.path;
-                                                                    const displayPath = file.path.replace('app/', '').replace('/page.tsx', '');
-                                                                    
-                                                                    return (
-                                                                        <div
-                                                                            key={file.path}
-                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
-                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
-                                                                            }`}
-                                                                            onClick={() => openFile(file.path)}
-                                                                            title={file.path}
-                                                                        >
-                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
-                                                                            <span className="flex-1 truncate">{displayPath || 'home'}/</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                    {/* App/Pages Folder */}
+                                                    {fileTree.pages && fileTree.pages.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('pages')}
+                                                            >
+                                                                {expandedFolders.includes('pages') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-green-400">📱</span>
+                                                                <span className="text-xs font-medium text-green-300">app (pages)</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.pages.length}</span>
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                            {expandedFolders.includes('pages') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.pages.filter(f => filterBySearch(f.name) || filterBySearch(f.path)).map(file => (
+                                                                        <FileTreeNode
+                                                                            key={file.path}
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     
-                                                    {/* Styles Folder */}
-                                                    <div className="border-b border-gray-700/50">
-                                                        <button
-                                                            onClick={() => toggleFolder('styles')}
-                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
-                                                        >
-                                                            {expandedFolders.includes('styles') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                                            <Palette className="w-4 h-4 text-purple-400" />
-                                                            <span className="text-purple-300 font-medium">styles/</span>
-                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.styles?.length || 0}</span>
-                                                        </button>
-                                                        
-                                                        {expandedFolders.includes('styles') && fileTree.styles && (
-                                                            <div className="pb-2">
-                                                                {fileTree.styles.filter(f => filterBySearch(f.name)).map(file => {
-                                                                    const ext = getFileExtension(file.name);
-                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '🎨', color: 'text-purple-400' };
-                                                                    const isOpen = openSourceFile?.path === file.path;
-                                                                    
-                                                                    return (
-                                                                        <div
-                                                                            key={file.path}
-                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
-                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
-                                                                            }`}
-                                                                            onClick={() => openFile(file.path)}
-                                                                            title={file.path}
-                                                                        >
-                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
-                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                    {/* Lib Folder */}
+                                                    {fileTree.lib && fileTree.lib.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('lib')}
+                                                            >
+                                                                {expandedFolders.includes('lib') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-teal-400">📚</span>
+                                                                <span className="text-xs font-medium text-teal-300">lib</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.lib.length}</span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    {/* Config Folder */}
-                                                    <div className="border-b border-gray-700/50">
-                                                        <button
-                                                            onClick={() => toggleFolder('config')}
-                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
-                                                        >
-                                                            {expandedFolders.includes('config') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                                            <Settings className="w-4 h-4 text-orange-400" />
-                                                            <span className="text-orange-300 font-medium">config/</span>
-                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.config?.length || 0}</span>
-                                                        </button>
-                                                        
-                                                        {expandedFolders.includes('config') && fileTree.config && (
-                                                            <div className="pb-2">
-                                                                {fileTree.config.filter(f => filterBySearch(f.name)).slice(0, 15).map(file => {
-                                                                    const ext = getFileExtension(file.name);
-                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '⚙️', color: 'text-orange-400' };
-                                                                    const isOpen = openSourceFile?.path === file.path;
-                                                                    
-                                                                    return (
-                                                                        <div
+                                                            {expandedFolders.includes('lib') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.lib.filter(f => filterBySearch(f.name)).map(file => (
+                                                                        <FileTreeNode
                                                                             key={file.path}
-                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
-                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
-                                                                            }`}
-                                                                            onClick={() => openFile(file.path)}
-                                                                            title={file.path}
-                                                                        >
-                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
-                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    {/* Lib Folder - Utilities */}
-                                                    <div className="border-b border-gray-700/50">
-                                                        <button
-                                                            onClick={() => toggleFolder('lib')}
-                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
-                                                        >
-                                                            {expandedFolders.includes('lib') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                                            <Command className="w-4 h-4 text-teal-400" />
-                                                            <span className="text-teal-300 font-medium">lib/</span>
-                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.lib?.length || 0}</span>
-                                                        </button>
-                                                        
-                                                        {expandedFolders.includes('lib') && fileTree.lib && (
-                                                            <div className="pb-2">
-                                                                {fileTree.lib.filter(f => filterBySearch(f.name)).slice(0, 20).map(file => {
-                                                                    const ext = getFileExtension(file.name);
-                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📘', color: 'text-blue-400' };
-                                                                    const isOpen = openSourceFile?.path === file.path;
-                                                                    
-                                                                    return (
-                                                                        <div
-                                                                            key={file.path}
-                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
-                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
-                                                                            }`}
-                                                                            onClick={() => openFile(file.path)}
-                                                                            title={file.path}
-                                                                        >
-                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
-                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     
                                                     {/* Hooks Folder */}
-                                                    <div className="border-b border-gray-700/50">
-                                                        <button
-                                                            onClick={() => toggleFolder('hooks')}
-                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
-                                                        >
-                                                            {expandedFolders.includes('hooks') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                                            <Cpu className="w-4 h-4 text-pink-400" />
-                                                            <span className="text-pink-300 font-medium">hooks/</span>
-                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.hooks?.length || 0}</span>
-                                                        </button>
-                                                        
-                                                        {expandedFolders.includes('hooks') && fileTree.hooks && (
-                                                            <div className="pb-2">
-                                                                {fileTree.hooks.filter(f => filterBySearch(f.name)).map(file => {
-                                                                    const ext = getFileExtension(file.name);
-                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📘', color: 'text-blue-400' };
-                                                                    const isOpen = openSourceFile?.path === file.path;
-                                                                    
-                                                                    return (
-                                                                        <div
-                                                                            key={file.path}
-                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
-                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
-                                                                            }`}
-                                                                            onClick={() => openFile(file.path)}
-                                                                            title={file.path}
-                                                                        >
-                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
-                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                    {fileTree.hooks && fileTree.hooks.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('hooks')}
+                                                            >
+                                                                {expandedFolders.includes('hooks') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-pink-400">🪝</span>
+                                                                <span className="text-xs font-medium text-pink-300">hooks</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.hooks.length}</span>
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                            {expandedFolders.includes('hooks') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.hooks.filter(f => filterBySearch(f.name)).map(file => (
+                                                                        <FileTreeNode
+                                                                            key={file.path}
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     
                                                     {/* Contexts Folder */}
-                                                    <div className="border-b border-gray-700/50">
-                                                        <button
-                                                            onClick={() => toggleFolder('contexts')}
-                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
-                                                        >
-                                                            {expandedFolders.includes('contexts') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                                            <Layers className="w-4 h-4 text-indigo-400" />
-                                                            <span className="text-indigo-300 font-medium">contexts/</span>
-                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.contexts?.length || 0}</span>
-                                                        </button>
-                                                        
-                                                        {expandedFolders.includes('contexts') && fileTree.contexts && (
-                                                            <div className="pb-2">
-                                                                {fileTree.contexts.filter(f => filterBySearch(f.name)).map(file => {
-                                                                    const ext = getFileExtension(file.name);
-                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📘', color: 'text-blue-400' };
-                                                                    const isOpen = openSourceFile?.path === file.path;
-                                                                    
-                                                                    return (
-                                                                        <div
-                                                                            key={file.path}
-                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
-                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
-                                                                            }`}
-                                                                            onClick={() => openFile(file.path)}
-                                                                            title={file.path}
-                                                                        >
-                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
-                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                    {fileTree.contexts && fileTree.contexts.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('contexts')}
+                                                            >
+                                                                {expandedFolders.includes('contexts') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-indigo-400">🎯</span>
+                                                                <span className="text-xs font-medium text-indigo-300">contexts</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.contexts.length}</span>
                                                             </div>
-                                                        )}
-                                                    </div>
+                                                            {expandedFolders.includes('contexts') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.contexts.filter(f => filterBySearch(f.name)).map(file => (
+                                                                        <FileTreeNode
+                                                                            key={file.path}
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     
                                                     {/* Types Folder */}
-                                                    <div className="border-b border-gray-700/50">
-                                                        <button
-                                                            onClick={() => toggleFolder('types')}
-                                                            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-gray-700/50 text-left"
-                                                        >
-                                                            {expandedFolders.includes('types') ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                                            <Type className="w-4 h-4 text-cyan-400" />
-                                                            <span className="text-cyan-300 font-medium">types/</span>
-                                                            <span className="ml-auto text-xs text-gray-500">{fileTree.types?.length || 0}</span>
-                                                        </button>
-                                                        
-                                                        {expandedFolders.includes('types') && fileTree.types && (
-                                                            <div className="pb-2">
-                                                                {fileTree.types.filter(f => filterBySearch(f.name)).map(file => {
-                                                                    const ext = getFileExtension(file.name);
-                                                                    const iconInfo = FILE_ICONS[ext] || { icon: '📘', color: 'text-blue-400' };
-                                                                    const isOpen = openSourceFile?.path === file.path;
-                                                                    
-                                                                    return (
-                                                                        <div
-                                                                            key={file.path}
-                                                                            className={`px-3 py-1 flex items-center gap-2 cursor-pointer mx-2 rounded transition-colors text-xs ${
-                                                                                isOpen ? 'bg-purple-600/30 text-purple-300' : 'hover:bg-gray-700/50 text-gray-400'
-                                                                            }`}
-                                                                            onClick={() => openFile(file.path)}
-                                                                            title={file.path}
-                                                                        >
-                                                                            <span className={iconInfo.color}>{iconInfo.icon}</span>
-                                                                            <span className="flex-1 truncate">{file.name}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                    {fileTree.types && fileTree.types.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('types')}
+                                                            >
+                                                                {expandedFolders.includes('types') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-cyan-400">📐</span>
+                                                                <span className="text-xs font-medium text-cyan-300">types</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.types.length}</span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                </>
+                                                            {expandedFolders.includes('types') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.types.filter(f => filterBySearch(f.name)).map(file => (
+                                                                        <FileTreeNode
+                                                                            key={file.path}
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {/* Config Files */}
+                                                    {fileTree.config && fileTree.config.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('config')}
+                                                            >
+                                                                {expandedFolders.includes('config') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-orange-400">⚙️</span>
+                                                                <span className="text-xs font-medium text-orange-300">config</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.config.length}</span>
+                                                            </div>
+                                                            {expandedFolders.includes('config') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.config.filter(f => filterBySearch(f.name)).map(file => (
+                                                                        <FileTreeNode
+                                                                            key={file.path}
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {/* Styles */}
+                                                    {fileTree.styles && fileTree.styles.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('styles')}
+                                                            >
+                                                                {expandedFolders.includes('styles') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-purple-400">🎨</span>
+                                                                <span className="text-xs font-medium text-purple-300">styles</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.styles.length}</span>
+                                                            </div>
+                                                            {expandedFolders.includes('styles') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.styles.filter(f => filterBySearch(f.name)).map(file => (
+                                                                        <FileTreeNode
+                                                                            key={file.path}
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {/* API Routes */}
+                                                    {fileTree.api && fileTree.api.length > 0 && (
+                                                        <div className="border-b border-gray-700/30">
+                                                            <div
+                                                                className="flex items-center gap-1.5 py-1.5 px-2 cursor-pointer hover:bg-gray-700/50"
+                                                                onClick={() => toggleFolder('api')}
+                                                            >
+                                                                {expandedFolders.includes('api') ? (
+                                                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                                <span className="text-orange-400">🔌</span>
+                                                                <span className="text-xs font-medium text-orange-300">api</span>
+                                                                <span className="text-[10px] text-gray-600 ml-auto">{fileTree.api.length}</span>
+                                                            </div>
+                                                            {expandedFolders.includes('api') && (
+                                                                <div className="pb-1">
+                                                                    {fileTree.api.filter(f => filterBySearch(f.name) || filterBySearch(f.path)).slice(0, 30).map(file => (
+                                                                        <FileTreeNode
+                                                                            key={file.path}
+                                                                            file={file}
+                                                                            depth={0}
+                                                                            openFile={openFile}
+                                                                            openSourceFile={openSourceFile}
+                                                                            expandedPaths={expandedPaths}
+                                                                            togglePath={togglePath}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
                                             
                                             {!fileTree && (
