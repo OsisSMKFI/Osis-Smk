@@ -988,10 +988,56 @@ ${sel}:hover {
         setIsAILoading(true);
         
         try {
+            // Analyze what the user is asking for
+            const queryLower = userQuery.toLowerCase();
+            
+            // Check if user is asking a question (not requesting CSS)
+            const isQuestion = /\?|dimana|where|bagaimana|how|apa itu|what is|letak|lokasi|file|jelaskan|explain/i.test(userQuery);
+            const isAskingLocation = /dimana|where|letak|lokasi|file apa|di file/i.test(userQuery);
+            const containsHTML = /<\w+[\s>]|class="|className=/i.test(userQuery);
+            const isRequestingResponsive = /responsif|responsive|mobile|hp|handphone|tablet/i.test(userQuery);
+            
             // Auto-detect component from query if not selected
             let targetComponent = selectedComponent;
             let componentInfo = selectedComponent ? DESIGN_REGISTRY[selectedComponent] : null;
             let selector = componentInfo?.selectors?.[0] || '';
+            
+            // If user pasted HTML, try to identify the component
+            let identifiedFromHTML: { component: string; file: string; description: string } | null = null;
+            if (containsHTML) {
+                // Analyze HTML to identify component
+                if (userQuery.includes('sekbid') || userQuery.includes('Sekbid')) {
+                    identifiedFromHTML = {
+                        component: 'Sekbid Filter Tabs',
+                        file: 'app/bidang/page.tsx atau components/ProkerSection.tsx',
+                        description: 'Filter tabs untuk memilih sekbid di halaman Program Kerja'
+                    };
+                } else if (userQuery.includes('navbar') || userQuery.includes('nav')) {
+                    identifiedFromHTML = {
+                        component: 'Navbar',
+                        file: 'components/Navbar.tsx',
+                        description: 'Navigation bar utama website'
+                    };
+                } else if (userQuery.includes('footer')) {
+                    identifiedFromHTML = {
+                        component: 'Footer',
+                        file: 'components/Footer.tsx',
+                        description: 'Footer website'
+                    };
+                } else if (userQuery.includes('hero') || userQuery.includes('banner')) {
+                    identifiedFromHTML = {
+                        component: 'Hero Section',
+                        file: 'components/DynamicHero.tsx',
+                        description: 'Banner utama di homepage'
+                    };
+                } else if (userQuery.includes('card')) {
+                    identifiedFromHTML = {
+                        component: 'Card Component',
+                        file: 'components/cards/PostCard.tsx',
+                        description: 'Card untuk menampilkan konten'
+                    };
+                }
+            }
             
             // Try to detect component from user query
             const detected = detectComponentFromQuery(userQuery);
@@ -999,7 +1045,6 @@ ${sel}:hover {
                 targetComponent = detected.component;
                 componentInfo = detected.info;
                 selector = detected.selector;
-                // Auto-select the detected component
                 setSelectedComponent(detected.component);
             }
             
@@ -1010,8 +1055,67 @@ ${sel}:hover {
                 selector = componentInfo?.selectors?.[0] || `[data-component="${targetComponent}"]`;
             }
             
-            // Try smart CSS generation first (if component is identified)
-            if (targetComponent) {
+            // SMART RESPONSE: If user is asking about location or pasted HTML
+            if (isAskingLocation || (containsHTML && isQuestion)) {
+                let response = '';
+                
+                if (identifiedFromHTML) {
+                    response = `📍 **Komponen Teridentifikasi:**\n\n`;
+                    response += `**Nama:** ${identifiedFromHTML.component}\n`;
+                    response += `**File:** \`${identifiedFromHTML.file}\`\n`;
+                    response += `**Deskripsi:** ${identifiedFromHTML.description}\n\n`;
+                    
+                    if (isRequestingResponsive) {
+                        response += `📱 **Tips Responsive:**\n`;
+                        response += `Untuk membuat komponen ini lebih responsive, kamu bisa:\n\n`;
+                        response += `1. Buka file \`${identifiedFromHTML.file}\` di VS Code\n`;
+                        response += `2. Gunakan Tailwind breakpoints: \`sm:\`, \`md:\`, \`lg:\`\n`;
+                        response += `3. Contoh perubahan:\n`;
+                        response += `   - \`hidden sm:inline\` → tampil di mobile: \`inline\`\n`;
+                        response += `   - \`px-4\` → lebih kecil: \`px-2 sm:px-4\`\n`;
+                        response += `   - \`gap-2\` → lebih rapat: \`gap-1 sm:gap-2\`\n\n`;
+                        
+                        if (identifiedFromHTML.component.includes('Sekbid')) {
+                            response += `🎨 **Untuk mengubah emoji Sekbid:**\n`;
+                            response += `Cari array yang berisi emoji di file, biasanya seperti:\n`;
+                            response += `\`\`\`tsx
+const sekbidList = [
+  { id: 1, name: 'Keagamaan', emoji: '🎭' },
+  { id: 2, name: 'Kaderisasi', emoji: '📚' },
+  { id: 3, name: 'Akademik', emoji: '🏃' },
+  { id: 4, name: 'Ekonomi Kreatif', emoji: '💡' },
+  { id: 5, name: 'Kesehatan', emoji: '🎨' },
+  { id: 6, name: 'Kominfo', emoji: '🌿' },
+];
+\`\`\`\n\n`;
+                            response += `Ganti emoji sesuai keinginan! 🚀`;
+                        }
+                    }
+                } else if (containsHTML) {
+                    response = `🔍 **Analisis HTML:**\n\n`;
+                    response += `Saya melihat kamu menempelkan kode HTML. `;
+                    response += `Untuk membantu lebih baik, beritahu saya:\n\n`;
+                    response += `1. Dari halaman mana komponen ini?\n`;
+                    response += `2. Apa yang ingin kamu ubah?\n\n`;
+                    response += `💡 **Tip:** Kamu bisa mencari file dengan fitur Source Files di sidebar kiri!`;
+                }
+                
+                setChatMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: response,
+                    timestamp: new Date(),
+                    actionType: 'info'
+                }]);
+                return;
+            }
+            
+            // ONLY use smart CSS patterns if user is EXPLICITLY requesting a style
+            const isExplicitStyleRequest = /buat(kan)?|terapkan|apply|style|tambah(kan)?|ubah.*jadi|make.*look/i.test(userQuery) && 
+                                          !isQuestion && 
+                                          /glass|dark|neon|gradient|hover|animasi|responsive|shadow|neumorphism|minimal/i.test(userQuery);
+            
+            if (targetComponent && isExplicitStyleRequest) {
                 const smartResult = generateSmartCSS(userQuery, selector, componentInfo?.category || 'other');
                 
                 if (smartResult) {
@@ -1028,9 +1132,17 @@ ${sel}:hover {
                 }
             }
             
-            // Build enhanced prompt for AI
+            // Build enhanced prompt for AI - send to real AI for complex queries
             const enhancedMessage = `
 Kamu adalah AI Design Assistant yang powerful dan fleksibel seperti GitHub Copilot.
+Kamu HARUS merespons dengan cerdas dan membantu, BUKAN hanya memberikan CSS template.
+
+${containsHTML ? `
+User menempelkan HTML code. Analisis dan identifikasi:
+1. Komponen apa ini
+2. Di file mana lokasinya
+3. Bagaimana cara mengubahnya
+` : ''}
 
 ${targetComponent ? `
 Komponen target: ${targetComponent}
@@ -1038,14 +1150,7 @@ Selector CSS: ${selector}
 Kategori: ${componentInfo?.category || 'other'}
 Deskripsi: ${componentInfo?.description || ''}
 ` : `
-Tidak ada komponen spesifik yang dipilih. Jika user meminta perubahan design,
-identifikasi komponen yang tepat dan gunakan selector yang sesuai dari daftar berikut:
-- navbar: [data-component="navbar"]
-- hero: [data-component="hero"]  
-- footer: [data-component="footer"]
-- card: [data-component*="card"]
-- button: button, .btn
-- dll
+Tidak ada komponen spesifik yang dipilih.
 `}
 
 CSS saat ini di editor:
@@ -1053,13 +1158,14 @@ ${code || '(tidak ada)'}
 
 Permintaan user: ${userQuery}
 
-INSTRUKSI:
+INSTRUKSI PENTING:
 1. Berikan respons dalam bahasa Indonesia yang ramah dan informatif
-2. Jika diminta CSS, sertakan kode lengkap dalam blok \`\`\`css ... \`\`\`
-3. Jika diminta penjelasan/info, jelaskan dengan jelas
-4. Jika diminta perubahan komponen, jelaskan selector yang tepat
-5. Sertakan hover/focus states dan responsive jika relevan
-6. Jangan minta user memilih komponen - deteksi dari pertanyaan mereka`;
+2. Jika user BERTANYA (ada tanda ?, kata "dimana", "bagaimana", dll), JAWAB pertanyaannya
+3. Jika user paste HTML, identifikasi komponennya dan jelaskan lokasinya
+4. JANGAN langsung berikan CSS jika user hanya bertanya
+5. Jika diminta CSS, sertakan kode lengkap dalam blok \`\`\`css ... \`\`\`
+6. Jika user minta responsive, jelaskan cara mengubah dengan Tailwind breakpoints
+7. Berikan jawaban yang RELEVAN dengan pertanyaan, bukan template generik`;
             
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
@@ -1096,13 +1202,8 @@ INSTRUKSI:
                 cssCode = cssBlock.code;
             }
             
-            // Clean up response
+            // Keep the response as-is, don't strip code blocks for informational responses
             let displayContent = data.reply || 'Maaf, tidak ada respons dari AI.';
-            if (codeBlocks.length > 0) {
-                // Replace code blocks with indicators
-                displayContent = displayContent.replace(/```css\n[\s\S]*?```/g, '✅ CSS berhasil di-generate!');
-                displayContent = displayContent.replace(/```tsx?\n[\s\S]*?```/g, '📝 Kode komponen tersedia.');
-            }
             
             const aiMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
@@ -1120,11 +1221,47 @@ INSTRUKSI:
         } catch (err) {
             console.error('AI Chat error:', err);
             
-            // Fallback with helpful suggestions
+            // Smart fallback based on what user asked
+            const queryLower = userQuery.toLowerCase();
+            let fallbackResponse = '';
+            
+            if (/dimana|where|letak|lokasi|file/i.test(userQuery)) {
+                fallbackResponse = `📂 **Mencari Lokasi File**\n\n`;
+                fallbackResponse += `Gunakan fitur **Source Files** di sidebar kiri untuk menelusuri file.\n\n`;
+                fallbackResponse += `**Lokasi file umum:**\n`;
+                fallbackResponse += `- Components: \`components/\`\n`;
+                fallbackResponse += `- Pages: \`app/\`\n`;
+                fallbackResponse += `- Styles: \`app/globals.css\`\n`;
+                fallbackResponse += `- Config: \`tailwind.config.ts\`\n\n`;
+                fallbackResponse += `💡 Klik pada file di sidebar untuk membuka dan edit!`;
+            } else if (/responsif|responsive|mobile/i.test(userQuery)) {
+                fallbackResponse = `📱 **Tips Membuat Responsive**\n\n`;
+                fallbackResponse += `Gunakan Tailwind breakpoints:\n`;
+                fallbackResponse += `- \`sm:\` - 640px ke atas\n`;
+                fallbackResponse += `- \`md:\` - 768px ke atas\n`;
+                fallbackResponse += `- \`lg:\` - 1024px ke atas\n\n`;
+                fallbackResponse += `**Contoh:**\n`;
+                fallbackResponse += `\`\`\`tsx\n<div className="px-2 sm:px-4 md:px-6 lg:px-8">\n  <span className="hidden sm:inline">Text desktop</span>\n  <span className="sm:hidden">Text mobile</span>\n</div>\n\`\`\``;
+            } else if (/<\w+[\s>]|class=/i.test(userQuery)) {
+                fallbackResponse = `🔍 **Analisis Kode**\n\n`;
+                fallbackResponse += `Saya melihat kamu menempelkan kode HTML/JSX.\n\n`;
+                fallbackResponse += `Untuk mengubahnya:\n`;
+                fallbackResponse += `1. Gunakan **Source Files** di sidebar\n`;
+                fallbackResponse += `2. Cari file yang sesuai\n`;
+                fallbackResponse += `3. Edit langsung di editor\n\n`;
+                fallbackResponse += `💡 Atau tanyakan lebih spesifik apa yang ingin diubah!`;
+            } else {
+                fallbackResponse = `🤖 Saya siap membantu! Coba:\n\n`;
+                fallbackResponse += `**📍 Lokasi File:**\n- "dimana file navbar?"\n- "letak komponen hero"\n\n`;
+                fallbackResponse += `**🎨 Styling:**\n- "buat glassmorphism untuk card"\n- "dark mode untuk navbar"\n\n`;
+                fallbackResponse += `**📱 Responsive:**\n- "buat navbar responsive"\n- "mobile friendly button"\n\n`;
+                fallbackResponse += `**📝 Edit File:**\nGunakan sidebar → Source Files untuk buka dan edit file langsung!`;
+            }
+            
             setChatMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: `🤖 Saya siap membantu! Coba salah satu:\n\n**🎨 Style Populer:**\n- "glassmorphism untuk card"\n- "dark mode untuk navbar"\n- "neon glow untuk button"\n- "gradient untuk hero"\n\n**✨ Efek:**\n- "hover effect untuk link"\n- "animasi untuk loading"\n- "shadow untuk card"\n\n**📱 Responsive:**\n- "responsive untuk navbar"\n- "mobile friendly untuk form"\n\n**💡 Info:**\n- "apa itu glassmorphism?"\n- "bagaimana cara membuat card?"`,
+                content: fallbackResponse,
                 timestamp: new Date(),
                 actionType: 'info'
             }]);
