@@ -11,6 +11,7 @@ import AIMonitorClient from "../components/AIMonitorClient";
 import LocationPermissionPrompt from "../components/LocationPermissionPrompt";
 import ScrollToTop from "../components/ScrollToTop";
 import DynamicStyles from "../components/DynamicStyles";
+import GlobalDesignLoader from "../components/GlobalDesignLoader";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { auth } from "@/lib/auth";
@@ -184,6 +185,7 @@ export default async function RootLayout({
                         <BackgroundSync />
                         <AIMonitorClient />
                         <DynamicStyles />
+                        <GlobalDesignLoader />
                         {children}
                         {!chatDisabled && <ClientRole role={role as any} />}
                         <SpeedInsights />

@@ -1205,19 +1205,54 @@ export async function POST(request: NextRequest) {
     // Detect specific design type from conversation
     const detectDesignType = (): string => {
       const allContent = previousMsgs.map(m => m.content).join(' ').toLowerCase();
-      if (/neumorphism|3d|efek 3d/i.test(allContent)) return 'neumorphism';
-      if (/glassmorphism|glass|blur|transparan/i.test(allContent)) return 'glassmorphism';
-      if (/modern|minimal|minimalis/i.test(allContent)) return 'modern_minimal';
-      return 'neumorphism'; // default
+      if (/neumorphism|3d|efek 3d|timbul|emboss/i.test(allContent)) return 'neumorphism';
+      if (/glassmorphism|glass|blur|transparan|kaca/i.test(allContent)) return 'glassmorphism';
+      if (/modern|minimal|minimalis|bersih|clean/i.test(allContent)) return 'modern';
+      if (/dark|gelap|hitam|malam/i.test(allContent)) return 'dark';
+      if (/gradient|warna-warni|colorful|pelangi/i.test(allContent)) return 'gradient';
+      return 'modern'; // default
     };
     
-    // Detect which component to redesign
+    // Detect which component to redesign - expanded for all components
     const detectComponent = (): string => {
       const allContent = previousMsgs.map(m => m.content).join(' ').toLowerCase();
+      
+      // Layout components
+      if (/header|nav|navigasi|menu atas/i.test(allContent)) return 'header';
+      if (/footer|kaki halaman/i.test(allContent)) return 'footer';
+      if (/sidebar|menu samping|side panel/i.test(allContent)) return 'sidebar';
+      if (/hero|banner|jumbotron/i.test(allContent)) return 'hero';
+      
+      // Form components
       if (/chat.*input|input.*chat|mengisi pesan|input pesan|kotak.*chat/i.test(allContent)) return 'chat_input';
-      if (/header/i.test(allContent)) return 'header';
-      if (/footer/i.test(allContent)) return 'footer';
-      if (/card/i.test(allContent)) return 'card';
+      if (/input|text.*field|form input/i.test(allContent)) return 'input';
+      if (/button|tombol/i.test(allContent)) return 'button';
+      if (/form|formulir/i.test(allContent)) return 'form';
+      if (/textarea|teks area/i.test(allContent)) return 'textarea';
+      if (/select|dropdown|pilihan/i.test(allContent)) return 'select';
+      
+      // Card components
+      if (/card|kartu|panel/i.test(allContent)) return 'card';
+      
+      // Chat components
+      if (/chat widget|widget chat|pop.*chat/i.test(allContent)) return 'chat_widget';
+      if (/chat message|pesan chat|bubble/i.test(allContent)) return 'chat_message';
+      if (/chat button|tombol chat/i.test(allContent)) return 'chat_button';
+      
+      // Other components
+      if (/modal|dialog|popup/i.test(allContent)) return 'modal';
+      if (/table|tabel/i.test(allContent)) return 'table';
+      if (/badge|tag|label/i.test(allContent)) return 'badge';
+      if (/alert|notif/i.test(allContent)) return 'alert';
+      if (/loading|spinner/i.test(allContent)) return 'loading';
+      if (/heading|judul|h1|h2/i.test(allContent)) return 'heading';
+      if (/link|tautan/i.test(allContent)) return 'link';
+      if (/avatar|profile.*pic/i.test(allContent)) return 'avatar';
+      if (/image|gambar/i.test(allContent)) return 'image';
+      
+      // Global/all
+      if (/semua|seluruh|global|all/i.test(allContent)) return 'global';
+      
       return 'chat_input'; // default based on user's request
     };
     
@@ -1271,13 +1306,16 @@ export async function POST(request: NextRequest) {
             mainContent: `Saya sudah menerapkan design **${designType}** untuk komponen **${component}**.
 
 📋 **Yang Sudah Dilakukan:**
-• CSS dengan efek ${designType === 'neumorphism' ? '3D lembut dengan bayangan halus' : designType === 'glassmorphism' ? 'kaca transparan dengan blur' : 'modern minimalis'} disimpan ke database
-• Perubahan siap ditampilkan
+• CSS dengan efek ${designType === 'neumorphism' ? '3D lembut dengan bayangan halus' : designType === 'glassmorphism' ? 'kaca transparan dengan blur' : designType === 'dark' ? 'tema gelap elegan' : designType === 'gradient' ? 'gradien warna-warni' : 'modern minimalis'} disimpan ke database
+• Perubahan akan diterapkan secara otomatis
 
 🔄 **Langkah Selanjutnya:**
-Refresh halaman (tekan F5 atau Ctrl+R) untuk melihat perubahan!`,
+Refresh halaman (tekan F5 atau Ctrl+R) untuk melihat perubahan!
+
+💡 **Komponen lain yang bisa didesain:**
+header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, dan lainnya.`,
             actionTaken: `Design diterapkan pada ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`,
-            followUp: 'Jika ingin style lain, bilang saja! Tersedia: neumorphism, glassmorphism, modern_minimal',
+            followUp: 'Mau redesign komponen lain? Bilang saja komponen dan style yang diinginkan! (neumorphism, glassmorphism, modern, dark, gradient)',
           });
           
           return NextResponse.json({
