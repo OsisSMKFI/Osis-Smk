@@ -2118,10 +2118,83 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
         
         if (successCount === changes.length) {
             notify('success', `✅ All ${successCount} files updated successfully!`);
+            
+            // Auto push to GitHub after successful apply
+            if (successCount > 0) {
+                const changedFiles = changes.map(c => c.path).join(', ');
+                await pushToGitHub(`Auto-commit from Design Studio: ${changedFiles.slice(0, 100)}`);
+            }
         } else if (successCount > 0) {
             notify('info', `${successCount}/${changes.length} files updated`);
+            // Still push partial changes
+            const changedFiles = changes.slice(0, successCount).map(c => c.path).join(', ');
+            await pushToGitHub(`Partial commit from Design Studio: ${changedFiles.slice(0, 100)}`);
         } else {
             notify('error', 'Failed to update files');
+        }
+    };
+    
+    // Push changes to GitHub
+    const pushToGitHub = async (message: string = 'Update from Design Studio') => {
+        try {
+            notify('info', '🚀 Pushing to GitHub...');
+            
+            // git add -A
+            const addRes = await fetch('/api/design/terminal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'git add -A' })
+            });
+            const addData = await addRes.json();
+            
+            if (!addData.success && !addData.isProduction) {
+                notify('error', 'Failed to stage changes');
+                return false;
+            }
+            
+            // git commit
+            const commitRes = await fetch('/api/design/terminal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `git commit -m "${message}"` })
+            });
+            const commitData = await commitRes.json();
+            
+            // git push
+            const pushRes = await fetch('/api/design/terminal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'git push origin main' })
+            });
+            const pushData = await pushRes.json();
+            
+            if (pushData.success) {
+                notify('success', '🎉 Pushed to GitHub! Vercel will auto-deploy.');
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `✅ **Successfully pushed to GitHub!**\n\nVercel will auto-deploy in ~30-60 seconds.\n\n📋 Commit: ${message}`,
+                    timestamp: new Date(),
+                    actionType: 'action'
+                }]);
+                return true;
+            } else if (pushData.isProduction) {
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `📋 **Files saved! Push manually:**\n\n\`\`\`bash\ngit add -A && git commit -m "${message}" && git push\n\`\`\``,
+                    timestamp: new Date(),
+                    actionType: 'action'
+                }]);
+                return false;
+            } else {
+                notify('error', 'Failed to push to GitHub');
+                return false;
+            }
+        } catch (err) {
+            console.error('Git push error:', err);
+            notify('error', 'Failed to push to GitHub');
+            return false;
         }
     };
     
@@ -3284,7 +3357,12 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                                                                         <Copy className="w-3 h-3" />
                                                                     </button>
                                                                     <button 
-                                                                        onClick={() => applyCodeToFile(change.path, change.code, change.language)}
+                                                                        onClick={async () => {
+                                                                            const success = await applyCodeToFile(change.path, change.code, change.language);
+                                                                            if (success) {
+                                                                                await pushToGitHub(`Update ${change.path} from Design Studio`);
+                                                                            }
+                                                                        }}
                                                                         className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded text-xs font-medium transition-all hover:scale-[1.02] shadow-lg shadow-cyan-500/20"
                                                                     >
                                                                         <Play className="w-3 h-3" /> Apply
@@ -3398,6 +3476,7 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                                                                                 if (success) {
                                                                                     setSourceCode(block.code);
                                                                                     setOriginalSourceCode(block.code);
+                                                                                    await pushToGitHub(`Update ${openSourceFile.path} from Design Studio`);
                                                                                 }
                                                                             }}
                                                                             className="flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white rounded text-xs font-medium transition-all"
