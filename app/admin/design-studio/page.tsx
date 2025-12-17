@@ -1153,11 +1153,8 @@ ${sel}:hover {
                                 actionType: 'info'
                             }]);
                             
-                            // Store file info for the AI context
-                            setOpenSourceFile({
-                                path: foundFile.path,
-                                language: foundFile.path.endsWith('.tsx') ? 'tsx' : foundFile.path.endsWith('.ts') ? 'ts' : 'jsx'
-                            });
+                            // Store file info for the AI context - use full file data
+                            setOpenSourceFile(fileData.file);
                             setSourceCode(fileData.file.content);
                             setOriginalSourceCode(fileData.file.content);
                         }
@@ -1435,7 +1432,6 @@ ${targetComponent ? `
 - Nama: ${targetComponent}
 - Selector: ${selector}
 - Deskripsi: ${componentInfo?.description || 'N/A'}
-- File: ${COMPONENT_FILE_MAP[targetComponent]?.[0] || 'Tidak diketahui'}
 ` : ''}
 
 ═══════════════════════════════════════════════════════════════
@@ -1482,71 +1478,6 @@ Berikut kode yang sudah saya perbaiki:
 Klik **Apply** untuk menerapkan perubahan!"
 
 INGAT: SELALU sertakan PATH FILE dalam code block agar bisa langsung diterapkan!`;
-- hooks/ → React hooks
-- contexts/ → React contexts
-- types/ → TypeScript types
-
-═══════════════════════════════════════════════════════════════
-PERMINTAAN USER:
-═══════════════════════════════════════════════════════════════
-${userQuery}
-
-═══════════════════════════════════════════════════════════════
-CARA MENJAWAB:
-═══════════════════════════════════════════════════════════════
-- Jika user bertanya "ada gak" atau "dimana" → Cari dan berikan info file
-- Jika user minta ubah/buat kode → Berikan kode dengan format: \`\`\`tsx:path/file.tsx
-- Jika user minta style/design → Berikan CSS dengan format: \`\`\`css:app/globals.css
-- Jika user minta fungsi/hook → Berikan kode dengan format: \`\`\`ts:lib/fungsi.ts
-- SELALU berikan solusi yang bisa langsung diterapkan!
-
-═══════════════════════════════════════════════════════════════
-📝 CONTOH FORMAT KODE YANG BENAR:
-═══════════════════════════════════════════════════════════════
-
-1. KOMPONEN REACT:
-\`\`\`tsx:components/Button.tsx
-import React from 'react';
-
-export const Button = ({ children, onClick }) => {
-  return (
-    <button onClick={onClick} className="px-4 py-2 bg-blue-500 text-white rounded">
-      {children}
-    </button>
-  );
-};
-\`\`\`
-
-2. FUNGSI UTILITY:
-\`\`\`ts:lib/utils.ts
-export function formatDate(date: Date): string {
-  return date.toLocaleDateString('id-ID');
-}
-\`\`\`
-
-3. CSS STYLE:
-\`\`\`css:app/globals.css
-/* Glassmorphism Effect */
-.glass-card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-}
-\`\`\`
-
-4. REACT HOOK:
-\`\`\`ts:hooks/useLocalStorage.ts
-import { useState, useEffect } from 'react';
-
-export function useLocalStorage<T>(key: string, initialValue: T) {
-  const [value, setValue] = useState<T>(initialValue);
-  // ... implementation
-  return [value, setValue] as const;
-}
-\`\`\`
-
-INGAT: SELALU sertakan path file dalam code block agar bisa langsung diterapkan!`;
             
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
