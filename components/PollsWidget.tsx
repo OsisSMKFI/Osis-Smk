@@ -129,7 +129,7 @@ export default function PollsWidget() {
   }
 
   return (
-    <section className="py-16">
+    <section data-component="polls" className="py-16">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <FaPoll className="text-5xl text-blue-600 mx-auto mb-4" />

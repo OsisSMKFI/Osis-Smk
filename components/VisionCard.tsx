@@ -76,6 +76,7 @@ const VisionCard: React.FC = () => {
       <div className="absolute top-1/4 -right-3 sm:-right-6 w-12 sm:w-20 h-12 sm:h-20 bg-gradient-to-br from-green-400/15 to-emerald-500/15 rounded-full blur-lg animate-pulse delay-1000" />
       
       <motion.div 
+        data-component="vision-card"
         className="relative card-gradient dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-10 lg:p-16 border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm overflow-hidden"
         style={{
           rotateX: rotateXSpring,

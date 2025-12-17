@@ -38,7 +38,7 @@ export default function LatestPostsSection() {
 
   return (
     <AnimatedSection id="latest-posts">
-      <section className="py-20 relative overflow-hidden">
+      <section data-component="latest-posts" className="py-20 relative overflow-hidden">
         {/* Background decorations */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-yellow-400/5 to-amber-500/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-400/5 to-indigo-500/5 rounded-full blur-3xl" />

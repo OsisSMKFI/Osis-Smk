@@ -67,6 +67,7 @@ const Footer: React.FC = () => {
   
   return (
     <footer
+      data-component="footer"
       className="relative overflow-hidden text-gray-600 dark:text-gray-300 transition-colors duration-300"
       style={{
         background: 'var(--gradient-bg)'

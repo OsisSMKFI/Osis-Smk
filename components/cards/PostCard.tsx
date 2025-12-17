@@ -91,6 +91,7 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
       >
         {/* Glassmorphism Card */}
         <motion.div 
+          data-component="post-card"
           className="h-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/20 dark:border-gray-700/50 shadow-lg rounded-2xl overflow-hidden"
           whileHover={{ scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}

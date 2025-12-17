@@ -14,7 +14,7 @@ const MissionCard: React.FC<MissionCardProps> = ({ icon, title, description }) =
       {/* Enhanced background decoration */}
       <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 rounded-2xl blur-lg opacity-20 group-hover:opacity-50 transition-all duration-500 group-hover:blur-xl" />
       
-      <div className="relative card-gradient dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 rounded-lg sm:rounded-xl shadow-2xl p-6 sm:p-8 text-center card-hover h-full flex flex-col border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm overflow-hidden">
+      <div className="relative card-gradient dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 rounded-lg sm:rounded-xl shadow-2xl p-6 sm:p-8 text-center card-hover h-full flex flex-col border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm overflow-hidden" data-component="mission-card">
         
         {/* Floating background elements */}
         <div className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-br from-yellow-400/10 to-amber-500/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700" />

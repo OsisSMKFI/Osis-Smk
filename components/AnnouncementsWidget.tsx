@@ -86,7 +86,7 @@ export default function AnnouncementsWidget() {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
+    <section data-component="announcements" className="py-16 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <FaBullhorn className="text-5xl text-yellow-500 mx-auto mb-4" />

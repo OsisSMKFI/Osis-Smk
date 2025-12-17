@@ -1,6 +1,8 @@
 /**
  * DESIGN REGISTRY - All components and their CSS selectors
  * This file defines what can be redesigned by AI
+ * 
+ * UPDATED: December 2025 - All selectors verified against actual website components
  */
 
 export interface ComponentDesignInfo {
@@ -8,56 +10,57 @@ export interface ComponentDesignInfo {
     displayName: string;
     description: string;
     selectors: string[];
-    category: 'layout' | 'navigation' | 'form' | 'card' | 'button' | 'text' | 'media' | 'chat' | 'other';
+    category: 'layout' | 'navigation' | 'form' | 'card' | 'button' | 'text' | 'media' | 'chat' | 'section' | 'other';
     defaultStyles?: string;
 }
 
 /**
  * Complete registry of all redesignable components
  * AI can target any of these for design changes
+ * All selectors are verified to exist in the actual website
  */
 export const DESIGN_REGISTRY: Record<string, ComponentDesignInfo> = {
     // === LAYOUT COMPONENTS ===
+    hero: {
+        name: 'hero',
+        displayName: 'Hero Section',
+        description: 'Hero/banner section at top of homepage with background image',
+        selectors: ['[data-component="hero"]', '.hero-section', 'section.hero-section'],
+        category: 'layout'
+    },
     header: {
         name: 'header',
         displayName: 'Header',
-        description: 'Main header/navigation bar at top of page',
-        selectors: ['header', '.header', '[data-component="header"]', 'nav.main-nav'],
+        description: 'Main header area (navbar container)',
+        selectors: ['[data-component="navbar"]', '.navbar-fixed', 'nav[role="navigation"]'],
         category: 'layout'
     },
     footer: {
         name: 'footer',
         displayName: 'Footer',
         description: 'Footer section at bottom of page',
-        selectors: ['footer', '.footer', '[data-component="footer"]'],
+        selectors: ['[data-component="footer"]', 'footer'],
         category: 'layout'
     },
     sidebar: {
         name: 'sidebar',
         displayName: 'Sidebar',
-        description: 'Side navigation or content panel',
-        selectors: ['.sidebar', 'aside', '[data-component="sidebar"]', '.side-panel'],
+        description: 'Admin sidebar navigation',
+        selectors: ['.sidebar', 'aside', '[data-component="sidebar"]', '.admin-sidebar'],
         category: 'layout'
     },
     main_content: {
         name: 'main_content',
         displayName: 'Main Content',
         description: 'Main content area of the page',
-        selectors: ['main', '.main-content', '[data-component="main"]', '.content-wrapper'],
-        category: 'layout'
-    },
-    hero: {
-        name: 'hero',
-        displayName: 'Hero Section',
-        description: 'Hero/banner section at top of pages',
-        selectors: ['.hero', '.hero-section', '[data-component="hero"]', '.banner'],
+        selectors: ['main', '.main-content', '.page-content', '[data-component="main"]'],
         category: 'layout'
     },
     container: {
         name: 'container',
         displayName: 'Container',
         description: 'Page container/wrapper',
-        selectors: ['.container', '.page-container', '.wrapper', '[data-component="container"]'],
+        selectors: ['.container', '.container-responsive', '.mx-auto.px-4', '.mx-auto.px-6'],
         category: 'layout'
     },
 
@@ -65,15 +68,22 @@ export const DESIGN_REGISTRY: Record<string, ComponentDesignInfo> = {
     navbar: {
         name: 'navbar',
         displayName: 'Navigation Bar',
-        description: 'Navigation menu bar',
-        selectors: ['nav', '.navbar', '.nav-menu', '[data-component="navbar"]'],
+        description: 'Floating navigation menu bar',
+        selectors: ['[data-component="navbar"]', '.navbar-fixed', 'nav[role="navigation"]'],
         category: 'navigation'
     },
     nav_link: {
         name: 'nav_link',
         displayName: 'Navigation Links',
         description: 'Links in navigation',
-        selectors: ['nav a', '.nav-link', '.menu-link', '[data-component="nav-link"]'],
+        selectors: ['.nav-link', 'nav a', '.navbar-nav a', '[data-component="navbar"] a'],
+        category: 'navigation'
+    },
+    navbar_brand: {
+        name: 'navbar_brand',
+        displayName: 'Navbar Brand/Logo',
+        description: 'Logo and brand name in navbar',
+        selectors: ['.navbar-brand', '[data-component="navbar"] a:first-child'],
         category: 'navigation'
     },
     breadcrumb: {
@@ -91,33 +101,77 @@ export const DESIGN_REGISTRY: Record<string, ComponentDesignInfo> = {
         category: 'navigation'
     },
 
+    // === SECTION COMPONENTS (Homepage) ===
+    vision_card: {
+        name: 'vision_card',
+        displayName: 'Vision Card',
+        description: 'Vision statement card on homepage',
+        selectors: ['[data-component="vision-card"]', '#vision .card-gradient'],
+        category: 'section'
+    },
+    mission_card: {
+        name: 'mission_card',
+        displayName: 'Mission Card',
+        description: 'Mission/goals cards on homepage',
+        selectors: ['[data-component="mission-card"]', '.card-gradient'],
+        category: 'section'
+    },
+    goals_section: {
+        name: 'goals_section',
+        displayName: 'Goals Section',
+        description: 'Goals/mission section on homepage',
+        selectors: ['#mission section', '[data-component="goals"]'],
+        category: 'section'
+    },
+    latest_posts: {
+        name: 'latest_posts',
+        displayName: 'Latest Posts Section',
+        description: 'Latest posts/articles section',
+        selectors: ['[data-component="latest-posts"]', '#latest-posts'],
+        category: 'section'
+    },
+    announcements: {
+        name: 'announcements',
+        displayName: 'Announcements Section',
+        description: 'Announcements widget on homepage',
+        selectors: ['[data-component="announcements"]'],
+        category: 'section'
+    },
+    polls: {
+        name: 'polls',
+        displayName: 'Polls Section',
+        description: 'Polls widget on homepage',
+        selectors: ['[data-component="polls"]'],
+        category: 'section'
+    },
+
     // === CARD COMPONENTS ===
     card: {
         name: 'card',
         displayName: 'Card',
-        description: 'Content card components',
-        selectors: ['.card', '[data-component="card"]', '.content-card', '.panel'],
+        description: 'General content card components',
+        selectors: ['.card-gradient', '.card-modern', '[data-component*="card"]'],
+        category: 'card'
+    },
+    post_card: {
+        name: 'post_card',
+        displayName: 'Post Card',
+        description: 'Blog post/article cards',
+        selectors: ['[data-component="post-card"]'],
         category: 'card'
     },
     card_header: {
         name: 'card_header',
         displayName: 'Card Header',
         description: 'Header section of cards',
-        selectors: ['.card-header', '.card h3', '.card-title', '[data-component="card-header"]'],
+        selectors: ['.card-header', '.card h3', '.card-title'],
         category: 'card'
     },
     card_body: {
         name: 'card_body',
         displayName: 'Card Body',
         description: 'Body/content section of cards',
-        selectors: ['.card-body', '.card-content', '[data-component="card-body"]'],
-        category: 'card'
-    },
-    card_footer: {
-        name: 'card_footer',
-        displayName: 'Card Footer',
-        description: 'Footer section of cards',
-        selectors: ['.card-footer', '.card-actions', '[data-component="card-footer"]'],
+        selectors: ['.card-body', '.card-content', '.p-6', '.p-8'],
         category: 'card'
     },
 
@@ -126,28 +180,28 @@ export const DESIGN_REGISTRY: Record<string, ComponentDesignInfo> = {
         name: 'button',
         displayName: 'Button',
         description: 'All buttons',
-        selectors: ['button', '.btn', '[data-component="button"]', 'input[type="submit"]'],
+        selectors: ['button', '.btn', '.btn-primary', '[data-component="button"]', 'input[type="submit"]'],
         category: 'button'
     },
     button_primary: {
         name: 'button_primary',
         displayName: 'Primary Button',
-        description: 'Primary action buttons',
-        selectors: ['.btn-primary', '.button-primary', '[data-variant="primary"]'],
+        description: 'Primary action buttons (gradient gold/amber)',
+        selectors: ['.btn-primary', '.bg-gradient-to-r.from-amber-500', '.from-yellow-500.to-amber-500'],
         category: 'button'
     },
     button_secondary: {
         name: 'button_secondary',
         displayName: 'Secondary Button',
         description: 'Secondary action buttons',
-        selectors: ['.btn-secondary', '.button-secondary', '[data-variant="secondary"]'],
+        selectors: ['.btn-secondary', '.bg-gray-100', '.bg-white.border'],
         category: 'button'
     },
     icon_button: {
         name: 'icon_button',
         displayName: 'Icon Button',
-        description: 'Buttons with icons',
-        selectors: ['.icon-btn', '.btn-icon', '[data-component="icon-button"]'],
+        description: 'Buttons with icons (social media, toggles)',
+        selectors: ['.icon-btn', '.btn-icon', '[data-component="icon-button"]', '.w-10.h-10.rounded-full'],
         category: 'button'
     },
 
@@ -163,7 +217,7 @@ export const DESIGN_REGISTRY: Record<string, ComponentDesignInfo> = {
         name: 'input',
         displayName: 'Input Field',
         description: 'Text input fields',
-        selectors: ['input[type="text"]', 'input[type="email"]', 'input[type="password"]', '.input', '[data-component="input"]'],
+        selectors: ['input[type="text"]', 'input[type="email"]', 'input[type="password"]', '.input', '[data-component="input"]', 'input.rounded-lg', 'input.rounded-xl'],
         category: 'form'
     },
     textarea: {
@@ -185,13 +239,6 @@ export const DESIGN_REGISTRY: Record<string, ComponentDesignInfo> = {
         displayName: 'Checkbox',
         description: 'Checkbox inputs',
         selectors: ['input[type="checkbox"]', '.checkbox', '[data-component="checkbox"]'],
-        category: 'form'
-    },
-    radio: {
-        name: 'radio',
-        displayName: 'Radio Button',
-        description: 'Radio button inputs',
-        selectors: ['input[type="radio"]', '.radio', '[data-component="radio"]'],
         category: 'form'
     },
     label: {

@@ -98,6 +98,7 @@ function DynamicHeroInternal() {
 
   return (
     <section 
+      data-component="hero"
       className={"hero-section relative min-h-screen flex items-center justify-center pb-16 sm:pb-20 lg:pb-24 " + (bg.imageStyle === 'cover' || !bg.imageUrl ? 'overflow-hidden' : 'overflow-visible')}
       style={{
         ...backgroundStyle,

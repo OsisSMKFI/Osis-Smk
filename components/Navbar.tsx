@@ -128,7 +128,8 @@ const Navbar: React.FC = () => {
       `}</style>
       <nav 
         role="navigation" 
-        aria-label="Main navigation" 
+        aria-label="Main navigation"
+        data-component="navbar"
         className={`navbar-fixed fixed top-2 xs:top-3 sm:top-4 left-2 xs:left-3 sm:left-4 right-2 xs:right-3 sm:right-4 z-[100] transition-all duration-300 rounded-xl xs:rounded-2xl overflow-hidden ${
           isScrolled
             ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg shadow-2xl border border-gray-200/50 dark:border-gray-700/50'
