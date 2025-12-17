@@ -98,6 +98,23 @@ async function initRepo() {
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔌 API ENDPOINTS
 // ═══════════════════════════════════════════════════════════════════════════
+// Root route
+app.get('/', (req, res) => {
+    res.json({
+        service: 'Webosis Dev Server',
+        version: '1.0.0',
+        status: 'running',
+        endpoints: [
+            'GET  /health - Health check',
+            'POST /api/exec - Execute command',
+            'POST /api/npm - NPM operations',
+            'POST /api/git - Git operations',
+            'POST /api/file - File operations',
+            'GET  /api/files - List files'
+        ],
+        docs: 'https://github.com/Ashera12/webosis-archive/tree/main/dev-server'
+    });
+});
 // Health check
 app.get('/health', (req, res) => {
     res.json({
