@@ -4,8 +4,9 @@ nixPkgs = ["nodejs_20", "git"]
 [phases.install]
 cmds = ["npm ci || npm install"]
 
+# Skip build - using pre-built dist
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["echo 'Using pre-built dist'"]
 
 [start]
-cmd = "npm start"
+cmd = "node dist/server.js"
