@@ -827,9 +827,10 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: enhancedMessage,
+                    messages: [{ role: 'user', content: enhancedMessage }],
                     context: 'design_studio',
-                    mode: 'admin'
+                    mode: 'admin',
+                    provider: 'auto'
                 })
             });
             

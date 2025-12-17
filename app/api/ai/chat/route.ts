@@ -963,9 +963,20 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     const body = await request.json();
-    const { messages: incomingMessages, history, reset = false, sessionId, mode: requestMode, provider, emphasis = false } = body || {};
-    // Chat history continuity support
-    let baseMessages: Array<{ role: string; content: string }> = Array.isArray(history) ? history : (incomingMessages || []);
+    const { messages: incomingMessages, message: singleMessage, history, reset = false, sessionId, mode: requestMode, provider, emphasis = false, context } = body || {};
+    
+    // Support both 'messages' array and single 'message' string (for Design Studio)
+    let baseMessages: Array<{ role: string; content: string }> = [];
+    
+    if (Array.isArray(history) && history.length > 0) {
+      baseMessages = history;
+    } else if (Array.isArray(incomingMessages) && incomingMessages.length > 0) {
+      baseMessages = incomingMessages;
+    } else if (singleMessage && typeof singleMessage === 'string') {
+      // Single message mode (from Design Studio)
+      baseMessages = [{ role: 'user', content: singleMessage }];
+      console.log('[AI Chat] Single message mode:', singleMessage.substring(0, 100));
+    }
     if (reset) {
       // Preserve only the earliest system message if provided
       const firstSystem = baseMessages.find(m => m.role === 'system');
