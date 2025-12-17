@@ -1664,21 +1664,18 @@ INGAT: SELALU sertakan PATH FILE dalam code block agar bisa langsung diterapkan!
             setChatMessages(prev => [...prev, aiMessage]);
             
             // ═══════════════════════════════════════════════════════════════
-            // 🚀 AUTO-APPLY: Only apply if user EXPLICITLY requests it
+            // ⚠️ AUTO-APPLY DISABLED - User must click Apply button manually
             // ═══════════════════════════════════════════════════════════════
+            // Auto-apply was causing confusion and unexpected changes.
+            // Now ALL changes require explicit user action via the Apply button.
             
-            // Only auto-apply if user explicitly says "terapkan", "apply", "lakukan"
-            // NOT just because they mention a style keyword
+            const shouldAutoApply = false; // DISABLED - always false
+            
+            /* DISABLED AUTO-APPLY LOGIC
             const explicitApplyRequest = /\b(terapkan|apply|lakukan|pasang|execute|jalankan)\b/i.test(userQuery);
-            
-            // Check if user is asking a QUESTION (should NOT auto-apply)
             const isAskingQuestion = /\?|dimana|where|letak|lokasi|ada (gak|tidak|nggak)|bagaimana|how|apa itu|what is|beritahu|kasih tau|jelaskan/i.test(userQuery);
-            
-            // Only auto-apply if:
-            // 1. User explicitly says "terapkan/apply/lakukan"
-            // 2. AND user is NOT asking a question
-            // 3. AND there is actual code to apply
             const shouldAutoApply = explicitApplyRequest && !isAskingQuestion;
+            */
             
             if (shouldAutoApply) {
                 // 1. Auto-apply CSS if available

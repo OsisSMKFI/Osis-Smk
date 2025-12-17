@@ -1312,7 +1312,17 @@ Silakan gunakan metode di atas atau hubungi admin.`,
       // Let it fall through to normal AI processing, don't auto-apply anything
     }
     
-    if (isDesignExecuteRequest && wasDiscussingDesign) {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ⚠️ DISABLED AUTO-EXECUTE - User must click Apply button manually
+    // This was causing too many false positives and unexpected behavior
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Previous code that auto-applied designs has been DISABLED
+    // All design changes now require explicit user action via the Apply button
+    // in the Design Studio interface
+    
+    const shouldAutoExecuteDesign = false; // DISABLED - always false
+    
+    if (shouldAutoExecuteDesign && isDesignExecuteRequest && wasDiscussingDesign) {
       // ACTUALLY EXECUTE THE DESIGN CHANGE
       console.log('[AI Action] 🎨 EXECUTING REAL DESIGN CHANGE');
       try {
