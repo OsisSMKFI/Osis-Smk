@@ -1368,13 +1368,24 @@ ${sel}:hover {
             let componentInfo = selectedComponent ? DESIGN_REGISTRY[selectedComponent] : null;
             let selector = componentInfo?.selectors?.[0] || '';
             
-            // Try to detect component from user query
-            const detected = detectComponentFromQuery(userQuery);
-            if (detected && !targetComponent) {
-                targetComponent = detected.component;
-                componentInfo = detected.info;
-                selector = detected.selector;
-                setSelectedComponent(detected.component);
+            // ═══════════════════════════════════════════════════════════════
+            // 🚫 SKIP PATTERN MATCHING WHEN USER PASTES HTML/CODE
+            // ═══════════════════════════════════════════════════════════════
+            // When user pastes HTML code, we should NOT auto-detect components
+            // from the HTML tags. Instead, let AI analyze the actual intent.
+            // This prevents hardcoded responses like "Header" when user pastes
+            // code containing <header> tags but wants something else.
+            const skipPatternMatching = containsHTML && userQuery.length > 150;
+            
+            // Try to detect component from user query (ONLY if not pasting code)
+            if (!skipPatternMatching) {
+                const detected = detectComponentFromQuery(userQuery);
+                if (detected && !targetComponent) {
+                    targetComponent = detected.component;
+                    componentInfo = detected.info;
+                    selector = detected.selector;
+                    setSelectedComponent(detected.component);
+                }
             }
             
             // If still no component, use general approach
@@ -1388,12 +1399,13 @@ ${sel}:hover {
             // 1. User explicitly requests to apply (terapkan/apply/lakukan)
             // 2. User mentions a style keyword
             // 3. User is NOT asking a question
+            // 4. User is NOT pasting HTML/code (we want AI to understand context)
             const styleKeywords = /glass|dark|neon|gradient|hover|animasi|responsive|shadow|neumorphism|minimal|modern|elegan|transparan|blur|glow|colorful|efek|effect/i;
             const explicitApply = /\b(terapkan|apply|lakukan|pasang)\b/i.test(userQuery);
-            const isStyleRequest = styleKeywords.test(userQuery) && !isQuestion;
+            const isStyleRequest = styleKeywords.test(userQuery) && !isQuestion && !skipPatternMatching;
             
-            // Only use smart CSS if user explicitly wants to apply AND mentions a style
-            if (isStyleRequest && explicitApply) {
+            // Only use smart CSS if user explicitly wants to apply AND mentions a style (NOT when pasting code)
+            if (isStyleRequest && explicitApply && !skipPatternMatching) {
                 // Use fallback selector if no component detected
                 const applySel = selector || '.component, .card, .button, [class*="card"], [class*="button"]';
                 const applyComp = targetComponent || selectedComponent || 'global';
@@ -1426,8 +1438,8 @@ ${sel}:hover {
                     
                     return;
                 }
-            } else if (isStyleRequest && !explicitApply) {
-                // Show CSS preview WITHOUT auto-applying
+            } else if (isStyleRequest && !explicitApply && !skipPatternMatching) {
+                // Show CSS preview WITHOUT auto-applying (ONLY when NOT pasting HTML)
                 const applySel = selector || '.component';
                 const applyComp = targetComponent || selectedComponent || 'global';
                 const smartResult = generateSmartCSS(userQuery, applySel, componentInfo?.category || 'other');
@@ -1536,11 +1548,21 @@ Jika ADA path → sistem akan AUTO-APPLY dengan tombol Apply
 2. Berikan PATH FILE jika relevan
 3. Jangan kasih kode kalau tidak diminta
 
-📌 JIKA USER KASIH CONTOH HTML/JSX:
-1. IDENTIFIKASI file mana yang berisi kode tersebut
-2. BACA file tersebut (gunakan konteks yang ada)
-3. BERIKAN kode yang sudah diperbaiki LENGKAP
-4. SERTAKAN path file yang PASTI
+📌 JIKA USER KASIH CONTOH HTML/JSX (PASTE KODE):
+⚠️ SANGAT PENTING! Jika user paste kode HTML/JSX, BACA BAIK-BAIK:
+1. JANGAN fokus pada tag/elemen tertentu saja (misal jangan fokus ke <header> saja)
+2. BACA apa yang user MINTA/KELUHKAN (bukan tag HTML-nya)
+3. Jika user bilang "button tidak sesuai" → fokus ke BUTTON, bukan header
+4. Jika user bilang "icon mengecil" → fokus ke ICON styling
+5. IDENTIFIKASI semua komponen yang ada dalam kode (button, icon, header, dll)
+6. TANYAKAN user: "Komponen mana yang ingin diperbaiki?" jika tidak jelas
+7. JANGAN asumsikan user ingin edit komponen tertentu hanya dari tag HTML
+
+CONTOH SALAH:
+- User paste kode dengan <header><button>...</button></header>
+- User bilang "buttonnya tidak sesuai"  
+- ❌ AI fokus ke "Header" → SALAH!
+- ✅ AI fokus ke "Button" → BENAR!
 
 📌 JIKA USER MINTA BUAT/UBAH:
 1. Pahami apa yang diminta dengan TELITI
@@ -1602,6 +1624,17 @@ ${targetComponent ? `
 • Nama: ${targetComponent}
 • Selector: ${selector}
 • Deskripsi: ${componentInfo?.description || 'N/A'}
+` : ''}
+
+${skipPatternMatching ? `
+═══════════════════════════════════════════════════════════════════════════
+⚠️ USER PASTE KODE HTML/JSX - BACA BAIK-BAIK!
+═══════════════════════════════════════════════════════════════════════════
+User mengirimkan kode HTML/JSX. PERHATIKAN:
+1. JANGAN fokus pada tag/elemen tertentu saja dari kode
+2. BACA apa yang user MINTA/KELUHKAN (di luar kode)
+3. Tanyakan "Komponen mana yang ingin diperbaiki?" jika tidak jelas
+4. JANGAN asumsikan user ingin edit komponen hanya dari tag HTML
 ` : ''}
 
 ═══════════════════════════════════════════════════════════════════════════
