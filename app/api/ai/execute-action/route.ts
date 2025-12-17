@@ -935,14 +935,15 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(result, { status: 400 });
         }
 
-        // Store design in page_content table
+        // Store design in page_content table (using correct columns)
         const { error: insertError } = await supabaseAdmin
           .from('page_content')
           .upsert({
             page_key: `design_override_${targetComponent}`,
-            content_type: 'css',
-            content_value: cssCode,
+            title: `Design Override: ${targetComponent}`,
+            content: cssCode,
             category: 'design',
+            published: true,
             updated_at: new Date().toISOString(),
           }, {
             onConflict: 'page_key',
@@ -1034,9 +1035,10 @@ export async function POST(request: NextRequest) {
           .from('page_content')
           .upsert({
             page_key: `ai_task_${sessionId || 'default'}`,
-            content_type: 'json',
-            content_value: JSON.stringify(progressData),
+            title: `AI Task Progress`,
+            content: JSON.stringify(progressData),
             category: 'ai_progress',
+            published: false,
             updated_at: new Date().toISOString(),
           }, {
             onConflict: 'page_key',
@@ -1063,7 +1065,7 @@ export async function POST(request: NextRequest) {
         
         const { data: statusData, error: statusError } = await supabaseAdmin
           .from('page_content')
-          .select('content_value, updated_at')
+          .select('content, updated_at')
           .eq('page_key', `ai_task_${taskSessionId || sessionId || 'default'}`)
           .single();
 
@@ -1074,7 +1076,7 @@ export async function POST(request: NextRequest) {
 
         result.success = true;
         result.details = 'Task status retrieved';
-        result.data = JSON.parse(statusData.content_value);
+        result.data = JSON.parse(statusData.content);
         break;
       }
 
@@ -1103,15 +1105,18 @@ async function logAIAction(sessionId: string | undefined, action: string, detail
       .from('page_content')
       .upsert({
         page_key: `ai_action_log_${Date.now()}`,
-        content_type: 'json',
-        content_value: JSON.stringify({
+        title: `AI Action: ${action}`,
+        content: JSON.stringify({
           sessionId,
           action,
           details,
           timestamp: new Date().toISOString(),
         }),
         category: 'ai_logs',
+        published: false,
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'page_key',
       });
   } catch (e) {
     console.error('[AI Execute] Failed to log action:', e);

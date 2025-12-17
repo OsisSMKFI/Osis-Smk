@@ -26,6 +26,7 @@ import {
   FaTools,
   FaTerminal,
   FaClipboardCheck,
+  FaPaintBrush,
 } from 'react-icons/fa';
 import { Shield } from 'lucide-react';
 
@@ -62,6 +63,7 @@ export default function AdminSidebar() {
   ];
 
   const settingsItems: MenuItem[] = [
+    { name: 'Design Studio', icon: <FaPaintBrush />, href: '/admin/design-studio' },
     { name: 'Settings', icon: <FaCog />, href: '/admin/settings' },
     { name: 'Tools', icon: <FaTools />, href: '/admin/tools' },
     { name: 'Terminal', icon: <FaTerminal />, href: '/admin/terminal' },

@@ -16,10 +16,10 @@ export async function GET() {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
         
         // Fetch all design overrides from page_content table
-        // Using page_key and content_value columns
+        // Using correct column names: page_key, content, category
         const { data: designs, error } = await supabase
             .from('page_content')
-            .select('page_key, content_value, updated_at')
+            .select('page_key, content, updated_at')
             .like('page_key', 'design_override_%')
             .eq('category', 'design')
             .order('updated_at', { ascending: true });
@@ -41,7 +41,7 @@ export async function GET() {
    Component: ${componentName}
    Updated: ${d.updated_at || 'unknown'}
    ════════════════════════════════════════ */
-${d.content_value}
+${d.content}
 `;
         }).join('\n');
 
