@@ -13,7 +13,7 @@ import {
     Zap, Download, Upload, Settings, Wand2,
     Sparkles, MessageCircle, Bot, User,
     RotateCcw, Type, Box, Layers, Grid3X3,
-    ArrowRight, Command, Cpu
+    ArrowRight, Command, Cpu, Terminal
 } from 'lucide-react';
 import { DESIGN_REGISTRY } from '@/lib/design-registry';
 
@@ -42,11 +42,12 @@ interface ChatMessage {
     content: string;
     timestamp: Date;
     cssCode?: string;
-    actionType?: 'css' | 'component' | 'style' | 'info' | 'action' | 'file-edit' | 'error';
+    actionType?: 'css' | 'component' | 'style' | 'info' | 'action' | 'file-edit' | 'error' | 'terminal';
     targetComponent?: string;
     targetFile?: string; // File path to apply changes
     codeBlocks?: { language: string; code: string; filename?: string }[];
     fileChanges?: { path: string; language: string; code: string; action: 'create' | 'update' | 'append' }[];
+    terminalCommands?: string[]; // Terminal commands to run (npm install, etc)
 }
 
 interface SourceFile {
@@ -1546,6 +1547,13 @@ Kamu adalah AI Design Studio Assistant PREMIUM dengan skill MAKSIMUM:
 • Tips & best practices
 • Jawab pertanyaan follow-up dengan sabar
 
+🔥 LEVEL 6 - TERMINAL & DEPENDENCIES:
+• Kamu BISA menjalankan perintah terminal!
+• Install packages: npm install, pnpm add
+• Run scripts: npm run build, npm run dev
+• Git commands: git status, git add, git commit
+• Berikan perintah dalam code block \`\`\`bash
+
 ═══════════════════════════════════════════════════════════════════════════
 📋 FORMAT KODE YANG WAJIB DIIKUTI
 ═══════════════════════════════════════════════════════════════════════════
@@ -1564,10 +1572,15 @@ export function myFunction() { ... }
 .class-name { ... }
 \`\`\`
 
+\`\`\`bash
+npm install framer-motion
+\`\`\`
+
 FORMAT: \`\`\`bahasa:path/ke/file.ext
 
 Jika TIDAK ada path → user harus copy manual (hindari ini!)
 Jika ADA path → sistem akan AUTO-APPLY dengan tombol Apply
+Jika BASH → sistem akan tampilkan tombol RUN untuk eksekusi terminal
 
 ═══════════════════════════════════════════════════════════════════════════
 🧠 CARA MENJAWAB YANG BENAR (IKUTI!)
@@ -1794,6 +1807,26 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                     action: 'update' as const
                 }));
             
+            // Extract terminal commands (bash/sh/shell code blocks)
+            const terminalCommands: string[] = [];
+            const bashBlocks = codeBlocks.filter(b => ['bash', 'sh', 'shell', 'cmd', 'powershell', 'terminal'].includes(b.language));
+            bashBlocks.forEach(block => {
+                const commands = block.code.split('\n').filter(line => 
+                    line.trim() && !line.startsWith('#') && !line.startsWith('//')
+                );
+                terminalCommands.push(...commands);
+            });
+            
+            // Also detect inline commands like `npm install xxx`
+            const inlineCommandRegex = /`(npm\s+(?:install|add|run)|pnpm\s+(?:install|add|run)|yarn\s+(?:add|install)|npx\s+\S+)[^`]*`/gi;
+            let cmdMatch;
+            while ((cmdMatch = inlineCommandRegex.exec(data.reply)) !== null) {
+                const cmd = cmdMatch[1] + cmdMatch[0].slice(cmdMatch[1].length + 1, -1);
+                if (!terminalCommands.includes(cmd)) {
+                    terminalCommands.push(cmd);
+                }
+            }
+            
             // Determine action type
             let actionType: ChatMessage['actionType'] = 'info';
             if (fileChanges.length > 0) {
@@ -1817,6 +1850,7 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                 targetFile: fileChanges.length > 0 ? fileChanges[0].path : undefined,
                 codeBlocks: codeBlocks.length > 0 ? codeBlocks : undefined,
                 fileChanges: fileChanges.length > 0 ? fileChanges : undefined,
+                terminalCommands: terminalCommands.length > 0 ? terminalCommands : undefined,
                 actionType
             };
             
@@ -2074,6 +2108,61 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
         } else {
             notify('error', 'Failed to update files');
         }
+    };
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🖥️ TERMINAL EXECUTION - Run commands from AI
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const runTerminalCommand = async (command: string): Promise<{ success: boolean; output: string; error?: string }> => {
+        try {
+            notify('info', `🖥️ Running: ${command}`);
+            
+            const res = await fetch('/api/design/terminal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                notify('success', `✅ Command completed: ${command.slice(0, 30)}...`);
+                return { success: true, output: data.output || data.stdout };
+            } else {
+                notify('error', `❌ Command failed: ${data.error}`);
+                return { success: false, output: data.stderr || '', error: data.error };
+            }
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+            notify('error', `Terminal error: ${errorMsg}`);
+            return { success: false, output: '', error: errorMsg };
+        }
+    };
+    
+    // Quick install package
+    const installPackage = async (packageName: string) => {
+        setChatMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            role: 'system',
+            content: `📦 Installing ${packageName}...`,
+            timestamp: new Date(),
+            actionType: 'action'
+        }]);
+        
+        const result = await runTerminalCommand(`npm install ${packageName}`);
+        
+        setChatMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            role: 'system',
+            content: result.success 
+                ? `✅ **${packageName}** installed successfully!\n\`\`\`\n${result.output.slice(0, 500)}\n\`\`\``
+                : `❌ Failed to install ${packageName}: ${result.error}`,
+            timestamp: new Date(),
+            actionType: result.success ? 'action' : 'error'
+        }]);
+        
+        return result.success;
     };
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -3186,8 +3275,79 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                                                             <Zap className="w-4 h-4" /> Apply All {msg.fileChanges.length} Files
                                                         </button>
                                                     )}
+                                                    {/* Single file - Big Apply button */}
+                                                    {msg.fileChanges.length === 1 && (
+                                                        <button 
+                                                            onClick={() => applyFileChanges(msg.fileChanges!)}
+                                                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] animate-pulse"
+                                                        >
+                                                            <Zap className="w-5 h-5" /> 🚀 APPLY CHANGES
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
+                                            
+                                            {/* Terminal Commands Section */}
+                                            {msg.terminalCommands && msg.terminalCommands.length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                    <div className="flex items-center gap-2 text-xs text-amber-400 mb-2">
+                                                        <Terminal className="w-3.5 h-3.5" />
+                                                        <span className="font-medium">Terminal Commands ({msg.terminalCommands.length})</span>
+                                                    </div>
+                                                    {msg.terminalCommands.map((cmd, i) => (
+                                                        <div key={i} className="flex items-center gap-2 bg-black/50 rounded-lg px-3 py-2 border border-amber-500/20">
+                                                            <code className="flex-1 text-xs text-amber-200 font-mono">{cmd}</code>
+                                                            <button 
+                                                                onClick={() => { navigator.clipboard.writeText(cmd); notify('info', 'Command copied!'); }}
+                                                                className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                                                                title="Copy command"
+                                                            >
+                                                                <Copy className="w-3 h-3" />
+                                                            </button>
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    const result = await runTerminalCommand(cmd);
+                                                                    setChatMessages(prev => [...prev, {
+                                                                        id: Date.now().toString(),
+                                                                        role: 'system',
+                                                                        content: result.success 
+                                                                            ? `✅ **Command executed:** \`${cmd}\`\n\`\`\`\n${result.output.slice(0, 1000)}\n\`\`\``
+                                                                            : `❌ **Command failed:** \`${cmd}\`\n\nError: ${result.error}`,
+                                                                        timestamp: new Date(),
+                                                                        actionType: result.success ? 'action' : 'error'
+                                                                    }]);
+                                                                }}
+                                                                className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded text-xs font-medium transition-all hover:scale-[1.02] shadow-lg shadow-amber-500/20"
+                                                            >
+                                                                <Play className="w-3 h-3" /> Run
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    {/* Run All Commands button */}
+                                                    {msg.terminalCommands.length > 1 && (
+                                                        <button 
+                                                            onClick={async () => {
+                                                                for (const cmd of msg.terminalCommands!) {
+                                                                    const result = await runTerminalCommand(cmd);
+                                                                    setChatMessages(prev => [...prev, {
+                                                                        id: Date.now().toString(),
+                                                                        role: 'system',
+                                                                        content: result.success 
+                                                                            ? `✅ \`${cmd}\` - Success`
+                                                                            : `❌ \`${cmd}\` - Failed: ${result.error}`,
+                                                                        timestamp: new Date(),
+                                                                        actionType: result.success ? 'action' : 'error'
+                                                                    }]);
+                                                                }
+                                                            }}
+                                                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-amber-500/25 hover:scale-[1.02]"
+                                                        >
+                                                            <Terminal className="w-4 h-4" /> Run All {msg.terminalCommands.length} Commands
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                            
                                             {/* Show code blocks for other languages (without file path) */}
                                             {msg.codeBlocks && msg.codeBlocks.filter(b => b.language !== 'css' && !b.filename).length > 0 && (
                                                 <div className="mt-3 space-y-2">
