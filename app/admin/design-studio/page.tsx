@@ -161,7 +161,14 @@ export default function DesignStudioPage() {
     const [expandedCategories, setExpandedCategories] = useState<string[]>(['active', 'templates']);
     
     // Chat
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+        {
+            id: 'welcome',
+            role: 'assistant',
+            content: '👋 Hai! Saya Design AI Assistant.\n\nPilih komponen dari sidebar, lalu tanya saya untuk membuat CSS style yang kamu inginkan!\n\n✨ Coba kata kunci: glassmorphism, dark mode, neon, gradient, hover, responsive',
+            timestamp: new Date()
+        }
+    ]);
     const [chatInput, setChatInput] = useState('');
     const [isAILoading, setIsAILoading] = useState(false);
     
@@ -518,8 +525,249 @@ ${selector}:hover {
     };
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // AI CHAT - FULLY FUNCTIONAL
+    // AI CHAT - INTELLIGENT CSS GENERATOR
     // ═══════════════════════════════════════════════════════════════════════════
+    
+    // Smart CSS Pattern Generator
+    const generateSmartCSS = (query: string, selector: string, category: string): { css: string; message: string } | null => {
+        const q = query.toLowerCase();
+        
+        // Pattern detection with intelligent matching
+        const patterns: Record<string, { match: RegExp; css: (sel: string) => string; msg: string }> = {
+            glassmorphism: {
+                match: /glass(morphism)?|blur|frosted|transparan/i,
+                css: (sel) => `${sel} {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+${sel}:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}`,
+                msg: '💎 Glassmorphism style created! Modern frosted glass effect with smooth hover animation.'
+            },
+            darkMode: {
+                match: /dark\s?(mode)?|gelap|hitam|night/i,
+                css: (sel) => `${sel} {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+    color: #e8e8e8;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+${sel}:hover {
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
+    transition: all 0.3s ease;
+}`,
+                msg: '🌙 Dark mode style applied! Elegant dark theme with subtle purple accent.'
+            },
+            neon: {
+                match: /neon|glow|cyberpunk|cyber/i,
+                css: (sel) => `${sel} {
+    background: #0a0a0f;
+    color: #00ffaa;
+    border: 2px solid #00ffaa;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 
+        0 0 10px #00ffaa,
+        0 0 20px rgba(0, 255, 170, 0.4),
+        inset 0 0 20px rgba(0, 255, 170, 0.05);
+    text-shadow: 0 0 8px currentColor;
+}
+
+${sel}:hover {
+    box-shadow: 
+        0 0 20px #00ffaa,
+        0 0 40px rgba(0, 255, 170, 0.6),
+        inset 0 0 30px rgba(0, 255, 170, 0.1);
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}`,
+                msg: '⚡ Neon glow effect activated! Cyberpunk-style with vibrant green glow.'
+            },
+            gradient: {
+                match: /gradient|gradien|warna|colorful|rainbow/i,
+                css: (sel) => `${sel} {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.35);
+    font-weight: 500;
+}
+
+${sel}:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.45);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}`,
+                msg: '🌈 Gradient style applied! Beautiful purple-pink gradient with premium shadow.'
+            },
+            hover: {
+                match: /hover|animasi|animation|efek|effect/i,
+                css: (sel) => `${sel} {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+${sel}:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+${sel}:active {
+    transform: translateY(-2px) scale(1.01);
+    transition: all 0.1s ease;
+}`,
+                msg: '✨ Hover animation added! Smooth lift effect with elegant scaling.'
+            },
+            responsive: {
+                match: /responsive|mobile|tablet|hp|handphone|adaptif/i,
+                css: (sel) => `/* Desktop - Default */
+${sel} {
+    padding: 32px;
+    font-size: 16px;
+    border-radius: 16px;
+}
+
+/* Tablet - max 1024px */
+@media (max-width: 1024px) {
+    ${sel} {
+        padding: 24px;
+        font-size: 15px;
+        border-radius: 14px;
+    }
+}
+
+/* Mobile - max 768px */
+@media (max-width: 768px) {
+    ${sel} {
+        padding: 20px;
+        font-size: 14px;
+        border-radius: 12px;
+    }
+}
+
+/* Small Mobile - max 480px */
+@media (max-width: 480px) {
+    ${sel} {
+        padding: 16px;
+        font-size: 13px;
+        border-radius: 10px;
+    }
+}`,
+                msg: '📱 Responsive styles added! Adapts perfectly from desktop to mobile.'
+            },
+            neumorphism: {
+                match: /neumorphism|soft|lembut|emboss/i,
+                css: (sel) => `${sel} {
+    background: #e0e5ec;
+    border-radius: 20px;
+    box-shadow: 
+        10px 10px 20px #b8bec7,
+        -10px -10px 20px #ffffff;
+    padding: 28px;
+    color: #333;
+}
+
+${sel}:hover {
+    box-shadow: 
+        12px 12px 24px #b8bec7,
+        -12px -12px 24px #ffffff;
+    transition: all 0.3s ease;
+}`,
+                msg: '🌙 Neumorphism style! Soft 3D embossed effect.'
+            },
+            minimal: {
+                match: /minimal|simple|clean|bersih|sederhana/i,
+                css: (sel) => `${sel} {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    color: #1f2937;
+}
+
+${sel}:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}`,
+                msg: '✓ Minimal clean style! Simple and elegant.'
+            },
+            shadow: {
+                match: /shadow|bayangan|depth/i,
+                css: (sel) => `${sel} {
+    box-shadow: 
+        0 1px 1px rgba(0,0,0,0.08),
+        0 2px 2px rgba(0,0,0,0.08),
+        0 4px 4px rgba(0,0,0,0.08),
+        0 8px 8px rgba(0,0,0,0.08),
+        0 16px 16px rgba(0,0,0,0.08);
+    border-radius: 16px;
+    padding: 24px;
+    background: white;
+}
+
+${sel}:hover {
+    box-shadow: 
+        0 1px 2px rgba(0,0,0,0.1),
+        0 2px 4px rgba(0,0,0,0.1),
+        0 4px 8px rgba(0,0,0,0.1),
+        0 8px 16px rgba(0,0,0,0.1),
+        0 16px 32px rgba(0,0,0,0.1);
+    transform: translateY(-4px);
+    transition: all 0.4s ease;
+}`,
+                msg: '🎭 Layered shadow effect! Smooth depth illusion.'
+            },
+            border: {
+                match: /border|outline|garis|tepi/i,
+                css: (sel) => `${sel} {
+    border: 2px solid transparent;
+    background: 
+        linear-gradient(white, white) padding-box,
+        linear-gradient(135deg, #667eea, #764ba2) border-box;
+    border-radius: 12px;
+    padding: 24px;
+}
+
+${sel}:hover {
+    background: 
+        linear-gradient(white, white) padding-box,
+        linear-gradient(135deg, #764ba2, #f093fb) border-box;
+    transition: all 0.3s ease;
+}`,
+                msg: '🎨 Gradient border effect! Modern animated border.'
+            }
+        };
+        
+        // Check each pattern
+        for (const [, pattern] of Object.entries(patterns)) {
+            if (pattern.match.test(q)) {
+                return {
+                    css: pattern.css(selector),
+                    message: pattern.msg
+                };
+            }
+        }
+        
+        return null;
+    };
     
     const sendChatMessage = async () => {
         if (!chatInput.trim() || isAILoading || !selectedComponent) return;
@@ -539,6 +787,21 @@ ${selector}:hover {
         try {
             const componentInfo = DESIGN_REGISTRY[selectedComponent];
             const selector = componentInfo?.selectors?.[0] || `.${selectedComponent}`;
+            
+            // Try smart CSS generation first
+            const smartResult = generateSmartCSS(userQuery, selector, componentInfo?.category || 'other');
+            
+            if (smartResult) {
+                // Instant CSS generation without API
+                setChatMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: smartResult.message + '\n\nKlik Apply untuk menerapkan ke komponen.',
+                    timestamp: new Date(),
+                    cssCode: smartResult.css
+                }]);
+                return;
+            }
             
             // Enhanced prompt for CSS generation
             const enhancedMessage = `
@@ -602,116 +865,13 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
         } catch (err) {
             console.error('AI Chat error:', err);
             
-            // Fallback: Generate CSS locally based on common patterns
-            let fallbackCSS = '';
-            const componentInfo = DESIGN_REGISTRY[selectedComponent];
-            const selector = componentInfo?.selectors?.[0] || `.${selectedComponent}`;
-            
-            if (userQuery.toLowerCase().includes('glassmorphism') || userQuery.toLowerCase().includes('glass')) {
-                fallbackCSS = `${selector} {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
-    padding: 24px;
-}
-
-${selector}:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
-    transition: all 0.3s ease;
-}`;
-            } else if (userQuery.toLowerCase().includes('dark')) {
-                fallbackCSS = `${selector} {
-    background: #1a1a2e;
-    color: #eaeaea;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 24px;
-}
-
-${selector}:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
-}`;
-            } else if (userQuery.toLowerCase().includes('hover')) {
-                fallbackCSS = `${selector}:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-${selector}:active {
-    transform: translateY(-2px);
-}`;
-            } else if (userQuery.toLowerCase().includes('neon')) {
-                fallbackCSS = `${selector} {
-    background: #0a0a0a;
-    color: #00ff88;
-    border: 2px solid #00ff88;
-    border-radius: 8px;
-    padding: 24px;
-    box-shadow: 0 0 10px #00ff88, 0 0 20px rgba(0, 255, 136, 0.3);
-    text-shadow: 0 0 10px currentColor;
-}
-
-${selector}:hover {
-    box-shadow: 0 0 20px #00ff88, 0 0 40px rgba(0, 255, 136, 0.5);
-}`;
-            } else if (userQuery.toLowerCase().includes('gradient')) {
-                fallbackCSS = `${selector} {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-}
-
-${selector}:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
-}`;
-            } else if (userQuery.toLowerCase().includes('responsive') || userQuery.toLowerCase().includes('mobile')) {
-                fallbackCSS = `/* Desktop */
-${selector} {
-    padding: 24px;
-    font-size: 16px;
-}
-
-/* Tablet */
-@media (max-width: 768px) {
-    ${selector} {
-        padding: 16px;
-        font-size: 15px;
-    }
-}
-
-/* Mobile */
-@media (max-width: 480px) {
-    ${selector} {
-        padding: 12px;
-        font-size: 14px;
-    }
-}`;
-            }
-            
-            if (fallbackCSS) {
-                setChatMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    content: `✨ CSS untuk "${userQuery}" berhasil dibuat! Klik Apply untuk menerapkan.`,
-                    timestamp: new Date(),
-                    cssCode: fallbackCSS
-                }]);
-            } else {
-                setChatMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    content: `Maaf, saya belum bisa memproses permintaan "${userQuery}". \n\nCoba perintah seperti:\n• "Buat glassmorphism"\n• "Tambahkan hover effect"\n• "Convert ke dark mode"\n• "Buat responsive"\n• "Tambahkan neon glow"\n• "Buat gradient style"`,
-                    timestamp: new Date()
-                }]);
-            }
+            // Fallback error message with suggestions
+            setChatMessages(prev => [...prev, {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: `Saya siap membantu! Coba salah satu style berikut:\n\n💎 "glassmorphism" - Efek kaca buram\n🌙 "dark mode" - Tema gelap elegan\n⚡ "neon glow" - Efek neon cyberpunk\n🌈 "gradient" - Warna gradasi\n✨ "hover effect" - Animasi hover\n📱 "responsive" - Adaptif mobile\n🌙 "neumorphism" - Efek emboss lembut\n🎭 "shadow depth" - Bayangan berlapis`,
+                timestamp: new Date()
+            }]);
         } finally {
             setIsAILoading(false);
         }
@@ -1249,135 +1409,173 @@ ${selector} {
                     )}
                 </main>
 
-                {/* ═══════════ AI CHAT PANEL - MODERN MINIMALIST ═══════════ */}
+                {/* ═══════════ AI CHAT PANEL - PREMIUM DESIGN ═══════════ */}
                 <AnimatePresence>
                     {chatOpen && (
                         <motion.aside
                             initial={{ width: 0, opacity: 0 }}
-                            animate={{ width: 340, opacity: 1 }}
+                            animate={{ width: 380, opacity: 1 }}
                             exit={{ width: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
+                            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                             className="flex-shrink-0 flex flex-col overflow-hidden"
-                            style={{ backgroundColor: '#111827' }}
+                            style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%)' }}
                         >
-                            {/* Header - Minimalist */}
-                            <div className="px-4 py-3 border-b border-gray-800">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                            <Sparkles className="w-4 h-4 text-white" />
+                            {/* Header - Premium Glassmorphism */}
+                            <div className="relative px-5 py-4 border-b border-white/10">
+                                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 via-pink-600/10 to-transparent" />
+                                <div className="relative flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative">
+                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                                                <Sparkles className="w-5 h-5 text-white" />
+                                            </div>
+                                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-slate-900 animate-pulse" />
                                         </div>
                                         <div>
-                                            <div className="text-sm font-medium text-white">Design AI</div>
-                                            <div className="text-xs text-green-400 flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                                                Online
-                                            </div>
+                                            <div className="text-base font-semibold text-white tracking-tight">Design AI</div>
+                                            <div className="text-xs text-emerald-400/80 font-medium">Ready to help</div>
                                         </div>
                                     </div>
-                                    <button onClick={() => setChatOpen(false)} className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                                    <button onClick={() => setChatOpen(false)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
                             
-                            {/* Quick Actions */}
+                            {/* Quick Actions - Floating Pills */}
                             {selectedComponent && (
-                                <div className="px-3 py-2 border-b border-gray-800 flex flex-wrap gap-1.5">
-                                    {['Glassmorphism', 'Dark Mode', 'Hover Effect', 'Responsive'].map(action => (
-                                        <button
-                                            key={action}
-                                            onClick={() => { setChatInput(`Buat ${action} untuk ${selectedComponent}`); }}
-                                            className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-full transition-colors"
-                                        >
-                                            {action}
-                                        </button>
-                                    ))}
+                                <div className="px-4 py-3 border-b border-white/5">
+                                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-2 font-medium">Quick Styles</div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[
+                                            { label: '💎 Glass', query: 'glassmorphism' },
+                                            { label: '🌙 Dark', query: 'dark mode' },
+                                            { label: '✨ Hover', query: 'hover effect' },
+                                            { label: '⚡ Neon', query: 'neon glow' },
+                                            { label: '🌈 Gradient', query: 'gradient' },
+                                            { label: '📱 Mobile', query: 'responsive mobile' }
+                                        ].map(action => (
+                                            <button
+                                                key={action.query}
+                                                onClick={() => { setChatInput(`Buat ${action.query} untuk ${selectedComponent}`); }}
+                                                className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/15 text-gray-200 rounded-full border border-white/10 hover:border-white/20 transition-all duration-200 hover:scale-105"
+                                            >
+                                                {action.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                             
-                            {/* Messages - Clean Design */}
-                            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {/* Messages - Modern Chat Bubbles */}
+                            <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(139, 92, 246, 0.03) 100%)' }}>
                                 {chatMessages.map(msg => (
-                                    <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <motion.div 
+                                        key={msg.id} 
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    >
                                         {msg.role !== 'user' && (
-                                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mr-2">
-                                                <Bot className="w-3.5 h-3.5 text-white" />
+                                            <div className="flex-shrink-0 mr-2.5">
+                                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                                                    <Bot className="w-4 h-4 text-white" />
+                                                </div>
                                             </div>
                                         )}
-                                        <div className={`max-w-[85%] ${
+                                        <div className={`max-w-[82%] ${
                                             msg.role === 'user' 
-                                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-2xl rounded-br-sm px-4 py-2.5' 
+                                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-lg shadow-blue-600/20' 
                                                 : msg.role === 'system'
-                                                    ? 'bg-gray-800/50 text-gray-300 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-700'
-                                                    : 'bg-gray-800 text-gray-200 rounded-2xl rounded-bl-sm px-4 py-2.5'
+                                                    ? 'bg-white/5 text-gray-200 rounded-2xl rounded-bl-md px-4 py-3 border border-white/10 backdrop-blur'
+                                                    : 'bg-white/5 text-gray-100 rounded-2xl rounded-bl-md px-4 py-3 border border-white/10 backdrop-blur'
                                         }`}>
                                             <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
                                             {msg.cssCode && (
                                                 <div className="mt-3 flex gap-2">
                                                     <button 
                                                         onClick={() => applyCSSFromChat(msg.cssCode!)}
-                                                        className="flex-1 flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-400 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+                                                        className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:scale-[1.02]"
                                                     >
-                                                        <Play className="w-3 h-3" /> Apply
+                                                        <Play className="w-3.5 h-3.5" /> Apply CSS
                                                     </button>
                                                     <button 
                                                         onClick={() => { navigator.clipboard.writeText(msg.cssCode!); notify('info', 'CSS copied!'); }}
-                                                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-xs transition-colors"
+                                                        className="px-3 py-2.5 bg-white/10 hover:bg-white/20 text-gray-200 rounded-xl text-xs transition-all duration-200 border border-white/10"
+                                                        title="Copy CSS"
                                                     >
-                                                        <Copy className="w-3 h-3" />
+                                                        <Copy className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             )}
                                         </div>
                                         {msg.role === 'user' && (
-                                            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 ml-2">
-                                                <User className="w-3.5 h-3.5 text-white" />
+                                            <div className="flex-shrink-0 ml-2.5">
+                                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                                    <User className="w-4 h-4 text-white" />
+                                                </div>
                                             </div>
                                         )}
-                                    </div>
+                                    </motion.div>
                                 ))}
                                 
                                 {isAILoading && (
-                                    <div className="flex justify-start">
-                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mr-2">
-                                            <Bot className="w-3.5 h-3.5 text-white" />
-                                        </div>
-                                        <div className="bg-gray-800 px-4 py-3 rounded-2xl rounded-bl-sm">
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex gap-1">
-                                                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                                                </div>
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="flex justify-start"
+                                    >
+                                        <div className="flex-shrink-0 mr-2.5">
+                                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                                                <Bot className="w-4 h-4 text-white" />
                                             </div>
                                         </div>
-                                    </div>
+                                        <div className="bg-white/5 border border-white/10 backdrop-blur px-5 py-4 rounded-2xl rounded-bl-md">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex gap-1.5">
+                                                    <span className="w-2.5 h-2.5 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                    <span className="w-2.5 h-2.5 bg-gradient-to-r from-pink-400 to-orange-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                    <span className="w-2.5 h-2.5 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                </div>
+                                                <span className="text-xs text-gray-400">Generating CSS...</span>
+                                            </div>
+                                        </div>
+                                    </motion.div>
                                 )}
                             </div>
                             
-                            {/* Input - Modern Minimalist */}
-                            <div className="p-4 border-t border-gray-800">
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={chatInput}
-                                        onChange={e => setChatInput(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
-                                        placeholder={selectedComponent ? `Tanya tentang ${selectedComponent}...` : 'Pilih komponen dulu...'}
-                                        disabled={!selectedComponent}
-                                        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 disabled:opacity-50 transition-all"
-                                    />
-                                    <button 
-                                        onClick={sendChatMessage}
-                                        disabled={!chatInput.trim() || isAILoading || !selectedComponent}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                                    >
-                                        <Send className="w-4 h-4" />
-                                    </button>
+                            {/* Input - Premium Floating Design */}
+                            <div className="p-4 border-t border-white/10" style={{ background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, rgba(15, 23, 42, 1) 100%)' }}>
+                                <div className="relative group">
+                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl opacity-0 group-focus-within:opacity-100 blur transition-all duration-300" />
+                                    <div className="relative flex items-center bg-slate-800/80 backdrop-blur border border-white/10 rounded-xl overflow-hidden">
+                                        <input
+                                            type="text"
+                                            value={chatInput}
+                                            onChange={e => setChatInput(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
+                                            placeholder={selectedComponent ? `Ask about ${selectedComponent}...` : 'Select a component first'}
+                                            disabled={!selectedComponent}
+                                            className="flex-1 bg-transparent px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none disabled:opacity-40 transition-all"
+                                        />
+                                        <button 
+                                            onClick={sendChatMessage}
+                                            disabled={!chatInput.trim() || isAILoading || !selectedComponent}
+                                            className="m-1.5 p-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 shadow-lg shadow-purple-500/25"
+                                        >
+                                            {isAILoading ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Send className="w-4 h-4" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                                 {!selectedComponent && (
-                                    <p className="mt-2 text-xs text-gray-500 text-center">👈 Pilih komponen dari sidebar terlebih dahulu</p>
+                                    <p className="mt-3 text-xs text-gray-500 text-center flex items-center justify-center gap-1.5">
+                                        <Layers className="w-3 h-3" />
+                                        Select a component from sidebar first
+                                    </p>
                                 )}
                             </div>
                         </motion.aside>
