@@ -794,6 +794,73 @@ export async function POST(request: NextRequest) {
     
     const aiContext = await buildAIContext(userId ?? null, role ?? null, mode);
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 📨 FORWARD REQUEST DETECTION - Actually forward to Admin/OSIS
+    // ═══════════════════════════════════════════════════════════════════════════
+    const forwardPatterns = [
+      /sampaikan\s+(ke\s+)?(admin|super\s*admin|osis)/i,
+      /boleh\s+(kan\s+)?sampai(kan)?/i,
+      /tolong\s+forward/i,
+      /forward\s+(ke\s+)?(admin|osis)/i,
+      /kirim\s+(ke\s+)?(admin|osis)/i,
+      /laporkan\s+(ke\s+)?(admin|osis)/i,
+      /beri\s*tahu\s+(admin|osis)/i,
+    ];
+    
+    const isForwardRequest = forwardPatterns.some(p => p.test(userQuery));
+    
+    if (isForwardRequest && mode === 'public') {
+      // Extract what to forward - look at previous messages for context
+      const previousMessages = baseMessages.slice(-5).filter(m => m.role === 'user').map(m => m.content).join(' ');
+      const messageToForward = previousMessages || userQuery;
+      
+      // Determine target
+      let target = 'admin'; // default
+      if (/super\s*admin/i.test(userQuery)) target = 'super_admin';
+      else if (/osis/i.test(userQuery)) target = 'osis';
+      
+      // Actually call the forward API
+      try {
+        const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
+        const forwardRes = await fetch(`${baseUrl}/api/notifications/forward`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target,
+            message: messageToForward.slice(0, 500),
+            urgent: /urgent|penting|segera/i.test(userQuery),
+            sessionId: sessionId || 'web-' + Date.now(),
+            senderName: session?.user?.name || 'Pengunjung Website',
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        
+        const forwardResult = await forwardRes.json();
+        
+        if (forwardResult.success) {
+          const targetName = target === 'super_admin' ? 'Super Admin' : target === 'osis' ? 'OSIS' : 'Admin';
+          return NextResponse.json({
+            reply: `✅ **Pesan Berhasil Diteruskan!**
+
+Saya sudah menyampaikan pesan kamu ke ${targetName}. 📨
+
+📝 **Isi pesan yang diteruskan:**
+"${messageToForward.slice(0, 200)}${messageToForward.length > 200 ? '...' : ''}"
+
+⏳ ${targetName} akan melihat pesan ini di panel notifikasi mereka dan dapat membalas langsung.
+
+💡 *Tip: Kamu bisa terus chat di sini, dan jika ${targetName} membalas, pesannya akan muncul di chat ini!*`,
+            forwarded: true,
+            forwardTarget: target,
+          });
+        } else {
+          console.error('[AI Chat] Forward failed:', forwardResult);
+        }
+      } catch (forwardErr) {
+        console.error('[AI Chat] Forward error:', forwardErr);
+      }
+    }
+
     // Image / media analysis command (vision) BEFORE generation & admin commands
     let isVisionAnalysis = false;
     if (typeof userQuery === 'string') {
