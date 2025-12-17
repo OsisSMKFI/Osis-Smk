@@ -1192,25 +1192,34 @@ export async function POST(request: NextRequest) {
     // ═══════════════════════════════════════════════════════════════════════════
     // 🎨 REAL DESIGN EXECUTION - Actually apply design changes
     // ═══════════════════════════════════════════════════════════════════════════
+    
+    // ⚠️ CRITICAL: Check for CANCEL/UNDO/REVERT requests FIRST
+    const isCancelOrUndoRequest = /kembalikan|batalkan|undo|revert|cancel|batal|reset|hapus.*perubahan|rollback/i.test(userQuery);
+    
+    // Check for casual/greeting messages that should NOT trigger actions
+    const isCasualMessage = /^(hi|hello|halo|hey|hai|apa kabar|selamat|good|ok|oke|okey|thanks|terima kasih|makasih|thx)$/i.test(userQuery.trim());
+    
+    // EXPLICIT execute patterns - user MUST clearly say they want to APPLY
     const designExecutePatterns = [
       /ayo\s+(terapkan|coba|lakukan|pasang)/i,
-      /terapkan\s+(saja|aja|dong|sekarang)/i,
+      /terapkan\s+(saja|aja|dong|sekarang|design|desain)/i,
       /coba\s+terapkan/i,
       /lakukan\s+(saja|aja|sekarang)/i,
-      /apply\s+(design|it|sekarang)/i,
+      /apply\s+(design|it|sekarang|this)/i,
       /setuju.*terapkan/i,
       /ok\s+ayo\s+(lakukan|terapkan)/i,
-      /efek\s+3d.*terapkan/i,
-      /neumorphism/i,
-      /glassmorphism/i,
+      /pasang\s+(design|desain|style)/i,
+      /execute\s+(design|now)/i,
     ];
     
-    const isDesignExecuteRequest = designExecutePatterns.some(p => p.test(userQuery));
+    // ⚠️ REMOVED: /neumorphism/i and /glassmorphism/i - these are just STYLE NAMES, not execute commands!
     
-    // Check if previous conversation was about design
+    const isDesignExecuteRequest = designExecutePatterns.some(p => p.test(userQuery)) && !isCancelOrUndoRequest && !isCasualMessage;
+    
+    // Check if previous conversation was about design (more strict patterns)
     const previousMsgs = baseMessages.slice(-6);
     const wasDiscussingDesign = previousMsgs.some(m => 
-      /(desain|design|tampilan|css|style|warna|font|border|modern|indah|bagus|3d|neumorphism|glassmorphism|input|chat)/i.test(m.content)
+      /(terapkan.*desain|apply.*design|design.*terapkan|buat.*desain|ubah.*tampilan)/i.test(m.content)
     );
     
     // Detect specific design type from conversation
@@ -1266,6 +1275,42 @@ export async function POST(request: NextRequest) {
       
       return 'chat_input'; // default based on user's request
     };
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🔄 HANDLE UNDO/REVERT REQUEST FIRST
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isCancelOrUndoRequest) {
+      console.log('[AI Action] 🔄 User requested UNDO/REVERT');
+      
+      // Return helpful response about reverting
+      const structuredReply = formatStructuredResponse({
+        greeting: '🔄 **Permintaan Pembatalan**',
+        mainContent: `Saya mengerti, kamu ingin membatalkan perubahan sebelumnya.
+
+📋 **Cara Membatalkan Perubahan:**
+• Jika design CSS yang sudah di-apply: Buka **Admin → Design Studio → Settings** dan hapus CSS override
+• Jika file source code yang diubah: Gunakan **git checkout** untuk mengembalikan file
+
+⚠️ **Catatan:**
+Saya tidak bisa secara otomatis membatalkan perubahan yang sudah diterapkan.
+Silakan gunakan metode di atas atau hubungi admin.`,
+        actionTaken: 'Tidak ada perubahan yang diterapkan',
+        followUp: 'Ada yang lain yang bisa saya bantu?',
+      });
+      
+      return NextResponse.json({
+        reply: structuredReply,
+        actionType: 'info',
+      });
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 👋 HANDLE CASUAL MESSAGES (greetings, thanks, etc)
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (isCasualMessage) {
+      console.log('[AI Action] 👋 Casual message detected, responding normally');
+      // Let it fall through to normal AI processing, don't auto-apply anything
+    }
     
     if (isDesignExecuteRequest && wasDiscussingDesign) {
       // ACTUALLY EXECUTE THE DESIGN CHANGE

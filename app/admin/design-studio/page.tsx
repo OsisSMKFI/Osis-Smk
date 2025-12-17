@@ -1120,6 +1120,38 @@ ${sel}:hover {
             // ═══════════════════════════════════════════════════════════════
             const queryLower = userQuery.toLowerCase();
             
+            // ⚠️ CRITICAL: Check for CANCEL/UNDO/REVERT first
+            const isCancelOrUndo = /kembalikan|batalkan|undo|revert|cancel|batal|reset|hapus.*perubahan|rollback/i.test(queryLower);
+            
+            // Check for casual/short messages that should NOT trigger actions
+            const isCasualMessage = /^(hi|hello|halo|hey|hai|apa kabar|selamat|good|ok|oke|okey|thanks|terima kasih|makasih|thx|ya|yup|yap)$/i.test(userQuery.trim());
+            
+            // Handle UNDO request immediately
+            if (isCancelOrUndo) {
+                setIsAILoading(false);
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'assistant',
+                    content: `🔄 **Pembatalan Perubahan**\n\n📋 **Cara Membatalkan:**\n• **CSS Override:** Klik tab "Settings" → "Reset CSS" atau hapus override yang tidak diinginkan\n• **File Changes:** Gunakan \`git checkout -- [filename]\` di terminal\n• **Semua Perubahan:** Gunakan \`git stash\` untuk menyimpan sementara\n\n⚠️ Perubahan yang sudah di-deploy ke production tidak bisa dibatalkan secara otomatis.\n\n❓ File mana yang ingin dikembalikan?`,
+                    timestamp: new Date(),
+                    actionType: 'info'
+                }]);
+                return;
+            }
+            
+            // Handle casual messages - just respond normally without auto-apply
+            if (isCasualMessage) {
+                setIsAILoading(false);
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'assistant',
+                    content: `👋 **Halo!**\n\nSaya siap membantu dengan:\n• 🎨 Mendesain ulang komponen (button, card, header, dll)\n• 📝 Mengedit file source code\n• 🔍 Mencari lokasi file tertentu\n\n💡 Contoh permintaan:\n- "Ubah button menjadi glassmorphism"\n- "Edit navbar agar lebih modern"\n- "Di mana file untuk halaman about?"\n\nApa yang bisa saya bantu?`,
+                    timestamp: new Date(),
+                    actionType: 'info'
+                }]);
+                return;
+            }
+            
             // Intent Detection
             const isQuestion = /\?|dimana|where|bagaimana|how|apa itu|what is|letak|lokasi|file|jelaskan|explain|ada gak|ada tidak|cari|find/i.test(queryLower);
             const isAskingAboutFile = /file|ada gak|ada tidak|dimana|lokasi|letak|cari file/i.test(queryLower);
