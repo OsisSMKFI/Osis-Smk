@@ -1354,8 +1354,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               </div>
             )}
 
-            {/* Input Row */}
-            <div className="flex items-end gap-2">
+            {/* Input Row - Premium Modern Design */}
+            <div className="flex items-end gap-2.5">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1364,89 +1364,101 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                 className="hidden"
               />
               
-              {/* Upload Button */}
+              {/* Upload Button - Floating Glass Style */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all duration-200 flex items-center justify-center flex-shrink-0 hover:scale-105"
+                className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border border-slate-200/80 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 transition-all duration-300 flex items-center justify-center flex-shrink-0 hover:scale-110 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 hover:text-indigo-500 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 group"
                 title="Upload gambar"
                 aria-label="Upload file"
               >
-                <FaImage size={16} />
+                <FaImage size={15} className="transition-transform group-hover:scale-110" />
               </button>
               
-              {/* Text Input */}
-              <div className="relative flex-1 min-w-0">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e)=>{ setInput(e.target.value); if (paletteOpen && e.target.value.trim() === '') { setInput('/'); } }}
-                  onKeyDown={(e)=>{
-                    if (e.key === 'Escape' && paletteOpen) { e.preventDefault(); closePalette(); return; }
-                    if ((e.key === '/' && input === '') || (e.key === 'k' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); openPalette(); return; }
-                    if (paletteOpen) {
-                      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i=> Math.min((i<0?0:i)+1, paletteCommands.length-1)); return; }
-                      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i=> Math.max((i<=0?0:i-1), 0)); return; }
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (selectedIndex >=0 && selectedIndex < paletteCommands.length) { handleCommandSelect(paletteCommands[selectedIndex]); } else { closePalette(); } return; }
-                      if (e.key === 'Tab') { e.preventDefault(); if (selectedIndex >=0 && selectedIndex < paletteCommands.length) { handleCommandSelect(paletteCommands[selectedIndex]); } return; }
-                      return;
-                    }
-                    if (suggestionsEnabled && showSuggestions) {
-                      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex((i)=> Math.min((i<0?0:i)+1, filteredSuggestions.length-1)); return; }
-                      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex((i)=> Math.max((i<=0?0:i-1), 0)); return; }
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (selectedIndex >= 0) { pickSuggestion(selectedIndex); } else { send(); } return; }
-                      if (e.key === 'Escape') { setShowSuggestions(false); setSelectedIndex(-1); return; }
-                    } else if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      send();
-                      return;
-                    }
-                  }}
-                  rows={1}
-                  placeholder={mode === 'admin' ? '💬 Ketik pesan atau / untuk perintah...' : '💬 Tanyakan sesuatu...'}
-                  className={`w-full px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white ${isMobile ? 'text-base' : 'text-sm'} focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-4 focus:ring-indigo-400/20 caret-indigo-500 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none transition-all duration-200`}
-                  style={{ height: '44px', maxHeight: '120px' }}
-                />
+              {/* Text Input - Premium Glass Morphism */}
+              <div className="relative flex-1 min-w-0 group">
+                {/* Glow Effect on Focus */}
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl opacity-0 group-focus-within:opacity-100 blur transition-all duration-500" />
+                
+                <div className="relative bg-gradient-to-br from-white via-slate-50 to-white dark:from-slate-800 dark:via-slate-800 dark:to-slate-700 rounded-2xl border border-slate-200/80 dark:border-slate-600/50 shadow-sm group-focus-within:shadow-xl group-focus-within:shadow-indigo-500/10 transition-all duration-300 overflow-hidden">
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e)=>{ setInput(e.target.value); if (paletteOpen && e.target.value.trim() === '') { setInput('/'); } }}
+                    onKeyDown={(e)=>{
+                      if (e.key === 'Escape' && paletteOpen) { e.preventDefault(); closePalette(); return; }
+                      if ((e.key === '/' && input === '') || (e.key === 'k' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); openPalette(); return; }
+                      if (paletteOpen) {
+                        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i=> Math.min((i<0?0:i)+1, paletteCommands.length-1)); return; }
+                        if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i=> Math.max((i<=0?0:i-1), 0)); return; }
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (selectedIndex >=0 && selectedIndex < paletteCommands.length) { handleCommandSelect(paletteCommands[selectedIndex]); } else { closePalette(); } return; }
+                        if (e.key === 'Tab') { e.preventDefault(); if (selectedIndex >=0 && selectedIndex < paletteCommands.length) { handleCommandSelect(paletteCommands[selectedIndex]); } return; }
+                        return;
+                      }
+                      if (suggestionsEnabled && showSuggestions) {
+                        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex((i)=> Math.min((i<0?0:i)+1, filteredSuggestions.length-1)); return; }
+                        if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex((i)=> Math.max((i<=0?0:i-1), 0)); return; }
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (selectedIndex >= 0) { pickSuggestion(selectedIndex); } else { send(); } return; }
+                        if (e.key === 'Escape') { setShowSuggestions(false); setSelectedIndex(-1); return; }
+                      } else if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        send();
+                        return;
+                      }
+                    }}
+                    rows={1}
+                    placeholder={mode === 'admin' ? 'Message AI... (/ for commands)' : 'Ask me anything...'}
+                    className={`w-full px-4 py-3.5 bg-transparent text-slate-900 dark:text-white ${isMobile ? 'text-base' : 'text-sm'} focus:outline-none caret-indigo-500 placeholder:text-slate-400/70 dark:placeholder:text-slate-500/70 placeholder:font-light resize-none transition-all duration-200`}
+                    style={{ height: '48px', maxHeight: '120px' }}
+                  />
+                  
+                  {/* Subtle hint text */}
+                  {!input && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium tracking-wide opacity-60">
+                        <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-[9px]">⏎</kbd>
+                      </span>
+                    </div>
+                  )}
+                </div>
 
               {paletteOpen && suggestionsEnabled && (
-                <div className="absolute bottom-full mb-2 left-0 w-full max-h-72 overflow-auto rounded-lg border border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 shadow-xl z-[2147483647] backdrop-blur-sm">
-                  <div className="sticky top-0 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                    <span>⚡ Perintah ({paletteCommands.length})</span>
-                    <button onClick={closePalette} className="text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 text-xs">Esc</button>
+                <div className="absolute bottom-full mb-2 left-0 w-full max-h-72 overflow-auto rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white/98 dark:bg-slate-900/98 shadow-2xl shadow-slate-200/50 dark:shadow-slate-900/50 z-[2147483647] backdrop-blur-xl">
+                  <div className="sticky top-0 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-gradient-to-r from-white/95 to-slate-50/95 dark:from-slate-900/95 dark:to-slate-800/95 border-b border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between backdrop-blur-sm">
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                      Commands ({paletteCommands.length})
+                    </span>
+                    <button onClick={closePalette} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 text-[10px] transition-colors">ESC</button>
                   </div>
                   {paletteCommands.map((c, idx) => (
                     <button
                       key={c.cmd+idx}
                       type="button"
                       onClick={()=>handleCommandSelect(c)}
-                      className={`w-full text-left px-3 py-2 text-sm flex flex-col gap-1 border-b border-slate-100 dark:border-slate-800 ${idx===selectedIndex? 'bg-indigo-100 dark:bg-indigo-900/40' : 'hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
+                      className={`w-full text-left px-4 py-3 text-sm flex flex-col gap-1 border-b border-slate-100/80 dark:border-slate-800/80 transition-all duration-150 ${idx===selectedIndex? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-700 dark:text-slate-300 text-xs">{c.template || c.cmd}</span>
+                        <span className="font-mono text-indigo-600 dark:text-indigo-400 text-xs font-medium">{c.template || c.cmd}</span>
                       </div>
                       <span className="text-xs text-slate-500 dark:text-slate-400">{c.desc}</span>
                     </button>
                   ))}
                   {paletteCommands.length === 0 && (
-                    <div className="px-3 py-4 text-xs text-slate-500">Tidak ada perintah cocok.</div>
+                    <div className="px-4 py-6 text-xs text-slate-500 text-center">No matching commands</div>
                   )}
-                  <div className="px-3 py-2 text-[10px] text-slate-500 dark:text-slate-400 flex flex-wrap gap-3">
-                    <span><kbd className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">↵</kbd> pilih</span>
-                    <span><kbd className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">Esc</kbd> tutup</span>
-                    <span><kbd className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">Ctrl+K</kbd> buka</span>
-                  </div>
                 </div>
               )}
 
               {suggestionsEnabled && showSuggestions && !paletteOpen && (
-                <div className="absolute bottom-full mb-2 left-0 w-full max-h-56 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl z-[2147483647]">
+                <div className="absolute bottom-full mb-2 left-0 w-full max-h-56 overflow-auto rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white/98 dark:bg-slate-900/98 shadow-2xl z-[2147483647] backdrop-blur-xl">
                   {filteredSuggestions.map((s, idx) => (
                     <button
                       key={s.cmd+idx}
                       type="button"
                       onClick={()=>pickSuggestion(idx)}
-                      className={`w-full text-left px-4 py-2.5 text-sm flex items-start gap-2 transition ${idx===selectedIndex? 'bg-indigo-50 dark:bg-indigo-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+                      className={`w-full text-left px-4 py-3 text-sm flex items-start gap-3 transition-all duration-150 ${idx===selectedIndex? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
                     >
-                      <span className="font-mono text-indigo-600 dark:text-indigo-400">{s.cmd}</span>
+                      <span className="font-mono text-indigo-600 dark:text-indigo-400 font-medium">{s.cmd}</span>
                       <span className="text-slate-500 dark:text-slate-400">{s.desc}</span>
                     </button>
                   ))}
@@ -1454,22 +1466,22 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               )}
             </div>
 
-              {/* Send Button */}
+              {/* Send Button - Premium Gradient */}
               <button
                 onClick={send}
                 disabled={loading || (!input.trim() && !uploadedImage)}
-                className="w-10 h-10 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:from-slate-300 disabled:to-slate-400 text-white shadow-lg shadow-indigo-500/30 disabled:shadow-none transition-all duration-200 flex items-center justify-center flex-shrink-0 hover:scale-105 disabled:hover:scale-100"
+                className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 disabled:from-slate-300 disabled:via-slate-400 disabled:to-slate-300 dark:disabled:from-slate-700 dark:disabled:via-slate-600 dark:disabled:to-slate-700 text-white shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-purple-500/30 disabled:shadow-none transition-all duration-300 flex items-center justify-center flex-shrink-0 hover:scale-110 disabled:hover:scale-100 group"
                 aria-label="Kirim pesan"
               >
-                <FaPaperPlane size={14} />
+                <FaPaperPlane size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
               
-              {/* Mobile Provider Select */}
+              {/* Mobile Provider Select - Hidden for cleaner look */}
               {isMobile && (
                 <select
                   value={provider}
                   onChange={e=> setProvider(e.target.value as any)}
-                  className="text-[10px] px-2 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                  className="text-[10px] px-2 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
                   title="Provider AI"
                 >
                   <option value="auto">Auto</option>

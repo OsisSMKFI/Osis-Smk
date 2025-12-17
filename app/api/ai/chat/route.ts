@@ -1868,9 +1868,31 @@ REMINDER: You have ALL the data above. Answer ONLY from this data. DO NOT halluc
     return NextResponse.json({ reply: formatCleanResponse(finalReply, { emphasis }), historyEnabled: true, resetApplied: reset });
   } catch (e: any) {
     console.error('[/api/ai/chat] Error:', e);
+    
+    // More informative error message
+    const errorMessage = e.message || 'Unknown error';
+    let helpfulReply = '❌ **Oops! AI sedang tidak tersedia.**\n\n';
+    
+    if (errorMessage.includes('API') || errorMessage.includes('key') || errorMessage.includes('configured')) {
+      helpfulReply += '🔑 **Kemungkinan masalah:** API key belum dikonfigurasi.\n\n';
+      helpfulReply += '💡 **Solusi:**\n';
+      helpfulReply += '1. Buka Admin Panel → Settings\n';
+      helpfulReply += '2. Tambahkan salah satu API key:\n';
+      helpfulReply += '   • `AI_GATEWAY_API_KEY` (Vercel AI Gateway)\n';
+      helpfulReply += '   • `OPENAI_API_KEY` (OpenAI)\n';
+      helpfulReply += '   • `GOOGLE_GENERATIVE_AI_API_KEY` (Gemini)\n';
+      helpfulReply += '   • `ANTHROPIC_API_KEY` (Claude)\n\n';
+    } else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+      helpfulReply += '🌐 **Masalah koneksi.** Silakan coba lagi.\n\n';
+    } else {
+      helpfulReply += `📋 **Detail:** ${errorMessage}\n\n`;
+    }
+    
+    helpfulReply += '🔄 Silakan coba lagi atau hubungi administrator.';
+    
     return NextResponse.json({ 
-      error: e.message || 'AI chat failed',
-      reply: '❌ Maaf, terjadi kesalahan. Silakan coba lagi.'
+      error: errorMessage,
+      reply: helpfulReply
     }, { status: 200 }); // Return 200 with error message in reply
   }
 }
