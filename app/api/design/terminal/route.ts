@@ -7,23 +7,23 @@ const execAsync = promisify(exec);
 /**
  * 🖥️ TERMINAL API - Execute commands from AI Design Studio
  * 
- * ⚠️ IMPORTANT: This only works in LOCAL DEVELOPMENT!
- * In production (Vercel), the filesystem is read-only and npm can't run.
+ * MODES:
+ * 1. LOCAL: Execute directly on filesystem
+ * 2. PRODUCTION: Forward to Dev Server (Railway) if configured
  * 
  * SUPPORTED COMMANDS:
  * - npm install / pnpm install
  * - npm run build / npm run dev
  * - git commands
  * - File operations (mkdir, rm, mv, cp)
- * 
- * SECURITY:
- * - Restricted to safe commands only
- * - Working directory locked to workspace
- * - Timeout protection
  */
 
 // Check if we're in production (Vercel)
 const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+// Dev Server configuration
+const DEV_SERVER_URL = process.env.DEV_SERVER_URL;
+const DEV_SERVER_TOKEN = process.env.DEV_SERVER_TOKEN;
 
 // Whitelist of allowed commands
 const ALLOWED_COMMANDS = [
@@ -72,16 +72,6 @@ function isCommandAllowed(command: string): { allowed: boolean; reason?: string 
 
 export async function POST(request: NextRequest) {
     try {
-        // Check if we're in production
-        if (isProduction) {
-            return NextResponse.json({
-                success: false,
-                error: '⚠️ Terminal commands only work in LOCAL development.\n\nYou are currently on Vercel (production) where the filesystem is read-only.\n\n💡 To run this command:\n1. Open your local terminal\n2. Run the command manually\n3. Push changes to deploy',
-                isProduction: true,
-                hint: 'Run commands locally, then deploy'
-            }, { status: 200 }); // Return 200 so message shows nicely
-        }
-        
         const body = await request.json();
         const { command, cwd } = body;
         
@@ -91,6 +81,54 @@ export async function POST(request: NextRequest) {
                 error: 'Command is required'
             }, { status: 400 });
         }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // 🌐 PRODUCTION MODE: Forward to Dev Server
+        // ═══════════════════════════════════════════════════════════════════
+        if (isProduction) {
+            // Check if Dev Server is configured
+            if (DEV_SERVER_URL && DEV_SERVER_TOKEN) {
+                console.log(`[Terminal API] Forwarding to Dev Server: ${DEV_SERVER_URL}`);
+                
+                try {
+                    const devRes = await fetch(`${DEV_SERVER_URL}/api/exec`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-auth-token': DEV_SERVER_TOKEN
+                        },
+                        body: JSON.stringify({ command, cwd })
+                    });
+                    
+                    const devData = await devRes.json();
+                    
+                    return NextResponse.json({
+                        ...devData,
+                        source: 'dev-server'
+                    });
+                    
+                } catch (devErr) {
+                    console.error('[Terminal API] Dev Server error:', devErr);
+                    return NextResponse.json({
+                        success: false,
+                        error: `Dev Server error: ${devErr instanceof Error ? devErr.message : 'Unknown error'}`,
+                        hint: 'Make sure Dev Server is running on Railway'
+                    }, { status: 200 });
+                }
+            }
+            
+            // No Dev Server configured
+            return NextResponse.json({
+                success: false,
+                error: '⚠️ Terminal commands require Dev Server.\n\nDev Server belum dikonfigurasi.\n\n💡 Setup Dev Server:\n1. Deploy dev-server/ ke Railway\n2. Set DEV_SERVER_URL dan DEV_SERVER_TOKEN di Vercel',
+                isProduction: true,
+                hint: 'Run commands locally, or setup Dev Server'
+            }, { status: 200 });
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // 💻 LOCAL MODE: Execute directly
+        // ═══════════════════════════════════════════════════════════════════
         
         // Check if command is allowed
         const check = isCommandAllowed(command);
