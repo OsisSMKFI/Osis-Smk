@@ -42,6 +42,9 @@ interface ChatMessage {
     content: string;
     timestamp: Date;
     cssCode?: string;
+    actionType?: 'css' | 'component' | 'style' | 'info' | 'action';
+    targetComponent?: string;
+    codeBlocks?: { language: string; code: string; filename?: string }[];
 }
 
 // CSS Templates - Complete
@@ -165,7 +168,7 @@ export default function DesignStudioPage() {
         {
             id: 'welcome',
             role: 'assistant',
-            content: '👋 Hai! Saya Design AI Assistant.\n\nPilih komponen dari sidebar, lalu tanya saya untuk membuat CSS style yang kamu inginkan!\n\n✨ Coba kata kunci: glassmorphism, dark mode, neon, gradient, hover, responsive',
+            content: '👋 Hai! Saya Design AI Assistant - Fleksibel seperti GitHub Copilot!\n\n✨ **Saya bisa bantu:**\n• Generate CSS untuk komponen manapun\n• Modifikasi style website secara langsung\n• Jelaskan struktur kode\n• Buat animasi, hover effects, responsive\n• Jawab pertanyaan tentang design\n\n💡 **Contoh perintah:**\n- "Buat navbar lebih transparan"\n- "Tambahkan glassmorphism ke hero section"\n- "Ubah warna tombol jadi gradient"\n- "Bagaimana cara membuat card responsive?"\n\n📌 **Tidak perlu pilih komponen dulu!** Cukup ketik apa yang kamu mau.',
             timestamp: new Date()
         }
     ]);
@@ -249,21 +252,30 @@ export default function DesignStudioPage() {
         setChatMessages([{
             id: '0',
             role: 'system',
-            content: `🎨 **Design Studio AI Assistant**
+            content: `🚀 **Design Studio AI - Powered by GitHub Copilot Style**
 
-Saya siap membantu Anda dengan:
-• Generate CSS untuk komponen
-• Modifikasi style yang ada
-• Saran design patterns
-• Troubleshooting CSS
+Saya AI yang **fleksibel** dan bisa membantu:
 
-**Contoh perintah:**
-- "Buat glassmorphism untuk card"
-- "Tambahkan hover effect"  
-- "Convert ke dark mode"
-- "Optimize untuk mobile"
+**🎨 CSS & Styling:**
+• Generate CSS untuk komponen apapun
+• Glassmorphism, neumorphism, dark mode
+• Animasi, hover effects, transitions
+• Responsive design
 
-Pilih komponen di sidebar, lalu tanyakan!`,
+**📝 Penjelasan & Info:**
+• Jelaskan cara kerja CSS
+• Best practices design
+• Troubleshooting style issues
+
+**🔥 Contoh langsung ketik:**
+- "glassmorphism untuk navbar"
+- "dark mode untuk semua card"  
+- "hover effect button gradient"
+- "responsive hero section"
+- "apa itu flexbox?"
+
+**💡 Tidak perlu pilih komponen dulu!**
+Saya akan otomatis mendeteksi dari pertanyaan kamu.`,
             timestamp: new Date()
         }]);
     };
@@ -769,8 +781,67 @@ ${sel}:hover {
         return null;
     };
     
+    // Detect component from user query
+    const detectComponentFromQuery = (query: string): { component: string; selector: string; info: any } | null => {
+        const q = query.toLowerCase();
+        
+        // Check against all components in registry
+        for (const [key, info] of Object.entries(DESIGN_REGISTRY)) {
+            const name = info.displayName.toLowerCase();
+            const desc = info.description.toLowerCase();
+            
+            if (q.includes(name) || q.includes(key.replace(/_/g, ' ')) || q.includes(key)) {
+                return {
+                    component: key,
+                    selector: info.selectors[0],
+                    info
+                };
+            }
+        }
+        
+        // Common patterns
+        const patterns: Record<string, string> = {
+            'navbar|nav|navigasi|menu': 'navbar',
+            'hero|banner|jumbotron|header utama': 'hero',
+            'footer|kaki': 'footer',
+            'button|tombol|btn': 'button',
+            'card|kartu': 'card',
+            'input|form|field': 'input',
+            'heading|judul|title|h1|h2': 'heading',
+            'sidebar|side bar': 'sidebar',
+            'modal|popup|dialog': 'modal',
+            'chat|widget chat|live chat': 'chat_widget',
+            'post|artikel|blog': 'post_card',
+            'announcement|pengumuman': 'announcements',
+            'poll|voting': 'polls',
+            'vision|visi': 'vision_card',
+            'mission|misi': 'mission_card',
+            'loading|skeleton|spinner': 'loading',
+            'avatar|profile|profil': 'avatar',
+            'badge|tag|label': 'badge',
+            'table|tabel': 'table',
+            'link|tautan': 'link',
+            'image|gambar|img': 'image'
+        };
+        
+        for (const [pattern, component] of Object.entries(patterns)) {
+            if (new RegExp(pattern, 'i').test(q)) {
+                const info = DESIGN_REGISTRY[component];
+                if (info) {
+                    return {
+                        component,
+                        selector: info.selectors[0],
+                        info
+                    };
+                }
+            }
+        }
+        
+        return null;
+    };
+    
     const sendChatMessage = async () => {
-        if (!chatInput.trim() || isAILoading || !selectedComponent) return;
+        if (!chatInput.trim() || isAILoading) return;
         
         const userMessage: ChatMessage = {
             id: Date.now().toString(),
@@ -785,43 +856,78 @@ ${sel}:hover {
         setIsAILoading(true);
         
         try {
-            const componentInfo = DESIGN_REGISTRY[selectedComponent];
-            const selector = componentInfo?.selectors?.[0] || `.${selectedComponent}`;
+            // Auto-detect component from query if not selected
+            let targetComponent = selectedComponent;
+            let componentInfo = selectedComponent ? DESIGN_REGISTRY[selectedComponent] : null;
+            let selector = componentInfo?.selectors?.[0] || '';
             
-            // Try smart CSS generation first
-            const smartResult = generateSmartCSS(userQuery, selector, componentInfo?.category || 'other');
-            
-            if (smartResult) {
-                // Instant CSS generation without API
-                setChatMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    content: smartResult.message + '\n\nKlik Apply untuk menerapkan ke komponen.',
-                    timestamp: new Date(),
-                    cssCode: smartResult.css
-                }]);
-                return;
+            // Try to detect component from user query
+            const detected = detectComponentFromQuery(userQuery);
+            if (detected && !targetComponent) {
+                targetComponent = detected.component;
+                componentInfo = detected.info;
+                selector = detected.selector;
+                // Auto-select the detected component
+                setSelectedComponent(detected.component);
             }
             
-            // Enhanced prompt for CSS generation
+            // If still no component, use general approach
+            if (!targetComponent) {
+                selector = '.target-component';
+            } else {
+                selector = componentInfo?.selectors?.[0] || `[data-component="${targetComponent}"]`;
+            }
+            
+            // Try smart CSS generation first (if component is identified)
+            if (targetComponent) {
+                const smartResult = generateSmartCSS(userQuery, selector, componentInfo?.category || 'other');
+                
+                if (smartResult) {
+                    setChatMessages(prev => [...prev, {
+                        id: (Date.now() + 1).toString(),
+                        role: 'assistant',
+                        content: `🎯 Komponen terdeteksi: **${componentInfo?.displayName || targetComponent}**\n\n${smartResult.message}\n\n✅ Klik **Apply** untuk menerapkan ke website.`,
+                        timestamp: new Date(),
+                        cssCode: smartResult.css,
+                        targetComponent,
+                        actionType: 'css'
+                    }]);
+                    return;
+                }
+            }
+            
+            // Build enhanced prompt for AI
             const enhancedMessage = `
-Kamu adalah AI Design Assistant untuk Design Studio.
-Komponen yang dipilih: ${selectedComponent}
+Kamu adalah AI Design Assistant yang powerful dan fleksibel seperti GitHub Copilot.
+
+${targetComponent ? `
+Komponen target: ${targetComponent}
 Selector CSS: ${selector}
 Kategori: ${componentInfo?.category || 'other'}
 Deskripsi: ${componentInfo?.description || ''}
+` : `
+Tidak ada komponen spesifik yang dipilih. Jika user meminta perubahan design,
+identifikasi komponen yang tepat dan gunakan selector yang sesuai dari daftar berikut:
+- navbar: [data-component="navbar"]
+- hero: [data-component="hero"]  
+- footer: [data-component="footer"]
+- card: [data-component*="card"]
+- button: button, .btn
+- dll
+`}
 
-CSS saat ini:
-${code || '(kosong)'}
+CSS saat ini di editor:
+${code || '(tidak ada)'}
 
 Permintaan user: ${userQuery}
 
-Berikan respons dalam bahasa Indonesia. Jika diminta membuat/modifikasi CSS, sertakan kode CSS lengkap dalam format:
-\`\`\`css
-/* kode CSS di sini */
-\`\`\`
-
-Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/focus states jika relevan.`;
+INSTRUKSI:
+1. Berikan respons dalam bahasa Indonesia yang ramah dan informatif
+2. Jika diminta CSS, sertakan kode lengkap dalam blok \`\`\`css ... \`\`\`
+3. Jika diminta penjelasan/info, jelaskan dengan jelas
+4. Jika diminta perubahan komponen, jelaskan selector yang tepat
+5. Sertakan hover/focus states dan responsive jika relevan
+6. Jangan minta user memilih komponen - deteksi dari pertanyaan mereka`;
             
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
@@ -840,17 +946,30 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
             
             const data = await res.json();
             
-            // Extract CSS from markdown code blocks
-            let cssCode: string | undefined;
-            const cssMatch = data.reply?.match(/```css\n([\s\S]*?)```/);
-            if (cssMatch) {
-                cssCode = cssMatch[1].trim();
+            // Extract all code blocks (CSS, TSX, etc)
+            const codeBlocks: { language: string; code: string }[] = [];
+            const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+            let match;
+            while ((match = codeBlockRegex.exec(data.reply)) !== null) {
+                codeBlocks.push({
+                    language: match[1] || 'text',
+                    code: match[2].trim()
+                });
             }
             
-            // Clean up response for display
+            // Extract CSS specifically
+            let cssCode: string | undefined;
+            const cssBlock = codeBlocks.find(b => b.language === 'css');
+            if (cssBlock) {
+                cssCode = cssBlock.code;
+            }
+            
+            // Clean up response
             let displayContent = data.reply || 'Maaf, tidak ada respons dari AI.';
-            if (cssCode) {
-                displayContent = displayContent.replace(/```css\n[\s\S]*?```/g, '✅ CSS berhasil di-generate! Klik tombol Apply untuk menerapkan.');
+            if (codeBlocks.length > 0) {
+                // Replace code blocks with indicators
+                displayContent = displayContent.replace(/```css\n[\s\S]*?```/g, '✅ CSS berhasil di-generate!');
+                displayContent = displayContent.replace(/```tsx?\n[\s\S]*?```/g, '📝 Kode komponen tersedia.');
             }
             
             const aiMessage: ChatMessage = {
@@ -858,7 +977,10 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
                 role: 'assistant',
                 content: displayContent,
                 timestamp: new Date(),
-                cssCode
+                cssCode,
+                targetComponent: targetComponent || undefined,
+                codeBlocks: codeBlocks.length > 0 ? codeBlocks : undefined,
+                actionType: cssCode ? 'css' : (codeBlocks.length > 0 ? 'component' : 'info')
             };
             
             setChatMessages(prev => [...prev, aiMessage]);
@@ -866,22 +988,33 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
         } catch (err) {
             console.error('AI Chat error:', err);
             
-            // Fallback error message with suggestions
+            // Fallback with helpful suggestions
             setChatMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: `Saya siap membantu! Coba salah satu style berikut:\n\n💎 "glassmorphism" - Efek kaca buram\n🌙 "dark mode" - Tema gelap elegan\n⚡ "neon glow" - Efek neon cyberpunk\n🌈 "gradient" - Warna gradasi\n✨ "hover effect" - Animasi hover\n📱 "responsive" - Adaptif mobile\n🌙 "neumorphism" - Efek emboss lembut\n🎭 "shadow depth" - Bayangan berlapis`,
-                timestamp: new Date()
+                content: `🤖 Saya siap membantu! Coba salah satu:\n\n**🎨 Style Populer:**\n- "glassmorphism untuk card"\n- "dark mode untuk navbar"\n- "neon glow untuk button"\n- "gradient untuk hero"\n\n**✨ Efek:**\n- "hover effect untuk link"\n- "animasi untuk loading"\n- "shadow untuk card"\n\n**📱 Responsive:**\n- "responsive untuk navbar"\n- "mobile friendly untuk form"\n\n**💡 Info:**\n- "apa itu glassmorphism?"\n- "bagaimana cara membuat card?"`,
+                timestamp: new Date(),
+                actionType: 'info'
             }]);
         } finally {
             setIsAILoading(false);
         }
     };
 
-    const applyCSSFromChat = async (css: string) => {
-        if (!selectedComponent) {
-            notify('error', 'Pilih komponen terlebih dahulu');
+    const applyCSSFromChat = async (css: string, targetComp?: string) => {
+        const component = targetComp || selectedComponent;
+        
+        if (!component) {
+            // If no component, show in editor anyway
+            setCode(css);
+            addToHistory(css, 'ai-applied');
+            notify('info', 'CSS ditampilkan di editor. Pilih komponen untuk menyimpan.');
             return;
+        }
+        
+        // Select the component if not already selected
+        if (!selectedComponent && component) {
+            setSelectedComponent(component);
         }
         
         // Update editor with new CSS
@@ -894,7 +1027,7 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    component: selectedComponent,
+                    component: component,
                     css: css,
                     style: 'ai-generated'
                 })
@@ -909,10 +1042,10 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
                 
                 // Trigger global design reload so website updates immediately
                 window.dispatchEvent(new CustomEvent('design-updated', { 
-                    detail: { component: selectedComponent, css: css } 
+                    detail: { component: component, css: css } 
                 }));
                 
-                notify('success', '✅ CSS applied & saved to website!');
+                notify('success', `✅ CSS applied to ${component} & synced to website!`);
             } else {
                 notify('info', 'CSS applied locally - Save to apply globally');
             }
@@ -1526,13 +1659,20 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
                                                     : 'bg-white/5 text-gray-100 rounded-2xl rounded-bl-md px-4 py-3 border border-white/10 backdrop-blur'
                                         }`}>
                                             <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                                            {/* Show target component if detected */}
+                                            {msg.targetComponent && (
+                                                <div className="mt-2 flex items-center gap-2 text-xs text-purple-300">
+                                                    <Box className="w-3 h-3" />
+                                                    <span>Target: <strong>{DESIGN_REGISTRY[msg.targetComponent]?.displayName || msg.targetComponent}</strong></span>
+                                                </div>
+                                            )}
                                             {msg.cssCode && (
                                                 <div className="mt-3 flex gap-2">
                                                     <button 
-                                                        onClick={() => applyCSSFromChat(msg.cssCode!)}
+                                                        onClick={() => applyCSSFromChat(msg.cssCode!, msg.targetComponent)}
                                                         className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:scale-[1.02]"
                                                     >
-                                                        <Play className="w-3.5 h-3.5" /> Apply CSS
+                                                        <Play className="w-3.5 h-3.5" /> Apply to {msg.targetComponent ? DESIGN_REGISTRY[msg.targetComponent]?.displayName || msg.targetComponent : 'Website'}
                                                     </button>
                                                     <button 
                                                         onClick={() => { navigator.clipboard.writeText(msg.cssCode!); notify('info', 'CSS copied!'); }}
@@ -1541,6 +1681,25 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
                                                     >
                                                         <Copy className="w-3.5 h-3.5" />
                                                     </button>
+                                                </div>
+                                            )}
+                                            {/* Show code blocks for other languages */}
+                                            {msg.codeBlocks && msg.codeBlocks.filter(b => b.language !== 'css').length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                    {msg.codeBlocks.filter(b => b.language !== 'css').map((block, i) => (
+                                                        <div key={i} className="bg-black/30 rounded-lg p-2 border border-white/10">
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className="text-xs text-gray-400 uppercase">{block.language}</span>
+                                                                <button 
+                                                                    onClick={() => { navigator.clipboard.writeText(block.code); notify('info', `${block.language} copied!`); }}
+                                                                    className="text-xs text-gray-400 hover:text-white"
+                                                                >
+                                                                    <Copy className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                            <pre className="text-xs text-gray-300 overflow-x-auto max-h-32">{block.code.slice(0, 200)}{block.code.length > 200 ? '...' : ''}</pre>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
@@ -1589,13 +1748,12 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
                                             value={chatInput}
                                             onChange={e => setChatInput(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
-                                            placeholder={selectedComponent ? `Ask about ${selectedComponent}...` : 'Select a component first'}
-                                            disabled={!selectedComponent}
-                                            className="flex-1 bg-transparent px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none disabled:opacity-40 transition-all"
+                                            placeholder={selectedComponent ? `Tanya tentang ${DESIGN_REGISTRY[selectedComponent]?.displayName || selectedComponent}...` : 'Ketik apa saja: "glassmorphism untuk navbar", "dark mode card", dll...'}
+                                            className="flex-1 bg-transparent px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none transition-all"
                                         />
                                         <button 
                                             onClick={sendChatMessage}
-                                            disabled={!chatInput.trim() || isAILoading || !selectedComponent}
+                                            disabled={!chatInput.trim() || isAILoading}
                                             className="m-1.5 p-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 shadow-lg shadow-purple-500/25"
                                         >
                                             {isAILoading ? (
@@ -1606,10 +1764,10 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
                                         </button>
                                     </div>
                                 </div>
-                                {!selectedComponent && (
-                                    <p className="mt-3 text-xs text-gray-500 text-center flex items-center justify-center gap-1.5">
-                                        <Layers className="w-3 h-3" />
-                                        Select a component from sidebar first
+                                {selectedComponent && (
+                                    <p className="mt-3 text-xs text-emerald-400/80 text-center flex items-center justify-center gap-1.5">
+                                        <Check className="w-3 h-3" />
+                                        Target: {DESIGN_REGISTRY[selectedComponent]?.displayName || selectedComponent}
                                     </p>
                                 )}
                             </div>
