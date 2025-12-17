@@ -9,6 +9,10 @@ out/
 /build
 /dist
 
+# TypeScript build info (causes Railway cache issues)
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
 # OS files
 .DS_Store
 Thumbs.db
