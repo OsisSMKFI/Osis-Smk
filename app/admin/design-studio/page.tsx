@@ -877,14 +877,48 @@ Pastikan CSS menggunakan selector yang benar (${selector}) dan include hover/foc
         }
     };
 
-    const applyCSSFromChat = (css: string) => {
+    const applyCSSFromChat = async (css: string) => {
         if (!selectedComponent) {
             notify('error', 'Pilih komponen terlebih dahulu');
             return;
         }
+        
+        // Update editor with new CSS
         setCode(css);
         addToHistory(css, 'ai-applied');
-        notify('success', '✅ CSS dari AI diterapkan');
+        
+        // Auto-save to database so changes apply globally
+        try {
+            const res = await fetch('/api/design/studio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    component: selectedComponent,
+                    css: css,
+                    style: 'ai-generated'
+                })
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                setOriginalCode(css);
+                setHasUnsavedChanges(false);
+                setLastSaved(new Date());
+                await loadDesigns();
+                
+                // Trigger global design reload so website updates immediately
+                window.dispatchEvent(new CustomEvent('design-updated', { 
+                    detail: { component: selectedComponent, css: css } 
+                }));
+                
+                notify('success', '✅ CSS applied & saved to website!');
+            } else {
+                notify('info', 'CSS applied locally - Save to apply globally');
+            }
+        } catch (err) {
+            console.error('Auto-save error:', err);
+            notify('info', 'CSS applied locally - Save manually to apply');
+        }
     };
 
     // ═══════════════════════════════════════════════════════════════════════════

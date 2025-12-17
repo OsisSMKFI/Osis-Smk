@@ -238,6 +238,20 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
     if (mounted) {
       loadCustomDesign();
     }
+    
+    // Listen for realtime design updates from Design Studio
+    const handleDesignUpdate = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.component?.includes('chat') || detail?.component?.includes('live')) {
+        setCustomDesignCSS(detail.css);
+        console.log('[LiveChat] ✅ Design updated in realtime from Design Studio');
+      }
+      // Reload all designs when any component changes
+      loadCustomDesign();
+    };
+    
+    window.addEventListener('design-updated', handleDesignUpdate);
+    return () => window.removeEventListener('design-updated', handleDesignUpdate);
   }, [mounted]);
 
   const mode: 'admin' | 'public' = role === 'super_admin' ? 'admin' : 'public';
