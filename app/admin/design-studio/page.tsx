@@ -1395,68 +1395,18 @@ ${sel}:hover {
                 selector = componentInfo?.selectors?.[0] || `[data-component="${targetComponent}"]`;
             }
             
-            // Use smart CSS patterns ONLY if:
-            // 1. User explicitly requests to apply (terapkan/apply/lakukan)
-            // 2. User mentions a style keyword
-            // 3. User is NOT asking a question
-            // 4. User is NOT pasting HTML/code (we want AI to understand context)
-            const styleKeywords = /glass|dark|neon|gradient|hover|animasi|responsive|shadow|neumorphism|minimal|modern|elegan|transparan|blur|glow|colorful|efek|effect/i;
-            const explicitApply = /\b(terapkan|apply|lakukan|pasang)\b/i.test(userQuery);
-            const isStyleRequest = styleKeywords.test(userQuery) && !isQuestion && !skipPatternMatching;
-            
-            // Only use smart CSS if user explicitly wants to apply AND mentions a style (NOT when pasting code)
-            if (isStyleRequest && explicitApply && !skipPatternMatching) {
-                // Use fallback selector if no component detected
-                const applySel = selector || '.component, .card, .button, [class*="card"], [class*="button"]';
-                const applyComp = targetComponent || selectedComponent || 'global';
-                
-                const smartResult = generateSmartCSS(userQuery, applySel, componentInfo?.category || 'other');
-                
-                if (smartResult) {
-                    // Add message to chat
-                    setChatMessages(prev => [...prev, {
-                        id: (Date.now() + 1).toString(),
-                        role: 'assistant',
-                        content: `🎯 Komponen target: **${DESIGN_REGISTRY[applyComp]?.displayName || applyComp}**\n\n${smartResult.message}\n\n✅ Menerapkan CSS...`,
-                        timestamp: new Date(),
-                        cssCode: smartResult.css,
-                        targetComponent: applyComp,
-                        actionType: 'css'
-                    }]);
-                    
-                    // Apply the smart CSS
-                    setTimeout(async () => {
-                        await applyCSSFromChat(smartResult.css, applyComp);
-                        setChatMessages(prev => [...prev, {
-                            id: Date.now().toString(),
-                            role: 'system',
-                            content: `✅ **Berhasil!** CSS untuk **${DESIGN_REGISTRY[applyComp]?.displayName || applyComp}** sudah diterapkan!\n\n🔄 Refresh halaman untuk melihat perubahan.`,
-                            timestamp: new Date(),
-                            actionType: 'action'
-                        }]);
-                    }, 300);
-                    
-                    return;
-                }
-            } else if (isStyleRequest && !explicitApply && !skipPatternMatching) {
-                // Show CSS preview WITHOUT auto-applying (ONLY when NOT pasting HTML)
-                const applySel = selector || '.component';
-                const applyComp = targetComponent || selectedComponent || 'global';
-                const smartResult = generateSmartCSS(userQuery, applySel, componentInfo?.category || 'other');
-                
-                if (smartResult) {
-                    setChatMessages(prev => [...prev, {
-                        id: (Date.now() + 1).toString(),
-                        role: 'assistant',
-                        content: `🎯 Komponen: **${DESIGN_REGISTRY[applyComp]?.displayName || applyComp}**\n\n${smartResult.message}\n\n👆 Klik **Apply** untuk menerapkan, atau ketik "**terapkan**" untuk konfirmasi.`,
-                        timestamp: new Date(),
-                        cssCode: smartResult.css,
-                        targetComponent: applyComp,
-                        actionType: 'css'
-                    }]);
-                    return;
-                }
-            }
+            // ═══════════════════════════════════════════════════════════════
+            // 🚫 SMART CSS PATTERNS - COMPLETELY DISABLED
+            // ═══════════════════════════════════════════════════════════════
+            // Previously we used generateSmartCSS for quick CSS generation,
+            // but it caused hardcoded responses that didn't understand context.
+            // NOW: All requests go to AI for proper understanding.
+            // ═══════════════════════════════════════════════════════════════
+            // const styleKeywords = /glass|dark|neon.../i; // DISABLED
+            // const isStyleRequest = styleKeywords.test(userQuery)... // DISABLED
+            // if (isStyleRequest && explicitApply...) { generateSmartCSS... } // DISABLED
+            // 
+            // ALL requests now go directly to AI for proper context understanding!
             
             // Get current source file context if open
             const currentFileContext = openSourceFile ? `
