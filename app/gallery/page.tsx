@@ -180,27 +180,102 @@ export default function GalleryPage() {
             </select>
           </div>
         </div>
-        {/* Quick Sekbid Buttons */}
-        <div className="flex flex-wrap gap-2 justify-center mt-6">
-          <button
-            onClick={() => setSekbidFilter('all')}
-            className={`px-4 py-2 rounded-full transition-all ${
-              sekbidFilter === 'all'
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >{t('gallery.all')}</button>
-          {sekbids.map(sb => (
+        
+        {/* Quick Sekbid Buttons - Elegant Tab Navigation Like People Page */}
+        <div className="flex justify-center mt-6 px-4">
+          {/* Desktop: Horizontal Tabs */}
+          <div className="hidden sm:inline-flex items-center p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-purple-500/10 dark:shadow-purple-500/5 border border-gray-100/50 dark:border-slate-700/50">
+            {/* All Tab */}
             <button
-              key={`sekbtn-${sb.id}`}
-              onClick={() => setSekbidFilter(sb.id)}
-              className={`px-4 py-2 rounded-full transition-all ${
-                sekbidFilter === sb.id
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              onClick={() => setSekbidFilter('all')}
+              className={`relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                sekbidFilter === 'all'
+                  ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
-            >{sb.name}</button>
-          ))}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                {t('gallery.all')}
+              </span>
+            </button>
+            
+            {/* Divider */}
+            <div className="w-px h-6 bg-gray-200 dark:bg-slate-600 mx-1" />
+            
+            {/* Sekbid Tabs */}
+            {sekbids.map((sb) => {
+              // Icons per sekbid: 🕌 Keagamaan, 👥 Kaderisasi, 📖 Akademik, 💡 Ekonomi, 🏥 Kesehatan, 💻 Kominfo
+              const icons = ['🕌', '👥', '📖', '💡', '🏥', '💻'];
+              const icon = icons[(sb.id - 1) % icons.length];
+              
+              return (
+                <button
+                  key={`sekbtn-${sb.id}`}
+                  onClick={() => setSekbidFilter(sb.id)}
+                  className={`relative px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                    sekbidFilter === sb.id
+                      ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                  title={sb.name}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-base">{icon}</span>
+                    <span>{sb.id}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile: Grid Layout */}
+          <div className="sm:hidden w-full max-w-sm">
+            <div className="grid grid-cols-4 gap-2 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-purple-500/10 dark:shadow-purple-500/5 border border-gray-100/50 dark:border-slate-700/50">
+              {/* All Tab - Mobile */}
+              <button
+                onClick={() => setSekbidFilter('all')}
+                className={`col-span-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                  sekbidFilter === 'all'
+                    ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                  {t('gallery.all') || 'Semua'}
+                </span>
+              </button>
+              
+              {/* Sekbid Tabs - Mobile Grid (2 per row) */}
+              {sekbids.map((sb) => {
+                const icons = ['🕌', '👥', '📖', '💡', '🏥', '💻'];
+                const icon = icons[(sb.id - 1) % icons.length];
+                const shortLabel = sb.name?.split('-')[1]?.trim() || `Sekbid ${sb.id}`;
+                
+                return (
+                  <button
+                    key={`sekbtn-mobile-${sb.id}`}
+                    onClick={() => setSekbidFilter(sb.id)}
+                    className={`col-span-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-300 ${
+                      sekbidFilter === sb.id
+                        ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <span className="flex items-center justify-center gap-1.5">
+                      <span className="text-lg">{icon}</span>
+                      <span className="truncate">{shortLabel}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
         </section>
       </AnimatedSection>
