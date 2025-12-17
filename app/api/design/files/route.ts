@@ -199,6 +199,9 @@ export async function GET(request: NextRequest) {
     }
 }
 
+// Check if we're in production (Vercel)
+const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
@@ -207,6 +210,17 @@ export async function POST(request: NextRequest) {
         const workspaceRoot = process.cwd();
         
         if (action === 'save' && filePath && content !== undefined) {
+            // Check if we're in production
+            if (isProduction) {
+                return NextResponse.json({
+                    success: false,
+                    error: `⚠️ File editing only works in LOCAL development.\n\nYou are on Vercel (production) where the filesystem is read-only.\n\n💡 To apply changes:\n1. Copy the code\n2. Paste in your local editor\n3. Save and push to deploy\n\n📋 File: ${filePath}`,
+                    isProduction: true,
+                    filePath,
+                    code: content.slice(0, 500) + (content.length > 500 ? '\n...(truncated)' : '')
+                }, { status: 200 }); // Return 200 so message shows
+            }
+            
             const fullPath = path.join(workspaceRoot, filePath);
             
             // Security: Ensure path is within workspace
