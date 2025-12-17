@@ -121,7 +121,13 @@ app.get('/health', (req, res) => {
         status: 'ok',
         service: 'webosis-dev-server',
         repoDir: REPO_DIR,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        config: {
+            hasGithubToken: !!GITHUB_TOKEN,
+            githubTokenLength: GITHUB_TOKEN?.length || 0,
+            repoUrl: REPO_URL,
+            hasAuthToken: !!AUTH_TOKEN
+        }
     });
 });
 // Execute any command - SUPER ADMIN MODE (no restrictions)
