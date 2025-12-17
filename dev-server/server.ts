@@ -136,9 +136,49 @@ app.get('/health', (req, res) => {
             hasGithubToken: !!GITHUB_TOKEN,
             githubTokenLength: GITHUB_TOKEN?.length || 0,
             repoUrl: REPO_URL,
-            hasAuthToken: !!AUTH_TOKEN
+            hasAuthToken: !!AUTH_TOKEN,
+            authTokenPreview: AUTH_TOKEN ? `${AUTH_TOKEN.slice(0, 4)}...${AUTH_TOKEN.slice(-4)}` : 'not-set'
         }
     });
+});
+
+// Debug endpoint - test git push (temporary)
+app.get('/api/test-git', async (req, res) => {
+    try {
+        // Check git remote
+        const { stdout: remoteInfo } = await execAsync('git remote -v', { cwd: REPO_DIR });
+        
+        // Check git status
+        const { stdout: statusInfo } = await execAsync('git status --short', { cwd: REPO_DIR });
+        
+        // Try a simple git operation
+        let pushTest = 'not attempted';
+        if (GITHUB_TOKEN) {
+            try {
+                const remoteUrl = REPO_URL.replace('https://', `https://${GITHUB_TOKEN}@`);
+                await execAsync(`git remote set-url origin ${remoteUrl}`, { cwd: REPO_DIR });
+                const { stdout } = await execAsync('git push --dry-run origin main 2>&1', { cwd: REPO_DIR });
+                pushTest = 'SUCCESS: ' + (stdout || 'Push would succeed');
+            } catch (err: any) {
+                pushTest = 'FAILED: ' + err.message;
+            }
+        } else {
+            pushTest = 'GITHUB_TOKEN not set';
+        }
+        
+        res.json({
+            success: true,
+            gitRemote: remoteInfo,
+            gitStatus: statusInfo || 'No changes',
+            pushTest,
+            config: {
+                hasGithubToken: !!GITHUB_TOKEN,
+                tokenLength: GITHUB_TOKEN?.length || 0
+            }
+        });
+    } catch (err: any) {
+        res.json({ success: false, error: err.message });
+    }
 });
 
 // Execute any command - SUPER ADMIN MODE (no restrictions)
