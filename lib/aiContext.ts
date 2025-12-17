@@ -55,7 +55,7 @@ export async function getDatabaseSchema(): Promise<string> {
 }
 
 /**
- * Get recent errors for AI admin
+ * Get recent errors for AI admin - Premium format
  */
 export async function getRecentErrors(): Promise<string> {
   try {
@@ -63,27 +63,60 @@ export async function getRecentErrors(): Promise<string> {
       .from('error_logs')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(15);
 
     if (!errors || errors.length === 0) {
-      return 'No recent errors';
+      return `✅ **Tidak Ada Error!**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Sistem berjalan dengan baik. 🎉
+
+Tidak ada error yang tercatat dalam database.
+Semua layanan beroperasi normal.`;
     }
 
-    const errorInfo = ['=== RECENT ERRORS (Last 10) ==='];
-    errors.forEach((err, idx) => {
-      errorInfo.push(`\n${idx + 1}. [${err.severity}] ${err.message}`);
-      errorInfo.push(`   Type: ${err.error_type}`);
-      errorInfo.push(`   File: ${err.file_path || 'N/A'}`);
-      errorInfo.push(`   Time: ${err.created_at}`);
-      if (err.stack_trace) {
-        errorInfo.push(`   Stack: ${err.stack_trace.substring(0, 200)}...`);
-      }
+    // Group by severity
+    const critical = errors.filter(e => /critical|fatal/i.test(e.severity || e.error_type || ''));
+    const high = errors.filter(e => /high|error/i.test(e.severity || e.error_type || ''));
+    const other = errors.filter(e => !critical.includes(e) && !high.includes(e));
+
+    const errorInfo = [`📋 **RECENT ERRORS (Last ${errors.length})**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 **Summary:**
+• 🔴 Critical: ${critical.length}
+• 🟠 High: ${high.length}
+• 🟢 Other: ${other.length}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📜 **Detail:**`];
+
+    errors.slice(0, 10).forEach((err, idx) => {
+      const severity = err.severity || err.error_type || 'unknown';
+      const emoji = /critical|fatal/i.test(severity) ? '🔴' : 
+                    /high|error/i.test(severity) ? '🟠' : 
+                    /warning/i.test(severity) ? '🟡' : '🟢';
+      const time = err.created_at ? new Date(err.created_at).toLocaleString('id-ID') : 'unknown';
+      const message = (err.message || err.error_message || 'No message').slice(0, 100);
+      const fixStatus = err.fix_status === 'fix_applied' ? '✅' : '⏳';
+      
+      errorInfo.push(`
+${emoji} **#${err.id}** [${severity}] ${fixStatus}
+   📝 ${message}
+   📁 ${err.file_path || 'N/A'}
+   ⏰ ${time}`);
     });
+
+    if (errors.length > 10) {
+      errorInfo.push(`\n... dan ${errors.length - 10} error lainnya`);
+    }
+
+    errorInfo.push(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 Gunakan \`/analyze <id>\` untuk detail analisis AI`);
 
     return errorInfo.join('\n');
   } catch (e) {
     console.error('Failed to get recent errors:', e);
-    return 'Error log query failed';
+    return '❌ Gagal mengambil log error. Coba lagi nanti.';
   }
 }
 
@@ -92,9 +125,7 @@ export async function getRecentErrors(): Promise<string> {
  */
 export async function getSystemStats(): Promise<string> {
   try {
-    const stats = ['=== SYSTEM STATISTICS ==='];
-
-    // Count tables
+    // Count tables with real-time data
     const counts = await Promise.all([
       supabaseAdmin.from('users').select('id', { count: 'exact', head: true }),
       supabaseAdmin.from('posts').select('id', { count: 'exact', head: true }),
@@ -102,21 +133,42 @@ export async function getSystemStats(): Promise<string> {
       supabaseAdmin.from('gallery').select('id', { count: 'exact', head: true }),
       supabaseAdmin.from('announcements').select('id', { count: 'exact', head: true }),
       supabaseAdmin.from('error_logs').select('id', { count: 'exact', head: true }),
-      supabaseAdmin.from('chat_sessions').select('id', { count: 'exact', head: true })
+      supabaseAdmin.from('chat_sessions').select('id', { count: 'exact', head: true }),
+      // Additional stats
+      supabaseAdmin.from('error_logs').select('id', { count: 'exact', head: true }).eq('fix_status', 'fix_applied'),
+      supabaseAdmin.from('error_logs').select('id', { count: 'exact', head: true }).is('fix_status', null),
     ]);
 
-    stats.push(`Users: ${counts[0].count || 0}`);
-    stats.push(`Posts: ${counts[1].count || 0}`);
-    stats.push(`Events: ${counts[2].count || 0}`);
-    stats.push(`Gallery Items: ${counts[3].count || 0}`);
-    stats.push(`Announcements: ${counts[4].count || 0}`);
-    stats.push(`Error Logs: ${counts[5].count || 0}`);
-    stats.push(`Chat Sessions: ${counts[6].count || 0}`);
+    const totalErrors = counts[5].count || 0;
+    const fixedErrors = counts[7].count || 0;
+    const pendingErrors = counts[8].count || 0;
+    const errorRate = totalErrors > 0 ? ((fixedErrors / totalErrors) * 100).toFixed(1) : 100;
 
-    return stats.join('\n');
+    return `📊 **WEBOSIS SYSTEM STATISTICS**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**👥 Users & Content:**
+• 👤 Total Users: **${counts[0].count || 0}**
+• 📝 Total Posts: **${counts[1].count || 0}**
+• 📅 Total Events: **${counts[2].count || 0}**
+• 🖼️ Gallery Items: **${counts[3].count || 0}**
+• 📢 Announcements: **${counts[4].count || 0}**
+
+**💬 AI & Chat:**
+• 🗨️ Chat Sessions: **${counts[6].count || 0}**
+
+**🔧 Error Monitoring:**
+• 📋 Total Errors Logged: **${totalErrors}**
+• ✅ Fixed Errors: **${fixedErrors}**
+• ⏳ Pending Fix: **${pendingErrors}**
+• 📈 Fix Rate: **${errorRate}%**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🕐 *Data real-time dari database*
+💡 Ketik \`/errors\` untuk detail error`;
   } catch (e) {
     console.error('Failed to get system stats:', e);
-    return 'System stats query failed';
+    return '❌ Gagal mengambil statistik sistem. Coba lagi nanti.';
   }
 }
 
