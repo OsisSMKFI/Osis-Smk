@@ -42,12 +42,13 @@ interface ChatMessage {
     content: string;
     timestamp: Date;
     cssCode?: string;
-    actionType?: 'css' | 'component' | 'style' | 'info' | 'action' | 'file-edit' | 'error' | 'terminal';
+    actionType?: 'css' | 'component' | 'style' | 'info' | 'action' | 'file-edit' | 'error' | 'terminal' | 'diff-edit';
     targetComponent?: string;
     targetFile?: string; // File path to apply changes
     codeBlocks?: { language: string; code: string; filename?: string }[];
     fileChanges?: { path: string; language: string; code: string; action: 'create' | 'update' | 'append' }[];
     terminalCommands?: string[]; // Terminal commands to run (npm install, etc)
+    diffBlocks?: { path: string; find: string; replace: string }[]; // DIFF-based edits (safer!)
 }
 
 interface SourceFile {
@@ -1443,11 +1444,79 @@ ${sourceCode}
             // Build enhanced prompt for AI - REAL CODE EDITOR like GitHub Copilot
             const enhancedMessage = `
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║   🚀 WEBOSIS DESIGN STUDIO AI - GITHUB COPILOT LEVEL v5.0              ║
-║        💎 ULTRA PROFESSIONAL MODE - PARTIAL EDIT MASTER 💎              ║
+║   🚀 WEBOSIS DESIGN STUDIO AI - GITHUB COPILOT LEVEL v6.0              ║
+║     💎 ULTRA PROFESSIONAL MODE - DIFF-BASED SMART EDITING 💎           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-🚨🚨🚨 ATURAN #1 PALING PENTING - BACA INI DULU! 🚨🚨🚨
+═══════════════════════════════════════════════════════════════════════════
+🔥 MODE EDIT BARU: DIFF-BASED EDITING (SANGAT AMAN!)
+═══════════════════════════════════════════════════════════════════════════
+
+🎯 UNTUK EDIT KECIL (ubah teks, warna, icon, dll), gunakan format DIFF:
+
+\`\`\`diff:path/ke/file.tsx
+<<<FIND>>>
+kode yang mau diganti (copy paste PERSIS dari file asli)
+<<<REPLACE>>>
+kode penggantinya
+\`\`\`
+
+CONTOH 1 - Ubah Email:
+\`\`\`diff:components/Footer.tsx
+<<<FIND>>>
+<span className="text-gray-600 dark:text-gray-400">info@smaitfithrahinsani.sch.id</span>
+<<<REPLACE>>>
+<span className="text-gray-600 dark:text-gray-400">osissmkinformatika2.fi@gmail.com</span>
+\`\`\`
+
+CONTOH 2 - Ubah Warna:
+\`\`\`diff:components/Button.tsx
+<<<FIND>>>
+className="bg-blue-500 hover:bg-blue-600"
+<<<REPLACE>>>
+className="bg-green-500 hover:bg-green-600"
+\`\`\`
+
+CONTOH 3 - Ubah Multiple Lines:
+\`\`\`diff:components/Hero.tsx
+<<<FIND>>>
+<h1 className="text-4xl font-bold">
+  Welcome to Website
+</h1>
+<<<REPLACE>>>
+<h1 className="text-5xl font-extrabold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+  Welcome to Our Amazing Platform
+</h1>
+\`\`\`
+
+⚠️ ATURAN DIFF:
+1. FIND harus PERSIS SAMA dengan kode asli (termasuk spasi, indentasi)
+2. Jangan include kode yang tidak perlu diganti
+3. Gunakan diff untuk edit kecil, full file untuk buat komponen baru
+4. Bisa multiple diff blocks untuk edit beberapa tempat
+
+═══════════════════════════════════════════════════════════════════════════
+📝 KAPAN PAKAI DIFF vs FULL FILE?
+═══════════════════════════════════════════════════════════════════════════
+
+PAKAI DIFF ✅ jika:
+- Ubah teks/label
+- Ubah email/nomor telepon
+- Ubah warna
+- Ubah icon
+- Ubah ukuran font
+- Tambah/hapus 1-5 baris
+- Fix typo
+
+PAKAI FULL FILE ✅ jika:
+- Buat komponen BARU dari nol
+- Refactor besar-besaran
+- User minta "buat ulang" atau "redesign"
+- Tambah fitur besar (100+ baris)
+
+═══════════════════════════════════════════════════════════════════════════
+
+🚨 JIKA PAKAI FULL FILE, WAJIB IKUTI ATURAN INI! 🚨
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⛔ DILARANG KERAS MEMBUAT KODE BARU DARI NOL! ⛔
@@ -1914,12 +1983,30 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
             
             const data = await res.json();
             
+            // ═══════════════════════════════════════════════════════════════
+            // 🔥 PARSE DIFF BLOCKS (new format for safe edits)
+            // ═══════════════════════════════════════════════════════════════
+            const diffBlocks: { path: string; find: string; replace: string }[] = [];
+            const diffBlockRegex = /```diff:([^\n]+)\n<<<FIND>>>\n([\s\S]*?)\n<<<REPLACE>>>\n([\s\S]*?)```/g;
+            let diffMatch;
+            while ((diffMatch = diffBlockRegex.exec(data.reply)) !== null) {
+                diffBlocks.push({
+                    path: diffMatch[1].trim(),
+                    find: diffMatch[2].trim(),
+                    replace: diffMatch[3].trim()
+                });
+            }
+            
             // Extract all code blocks (CSS, TSX, etc) - including file paths
             const codeBlocks: { language: string; code: string; filename?: string }[] = [];
             // Match both ```language and ```language:filepath formats
             const codeBlockRegex = /```(\w+)?(?::([^\n]+))?\n([\s\S]*?)```/g;
             let match;
             while ((match = codeBlockRegex.exec(data.reply)) !== null) {
+                // Skip diff blocks (already parsed above)
+                if (match[1] === 'diff' && match[0].includes('<<<FIND>>>')) {
+                    continue;
+                }
                 codeBlocks.push({
                     language: match[1] || 'text',
                     filename: match[2]?.trim(),
@@ -1966,7 +2053,9 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
             
             // Determine action type
             let actionType: ChatMessage['actionType'] = 'info';
-            if (fileChanges.length > 0) {
+            if (diffBlocks.length > 0) {
+                actionType = 'diff-edit'; // New! DIFF-based editing
+            } else if (fileChanges.length > 0) {
                 actionType = 'file-edit';
             } else if (cssCode) {
                 actionType = 'css';
@@ -1984,9 +2073,10 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                 timestamp: new Date(),
                 cssCode,
                 targetComponent: targetComponent || undefined,
-                targetFile: fileChanges.length > 0 ? fileChanges[0].path : undefined,
+                targetFile: diffBlocks.length > 0 ? diffBlocks[0].path : (fileChanges.length > 0 ? fileChanges[0].path : undefined),
                 codeBlocks: codeBlocks.length > 0 ? codeBlocks : undefined,
                 fileChanges: fileChanges.length > 0 ? fileChanges : undefined,
+                diffBlocks: diffBlocks.length > 0 ? diffBlocks : undefined, // New! DIFF blocks
                 terminalCommands: terminalCommands.length > 0 ? terminalCommands : undefined,
                 actionType
             };
@@ -2345,6 +2435,126 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
             notify('error', 'Failed to apply code to file');
             return false;
         }
+    };
+    
+    // ═══════════════════════════════════════════════════════════════
+    // 🔥 APPLY DIFF EDIT - Safe find/replace editing
+    // ═══════════════════════════════════════════════════════════════
+    const applyDiffEdit = async (diffBlock: { path: string; find: string; replace: string }) => {
+        try {
+            notify('info', `🔍 Applying DIFF edit to ${diffBlock.path}...`);
+            
+            // First, read the current file content
+            const readRes = await fetch(`/api/design/files?path=${encodeURIComponent(diffBlock.path)}`);
+            const readData = await readRes.json();
+            
+            if (!readData.success || !readData.content) {
+                notify('error', `❌ Cannot read file: ${diffBlock.path}`);
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `❌ **DIFF Apply Failed**\n\nFile tidak ditemukan: \`${diffBlock.path}\`\n\nPastikan path file sudah benar.`,
+                    timestamp: new Date(),
+                    actionType: 'error'
+                }]);
+                return false;
+            }
+            
+            const originalContent = readData.content;
+            
+            // Check if FIND string exists in the file
+            if (!originalContent.includes(diffBlock.find)) {
+                notify('error', `❌ FIND string not found in file`);
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `❌ **DIFF Apply Failed**\n\nTidak menemukan string yang dicari di file \`${diffBlock.path}\`\n\n**String yang dicari:**\n\`\`\`\n${diffBlock.find.slice(0, 200)}${diffBlock.find.length > 200 ? '...' : ''}\n\`\`\`\n\n💡 **Kemungkinan penyebab:**\n- AI mungkin tidak melihat file original\n- Buka file di sidebar, lalu minta AI edit lagi`,
+                    timestamp: new Date(),
+                    actionType: 'error'
+                }]);
+                return false;
+            }
+            
+            // Do the replacement
+            const newContent = originalContent.replace(diffBlock.find, diffBlock.replace);
+            
+            // Verify replacement happened
+            if (newContent === originalContent) {
+                notify('error', '❌ No changes made');
+                return false;
+            }
+            
+            // Save the modified file
+            const saveRes = await fetch('/api/design/files', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'save',
+                    filePath: diffBlock.path,
+                    content: newContent
+                })
+            });
+            
+            const saveData = await saveRes.json();
+            
+            if (saveData.isProduction) {
+                // Show production message
+                setChatMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `⚠️ **Production Environment**\n\nDIFF edit tidak bisa diapply di Vercel.\n\n**File:** \`${diffBlock.path}\`\n\n**Ganti ini:**\n\`\`\`\n${diffBlock.find}\n\`\`\`\n\n**Dengan ini:**\n\`\`\`\n${diffBlock.replace}\n\`\`\`\n\n💡 Copy dan lakukan manual di VS Code.`,
+                    timestamp: new Date(),
+                    actionType: 'info'
+                }]);
+                return false;
+            }
+            
+            if (saveData.success) {
+                notify('success', `✅ DIFF applied: ${diffBlock.path}`);
+                
+                // Update editor if file is open
+                if (openSourceFile?.path === diffBlock.path) {
+                    setSourceCode(newContent);
+                    setOriginalSourceCode(newContent);
+                }
+                
+                // Reload file tree
+                await loadFileTree();
+                
+                return true;
+            } else {
+                notify('error', saveData.error || 'Failed to save DIFF');
+                return false;
+            }
+        } catch (err) {
+            console.error('DIFF apply error:', err);
+            notify('error', 'Failed to apply DIFF edit');
+            return false;
+        }
+    };
+    
+    // Apply multiple DIFF edits
+    const applyDiffEdits = async (diffBlocks: { path: string; find: string; replace: string }[]) => {
+        let successCount = 0;
+        
+        for (const diff of diffBlocks) {
+            const success = await applyDiffEdit(diff);
+            if (success) successCount++;
+        }
+        
+        if (successCount === diffBlocks.length) {
+            notify('success', `✅ All ${successCount} DIFF edits applied!`);
+            
+            // Auto push to GitHub
+            const files = [...new Set(diffBlocks.map(d => d.path))];
+            await pushToGitHub(`DIFF edit: ${files.join(', ').slice(0, 100)}`);
+        } else if (successCount > 0) {
+            notify('info', `${successCount}/${diffBlocks.length} DIFF edits applied`);
+        } else {
+            notify('error', 'No DIFF edits applied');
+        }
+        
+        return successCount > 0;
     };
     
     // Apply multiple file changes from AI
@@ -3566,6 +3776,52 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                                                         title="Copy CSS"
                                                     >
                                                         <Copy className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {/* 🔥 Show DIFF edits with Apply button (SAFER!) */}
+                                            {msg.diffBlocks && msg.diffBlocks.length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                    <div className="flex items-center gap-2 text-xs text-emerald-400 mb-2">
+                                                        <Zap className="w-3.5 h-3.5" />
+                                                        <span className="font-medium">🔥 DIFF Edit - Safe Changes ({msg.diffBlocks.length})</span>
+                                                    </div>
+                                                    {msg.diffBlocks.map((diff, i) => (
+                                                        <div key={i} className="bg-black/40 rounded-lg overflow-hidden border border-emerald-500/30">
+                                                            <div className="flex items-center justify-between px-3 py-2 bg-emerald-500/10 border-b border-emerald-500/20">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-emerald-400">📝</span>
+                                                                    <span className="text-xs text-emerald-300 font-mono">{diff.path}</span>
+                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
+                                                                        find & replace
+                                                                    </span>
+                                                                </div>
+                                                                <button 
+                                                                    onClick={async () => {
+                                                                        const success = await applyDiffEdit(diff);
+                                                                        if (success) {
+                                                                            await pushToGitHub(`DIFF edit: ${diff.path}`);
+                                                                        }
+                                                                    }}
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white rounded text-xs font-bold transition-all hover:scale-[1.02] shadow-lg shadow-emerald-500/30"
+                                                                >
+                                                                    <Play className="w-3 h-3" /> Apply DIFF
+                                                                </button>
+                                                            </div>
+                                                            <div className="p-3 space-y-2">
+                                                                <div className="text-[10px] text-red-400 font-semibold">❌ FIND (akan diganti):</div>
+                                                                <pre className="text-xs text-red-300/80 p-2 bg-red-500/10 rounded border border-red-500/20 overflow-x-auto max-h-24 font-mono">{diff.find.slice(0, 200)}{diff.find.length > 200 ? '...' : ''}</pre>
+                                                                <div className="text-[10px] text-green-400 font-semibold">✅ REPLACE (pengganti):</div>
+                                                                <pre className="text-xs text-green-300/80 p-2 bg-green-500/10 rounded border border-green-500/20 overflow-x-auto max-h-24 font-mono">{diff.replace.slice(0, 200)}{diff.replace.length > 200 ? '...' : ''}</pre>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {/* Apply All DIFF button */}
+                                                    <button 
+                                                        onClick={() => applyDiffEdits(msg.diffBlocks!)}
+                                                        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 shadow-lg shadow-emerald-500/30 hover:scale-[1.02] animate-pulse"
+                                                    >
+                                                        <Zap className="w-5 h-5" /> 🚀 APPLY DIFF CHANGES (AMAN!)
                                                     </button>
                                                 </div>
                                             )}
