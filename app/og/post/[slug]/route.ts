@@ -108,7 +108,7 @@ export async function GET(
     }
 
     // 6. Return compressed image
-    return new NextResponse(compressedBuffer, {
+    return new NextResponse(new Uint8Array(compressedBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'image/jpeg',
@@ -139,7 +139,7 @@ async function serveFallback() {
       .jpeg({ quality: 80, mozjpeg: true })
       .toBuffer()
     
-    return new NextResponse(compressed, {
+    return new NextResponse(new Uint8Array(compressed), {
       status: 200,
       headers: {
         'Content-Type': 'image/jpeg',
@@ -153,7 +153,7 @@ async function serveFallback() {
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       'base64'
     )
-    return new NextResponse(transparentPng, {
+    return new NextResponse(new Uint8Array(transparentPng), {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
