@@ -178,7 +178,7 @@ const Footer: React.FC = () => {
                         {/* Icon */}
                         <social.icon size={22} className="relative z-10 opacity-70" />
                       </button>
-                    )}}
+                    )}
                     
                     {/* Tooltip */}
                     <div
