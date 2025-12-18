@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { generatePageMetadata, SITE_URL } from '@/lib/metadata-helper';
+import { generatePageMetadata } from '@/lib/metadata-helper';
 import SekbidDetailClient from './SekbidDetailClient';
 
 // Sekbid names
@@ -49,12 +49,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         // Use defaults
     }
     
+    // OG IMAGE PROXY: Image served from /og/sekbid/{id} (our domain)
+    // WhatsApp sees: osissmktest.biezz.my.id/og/sekbid/6
+    // NOT: supabase.co/xxx
     return generatePageMetadata({
         title: `${sekbidName} - OSIS SMK Informatika 2 FI`,
         description: sekbidDescription,
         url: `/sekbid/${sekbidId}`,
         type: 'article',
-        sekbidId: sekbidId, // WhatsApp-optimized: uses static OG image for this sekbid
+        sekbidId: sekbidId, // Uses /og/sekbid/{id} proxy
     });
 }
 

@@ -1,96 +1,80 @@
 import { Metadata } from 'next';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎯 METADATA HELPER v3.0 - WhatsApp Optimized
+// 🎯 METADATA HELPER v4.0 - OG Image Proxy (Industry Standard)
 // ═══════════════════════════════════════════════════════════════════════════════
 // 
-// WHATSAPP REQUIREMENTS:
-// ✅ og:image:width & og:image:height (WAJIB)
-// ✅ twitter:card = summary_large_image (FALLBACK)
-// ✅ Static images (no query params)
-// ✅ HTTPS, 200 OK, no redirect
-// ✅ JPEG/PNG, < 300KB, 1200x630
-// ✅ Local images (not Supabase for reliability)
+// SOLUSI YOUTUBE/NEWS SITE BESAR:
+// ✅ OG Image selalu dari DOMAIN SENDIRI (bukan Supabase langsung)
+// ✅ Image di-proxy melalui /og/post/{slug} atau /og/sekbid/{id}
+// ✅ WhatsApp HANYA percaya domain OG image = domain website
+// ✅ Supabase image tetap dipakai, tapi di-serve ulang via proxy
+// 
+// ARSITEKTUR:
+// Supabase Image → Server Proxy (/og/...) → WhatsApp/FB/Telegram
+// 
+// WHY THIS WORKS:
+// - Image URL = domain website (trusted)
+// - No redirect, no token, no auth
+// - Static URL (no query params)
+// - Pure HTTP image response
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
 export const DEFAULT_TITLE = 'OSIS SMK Informatika 2 Fithrah Insani';
 export const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani - Organisasi Siswa Intra Sekolah yang aktif dalam kegiatan keislaman, kepemimpinan, dan kreativitas siswa.';
-// Default OG image - must be local, static, < 300KB
-const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default.jpg`;
-export const FALLBACK_OG_IMAGE = `${SITE_URL}/images/logo.png`;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// OG IMAGE PROXY URLs (served from our domain)
+// ═══════════════════════════════════════════════════════════════════════════════
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default`;
+export const FALLBACK_OG_IMAGE = `${SITE_URL}/og/default`;
 
 /**
- * Static OG images for sekbid (pre-generated for WhatsApp compatibility)
- * These should be in /public/og/ folder
+ * Get proxied OG image URL for a post
+ * Image is served from our domain, proxying the Supabase image
  */
-export const SEKBID_OG_IMAGES: Record<number, string> = {
-    1: `${SITE_URL}/og/sekbid-1.jpg`,
-    2: `${SITE_URL}/og/sekbid-2.jpg`,
-    3: `${SITE_URL}/og/sekbid-3.jpg`,
-    4: `${SITE_URL}/og/sekbid-4.jpg`,
-    5: `${SITE_URL}/og/sekbid-5.jpg`,
-    6: `${SITE_URL}/og/sekbid-6.jpg`,
-};
+export function getPostOGImage(slug: string): string {
+    return `${SITE_URL}/og/post/${slug}`;
+}
 
 /**
- * Static OG images for pages
+ * Get proxied OG image URL for a sekbid
+ * Image is served from our domain, proxying the Supabase image
  */
-export const PAGE_OG_IMAGES: Record<string, string> = {
-    home: `${SITE_URL}/og/home.jpg`,
-    about: `${SITE_URL}/og/about.jpg`,
-    people: `${SITE_URL}/og/people.jpg`,
-    posts: `${SITE_URL}/og/posts.jpg`,
-    gallery: `${SITE_URL}/og/gallery.jpg`,
-    sekbid: `${SITE_URL}/og/sekbid.jpg`,
-    info: `${SITE_URL}/og/info.jpg`,
-    bidang: `${SITE_URL}/og/bidang.jpg`,
-};
+export function getSekbidOGImage(id: number): string {
+    return `${SITE_URL}/og/sekbid/${id}`;
+}
 
 /**
  * Get safe OG image URL
- * Priority: static local > dynamic API > fallback
+ * Uses proxy URLs for dynamic content, default for static pages
  */
 export function getSafeOGImage(options: {
-    staticImage?: string;
-    contentImage?: string;
-    pageKey?: string;
+    postSlug?: string;
     sekbidId?: number;
+    staticImage?: string;
 }): string {
-    // 1. Use explicit static image if provided
+    // 1. Post-specific (proxied)
+    if (options.postSlug) {
+        return getPostOGImage(options.postSlug);
+    }
+    
+    // 2. Sekbid-specific (proxied)
+    if (options.sekbidId) {
+        return getSekbidOGImage(options.sekbidId);
+    }
+    
+    // 3. Static local image
     if (options.staticImage) {
-        // Ensure it's absolute URL
         if (options.staticImage.startsWith('http')) {
             return options.staticImage;
         }
         return `${SITE_URL}${options.staticImage.startsWith('/') ? '' : '/'}${options.staticImage}`;
     }
     
-    // 2. Use sekbid-specific image
-    if (options.sekbidId && SEKBID_OG_IMAGES[options.sekbidId]) {
-        return SEKBID_OG_IMAGES[options.sekbidId];
-    }
-    
-    // 3. Use page-specific image
-    if (options.pageKey && PAGE_OG_IMAGES[options.pageKey]) {
-        return PAGE_OG_IMAGES[options.pageKey];
-    }
-    
-    // 4. Use content image if it's a safe local path
-    if (options.contentImage) {
-        // Avoid Supabase/external URLs for WhatsApp (unreliable)
-        // Only use if it's a local path
-        if (options.contentImage.startsWith('/') && !options.contentImage.includes('?')) {
-            return `${SITE_URL}${options.contentImage}`;
-        }
-        // If it's a full URL and looks local, use it
-        if (options.contentImage.startsWith(SITE_URL) && !options.contentImage.includes('?')) {
-            return options.contentImage;
-        }
-    }
-    
-    // 5. Fallback
-    return FALLBACK_OG_IMAGE;
+    // 4. Default (proxied)
+    return DEFAULT_OG_IMAGE;
 }
 
 interface MetadataParams {
@@ -104,19 +88,21 @@ interface MetadataParams {
     author?: string;
     section?: string;
     keywords?: string[];
-    ogType?: 'default' | 'post' | 'sekbid' | 'event' | 'member' | 'gallery';
-    category?: string;
-    pageKey?: string; // For static page OG images
-    sekbidId?: number; // For sekbid-specific OG images
+    // NEW: For OG Image Proxy
+    postSlug?: string;   // For post-specific OG image proxy
+    sekbidId?: number;   // For sekbid-specific OG image proxy
 }
 
 /**
  * Generate complete metadata for any page
- * WHATSAPP OPTIMIZED:
- * - Static images (no query params)
- * - Includes og:image:width & og:image:height
- * - Includes full Twitter Card as fallback
- * - JPEG preferred over PNG
+ * 
+ * OG IMAGE PROXY STRATEGY:
+ * - Posts: /og/post/{slug} (proxies Supabase image)
+ * - Sekbid: /og/sekbid/{id} (proxies Supabase image)
+ * - Static pages: /og/default (serves logo)
+ * 
+ * WhatsApp sees: osissmktest.biezz.my.id/og/...
+ * WhatsApp doesn't see: supabase.co/...
  */
 export function generatePageMetadata(params: MetadataParams): Metadata {
     const title = params.title || DEFAULT_TITLE;
@@ -124,11 +110,11 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
     const url = params.url ? `${SITE_URL}${params.url}` : SITE_URL;
     const type = params.type || 'website';
     
-    // Get WhatsApp-safe OG image
+    // Get OG image via proxy (our domain, not Supabase)
     const image = getSafeOGImage({
-        staticImage: params.image || undefined,
-        pageKey: params.pageKey,
+        postSlug: params.postSlug,
         sekbidId: params.sekbidId,
+        staticImage: params.image || undefined,
     });
     
     const metadata: Metadata = {
@@ -139,6 +125,7 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
         
         // ═══════════════════════════════════════════════════════════════
         // OPEN GRAPH - WhatsApp reads this
+        // Image is from OUR DOMAIN (proxied)
         // ═══════════════════════════════════════════════════════════════
         openGraph: {
             title,
@@ -153,7 +140,7 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
                     width: 1200,  // WAJIB untuk WhatsApp
                     height: 630,  // WAJIB untuk WhatsApp
                     alt: title,
-                    type: 'image/jpeg', // JPEG lebih aman untuk WA
+                    type: 'image/jpeg',
                 }
             ],
             ...(type === 'article' && {
@@ -165,13 +152,13 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
         },
         
         // ═══════════════════════════════════════════════════════════════
-        // TWITTER CARD - WhatsApp fallback ke ini kalau OG gagal
+        // TWITTER CARD - Fallback for WhatsApp
         // ═══════════════════════════════════════════════════════════════
         twitter: {
             card: 'summary_large_image',
             title,
             description,
-            images: [image], // Sama dengan OG image
+            images: [image],
             creator: '@osissmkinformatika2fi',
         },
         
@@ -190,7 +177,7 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
 
 /**
  * Generate metadata for static pages
- * Uses pageKey to map to static OG images in /public/og/
+ * All static pages use /og/default (logo) for thumbnail
  */
 export const STATIC_METADATA = {
     home: generatePageMetadata({
@@ -198,7 +185,6 @@ export const STATIC_METADATA = {
         description: 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani - Pusat informasi kegiatan, berita, dan program kerja OSIS.',
         url: '/',
         type: 'website',
-        pageKey: 'home',
     }),
     
     about: generatePageMetadata({
@@ -206,7 +192,6 @@ export const STATIC_METADATA = {
         description: 'Mengenal lebih dekat OSIS SMK Informatika 2 Fithrah Insani - Visi, Misi, Filosofi, dan Struktur Organisasi.',
         url: '/about',
         type: 'website',
-        pageKey: 'about',
     }),
     
     people: generatePageMetadata({
@@ -214,7 +199,6 @@ export const STATIC_METADATA = {
         description: 'Daftar lengkap pengurus dan anggota OSIS SMK Informatika 2 Fithrah Insani periode aktif.',
         url: '/people',
         type: 'website',
-        pageKey: 'people',
     }),
     
     posts: generatePageMetadata({
@@ -222,7 +206,6 @@ export const STATIC_METADATA = {
         description: 'Berita terbaru, artikel, dan informasi kegiatan dari OSIS SMK Informatika 2 Fithrah Insani.',
         url: '/posts',
         type: 'website',
-        pageKey: 'posts',
     }),
     
     gallery: generatePageMetadata({
@@ -230,7 +213,6 @@ export const STATIC_METADATA = {
         description: 'Dokumentasi foto dan video kegiatan OSIS SMK Informatika 2 Fithrah Insani.',
         url: '/gallery',
         type: 'website',
-        pageKey: 'gallery',
     }),
     
     sekbid: generatePageMetadata({
@@ -238,7 +220,6 @@ export const STATIC_METADATA = {
         description: 'Informasi lengkap tentang seksi bidang OSIS SMK Informatika 2 Fithrah Insani beserta program kerjanya.',
         url: '/sekbid',
         type: 'website',
-        pageKey: 'sekbid',
     }),
     
     info: generatePageMetadata({
@@ -246,7 +227,6 @@ export const STATIC_METADATA = {
         description: 'Informasi event, kegiatan, dan pengumuman dari OSIS SMK Informatika 2 Fithrah Insani.',
         url: '/info',
         type: 'website',
-        pageKey: 'info',
     }),
     
     bidang: generatePageMetadata({
@@ -254,7 +234,6 @@ export const STATIC_METADATA = {
         description: 'Daftar program kerja OSIS SMK Informatika 2 Fithrah Insani.',
         url: '/bidang',
         type: 'website',
-        pageKey: 'bidang',
     }),
     
     activity: generatePageMetadata({

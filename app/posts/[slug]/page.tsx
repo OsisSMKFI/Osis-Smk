@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
-import { generatePageMetadata, SITE_URL, getSafeOGImage } from '@/lib/metadata-helper';
+import { generatePageMetadata } from '@/lib/metadata-helper';
 import PostDetailClient from './PostDetailClient';
 
 // Create Supabase client for server-side data fetching
@@ -53,7 +53,10 @@ async function getPost(slug: string): Promise<Post | null> {
   }
 }
 
-// Generate dynamic metadata with Open Graph (WhatsApp optimized)
+// Generate dynamic metadata with Open Graph
+// OG IMAGE PROXY: Image served from /og/post/{slug} (our domain)
+// WhatsApp sees: osissmktest.biezz.my.id/og/post/xxx
+// NOT: supabase.co/xxx
 export async function generateMetadata({ 
   params 
 }: { 
@@ -68,7 +71,6 @@ export async function generateMetadata({
       title: 'Berita Tidak Ditemukan',
       description: 'Berita yang Anda cari tidak ditemukan.',
       url: `/posts/${slug}`,
-      pageKey: 'posts', // Use posts page default OG
     });
   }
 
@@ -76,27 +78,14 @@ export async function generateMetadata({
   const description = post.excerpt || 
     post.content.replace(/<[^>]*>/g, '').slice(0, 160) + '...';
 
-  // Get WhatsApp-safe OG image
-  // Priority: featured_image (if valid static URL) > posts page default
-  let postImage: string | undefined;
-  
-  if (post.featured_image) {
-    // Check if it's NOT a video
-    const isVideo = /\.(mp4|webm|ogg)$/i.test(post.featured_image);
-    if (!isVideo) {
-      // For Supabase URLs, we still use them but they might not work perfectly on WhatsApp
-      // For local/static images, they work great
-      postImage = post.featured_image;
-    }
-  }
-
+  // Use OG Image Proxy - image served from our domain
+  // The proxy at /og/post/{slug} fetches from Supabase and serves it
   return generatePageMetadata({
     title: post.title,
     description,
     url: `/posts/${post.slug}`,
     type: 'article',
-    image: postImage, // Will fallback to posts page default if undefined
-    pageKey: 'posts',
+    postSlug: post.slug, // THIS IS THE KEY - uses /og/post/{slug} proxy
     publishedTime: post.published_at || post.created_at,
     modifiedTime: post.created_at,
     section: post.category || 'Berita',
