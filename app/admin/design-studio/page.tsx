@@ -332,6 +332,7 @@ export default function DesignStudioPage() {
     ]);
     const [chatInput, setChatInput] = useState('');
     const [isAILoading, setIsAILoading] = useState(false);
+    const [useAgentMode, setUseAgentMode] = useState(true); // Copilot-like AI Agent mode
     
     // Notification
     const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
@@ -2014,25 +2015,96 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                 content: msg.content.slice(0, 500) // Truncate to save tokens
             }));
             
-            const res = await fetch('/api/ai/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [
-                        ...recentMessages.filter(m => m.role === 'user' || m.role === 'assistant'),
-                        { role: 'user', content: enhancedMessage }
-                    ],
-                    context: 'design_studio',
-                    mode: 'admin',
-                    provider: 'auto'
-                })
-            });
+            let data: { reply: string; toolsUsed?: any[]; filesModified?: string[] };
             
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
+            // ═══════════════════════════════════════════════════════════════
+            // 🤖 AI AGENT MODE - Copilot-like with real tool capabilities
+            // ═══════════════════════════════════════════════════════════════
+            if (useAgentMode) {
+                try {
+                    const agentRes = await fetch('/api/ai/agent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: userQuery,
+                            conversationHistory: recentMessages.filter(m => m.role === 'user' || m.role === 'assistant'),
+                            openFile: openSourceFile ? { 
+                                path: openSourceFile.path, 
+                                content: openSourceFile.content?.slice(0, 3000) 
+                            } : undefined,
+                            mode: 'design-studio'
+                        })
+                    });
+                    
+                    if (agentRes.ok) {
+                        const agentData = await agentRes.json();
+                        if (agentData.success) {
+                            data = { 
+                                reply: agentData.reply,
+                                toolsUsed: agentData.toolsUsed,
+                                filesModified: agentData.filesModified
+                            };
+                            
+                            // If agent modified files, show notification
+                            if (agentData.filesModified?.length > 0) {
+                                notify('success', `✅ AI Agent modified ${agentData.filesModified.length} file(s)`);
+                                
+                                // Reload file tree to reflect changes
+                                await loadFileTree();
+                                
+                                // Reload the open file if it was modified
+                                if (openSourceFile && agentData.filesModified.includes(openSourceFile.path)) {
+                                    await openFile(openSourceFile.path);
+                                }
+                            }
+                        } else {
+                            // Fallback to regular AI
+                            throw new Error('Agent failed, using fallback');
+                        }
+                    } else {
+                        throw new Error('Agent API error, using fallback');
+                    }
+                } catch (agentErr) {
+                    console.log('[AI Agent] Fallback to regular AI:', agentErr);
+                    // Fall through to regular AI
+                    const res = await fetch('/api/ai/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            messages: [
+                                ...recentMessages.filter(m => m.role === 'user' || m.role === 'assistant'),
+                                { role: 'user', content: enhancedMessage }
+                            ],
+                            context: 'design_studio',
+                            mode: 'admin',
+                            provider: 'auto'
+                        })
+                    });
+                    
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    data = await res.json();
+                }
+            } else {
+                // ═══════════════════════════════════════════════════════════
+                // 📝 Regular AI Mode
+                // ═══════════════════════════════════════════════════════════
+                const res = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: [
+                            ...recentMessages.filter(m => m.role === 'user' || m.role === 'assistant'),
+                            { role: 'user', content: enhancedMessage }
+                        ],
+                        context: 'design_studio',
+                        mode: 'admin',
+                        provider: 'auto'
+                    })
+                });
+                
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                data = await res.json();
             }
-            
-            const data = await res.json();
             
             // ═══════════════════════════════════════════════════════════════
             // 🔥 PARSE DIFF BLOCKS (new format for safe edits)
@@ -3878,20 +3950,50 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                                 <div className="relative flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="relative">
-                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                                                <Sparkles className="w-5 h-5 text-white" />
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${
+                                                useAgentMode 
+                                                    ? 'bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-500 shadow-cyan-500/30' 
+                                                    : 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 shadow-purple-500/30'
+                                            }`}>
+                                                {useAgentMode ? <Cpu className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
                                             </div>
                                             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-slate-900 animate-pulse" />
                                         </div>
                                         <div>
-                                            <div className="text-base font-semibold text-white tracking-tight">Design AI</div>
-                                            <div className="text-xs text-emerald-400/80 font-medium">Ready to help</div>
+                                            <div className="text-base font-semibold text-white tracking-tight">
+                                                {useAgentMode ? 'AI Agent' : 'Design AI'}
+                                            </div>
+                                            <div className={`text-xs font-medium ${useAgentMode ? 'text-cyan-400/80' : 'text-emerald-400/80'}`}>
+                                                {useAgentMode ? 'Copilot Mode' : 'Ready to help'}
+                                            </div>
                                         </div>
                                     </div>
-                                    <button onClick={() => setChatOpen(false)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
-                                        <X className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        {/* AI Agent Mode Toggle */}
+                                        <button 
+                                            onClick={() => setUseAgentMode(!useAgentMode)}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                                                useAgentMode 
+                                                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30' 
+                                                    : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                                            }`}
+                                            title={useAgentMode ? 'AI Agent Mode: Can read/write files, search code, run commands' : 'Click to enable Copilot-like AI Agent'}
+                                        >
+                                            <Cpu className="w-3 h-3" />
+                                            <span className="hidden sm:inline">{useAgentMode ? 'Agent' : 'Basic'}</span>
+                                        </button>
+                                        <button onClick={() => setChatOpen(false)} className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
+                                {/* Agent Mode Info */}
+                                {useAgentMode && (
+                                    <div className="mt-2 flex items-center gap-2 text-[10px] text-cyan-400/60">
+                                        <Terminal className="w-3 h-3" />
+                                        <span>Real tools: file search, read, write, terminal, database</span>
+                                    </div>
+                                )}
                             </div>
                             
                             {/* Quick Actions - Floating Pills */}
