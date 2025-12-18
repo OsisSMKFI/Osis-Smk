@@ -1,3 +1,7 @@
+import { Metadata } from 'next';
+import { STATIC_METADATA } from '@/lib/metadata-helper';
+
+export const metadata: Metadata = STATIC_METADATA.notFound;
 
 export default function NotFound() {
   return (

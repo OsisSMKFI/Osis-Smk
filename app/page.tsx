@@ -1,3 +1,4 @@
+import { STATIC_METADATA } from '@/lib/metadata-helper';
 import DynamicHero from '@/components/DynamicHero';
 import VisionCard from '@/components/VisionCard';
 import GoalsSection from '@/components/GoalsSection';
@@ -6,6 +7,8 @@ import AnnouncementsWidget from '@/components/AnnouncementsWidget';
 import PollsWidget from '@/components/PollsWidget';
 import { HomePageDataProvider } from '@/contexts/HomePageDataContext';
 import { SectionsAnimatedBackground } from '@/components/animations/AnimatedBackground';
+
+export const metadata = STATIC_METADATA.home;
 
 export default function Home() {
   return (

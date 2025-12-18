@@ -1,0 +1,551 @@
+'use client';
+
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { FaGlobe, FaUser, FaChartLine, FaCalendarAlt, FaClock, FaEnvelope, FaIdCard, FaSchool, FaUserTag } from 'react-icons/fa';
+import RoleBadge from '@/components/RoleBadge';
+import AttendanceWidget from '@/components/dashboard/AttendanceWidget';
+import Image from 'next/image';
+import Link from 'next/link';
+
+interface UserProfile {
+  name: string;
+  email: string;
+  role: string;
+  username?: string;
+  nisn?: string;
+  nik?: string;
+  unit?: string;
+  kelas?: string;
+  instagram_username?: string;
+  requested_role?: string;
+  photo_url?: string;
+  created_at?: string;
+  email_verified?: boolean;
+  approved?: boolean;
+  updated_at?: string;
+  sekbid_id?: number;
+}
+
+export default function DashboardPageClient() {
+  const { data: session, update: updateSession } = useSession();
+  const router = useRouter();
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [roleChanged, setRoleChanged] = useState(false);
+
+  useEffect(() => {
+    // Parse userId from query if present
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('userId');
+      
+      // Check if user is trying to view another user's dashboard
+      if (q && q !== session?.user?.id) {
+        const currentRole = session?.user?.role;
+        const allowedRoles = ['super_admin', 'admin', 'osis'];
+        
+        // If not authorized role, redirect to own dashboard
+        if (!allowedRoles.includes(currentRole || '')) {
+          router.push('/dashboard');
+          return;
+        }
+      }
+      
+      setTargetUserId(q);
+    }
+    if (session?.user) {
+      loadProfile();
+      
+      // Auto-refresh profile every 5 minutes (was 30s - too frequent, causing performance issues)
+      const interval = setInterval(() => {
+        loadProfile();
+      }, 300000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [session]);
+
+  const loadProfile = async (showRefreshIndicator = false) => {
+    try {
+      if (showRefreshIndicator) setRefreshing(true);
+      const idToLoad = targetUserId || session?.user?.id;
+      // Use dedicated profile endpoint for own profile, admin endpoint for viewing others
+      const endpoint = targetUserId && targetUserId !== session?.user?.id 
+        ? `/api/admin/users/${idToLoad}`
+        : '/api/profile';
+      const res = await fetch(endpoint, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to load profile');
+      const data = await res.json();
+      
+      console.log('[Dashboard] loadProfile response:', data);
+      console.log('[Dashboard] Current session role:', session?.user?.role);
+      console.log('[Dashboard] Fetched data role:', data.data?.role);
+      
+      if (data.success) {
+        const newProfile = {
+          name: data.data.name || '',
+          email: data.data.email || '',
+          role: data.data.role || '',
+          username: data.data.username || data.data.nickname || '',
+          nisn: data.data.nisn || '',
+          nik: data.data.nik || '',
+          unit: data.data.unit || data.data.unit_sekolah || '',
+          kelas: data.data.kelas || '',
+          instagram_username: data.data.instagram_username || '',
+          requested_role: data.data.requested_role || '',
+          photo_url: data.data.profile_image || data.data.photo_url || '',
+          created_at: data.data.created_at || '',
+          email_verified: data.data.email_verified || false,
+          approved: data.data.approved || false,
+          updated_at: data.data.updated_at || '',
+          sekbid_id: data.data.sekbid_id || null,
+        };
+        setProfile(newProfile);
+        
+        console.log('[Dashboard] Profile set to:', newProfile);
+        console.log('[Dashboard] Comparing roles - Session:', session?.user?.role, 'DB:', data.data.role);
+        
+        // Update session if role changed and viewing own profile
+        if (!targetUserId && session?.user?.role !== data.data.role) {
+          console.log('[Dashboard] Role changed detected!', { 
+            old: session?.user?.role, 
+            new: data.data.role 
+          });
+          setRoleChanged(true);
+          
+          // Force logout to refresh JWT token with new role
+          setTimeout(async () => {
+            const shouldLogout = confirm(
+              `Role Anda telah diubah oleh admin dari "${session?.user?.role}" menjadi "${data.data.role}".\n\n` +
+              `Untuk mengaktifkan role baru, Anda perlu login ulang.\n\n` +
+              `Klik OK untuk logout sekarang, atau Cancel untuk logout nanti.`
+            );
+            if (shouldLogout) {
+              const origin = typeof window !== 'undefined' ? window.location.origin : '';
+              await signOut({ callbackUrl: `${origin}/` });
+            } else {
+              setRoleChanged(false);
+            }
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setLoading(false);
+      if (showRefreshIndicator) setRefreshing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    );
+  }
+
+  const userName = profile?.name || session?.user?.name || 'User';
+  const userEmail = profile?.email || session?.user?.email || '';
+  const userRole = profile?.role || session?.user?.role || 'siswa';
+  const userPhoto = profile?.photo_url || session?.user?.image || '';
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Role Change Notification */}
+        {roleChanged && (
+          <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3">
+              <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+              <div>
+                <p className="font-bold">Role Berhasil Diperbarui!</p>
+                <p className="text-sm opacity-90">Silakan logout untuk mengaktifkan role baru</p>
+              </div>
+              <button 
+                onClick={() => setRoleChanged(false)}
+                className="ml-4 text-white/80 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Welcome Header */}
+        <div className="bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 rounded-2xl shadow-2xl p-8 text-slate-900">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {/* Avatar */}
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full overflow-hidden bg-white shadow-2xl border-4 border-white">
+                {userPhoto ? (
+                  <Image
+                    src={userPhoto}
+                    alt={userName}
+                    width={128}
+                    height={128}
+                    className="object-cover w-full h-full"
+                    priority
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white text-5xl font-bold">
+                    {userInitial}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* User Info */}
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="text-4xl font-bold mb-2">Selamat Datang, {userName}!</h1>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-3">
+                <RoleBadge role={userRole} size="lg" />
+                <span className="text-slate-700 font-medium">{userEmail}</span>
+              </div>
+              <p className="text-slate-800 text-lg">
+                {userRole === 'guru' && 'Portal Guru - Monitor aktivitas dan kelola profil Anda'}
+                {userRole === 'siswa' && 'Portal Siswa - Lihat progress dan kelola profil Anda'}
+                {userRole === 'viewer' && 'Portal Viewer - Pantau aktivitas sekolah'}
+                {userRole === 'other' && 'Selamat datang di sistem OSIS'}
+              </p>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-col gap-3">
+              {/* Attendance Button - Only for siswa & guru */}
+              {['siswa', 'guru'].includes(userRole) && (
+                <Link
+                  href="/attendance"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                >
+                  <FaCalendarAlt className="text-xl" />
+                  Absensi
+                </Link>
+              )}
+              
+              <Link
+                href="/dashboard"
+                target="_blank"
+                className="flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              >
+                <FaGlobe className="text-xl" />
+                View Public Website
+              </Link>
+              <Link
+                href={['super_admin', 'admin', 'osis'].includes(userRole) ? '/admin/profile' : '/profile/edit'}
+                className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              >
+                <FaUser className="text-xl" />
+                My Profile
+              </Link>
+              <button
+                onClick={() => loadProfile(true)}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <FaClock className={`text-xl ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh Data'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Attendance Widget - Only for siswa & guru */}
+        {['siswa', 'guru'].includes(userRole) && (
+          <AttendanceWidget />
+        )}
+
+        {/* Profile Information */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Personal Data */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <FaUser className="text-yellow-500" />
+              Data Pribadi
+            </h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <FaEnvelope className="text-gray-400 text-xl" />
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{userEmail}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <FaUser className="text-gray-400 text-xl" />
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Nickname</p>
+                  <p className={`font-medium ${profile?.username ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                    {profile?.username || 'belum diisi'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <FaIdCard className="text-gray-400 text-xl" />
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">NIK (16 digit)</p>
+                  <p className={`font-medium ${profile?.nik ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                    {profile?.nik || 'belum diisi'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <FaIdCard className="text-gray-400 text-xl" />
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">NISN (10 digit)</p>
+                  <p className={`font-medium ${profile?.nisn ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                    {profile?.nisn || 'belum diisi'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <FaSchool className="text-gray-400 text-xl" />
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Unit Sekolah</p>
+                  <p className={`font-medium ${profile?.unit ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                    {profile?.unit || 'belum diisi'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <FaSchool className="text-gray-400 text-xl" />
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Kelas</p>
+                  <p className={`font-medium ${profile?.kelas ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400'}`}>
+                    {profile?.kelas || 'belum diisi'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Instagram</p>
+                  {(() => {
+                    // Clean instagram_username - extract username jika berbentuk email atau URL
+                    const rawUsername = profile?.instagram_username || '';
+                    let cleanUsername = rawUsername
+                      .replace(/^@/, '') // hapus @ di awal
+                      .replace(/https?:\/\/(www\.)?instagram\.com\//i, '') // hapus URL Instagram
+                      .replace(/\/$/, '') // hapus trailing slash
+                      .trim();
+                    
+                    // Jika masih berbentuk email, ambil bagian sebelum @
+                    if (cleanUsername.includes('@')) {
+                      cleanUsername = cleanUsername.split('@')[0];
+                    }
+                    
+                    // Hapus domain email yang mungkin tertempel (gmail.com, yahoo.com, dll)
+                    // Pattern: username diikuti langsung domain tanpa @ (misal: bilaniumn1gmail.com)
+                    const emailDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'mail.com', 'ymail.com', 'live.com', 'protonmail.com', 'zoho.com'];
+                    for (const domain of emailDomains) {
+                      if (cleanUsername.toLowerCase().endsWith(domain)) {
+                        cleanUsername = cleanUsername.slice(0, -domain.length);
+                        break;
+                      }
+                    }
+                    
+                    // Validasi apakah username valid (hanya huruf, angka, underscore, titik, max 30 char)
+                    const isValidUsername = /^[a-zA-Z0-9._]+$/.test(cleanUsername) && cleanUsername.length > 0 && cleanUsername.length <= 30;
+                    
+                    if (isValidUsername) {
+                      return (
+                        <a 
+                          href={`https://instagram.com/${cleanUsername}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1"
+                        >
+                          @{cleanUsername}
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      );
+                    } else if (rawUsername) {
+                      // Tampilkan peringatan jika format tidak valid
+                      return (
+                        <p className="font-medium text-amber-600 dark:text-amber-400 text-sm">
+                          Format salah - Update di profil
+                        </p>
+                      );
+                    } else {
+                      return (
+                        <p className="font-medium text-red-600 dark:text-red-400">belum diisi</p>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+              
+              {profile?.requested_role && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <FaUserTag className="text-gray-400 text-xl" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Role Diminta</p>
+                    <p className="font-medium text-gray-900 dark:text-white capitalize">{profile.requested_role}</p>
+                  </div>
+                </div>
+              )}
+              
+              {profile?.created_at && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <FaCalendarAlt className="text-gray-400 text-xl" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Bergabung Sejak</p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {new Date(profile.created_at).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Statistics */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <FaChartLine className="text-yellow-500" />
+              Statistik
+            </h2>
+            <div className="space-y-4">
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border-l-4 border-blue-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Status Akun</p>
+                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{profile?.approved ? 'Disetujui' : 'Menunggu Persetujuan'}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                    <FaUser className="text-white text-xl" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border-l-4 border-green-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">Email Verification</p>
+                    <p className="text-2xl font-bold text-green-700 dark:text-green-300">{profile?.email_verified ? 'Verified' : 'Unverified'}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                    <FaEnvelope className="text-white text-xl" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border-l-4 border-purple-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Role</p>
+                    <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 capitalize">{userRole}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
+                    <FaUserTag className="text-white text-xl" />
+                  </div>
+                </div>
+              </div>
+
+              {profile?.updated_at && (
+                <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/20 dark:to-slate-800/20 rounded-lg border-l-4 border-slate-500">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Terakhir Diperbarui</p>
+                      <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">
+                        {new Date(profile.updated_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-slate-500 rounded-full flex items-center justify-center">
+                      <FaClock className="text-white text-xl" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Info Cards */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
+                <FaGlobe className="text-white text-xl" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white">Public Website</h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+              Akses website publik OSIS untuk melihat berita, event, dan informasi terbaru.
+            </p>
+            <Link
+              href="/dashboard"
+              target="_blank"
+              className="block text-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors"
+            >
+              Buka Website
+            </Link>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                <FaUser className="text-white text-xl" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white">Edit Profil</h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+              Update data pribadi, foto profil, dan informasi lainnya.
+            </p>
+            <Link
+              href={['super_admin', 'admin', 'osis'].includes(userRole) ? '/admin/profile' : '/profile/edit'}
+              className="block text-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+            >
+              Edit Profil
+            </Link>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                <FaCalendarAlt className="text-white text-xl" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white">Aktivitas</h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+              Lihat aktivitas dan partisipasi Anda dalam kegiatan OSIS.
+            </p>
+            <Link 
+              href="/activity"
+              className="block w-full text-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:shadow-xl transition-all"
+            >
+              Lihat Aktivitas →
+            </Link>
+          </div>
+        </div>
+
+        {/* Footer Info */}
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl shadow-lg p-6 text-white text-center">
+          <p className="text-sm opacity-80">
+            Anda login sebagai <span className="font-bold">{userRole.toUpperCase()}</span>. 
+            Untuk mengakses fitur admin lengkap, hubungi administrator.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

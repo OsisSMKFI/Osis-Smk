@@ -3,6 +3,15 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 import React from 'react';
+import { Metadata } from 'next';
+import { generatePageMetadata } from '@/lib/metadata-helper';
+
+export const metadata: Metadata = generatePageMetadata({
+  title: 'Sekbid 3 - Akademik',
+  description: 'Seksi Bidang 3 (Akademik) OSIS SMK Informatika 2 Fithrah Insani. Mendukung kegiatan akademik dan pengembangan ilmu pengetahuan siswa.',
+  url: '/sekbid/sekbid-3',
+  type: 'article',
+});
 
 export default function Page() {
   return (

@@ -20,14 +20,49 @@ import { headers } from 'next/headers';
 
 const inter = Inter({ subsets: ["latin"] });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
+
 export const metadata: Metadata = {
-    title: "OSIS SMK Informatika - Dirgantara 2025",
-    description: "Student Intra-School Organization SMK Informatika - Dirgantara 2025 | Organisasi Siswa Intra Sekolah SMK Informatika - Dirgantara 2025",
+    title: {
+        default: "OSIS SMK Informatika 2 Fithrah Insani",
+        template: "%s | OSIS SMK Informatika 2 FI",
+    },
+    description: "Website Resmi OSIS SMK Informatika 2 Fithrah Insani - Organisasi Siswa Intra Sekolah yang aktif dalam kegiatan keislaman, kepemimpinan, dan kreativitas siswa.",
+    keywords: ['OSIS', 'SMK Informatika 2', 'Fithrah Insani', 'Bandung', 'Sekolah Islam', 'Organisasi Siswa'],
+    authors: [{ name: 'OSIS SMK Informatika 2 FI' }],
     icons: {
         icon: '/images/logo-2.png',
         shortcut: '/images/logo-2.png',
         apple: '/images/logo-2.png',
-    }
+    },
+    openGraph: {
+        title: 'OSIS SMK Informatika 2 Fithrah Insani',
+        description: 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani - Organisasi Siswa Intra Sekolah yang aktif dalam kegiatan keislaman, kepemimpinan, dan kreativitas siswa.',
+        url: SITE_URL,
+        siteName: 'OSIS SMK Informatika 2 Fithrah Insani',
+        locale: 'id_ID',
+        type: 'website',
+        images: [
+            {
+                url: `${SITE_URL}/images/logo.png`,
+                width: 1200,
+                height: 630,
+                alt: 'OSIS SMK Informatika 2 Fithrah Insani',
+            },
+        ],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'OSIS SMK Informatika 2 Fithrah Insani',
+        description: 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani',
+        images: [`${SITE_URL}/images/logo.png`],
+        creator: '@osissmkinformatika2fi',
+    },
+    robots: {
+        index: true,
+        follow: true,
+    },
+    metadataBase: new URL(SITE_URL),
 };
 
 // Make layout dynamic so background changes apply immediately without rebuild

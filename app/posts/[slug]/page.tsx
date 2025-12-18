@@ -74,7 +74,7 @@ export async function generateMetadata({
     post.content.replace(/<[^>]*>/g, '').slice(0, 160) + '...';
 
   // Get featured image or use default
-  const ogImage = post.featured_image || '/images/og-default.png';
+  const ogImage = post.featured_image || '/images/logo.png';
   
   // Check if it's a video
   const isVideo = /\.(mp4|webm|ogg)$/i.test(post.featured_image || '');
@@ -82,7 +82,7 @@ export async function generateMetadata({
   // For videos, we might want to use a poster/thumbnail if available
   // Otherwise use a default image
   const imageUrl = isVideo 
-    ? '/images/og-default.png' // Use default for videos
+    ? '/images/logo.png' // Use default for videos
     : ogImage;
 
   // Build the full URL

@@ -3,6 +3,15 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 import React from 'react';
+import { Metadata } from 'next';
+import { generatePageMetadata } from '@/lib/metadata-helper';
+
+export const metadata: Metadata = generatePageMetadata({
+  title: 'Sekbid 6 - Publikasi & Dokumentasi',
+  description: 'Seksi Bidang 6 (Publikasi & Dokumentasi) OSIS SMK Informatika 2 Fithrah Insani. Mengelola publikasi, dokumentasi, dan teknologi informasi OSIS.',
+  url: '/sekbid/sekbid-6',
+  type: 'article',
+});
 
 export default function Page() {
   return (

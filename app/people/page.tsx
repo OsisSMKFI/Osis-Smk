@@ -1,8 +1,11 @@
 import React from 'react';
+import { Metadata } from 'next';
 import PeopleSectionsClient from '@/components/PeopleSectionsClient';
 import PageHero from '@/components/animations/PageHero';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { STATIC_METADATA } from '@/lib/metadata-helper';
 
+export const metadata: Metadata = STATIC_METADATA.people;
 export const revalidate = 0; // Always fetch fresh data
 
 // Fix incomplete URLs stored as just filenames

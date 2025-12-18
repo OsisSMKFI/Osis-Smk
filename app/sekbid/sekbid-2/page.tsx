@@ -3,6 +3,15 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 import React from 'react';
+import { Metadata } from 'next';
+import { generatePageMetadata } from '@/lib/metadata-helper';
+
+export const metadata: Metadata = generatePageMetadata({
+  title: 'Sekbid 2 - Kaderisasi',
+  description: 'Seksi Bidang 2 (Kaderisasi) OSIS SMK Informatika 2 Fithrah Insani. Membentuk karakter kepemimpinan dan kaderisasi anggota OSIS.',
+  url: '/sekbid/sekbid-2',
+  type: 'article',
+});
 
 export default function Page() {
   return (
