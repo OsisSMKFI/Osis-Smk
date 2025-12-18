@@ -1987,7 +1987,8 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
             // 🔥 PARSE DIFF BLOCKS (new format for safe edits)
             // ═══════════════════════════════════════════════════════════════
             const diffBlocks: { path: string; find: string; replace: string }[] = [];
-            const diffBlockRegex = /```diff:([^\n]+)\n<<<FIND>>>\n([\s\S]*?)\n<<<REPLACE>>>\n([\s\S]*?)```/g;
+            // More flexible regex - allows variations in formatting
+            const diffBlockRegex = /```diff:([^\n]+)\s*\n\s*<<<\s*FIND\s*>>>\s*\n([\s\S]*?)\n\s*<<<\s*REPLACE\s*>>>\s*\n([\s\S]*?)```/gi;
             let diffMatch;
             while ((diffMatch = diffBlockRegex.exec(data.reply)) !== null) {
                 diffBlocks.push({
@@ -1995,6 +1996,25 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                     find: diffMatch[2].trim(),
                     replace: diffMatch[3].trim()
                 });
+            }
+            
+            // Also try alternate format without file path in code block
+            if (diffBlocks.length === 0) {
+                const altDiffRegex = /<<<\s*FIND\s*>>>\s*\n([\s\S]*?)\n\s*<<<\s*REPLACE\s*>>>\s*\n([\s\S]*?)(?=```|$)/gi;
+                let altMatch;
+                // Get file path from context (look for file mentions)
+                const filePathMatch = data.reply.match(/`(components\/[^`]+\.tsx|app\/[^`]+\.tsx|lib\/[^`]+\.ts)`/);
+                const inferredPath = filePathMatch ? filePathMatch[1] : null;
+                
+                while ((altMatch = altDiffRegex.exec(data.reply)) !== null) {
+                    if (inferredPath || openSourceFile?.path) {
+                        diffBlocks.push({
+                            path: inferredPath || openSourceFile?.path || '',
+                            find: altMatch[1].trim(),
+                            replace: altMatch[2].trim()
+                        });
+                    }
+                }
             }
             
             // Extract all code blocks (CSS, TSX, etc) - including file paths
@@ -4038,14 +4058,25 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                             <div className="p-4 border-t border-white/10" style={{ background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, rgba(15, 23, 42, 1) 100%)' }}>
                                 <div className="relative group">
                                     <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl opacity-0 group-focus-within:opacity-100 blur transition-all duration-300" />
-                                    <div className="relative flex items-center bg-slate-800/80 backdrop-blur border border-white/10 rounded-xl overflow-hidden">
-                                        <input
-                                            type="text"
+                                    <div className="relative flex items-start bg-slate-800/80 backdrop-blur border border-white/10 rounded-xl overflow-hidden">
+                                        <textarea
                                             value={chatInput}
-                                            onChange={e => setChatInput(e.target.value)}
-                                            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
-                                            placeholder={selectedComponent ? `Tanya tentang ${DESIGN_REGISTRY[selectedComponent]?.displayName || selectedComponent}...` : 'Ketik apa saja: "glassmorphism untuk navbar", "dark mode card", dll...'}
-                                            className="flex-1 bg-transparent px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none transition-all"
+                                            onChange={e => {
+                                                setChatInput(e.target.value);
+                                                // Auto-resize textarea
+                                                e.target.style.height = 'auto';
+                                                e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                                            }}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    sendChatMessage();
+                                                }
+                                                // Shift+Enter = new line (default behavior)
+                                            }}
+                                            placeholder={selectedComponent ? `Tanya tentang ${DESIGN_REGISTRY[selectedComponent]?.displayName || selectedComponent}...` : 'Ketik apa saja... (Shift+Enter untuk baris baru)'}
+                                            className="flex-1 bg-transparent px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none transition-all resize-none min-h-[48px] max-h-[150px] overflow-y-auto"
+                                            rows={1}
                                         />
                                         <button 
                                             onClick={sendChatMessage}

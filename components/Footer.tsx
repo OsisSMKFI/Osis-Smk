@@ -247,7 +247,7 @@ const Footer: React.FC = () => {
                 </li>
                 <li className="flex items-center">
                   <FaEnvelope className="mr-3 text-yellow-400" />
-                  <span className="text-gray-600 dark:text-gray-400">info@smaitfithrahinsani.sch.id</span>
+                  <span className="text-gray-600 dark:text-gray-400">osissmkinformatika2.fi@gmail.com</span>
                 </li>
               </ul>
             </div>
