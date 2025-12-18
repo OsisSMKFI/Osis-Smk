@@ -24,8 +24,8 @@ const supabase = createClient(
 
 // Fallback image - MUST be accessible without auth
 const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 
-  ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo.png`
-  : 'https://osissmktest.biezz.my.id/images/logo.png'
+  ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo-2.png`
+  : 'https://osissmktest.biezz.my.id/images/logo-2.png'
 
 // WhatsApp OG Image requirements:
 // - Max size: ~300KB (WhatsApp times out on large images)
