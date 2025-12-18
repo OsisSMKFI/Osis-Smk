@@ -333,6 +333,8 @@ export default function DesignStudioPage() {
     const [chatInput, setChatInput] = useState('');
     const [isAILoading, setIsAILoading] = useState(false);
     const [useAgentMode, setUseAgentMode] = useState(true); // Copilot-like AI Agent mode
+    const [streamingSteps, setStreamingSteps] = useState<{ type: string; content: string; timestamp: Date }[]>([]);
+    const [useStreaming, setUseStreaming] = useState(true); // Use streaming API for real-time steps
     
     // Notification
     const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
@@ -2020,7 +2022,120 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
             // ═══════════════════════════════════════════════════════════════
             // 🤖 AI AGENT MODE - Copilot-like with real tool capabilities
             // ═══════════════════════════════════════════════════════════════
-            if (useAgentMode) {
+            if (useAgentMode && useStreaming) {
+                // ═══════════════════════════════════════════════════════════
+                // 🌊 STREAMING MODE - Real-time steps like VS Code Copilot
+                // ═══════════════════════════════════════════════════════════
+                try {
+                    setStreamingSteps([]);
+                    
+                    const streamRes = await fetch('/api/ai/agent/stream', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: userQuery,
+                            conversationHistory: recentMessages.filter(m => m.role === 'user' || m.role === 'assistant'),
+                            openFile: openSourceFile ? { 
+                                path: openSourceFile.path, 
+                                content: openSourceFile.content?.slice(0, 3000) 
+                            } : undefined,
+                            mode: 'design-studio'
+                        })
+                    });
+                    
+                    if (!streamRes.ok) throw new Error('Stream failed');
+                    
+                    const reader = streamRes.body?.getReader();
+                    const decoder = new TextDecoder();
+                    let finalMessage = '';
+                    let toolsUsedList: any[] = [];
+                    let filesModifiedList: string[] = [];
+                    
+                    if (reader) {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            
+                            const chunk = decoder.decode(value);
+                            const lines = chunk.split('\n\n');
+                            
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    try {
+                                        const event = JSON.parse(line.slice(6));
+                                        
+                                        // Add step to streaming display
+                                        if (event.type !== 'done') {
+                                            setStreamingSteps(prev => [...prev, {
+                                                type: event.type,
+                                                content: event.content,
+                                                timestamp: new Date()
+                                            }]);
+                                        }
+                                        
+                                        // Handle specific event types
+                                        if (event.type === 'message') {
+                                            finalMessage = event.content;
+                                            if (event.data?.toolsUsed) toolsUsedList = event.data.toolsUsed;
+                                            if (event.data?.filesModified) filesModifiedList = event.data.filesModified;
+                                        } else if (event.type === 'file-edit') {
+                                            notify('success', event.content);
+                                        } else if (event.type === 'error') {
+                                            notify('error', event.content);
+                                        } else if (event.type === 'done') {
+                                            if (event.data?.filesModified?.length > 0) {
+                                                notify('success', `✅ AI Agent modified ${event.data.filesModified.length} file(s)`);
+                                                await loadFileTree();
+                                                if (openSourceFile && event.data.filesModified.includes(openSourceFile.path)) {
+                                                    await openFile(openSourceFile.path);
+                                                }
+                                            }
+                                        }
+                                    } catch { /* skip invalid JSON */ }
+                                }
+                            }
+                        }
+                    }
+                    
+                    data = { 
+                        reply: finalMessage,
+                        toolsUsed: toolsUsedList,
+                        filesModified: filesModifiedList
+                    };
+                    
+                    // Clear streaming steps after complete
+                    setTimeout(() => setStreamingSteps([]), 500);
+                    
+                } catch (streamErr) {
+                    console.log('[AI Streaming] Fallback to non-streaming:', streamErr);
+                    // Fallback to regular agent mode
+                    setStreamingSteps([]);
+                    const agentRes = await fetch('/api/ai/agent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: userQuery,
+                            conversationHistory: recentMessages.filter(m => m.role === 'user' || m.role === 'assistant'),
+                            openFile: openSourceFile ? { 
+                                path: openSourceFile.path, 
+                                content: openSourceFile.content?.slice(0, 3000) 
+                            } : undefined,
+                            mode: 'design-studio'
+                        })
+                    });
+                    
+                    if (agentRes.ok) {
+                        const agentData = await agentRes.json();
+                        data = { 
+                            reply: agentData.reply || agentData.error,
+                            toolsUsed: agentData.toolsUsed,
+                            filesModified: agentData.filesModified
+                        };
+                    } else {
+                        throw new Error('Agent failed');
+                    }
+                }
+            } else if (useAgentMode) {
                 try {
                     const agentRes = await fetch('/api/ai/agent', {
                         method: 'POST',
@@ -4305,20 +4420,52 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                                                 <Bot className="w-4 h-4 text-white" />
                                             </div>
                                         </div>
-                                        <div className="bg-white/5 border border-white/10 backdrop-blur px-5 py-4 rounded-2xl rounded-bl-md">
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex gap-1.5">
-                                                    <span className="w-2.5 h-2.5 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                                    <span className="w-2.5 h-2.5 bg-gradient-to-r from-pink-400 to-orange-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                                    <span className="w-2.5 h-2.5 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                        <div className="bg-white/5 border border-white/10 backdrop-blur px-5 py-4 rounded-2xl rounded-bl-md min-w-[280px] max-w-[400px]">
+                                            {/* Streaming Steps - Copilot-like real-time display */}
+                                            {streamingSteps.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {streamingSteps.map((step, idx) => (
+                                                        <motion.div 
+                                                            key={idx}
+                                                            initial={{ opacity: 0, x: -10 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            className={`flex items-start gap-2 text-xs ${
+                                                                step.type === 'error' ? 'text-red-400' :
+                                                                step.type === 'file-edit' ? 'text-emerald-400' :
+                                                                step.type === 'tool-result' ? 'text-blue-400' :
+                                                                step.type === 'tool-call' ? 'text-amber-400' :
+                                                                'text-gray-400'
+                                                            }`}
+                                                        >
+                                                            {step.type === 'thinking' && <Loader2 className="w-3 h-3 animate-spin mt-0.5 flex-shrink-0" />}
+                                                            {step.type === 'tool-call' && <Zap className="w-3 h-3 mt-0.5 flex-shrink-0" />}
+                                                            {step.type === 'tool-result' && <Check className="w-3 h-3 mt-0.5 flex-shrink-0" />}
+                                                            {step.type === 'file-edit' && <FileCode className="w-3 h-3 mt-0.5 flex-shrink-0" />}
+                                                            {step.type === 'error' && <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />}
+                                                            <span className="leading-relaxed">{step.content}</span>
+                                                        </motion.div>
+                                                    ))}
+                                                    {/* Active thinking indicator at the end */}
+                                                    <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/5">
+                                                        <div className="flex gap-1">
+                                                            <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                            <span className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                            <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <span className="text-xs text-gray-400">
-                                                    {chatInput.toLowerCase().includes('terapkan') || chatInput.toLowerCase().includes('apply') ? '✨ Menerapkan perubahan...' :
-                                                     chatInput.toLowerCase().includes('css') || chatInput.toLowerCase().includes('style') ? '🎨 Generating CSS...' :
-                                                     chatInput.toLowerCase().includes('file') || chatInput.toLowerCase().includes('code') ? '📝 Analyzing code...' :
-                                                     '🤔 Thinking...'}
-                                                </span>
-                                            </div>
+                                            ) : (
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex gap-1.5">
+                                                        <span className="w-2.5 h-2.5 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                                        <span className="w-2.5 h-2.5 bg-gradient-to-r from-pink-400 to-orange-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                                        <span className="w-2.5 h-2.5 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                                    </div>
+                                                    <span className="text-xs text-gray-400">
+                                                        🧠 Memulai analisis...
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     </motion.div>
                                 )}
