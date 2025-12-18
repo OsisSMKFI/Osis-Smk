@@ -1,11 +1,13 @@
 /**
- * OG Image Proxy for Sekbid
+ * OG Image Proxy for Sekbid - WhatsApp Compatible
  * 
- * INDUSTRY STANDARD: Serve Supabase images through our domain
- * WhatsApp ONLY trusts images from the same domain as the OG tag
- * 
- * URL: /og/sekbid/{id}
- * Output: Image (proxied from Supabase or generated fallback)
+ * CRITICAL FOR WHATSAPP:
+ * ✅ Binary image response (NOT JSON, NOT JSX)
+ * ✅ Status 200 OK
+ * ✅ Content-Type: image/*
+ * ✅ NO redirect
+ * ✅ NO auth
+ * ✅ Use facebookexternalhit User-Agent
  */
 
 import { NextResponse } from 'next/server'
@@ -13,30 +15,15 @@ import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-// Supabase client for server-side
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id'
-const FALLBACK_IMAGE = `${SITE_URL}/images/logo.png`
-
-// Sekbid names for fallback
-const SEKBID_NAMES: Record<number, string> = {
-  1: 'Keagamaan',
-  2: 'Kaderisasi',
-  3: 'Akademik',
-  4: 'Olahraga & Kewirausahaan',
-  5: 'Kesehatan & Lingkungan',
-  6: 'Publikasi & Dokumentasi',
-}
+// Fallback image - MUST be accessible without auth
+const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 
+  ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo.png`
+  : 'https://osissmktest.biezz.my.id/images/logo.png'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -50,79 +37,89 @@ export async function GET(
     const { id } = await params
     const sekbidId = parseInt(id)
 
+    // 1. Validate sekbid ID
     if (isNaN(sekbidId) || sekbidId < 1 || sekbidId > 6) {
-      // Invalid sekbid, return fallback
-      const fallbackResponse = await fetch(FALLBACK_IMAGE)
-      return new NextResponse(fallbackResponse.body, {
+      const fallbackRes = await fetch(FALLBACK_URL, {
+        headers: { 'User-Agent': 'facebookexternalhit/1.1' },
+      })
+      return new NextResponse(fallbackRes.body, {
+        status: 200,
         headers: {
           'Content-Type': 'image/png',
           'Cache-Control': 'public, max-age=86400',
-          'X-OG-Source': 'invalid-id-fallback',
         },
       })
     }
 
-    // 1. Try to fetch sekbid image from database
-    const { data: sekbid, error } = await supabase
+    // 2. Get sekbid from database
+    const { data } = await supabase
       .from('sekbid')
-      .select('image, name')
+      .select('image')
       .eq('id', sekbidId)
       .single()
 
-    if (error) {
-      console.error('[OG/sekbid] DB error:', error.message)
-    }
+    // 3. Determine source image
+    const src = data?.image || FALLBACK_URL
 
-    // 2. Determine image URL
-    let imageUrl = FALLBACK_IMAGE
-
-    if (sekbid?.image) {
-      imageUrl = sekbid.image
-    }
-
-    // 3. Fetch the actual image
-    const imageResponse = await fetch(imageUrl, {
+    // 4. Fetch image as binary with WhatsApp-compatible headers
+    const res = await fetch(src, {
+      redirect: 'follow',
       headers: {
-        'Accept': 'image/*',
+        'User-Agent': 'facebookexternalhit/1.1',
+        'Accept': 'image/jpeg, image/png, image/webp, image/*',
       },
     })
 
-    if (!imageResponse.ok) {
-      // Fallback if image fetch fails
-      const fallbackResponse = await fetch(FALLBACK_IMAGE)
-      return new NextResponse(fallbackResponse.body, {
+    // 5. Validate response is actually an image
+    const contentType = res.headers.get('content-type') || ''
+    
+    if (!res.ok || !contentType.startsWith('image')) {
+      const fallbackRes = await fetch(FALLBACK_URL, {
+        headers: { 'User-Agent': 'facebookexternalhit/1.1' },
+      })
+      return new NextResponse(fallbackRes.body, {
+        status: 200,
         headers: {
           'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-          'X-OG-Source': 'fetch-failed-fallback',
+          'Cache-Control': 'public, max-age=86400',
         },
       })
     }
 
-    // 4. Serve the image from OUR DOMAIN
-    return new NextResponse(imageResponse.body, {
+    // 6. Return binary image directly
+    return new NextResponse(res.body, {
+      status: 200,
       headers: {
-        'Content-Type': imageResponse.headers.get('content-type') || 'image/jpeg',
+        'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
-        'X-OG-Source': 'proxied',
-        'X-OG-Sekbid': SEKBID_NAMES[sekbidId] || `Sekbid ${sekbidId}`,
       },
     })
+
   } catch (error) {
     console.error('[OG/sekbid] Error:', error)
 
-    // Return fallback on any error
     try {
-      const fallbackResponse = await fetch(FALLBACK_IMAGE)
-      return new NextResponse(fallbackResponse.body, {
+      const fallbackRes = await fetch(FALLBACK_URL)
+      return new NextResponse(fallbackRes.body, {
+        status: 200,
         headers: {
           'Content-Type': 'image/png',
           'Cache-Control': 'public, max-age=3600',
-          'X-OG-Source': 'error-fallback',
         },
       })
     } catch {
-      return new NextResponse('Image not found', { status: 404 })
+      // Last resort - return 1x1 transparent PNG
+      const transparentPng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      )
+      return new NextResponse(transparentPng, {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=60',
+        },
+      })
     }
   }
 }

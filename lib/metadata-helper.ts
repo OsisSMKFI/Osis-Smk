@@ -27,23 +27,28 @@ export const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah
 // ═══════════════════════════════════════════════════════════════════════════════
 // OG IMAGE PROXY URLs (served from our domain)
 // ═══════════════════════════════════════════════════════════════════════════════
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default`;
-export const FALLBACK_OG_IMAGE = `${SITE_URL}/og/default`;
+// Cache buster version - increment this to force WhatsApp to re-fetch
+const OG_VERSION = 2;
+
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default?v=${OG_VERSION}`;
+export const FALLBACK_OG_IMAGE = `${SITE_URL}/og/default?v=${OG_VERSION}`;
 
 /**
  * Get proxied OG image URL for a post
  * Image is served from our domain, proxying the Supabase image
+ * Includes version param to bust WhatsApp cache
  */
 export function getPostOGImage(slug: string): string {
-    return `${SITE_URL}/og/post/${slug}`;
+    return `${SITE_URL}/og/post/${slug}?v=${OG_VERSION}`;
 }
 
 /**
  * Get proxied OG image URL for a sekbid
  * Image is served from our domain, proxying the Supabase image
+ * Includes version param to bust WhatsApp cache
  */
 export function getSekbidOGImage(id: number): string {
-    return `${SITE_URL}/og/sekbid/${id}`;
+    return `${SITE_URL}/og/sekbid/${id}?v=${OG_VERSION}`;
 }
 
 /**

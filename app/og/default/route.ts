@@ -1,41 +1,83 @@
 /**
- * Default OG Image Route
+ * Default OG Image Route - WhatsApp Compatible
  * 
- * URL: /og/default
- * Output: Default logo image (for static pages)
- * 
- * This ensures all pages have a working OG image from our domain
+ * CRITICAL FOR WHATSAPP:
+ * ✅ Binary image response
+ * ✅ Status 200 OK
+ * ✅ Content-Type: image/*
+ * ✅ Use facebookexternalhit User-Agent
  */
 
 import { NextResponse } from 'next/server'
+import * as fs from 'fs'
+import * as path from 'path'
 
 export const runtime = 'nodejs'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id'
-const DEFAULT_IMAGE = `${SITE_URL}/images/logo.png`
+const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 
+  ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo.png`
+  : 'https://osissmktest.biezz.my.id/images/logo.png'
 
 export async function GET() {
   try {
-    // Serve the default logo
-    const imageResponse = await fetch(DEFAULT_IMAGE, {
+    // Try to read directly from filesystem first (faster, more reliable)
+    const logoPath = path.join(process.cwd(), 'public', 'images', 'logo.png')
+    
+    if (fs.existsSync(logoPath)) {
+      const imageBuffer = fs.readFileSync(logoPath)
+      return new NextResponse(imageBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      })
+    }
+
+    // Fallback to HTTP fetch
+    const res = await fetch(FALLBACK_URL, {
       headers: {
-        'Accept': 'image/*',
+        'User-Agent': 'facebookexternalhit/1.1',
+        'Accept': 'image/png, image/jpeg, image/*',
       },
     })
 
-    if (!imageResponse.ok) {
-      return new NextResponse('Default image not found', { status: 404 })
+    if (!res.ok) {
+      // Return 1x1 transparent PNG as last resort
+      const transparentPng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      )
+      return new NextResponse(transparentPng, {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=60',
+        },
+      })
     }
 
-    return new NextResponse(imageResponse.body, {
+    return new NextResponse(res.body, {
+      status: 200,
       headers: {
-        'Content-Type': imageResponse.headers.get('content-type') || 'image/png',
+        'Content-Type': res.headers.get('content-type') || 'image/png',
         'Cache-Control': 'public, max-age=31536000, immutable',
-        'X-OG-Source': 'default',
       },
     })
   } catch (error) {
     console.error('[OG/default] Error:', error)
-    return new NextResponse('Image error', { status: 500 })
+    
+    // Return 1x1 transparent PNG
+    const transparentPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    )
+    return new NextResponse(transparentPng, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=60',
+      },
+    })
   }
 }

@@ -1,11 +1,13 @@
 /**
- * OG Image Proxy for Posts
+ * OG Image Proxy for Posts - WhatsApp Compatible
  * 
- * INDUSTRY STANDARD: Serve Supabase images through our domain
- * WhatsApp ONLY trusts images from the same domain as the OG tag
- * 
- * URL: /og/post/{slug}
- * Output: Image (proxied from Supabase or fallback)
+ * CRITICAL FOR WHATSAPP:
+ * ✅ Binary image response (NOT JSON, NOT JSX)
+ * ✅ Status 200 OK
+ * ✅ Content-Type: image/*
+ * ✅ NO redirect
+ * ✅ NO auth
+ * ✅ Use facebookexternalhit User-Agent
  */
 
 import { NextResponse } from 'next/server'
@@ -13,20 +15,15 @@ import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-// Supabase client for server-side
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id'
-const FALLBACK_IMAGE = `${SITE_URL}/images/logo.png`
+// Fallback image - MUST be accessible without auth
+const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 
+  ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo.png`
+  : 'https://osissmktest.biezz.my.id/images/logo.png'
 
 interface RouteParams {
   params: Promise<{ slug: string }>
@@ -39,74 +36,87 @@ export async function GET(
   try {
     const { slug } = await params
 
-    // 1. Fetch post from database
-    const { data: post, error } = await supabase
+    // 1. Get post from database
+    const { data } = await supabase
       .from('posts')
-      .select('featured_image, title')
+      .select('featured_image')
       .eq('slug', slug)
-      .eq('status', 'published')
       .single()
 
-    if (error) {
-      console.error('[OG/post] DB error:', error.message)
-    }
+    // 2. Determine source image
+    let src = FALLBACK_URL
 
-    // 2. Determine image URL (post image or fallback)
-    let imageUrl = FALLBACK_IMAGE
-
-    if (post?.featured_image) {
-      // Check if it's a video (can't use as OG image)
-      const isVideo = /\.(mp4|webm|ogg)$/i.test(post.featured_image)
+    if (data?.featured_image) {
+      // Skip videos
+      const isVideo = /\.(mp4|webm|ogg)$/i.test(data.featured_image)
       if (!isVideo) {
-        imageUrl = post.featured_image
+        src = data.featured_image
       }
     }
 
-    // 3. Fetch the actual image
-    const imageResponse = await fetch(imageUrl, {
+    // 3. Fetch image as binary with WhatsApp-compatible headers
+    const res = await fetch(src, {
+      redirect: 'follow',
       headers: {
-        'Accept': 'image/*',
+        'User-Agent': 'facebookexternalhit/1.1', // WhatsApp uses this
+        'Accept': 'image/jpeg, image/png, image/webp, image/*',
       },
     })
 
-    if (!imageResponse.ok) {
-      // Fallback if image fetch fails
-      const fallbackResponse = await fetch(FALLBACK_IMAGE)
-      return new NextResponse(fallbackResponse.body, {
+    // 4. Validate response is actually an image
+    const contentType = res.headers.get('content-type') || ''
+    
+    if (!res.ok || !contentType.startsWith('image')) {
+      // Fallback to logo
+      const fallbackRes = await fetch(FALLBACK_URL, {
+        headers: { 'User-Agent': 'facebookexternalhit/1.1' },
+      })
+      
+      return new NextResponse(fallbackRes.body, {
+        status: 200,
         headers: {
-          'Content-Type': fallbackResponse.headers.get('content-type') || 'image/png',
-          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-          'X-OG-Source': 'fallback',
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400',
         },
       })
     }
 
-    // 4. Serve the image from OUR DOMAIN
-    // WhatsApp will see: osissmktest.biezz.my.id/og/post/xxx
-    // NOT: supabase.co/xxx
-    return new NextResponse(imageResponse.body, {
+    // 5. Return binary image directly
+    // WhatsApp will receive pure image bytes, not JSON
+    return new NextResponse(res.body, {
+      status: 200,
       headers: {
-        'Content-Type': imageResponse.headers.get('content-type') || 'image/jpeg',
+        'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
-        'X-OG-Source': 'proxied',
-        'X-OG-Original': imageUrl.substring(0, 100), // Debug info (truncated)
       },
     })
+
   } catch (error) {
     console.error('[OG/post] Error:', error)
 
-    // Return fallback on any error
+    // Emergency fallback - return a simple image
     try {
-      const fallbackResponse = await fetch(FALLBACK_IMAGE)
-      return new NextResponse(fallbackResponse.body, {
+      const fallbackRes = await fetch(FALLBACK_URL)
+      return new NextResponse(fallbackRes.body, {
+        status: 200,
         headers: {
           'Content-Type': 'image/png',
           'Cache-Control': 'public, max-age=3600',
-          'X-OG-Source': 'error-fallback',
         },
       })
     } catch {
-      return new NextResponse('Image not found', { status: 404 })
+      // Last resort - return 1x1 transparent PNG
+      const transparentPng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      )
+      return new NextResponse(transparentPng, {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=60',
+        },
+      })
     }
   }
 }
