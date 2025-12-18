@@ -86,11 +86,12 @@ export async function GET(
     
     // Resize and compress for WhatsApp
     // Target: 1200x630, JPEG quality adjusted to stay under 250KB
+    // Using 'contain' to prevent cropping - adds white background if needed
     let quality = 80
     let compressedBuffer = await sharp(originalBuffer)
       .resize(OG_WIDTH, OG_HEIGHT, {
-        fit: 'cover',
-        position: 'center',
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
       })
       .jpeg({ quality, mozjpeg: true })
       .toBuffer()
@@ -100,8 +101,8 @@ export async function GET(
       quality -= 10
       compressedBuffer = await sharp(originalBuffer)
         .resize(OG_WIDTH, OG_HEIGHT, {
-          fit: 'cover',
-          position: 'center',
+          fit: 'contain',
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
         })
         .jpeg({ quality, mozjpeg: true })
         .toBuffer()
