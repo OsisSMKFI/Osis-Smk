@@ -2117,9 +2117,11 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                 for (const pattern of filePathPatterns) {
                     const match = data.reply.match(pattern);
                     if (match) {
-                        inferredPath = match[1] || match[0];
-                        inferredPath = inferredPath.replace(/`/g, '').trim();
-                        break;
+                        const matchedPath = match[1] || match[0];
+                        if (matchedPath) {
+                            inferredPath = matchedPath.replace(/`/g, '').trim();
+                            break;
+                        }
                     }
                 }
                 
