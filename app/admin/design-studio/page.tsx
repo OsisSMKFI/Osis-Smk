@@ -2042,7 +2042,7 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
             }
             
             // Extract file changes (code blocks with file paths)
-            const fileChanges = codeBlocks
+            let fileChanges = codeBlocks
                 .filter(b => b.filename)
                 .map(b => ({
                     path: b.filename!,
@@ -2050,6 +2050,62 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                     code: b.code,
                     action: 'update' as const
                 }));
+            
+            // ═══════════════════════════════════════════════════════════════
+            // 🔥 FALLBACK: If no file path in code block, try to infer from context
+            // ═══════════════════════════════════════════════════════════════
+            if (fileChanges.length === 0 && codeBlocks.length > 0) {
+                // Look for file paths mentioned in the response
+                const filePathPatterns = [
+                    /📍\s*(?:Lokasi\s*File|File):\s*`?([^`\n]+\.tsx?)`?/i,
+                    /(?:components|app|lib|hooks|contexts)\/[^\s`]+\.tsx?/g,
+                    /`((?:components|app|lib|hooks|contexts)\/[^`]+\.tsx?)`/g
+                ];
+                
+                let inferredPath: string | null = null;
+                for (const pattern of filePathPatterns) {
+                    const match = data.reply.match(pattern);
+                    if (match) {
+                        inferredPath = match[1] || match[0];
+                        inferredPath = inferredPath.replace(/`/g, '').trim();
+                        break;
+                    }
+                }
+                
+                // If we found a path and have TSX/JSX code blocks, create file changes
+                if (inferredPath) {
+                    const tsxBlocks = codeBlocks.filter(b => 
+                        ['tsx', 'jsx', 'typescript', 'javascript'].includes(b.language) && 
+                        b.code.length > 100 // Only substantial code blocks
+                    );
+                    
+                    if (tsxBlocks.length > 0) {
+                        fileChanges = tsxBlocks.map(b => ({
+                            path: inferredPath!,
+                            language: b.language,
+                            code: b.code,
+                            action: 'update' as const
+                        }));
+                    }
+                }
+                
+                // Also check if there's an open file and the code looks like it's for that file
+                if (fileChanges.length === 0 && openSourceFile?.path) {
+                    const relevantBlocks = codeBlocks.filter(b => 
+                        ['tsx', 'jsx', 'typescript', 'javascript', 'ts', 'js'].includes(b.language) &&
+                        b.code.length > 50
+                    );
+                    
+                    if (relevantBlocks.length > 0) {
+                        fileChanges = relevantBlocks.map(b => ({
+                            path: openSourceFile.path,
+                            language: b.language,
+                            code: b.code,
+                            action: 'update' as const
+                        }));
+                    }
+                }
+            }
             
             // Extract terminal commands (bash/sh/shell code blocks)
             const terminalCommands: string[] = [];

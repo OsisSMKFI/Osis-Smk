@@ -103,22 +103,24 @@ const Footer: React.FC = () => {
                 {t('footer.aboutDesc')}
               </p>
 
-              {/* Enhanced Social Media */}
-              <div className="flex space-x-2 sm:space-x-3">
+              {/* Enhanced Social Media - Premium Glassmorphism with Modern Effects */}
+              <div className="flex space-x-3 sm:space-x-4">
                 {[
                   { 
                     icon: InstagramIcon, 
                     href: SOCIAL_MEDIA_CONFIG.instagram.url, 
-                    color: "hover:text-pink-400",
-                    bgColor: "hover:bg-gradient-to-br hover:from-pink-500 hover:to-purple-600",
+                    color: "hover:text-white",
+                    bgColor: "hover:bg-gradient-to-br hover:from-pink-500 via-purple-500 hover:to-orange-400",
+                    shadowColor: "hover:shadow-pink-500/50",
                     name: "Instagram",
                     available: SOCIAL_MEDIA_CONFIG.instagram.isActive
                   },
                   { 
                     icon: SpotifyIcon, 
                     href: SOCIAL_MEDIA_CONFIG.spotify.url, 
-                    color: "hover:text-green-400",
-                    bgColor: "hover:bg-gradient-to-br hover:from-green-500 hover:to-green-600",
+                    color: "hover:text-white",
+                    bgColor: "hover:bg-gradient-to-br hover:from-green-400 hover:to-green-600",
+                    shadowColor: "hover:shadow-green-500/50",
                     name: "Spotify",
                     available: SOCIAL_MEDIA_CONFIG.spotify.isActive
                   },
@@ -126,15 +128,17 @@ const Footer: React.FC = () => {
                     icon: TiktokIcon, 
                     href: SOCIAL_MEDIA_CONFIG.tiktok.url, 
                     color: "hover:text-white",
-                    bgColor: "hover:bg-gradient-to-br hover:from-gray-800 hover:to-black",
+                    bgColor: "hover:bg-gradient-to-br hover:from-cyan-400 via-pink-500 hover:to-red-500",
+                    shadowColor: "hover:shadow-cyan-500/50",
                     name: "TikTok",
                     available: SOCIAL_MEDIA_CONFIG.tiktok.isActive
                   },
                   { 
                     icon: YoutubeIcon, 
                     href: SOCIAL_MEDIA_CONFIG.youtube.url, 
-                    color: "hover:text-red-400",
-                    bgColor: "hover:bg-gradient-to-br hover:from-red-500 hover:to-red-600",
+                    color: "hover:text-white",
+                    bgColor: "hover:bg-gradient-to-br hover:from-red-500 hover:to-red-700",
+                    shadowColor: "hover:shadow-red-500/50",
                     name: "YouTube",
                     available: SOCIAL_MEDIA_CONFIG.youtube.isActive
                   }
@@ -145,38 +149,36 @@ const Footer: React.FC = () => {
                         href={social.href} 
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`relative w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-white/10 dark:bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center text-gray-500 dark:text-gray-400 ${social.color} ${social.bgColor} transition-all duration-500 hover:scale-110 hover:rotate-3 hover:shadow-2xl focus-ring group overflow-hidden`}
+                        className={`relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-2xl flex items-center justify-center text-gray-600 dark:text-gray-300 ${social.color} ${social.bgColor} transition-all duration-500 hover:scale-125 hover:-rotate-6 hover:shadow-2xl ${social.shadowColor} focus-ring group overflow-hidden`}
                         aria-label={`${t('footer.followUsOn')} ${social.name}`}
                       >
-                        {/* Glow effect */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+                        {/* Animated background glow */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 rounded-2xl" />
                         
-                        {/* Icon */}
-                        <social.icon size={20} className="sm:w-[22px] sm:h-[22px] relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                        {/* Shine sweep effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out rounded-2xl" />
                         
-                        {/* Ripple effect */}
+                        {/* Icon with enhanced visibility */}
+                        <social.icon size={24} className="sm:w-[26px] sm:h-[26px] lg:w-[28px] lg:h-[28px] relative z-10 group-hover:scale-110 group-hover:drop-shadow-lg transition-all duration-300" />
+                        
+                        {/* Pulse ring effect */}
                         <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="absolute inset-0 rounded-2xl animate-ping bg-white/20" />
+                          <div className="absolute inset-[-4px] rounded-2xl animate-pulse bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                         </div>
                       </a>
                     ) : (
                       <button 
                         onClick={(e) => { e.preventDefault(); showToast(t('toast.linkNotActive'), 'warning'); }}
-                        className={`relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-white/10 dark:bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center text-gray-500 dark:text-gray-400 ${social.color} ${social.bgColor} transition-all duration-500 hover:scale-110 hover:rotate-3 hover:shadow-2xl focus-ring group overflow-hidden opacity-50 cursor-pointer`}
+                        className={`relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center text-gray-400 dark:text-gray-500 transition-all duration-500 hover:scale-105 hover:bg-white/15 focus-ring group overflow-hidden opacity-60 cursor-not-allowed`}
                         aria-label={`${social.name} - ${t('socialMediaPage.notAvailable')}`}
                       >
-                        {/* Glow effect */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+                        {/* Subtle glow for disabled */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300 rounded-2xl" />
                         
                         {/* Icon */}
-                        <social.icon size={22} className="relative z-10 group-hover:scale-110 transition-transform duration-300" />
-                        
-                        {/* Ripple effect */}
-                        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="absolute inset-0 rounded-2xl animate-ping bg-white/20" />
-                        </div>
+                        <social.icon size={22} className="relative z-10 opacity-70" />
                       </button>
-                    )}
+                    )}}
                     
                     {/* Tooltip */}
                     <div
