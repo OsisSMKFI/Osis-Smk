@@ -4,14 +4,16 @@
  * CRITICAL FOR WHATSAPP:
  * ✅ Binary image response (NOT JSON, NOT JSX)
  * ✅ Status 200 OK
- * ✅ Content-Type: image/*
+ * ✅ Content-Type: image/jpeg
  * ✅ NO redirect
  * ✅ NO auth
  * ✅ Use facebookexternalhit User-Agent
+ * ✅ COMPRESSED to < 300KB for WhatsApp preview
  */
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 
@@ -24,6 +26,14 @@ const supabase = createClient(
 const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 
   ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo.png`
   : 'https://osissmktest.biezz.my.id/images/logo.png'
+
+// WhatsApp OG Image requirements:
+// - Max size: ~300KB (WhatsApp times out on large images)
+// - Recommended dimensions: 1200x630
+// - Format: JPEG (best compression)
+const OG_WIDTH = 1200
+const OG_HEIGHT = 630
+const MAX_SIZE_KB = 250 // Target under 300KB
 
 interface RouteParams {
   params: Promise<{ slug: string }>
@@ -68,55 +78,87 @@ export async function GET(
     
     if (!res.ok || !contentType.startsWith('image')) {
       // Fallback to logo
-      const fallbackRes = await fetch(FALLBACK_URL, {
-        headers: { 'User-Agent': 'facebookexternalhit/1.1' },
-      })
-      
-      return new NextResponse(fallbackRes.body, {
-        status: 200,
-        headers: {
-          'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=86400',
-        },
-      })
+      return serveFallback()
     }
 
-    // 5. Return binary image directly
-    // WhatsApp will receive pure image bytes, not JSON
-    return new NextResponse(res.body, {
+    // 5. Get image buffer and compress with Sharp
+    const originalBuffer = Buffer.from(await res.arrayBuffer())
+    
+    // Resize and compress for WhatsApp
+    // Target: 1200x630, JPEG quality adjusted to stay under 250KB
+    let quality = 80
+    let compressedBuffer = await sharp(originalBuffer)
+      .resize(OG_WIDTH, OG_HEIGHT, {
+        fit: 'cover',
+        position: 'center',
+      })
+      .jpeg({ quality, mozjpeg: true })
+      .toBuffer()
+    
+    // If still too large, reduce quality progressively
+    while (compressedBuffer.length > MAX_SIZE_KB * 1024 && quality > 30) {
+      quality -= 10
+      compressedBuffer = await sharp(originalBuffer)
+        .resize(OG_WIDTH, OG_HEIGHT, {
+          fit: 'cover',
+          position: 'center',
+        })
+        .jpeg({ quality, mozjpeg: true })
+        .toBuffer()
+    }
+
+    // 6. Return compressed image
+    return new NextResponse(compressedBuffer, {
       status: 200,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': 'image/jpeg',
+        'Content-Length': compressedBuffer.length.toString(),
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     })
 
   } catch (error) {
     console.error('[OG/post] Error:', error)
+    return serveFallback()
+  }
+}
 
-    // Emergency fallback - return a simple image
-    try {
-      const fallbackRes = await fetch(FALLBACK_URL)
-      return new NextResponse(fallbackRes.body, {
-        status: 200,
-        headers: {
-          'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=3600',
-        },
-      })
-    } catch {
-      // Last resort - return 1x1 transparent PNG
-      const transparentPng = Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        'base64'
-      )
-      return new NextResponse(transparentPng, {
-        status: 200,
-        headers: {
-          'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=60',
-        },
-      })
-    }
+async function serveFallback() {
+  try {
+    const fallbackRes = await fetch(FALLBACK_URL, {
+      headers: { 'User-Agent': 'facebookexternalhit/1.1' },
+    })
+    
+    if (!fallbackRes.ok) throw new Error('Fallback fetch failed')
+    
+    const buffer = Buffer.from(await fallbackRes.arrayBuffer())
+    
+    // Compress fallback too
+    const compressed = await sharp(buffer)
+      .resize(OG_WIDTH, OG_HEIGHT, { fit: 'contain', background: '#ffffff' })
+      .jpeg({ quality: 80, mozjpeg: true })
+      .toBuffer()
+    
+    return new NextResponse(compressed, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/jpeg',
+        'Content-Length': compressed.length.toString(),
+        'Cache-Control': 'public, max-age=86400',
+      },
+    })
+  } catch {
+    // Last resort - return 1x1 transparent PNG
+    const transparentPng = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    )
+    return new NextResponse(transparentPng, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=60',
+      },
+    })
   }
 }

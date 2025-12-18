@@ -29,7 +29,8 @@ export const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah
 // ═══════════════════════════════════════════════════════════════════════════════
 // Cache buster version - increment this to force WhatsApp to re-fetch
 // IMPORTANT: After fixing NEXT_PUBLIC_SITE_URL on Vercel, increment this!
-const OG_VERSION = 4;
+// v5: Added Sharp compression to reduce image size for WhatsApp (<300KB)
+const OG_VERSION = 5;
 
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default?v=${OG_VERSION}`;
 export const FALLBACK_OG_IMAGE = `${SITE_URL}/og/default?v=${OG_VERSION}`;
