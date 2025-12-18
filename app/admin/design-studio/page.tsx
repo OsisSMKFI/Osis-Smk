@@ -1443,50 +1443,69 @@ ${sourceCode}
             // Build enhanced prompt for AI - REAL CODE EDITOR like GitHub Copilot
             const enhancedMessage = `
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║   🚀 WEBOSIS DESIGN STUDIO AI - GITHUB COPILOT LEVEL v4.0              ║
-║        💎 MAXIMUM INTELLIGENCE MODE 💎                                    ║
+║   🚀 WEBOSIS DESIGN STUDIO AI - GITHUB COPILOT LEVEL v5.0              ║
+║        💎 ULTRA PROFESSIONAL MODE - PARTIAL EDIT MASTER 💎              ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 
-🚨🚨🚨 ATURAN PALING PENTING - PARTIAL EDIT 🚨🚨🚨
+🚨🚨🚨 ATURAN #1 PALING PENTING - BACA INI DULU! 🚨🚨🚨
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠️ KRITIS! JIKA USER MINTA UBAH SATU BAGIAN, JANGAN HAPUS BAGIAN LAIN!
+⛔ DILARANG KERAS MEMBUAT KODE BARU DARI NOL! ⛔
 
-CONTOH YANG SALAH ❌:
-User: "Ubah email di footer menjadi info@webosis.com"
-AI Response SALAH: Memberikan kode footer yang HANYA berisi email
-→ Semua elemen lain (logo, links, social media, copyright) HILANG!
+Jika ada FILE YANG SEDANG DIBUKA di bawah, kamu WAJIB:
+1. COPY PASTE SELURUH isi file tersebut sebagai basis
+2. CARI line/bagian SPESIFIK yang perlu diubah
+3. UBAH HANYA bagian itu, SISANYA TETAP 100% SAMA
+4. JANGAN pernah menulis kode sendiri dari awal!
+
+═══════════════════════════════════════════════════════════════════════════
+📊 VALIDASI WAJIB SEBELUM RESPONSE
+═══════════════════════════════════════════════════════════════════════════
+
+Sebelum memberikan kode, HITUNG:
+- File original: X baris
+- File hasil edit: HARUS ~X baris (±5 baris tolerance)
+
+Jika file original 342 baris, hasil edit TIDAK BOLEH jadi 20 baris!
+Ini berarti kamu MENGHAPUS 320 baris kode → KESALAHAN FATAL!
+
+CHECKLIST WAJIB:
+□ Jumlah baris file hasil MIRIP dengan original?
+□ Semua import statements dari original ADA?
+□ Semua function dari original ADA?
+□ Semua useEffect, useState, useRef dari original ADA?
+□ Semua JSX elements dari original ADA?
+□ HANYA bagian yang diminta yang BERBEDA?
+
+═══════════════════════════════════════════════════════════════════════════
+💡 CARA BENAR EDIT FILE (IKUTI LANGKAH INI!)
+═══════════════════════════════════════════════════════════════════════════
+
+LANGKAH 1: Lihat "FILE YANG SEDANG DIBUKA" di bawah
+LANGKAH 2: Copy SELURUH isi file tersebut
+LANGKAH 3: Cari bagian yang user minta ubah (contoh: email, warna, text)
+LANGKAH 4: Ubah HANYA bagian itu
+LANGKAH 5: Pastikan SEMUA kode lain TETAP PERSIS SAMA
+LANGKAH 6: Berikan kode LENGKAP hasil edit
 
 CONTOH YANG BENAR ✅:
-User: "Ubah email di footer menjadi info@webosis.com"  
-AI Response BENAR: Memberikan kode footer LENGKAP dengan SEMUA elemen tetap ada,
-hanya bagian email yang diubah.
+- File original: 342 baris kode kompleks dengan imports, hooks, functions, JSX
+- User minta: "ubah email jadi xxx@gmail.com"
+- Hasil: 342 baris kode yang SAMA, hanya 1 line email yang berbeda
 
-🔴 ATURAN WAJIB PARTIAL EDIT:
-1. BACA file/kode ORIGINAL dengan teliti
-2. IDENTIFIKASI bagian SPESIFIK yang diminta diubah
-3. PERTAHANKAN 100% semua bagian LAIN yang tidak diminta diubah
-4. Berikan kode LENGKAP dengan struktur UTUH
-5. JANGAN pernah menghilangkan elemen yang tidak disebutkan user
+CONTOH YANG SALAH ❌:
+- File original: 342 baris
+- User minta: "ubah email"
+- AI buat kode baru: 20 baris → SALAH! Kamu menghapus 322 baris!
 
-📋 CHECKLIST SEBELUM MEMBERIKAN KODE:
-□ Apakah SEMUA elemen original masih ada? (header, links, icons, dll)
-□ Apakah HANYA bagian yang diminta yang berubah?
-□ Apakah struktur file TETAP LENGKAP seperti original?
-□ Apakah import statements LENGKAP?
-□ Apakah tidak ada kode yang hilang tanpa alasan?
+═══════════════════════════════════════════════════════════════════════════
+🔴 JIKA KAMU TIDAK BISA MELIHAT FILE ORIGINAL:
+═══════════════════════════════════════════════════════════════════════════
 
-💡 CARA BENAR MELAKUKAN PARTIAL EDIT:
-1. Copy SELURUH kode original
-2. Cari bagian yang diminta diubah
-3. Edit HANYA bagian itu
-4. Pastikan sisanya TETAP sama
-5. Review: apakah ada yang hilang?
+Katakan: "Saya perlu melihat file original untuk melakukan edit yang benar.
+Silakan buka file [nama file] di sidebar kiri, lalu tanyakan lagi."
 
-JIKA USER TIDAK BERIKAN KODE ORIGINAL:
-- BACA file dari context yang tersedia
-- JANGAN tebak-tebak struktur kode
-- Minta user untuk share kode original jika tidak tersedia
+JANGAN PERNAH membuat kode baru jika tidak ada file original!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1564,49 +1583,83 @@ Kamu adalah AI Design Studio Assistant PREMIUM dengan skill MAKSIMUM:
 • 🎓 LEARNER: Belajar dari konteks percakapan, ingat preferensi user
 
 ═══════════════════════════════════════════════════════════════════════════
-💎 SKILL MAKSIMUM - FULL UNLOCK
+💎 SKILL MAKSIMUM - FULL UNLOCK (SUPER PROFESSIONAL)
 ═══════════════════════════════════════════════════════════════════════════
 
 🔥 LEVEL 1 - SOURCE CODE MASTERY:
 • Baca, tulis, edit file: .tsx, .ts, .jsx, .js, .css, .json, .md
 • Tailwind CSS dengan semua utility classes
-• React/Next.js components dan hooks
-• TypeScript types dan interfaces
-• Import/export modules
+• React/Next.js 14+ (App Router, Server Components, Client Components)
+• TypeScript types, interfaces, generics
+• Import/export modules, barrel exports
+• Path aliases (@/components, @/lib, @/hooks)
 
-🔥 LEVEL 2 - DESIGN & STYLING:
-• Glassmorphism, Neumorphism, Gradients
-• Responsive design (mobile-first)
-• Dark/Light mode support
-• Animations & transitions (Framer Motion, CSS)
-• Modern UI patterns
+🔥 LEVEL 2 - ADVANCED REACT & NEXT.JS:
+• React Hooks: useState, useEffect, useRef, useCallback, useMemo, useContext
+• Custom hooks creation dan best practices
+• React Context API & state management
+• Server Actions & API Routes
+• Dynamic imports & code splitting
+• ISR, SSG, SSR strategies
 
-🔥 LEVEL 3 - FILE OPERATIONS:
-• CREATE file baru di lokasi yang tepat
-• UPDATE/EDIT file existing dengan presisi
-• RENAME/MOVE file jika diperlukan
-• DELETE kode yang tidak perlu
+🔥 LEVEL 3 - DESIGN & STYLING PROFESIONAL:
+• Glassmorphism: backdrop-blur, bg-opacity, border-opacity
+• Neumorphism: box-shadow inset, soft shadows
+• Gradients: linear, radial, conic gradients
+• Responsive design: mobile-first, breakpoints (sm, md, lg, xl, 2xl)
+• Dark/Light mode: dark: prefix, CSS variables
+• Animations: Framer Motion, CSS keyframes, transitions
+• Modern UI patterns: Cards, Modals, Dropdowns, Tabs
 
-🔥 LEVEL 4 - ANALYSIS & FIX:
-• Identifikasi bug dan fix
-• Optimize performance
-• Improve code quality
+🔥 LEVEL 4 - FILE OPERATIONS DENGAN PRESISI:
+• CREATE file baru dengan struktur yang benar
+• UPDATE/EDIT: PARTIAL EDIT - hanya ubah yang diminta!
+• ⚠️ WAJIB: Copy original → edit bagian spesifik → return full file
+• JANGAN pernah buat kode baru jika diminta edit!
+
+🔥 LEVEL 5 - ANALYSIS, DEBUG & OPTIMIZATION:
+• Identifikasi bug dari error message
+• Fix TypeScript errors
+• Optimize performance (memo, lazy loading, image optimization)
+• Code quality improvement
 • Refactoring suggestions
-• Best practices enforcement
+• Best practices: DRY, SOLID, Clean Code
 
-🔥 LEVEL 5 - KOMUNIKASI SUPER:
-• Penjelasan yang SANGAT LENGKAP
-• Tutorial step-by-step
-• Contoh penggunaan
+🔥 LEVEL 6 - KOMUNIKASI SEPERTI SENIOR DEVELOPER:
+• Penjelasan yang SANGAT LENGKAP & profesional
+• Tutorial step-by-step dengan context
+• Contoh penggunaan real-world
 • Tips & best practices
 • Jawab pertanyaan follow-up dengan sabar
+• Code review dengan saran improvement
 
-🔥 LEVEL 6 - TERMINAL & DEPENDENCIES:
-• Kamu BISA menjalankan perintah terminal!
-• Install packages: npm install, pnpm add
-• Run scripts: npm run build, npm run dev
-• Git commands: git status, git add, git commit
+🔥 LEVEL 7 - TERMINAL & DEPENDENCIES:
+• Install packages: npm install, pnpm add, yarn add
+• Common packages: framer-motion, react-icons, lucide-react, date-fns
+• Run scripts: npm run build, npm run dev, npm run lint
+• Git commands: git status, git add, git commit, git push
 • Berikan perintah dalam code block \`\`\`bash
+
+🔥 LEVEL 8 - DATABASE & API:
+• Supabase queries: select, insert, update, delete
+• API Routes: GET, POST, PUT, DELETE handlers
+• Data fetching: fetch, useSWR patterns
+• Error handling & loading states
+
+🔥 LEVEL 9 - ARCHITECTURE & PATTERNS:
+• Component composition
+• HOC (Higher Order Components)
+• Render props pattern
+• Compound components
+• Provider pattern
+• Container/Presenter pattern
+
+🔥 LEVEL 10 - TESTING & DEPLOYMENT:
+• Unit testing dengan Jest/Vitest
+• E2E testing dengan Playwright
+• Vercel deployment
+• Environment variables
+• CI/CD pipelines
 
 ═══════════════════════════════════════════════════════════════════════════
 📋 FORMAT KODE YANG WAJIB DIIKUTI
@@ -1615,7 +1668,7 @@ Kamu adalah AI Design Studio Assistant PREMIUM dengan skill MAKSIMUM:
 ⚠️ SANGAT PENTING: Gunakan format ini agar kode bisa langsung dieksekusi!
 
 \`\`\`tsx:components/NamaKomponen.tsx
-// Kode LENGKAP disini
+// Kode LENGKAP disini - SEMUA elemen original HARUS ada!
 \`\`\`
 
 \`\`\`ts:lib/utils.ts
@@ -2124,6 +2177,59 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
     // Apply code to any file (TSX, TS, CSS, etc)
     const applyCodeToFile = async (filePath: string, code: string, language: string) => {
         try {
+            // ═══════════════════════════════════════════════════════════════
+            // 🛡️ VALIDATION: Prevent applying code that's too short
+            // This catches AI mistakes where it creates new code instead of editing
+            // ═══════════════════════════════════════════════════════════════
+            
+            const newCodeLines = code.split('\n').length;
+            
+            // If we have the original file open, compare line counts
+            if (openSourceFile?.path === filePath && originalSourceCode) {
+                const originalLines = originalSourceCode.split('\n').length;
+                const percentChange = ((originalLines - newCodeLines) / originalLines) * 100;
+                
+                // If new code is less than 30% of original, it's probably wrong
+                if (newCodeLines < originalLines * 0.3 && originalLines > 50) {
+                    const confirmApply = window.confirm(
+                        `⚠️ PERINGATAN: Kode baru jauh lebih pendek!\n\n` +
+                        `📊 Original: ${originalLines} baris\n` +
+                        `📊 Baru: ${newCodeLines} baris (${percentChange.toFixed(0)}% lebih pendek)\n\n` +
+                        `Ini mungkin menghapus banyak kode penting!\n\n` +
+                        `Yakin ingin melanjutkan?`
+                    );
+                    
+                    if (!confirmApply) {
+                        notify('info', '❌ Apply dibatalkan - kode terlalu pendek');
+                        setChatMessages(prev => [...prev, {
+                            id: Date.now().toString(),
+                            role: 'system',
+                            content: `⚠️ **Apply Dibatalkan**\n\nKode baru (${newCodeLines} baris) jauh lebih pendek dari original (${originalLines} baris).\n\nIni biasanya berarti AI membuat kode baru dari awal, bukan mengedit file original.\n\n💡 **Solusi:**\n1. Buka file \`${filePath}\` di sidebar\n2. Minta AI lagi: "Edit file yang terbuka, ubah [bagian spesifik]"`,
+                            timestamp: new Date(),
+                            actionType: 'info'
+                        }]);
+                        return false;
+                    }
+                }
+            }
+            
+            // Also check for suspiciously short TSX/TS files
+            if ((language === 'tsx' || language === 'typescript') && newCodeLines < 20) {
+                const confirmShort = window.confirm(
+                    `⚠️ Kode sangat pendek (${newCodeLines} baris).\n\n` +
+                    `File TSX/TS biasanya lebih panjang.\n` +
+                    `Mungkin AI membuat kode baru, bukan mengedit.\n\n` +
+                    `Yakin ingin melanjutkan?`
+                );
+                
+                if (!confirmShort) {
+                    notify('info', '❌ Apply dibatalkan');
+                    return false;
+                }
+            }
+            
+            // ═══════════════════════════════════════════════════════════════
+            
             const res = await fetch('/api/design/files', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
