@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description: sekbidDescription,
         url: `/sekbid/${sekbidId}`,
         type: 'article',
-        image: '/images/logo.png',
+        sekbidId: sekbidId, // WhatsApp-optimized: uses static OG image for this sekbid
     });
 }
 

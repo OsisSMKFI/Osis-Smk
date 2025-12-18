@@ -1,41 +1,96 @@
 import { Metadata } from 'next';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎯 METADATA HELPER v2.0 - Dynamic OG Image Generation
+// 🎯 METADATA HELPER v3.0 - WhatsApp Optimized
 // ═══════════════════════════════════════════════════════════════════════════════
 // 
-// Features:
-// - Dynamic OG images via /api/og endpoint
-// - Unique thumbnails per page/post
-// - Content-aware styling
-// - Fallback to static image if needed
+// WHATSAPP REQUIREMENTS:
+// ✅ og:image:width & og:image:height (WAJIB)
+// ✅ twitter:card = summary_large_image (FALLBACK)
+// ✅ Static images (no query params)
+// ✅ HTTPS, 200 OK, no redirect
+// ✅ JPEG/PNG, < 300KB, 1200x630
+// ✅ Local images (not Supabase for reliability)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
-const DEFAULT_TITLE = 'OSIS SMK Informatika 2 Fithrah Insani';
-const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani - Organisasi Siswa Intra Sekolah yang aktif dalam kegiatan keislaman, kepemimpinan, dan kreativitas siswa.';
-// Use logo.png as default OG image (ensure this file exists in public/images)
-const DEFAULT_IMAGE = `${SITE_URL}/images/logo.png`;
-const DEFAULT_LOGO = `${SITE_URL}/images/logo.png`;
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
+export const DEFAULT_TITLE = 'OSIS SMK Informatika 2 Fithrah Insani';
+export const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani - Organisasi Siswa Intra Sekolah yang aktif dalam kegiatan keislaman, kepemimpinan, dan kreativitas siswa.';
+// Default OG image - must be local, static, < 300KB
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default.jpg`;
+export const FALLBACK_OG_IMAGE = `${SITE_URL}/images/logo.png`;
 
 /**
- * Generate dynamic OG image URL with content parameters
+ * Static OG images for sekbid (pre-generated for WhatsApp compatibility)
+ * These should be in /public/og/ folder
  */
-export function generateDynamicOGImage(params: {
-    title: string;
-    description?: string;
-    type?: 'default' | 'post' | 'sekbid' | 'event' | 'member' | 'gallery';
-    image?: string;
-    category?: string;
+export const SEKBID_OG_IMAGES: Record<number, string> = {
+    1: `${SITE_URL}/og/sekbid-1.jpg`,
+    2: `${SITE_URL}/og/sekbid-2.jpg`,
+    3: `${SITE_URL}/og/sekbid-3.jpg`,
+    4: `${SITE_URL}/og/sekbid-4.jpg`,
+    5: `${SITE_URL}/og/sekbid-5.jpg`,
+    6: `${SITE_URL}/og/sekbid-6.jpg`,
+};
+
+/**
+ * Static OG images for pages
+ */
+export const PAGE_OG_IMAGES: Record<string, string> = {
+    home: `${SITE_URL}/og/home.jpg`,
+    about: `${SITE_URL}/og/about.jpg`,
+    people: `${SITE_URL}/og/people.jpg`,
+    posts: `${SITE_URL}/og/posts.jpg`,
+    gallery: `${SITE_URL}/og/gallery.jpg`,
+    sekbid: `${SITE_URL}/og/sekbid.jpg`,
+    info: `${SITE_URL}/og/info.jpg`,
+    bidang: `${SITE_URL}/og/bidang.jpg`,
+};
+
+/**
+ * Get safe OG image URL
+ * Priority: static local > dynamic API > fallback
+ */
+export function getSafeOGImage(options: {
+    staticImage?: string;
+    contentImage?: string;
+    pageKey?: string;
+    sekbidId?: number;
 }): string {
-    const searchParams = new URLSearchParams();
-    searchParams.set('title', params.title.slice(0, 100));
-    if (params.description) searchParams.set('description', params.description.slice(0, 200));
-    if (params.type) searchParams.set('type', params.type);
-    if (params.image) searchParams.set('image', params.image);
-    if (params.category) searchParams.set('category', params.category);
+    // 1. Use explicit static image if provided
+    if (options.staticImage) {
+        // Ensure it's absolute URL
+        if (options.staticImage.startsWith('http')) {
+            return options.staticImage;
+        }
+        return `${SITE_URL}${options.staticImage.startsWith('/') ? '' : '/'}${options.staticImage}`;
+    }
     
-    return `${SITE_URL}/api/og?${searchParams.toString()}`;
+    // 2. Use sekbid-specific image
+    if (options.sekbidId && SEKBID_OG_IMAGES[options.sekbidId]) {
+        return SEKBID_OG_IMAGES[options.sekbidId];
+    }
+    
+    // 3. Use page-specific image
+    if (options.pageKey && PAGE_OG_IMAGES[options.pageKey]) {
+        return PAGE_OG_IMAGES[options.pageKey];
+    }
+    
+    // 4. Use content image if it's a safe local path
+    if (options.contentImage) {
+        // Avoid Supabase/external URLs for WhatsApp (unreliable)
+        // Only use if it's a local path
+        if (options.contentImage.startsWith('/') && !options.contentImage.includes('?')) {
+            return `${SITE_URL}${options.contentImage}`;
+        }
+        // If it's a full URL and looks local, use it
+        if (options.contentImage.startsWith(SITE_URL) && !options.contentImage.includes('?')) {
+            return options.contentImage;
+        }
+    }
+    
+    // 5. Fallback
+    return FALLBACK_OG_IMAGE;
 }
 
 interface MetadataParams {
@@ -51,13 +106,17 @@ interface MetadataParams {
     keywords?: string[];
     ogType?: 'default' | 'post' | 'sekbid' | 'event' | 'member' | 'gallery';
     category?: string;
-    useDynamicOG?: boolean; // Enable dynamic OG image generation
+    pageKey?: string; // For static page OG images
+    sekbidId?: number; // For sekbid-specific OG images
 }
 
 /**
  * Generate complete metadata for any page
- * Handles all fallbacks and ensures proper format
- * Now supports dynamic OG image generation!
+ * WHATSAPP OPTIMIZED:
+ * - Static images (no query params)
+ * - Includes og:image:width & og:image:height
+ * - Includes full Twitter Card as fallback
+ * - JPEG preferred over PNG
  */
 export function generatePageMetadata(params: MetadataParams): Metadata {
     const title = params.title || DEFAULT_TITLE;
@@ -65,30 +124,12 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
     const url = params.url ? `${SITE_URL}${params.url}` : SITE_URL;
     const type = params.type || 'website';
     
-    // Determine the OG image to use
-    let image: string;
-    
-    // Priority: 1) Explicit image, 2) Dynamic OG, 3) Default
-    if (params.image) {
-        // Check if it's a full URL
-        if (params.image.startsWith('http')) {
-            image = params.image;
-        } else if (params.image.startsWith('/')) {
-            image = `${SITE_URL}${params.image}`;
-        } else {
-            image = DEFAULT_IMAGE;
-        }
-    } else if (params.useDynamicOG !== false) {
-        // Generate dynamic OG image (enabled by default)
-        image = generateDynamicOGImage({
-            title,
-            description: description.slice(0, 200),
-            type: params.ogType || 'default',
-            category: params.category || params.section
-        });
-    } else {
-        image = DEFAULT_IMAGE;
-    }
+    // Get WhatsApp-safe OG image
+    const image = getSafeOGImage({
+        staticImage: params.image || undefined,
+        pageKey: params.pageKey,
+        sekbidId: params.sekbidId,
+    });
     
     const metadata: Metadata = {
         title,
@@ -96,6 +137,9 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
         keywords: params.keywords || ['OSIS', 'SMK Informatika 2', 'Fithrah Insani', 'Bandung', 'Sekolah Islam'],
         authors: params.author ? [{ name: params.author }] : [{ name: 'OSIS SMK Informatika 2 FI' }],
         
+        // ═══════════════════════════════════════════════════════════════
+        // OPEN GRAPH - WhatsApp reads this
+        // ═══════════════════════════════════════════════════════════════
         openGraph: {
             title,
             description,
@@ -106,10 +150,10 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
             images: [
                 {
                     url: image,
-                    width: 1200,
-                    height: 630,
+                    width: 1200,  // WAJIB untuk WhatsApp
+                    height: 630,  // WAJIB untuk WhatsApp
                     alt: title,
-                    type: 'image/png',
+                    type: 'image/jpeg', // JPEG lebih aman untuk WA
                 }
             ],
             ...(type === 'article' && {
@@ -120,11 +164,14 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
             }),
         },
         
+        // ═══════════════════════════════════════════════════════════════
+        // TWITTER CARD - WhatsApp fallback ke ini kalau OG gagal
+        // ═══════════════════════════════════════════════════════════════
         twitter: {
             card: 'summary_large_image',
             title,
             description,
-            images: [image],
+            images: [image], // Sama dengan OG image
             creator: '@osissmkinformatika2fi',
         },
         
@@ -143,6 +190,7 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
 
 /**
  * Generate metadata for static pages
+ * Uses pageKey to map to static OG images in /public/og/
  */
 export const STATIC_METADATA = {
     home: generatePageMetadata({
@@ -150,6 +198,7 @@ export const STATIC_METADATA = {
         description: 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani - Pusat informasi kegiatan, berita, dan program kerja OSIS.',
         url: '/',
         type: 'website',
+        pageKey: 'home',
     }),
     
     about: generatePageMetadata({
@@ -157,6 +206,7 @@ export const STATIC_METADATA = {
         description: 'Mengenal lebih dekat OSIS SMK Informatika 2 Fithrah Insani - Visi, Misi, Filosofi, dan Struktur Organisasi.',
         url: '/about',
         type: 'website',
+        pageKey: 'about',
     }),
     
     people: generatePageMetadata({
@@ -164,6 +214,7 @@ export const STATIC_METADATA = {
         description: 'Daftar lengkap pengurus dan anggota OSIS SMK Informatika 2 Fithrah Insani periode aktif.',
         url: '/people',
         type: 'website',
+        pageKey: 'people',
     }),
     
     posts: generatePageMetadata({
@@ -171,6 +222,7 @@ export const STATIC_METADATA = {
         description: 'Berita terbaru, artikel, dan informasi kegiatan dari OSIS SMK Informatika 2 Fithrah Insani.',
         url: '/posts',
         type: 'website',
+        pageKey: 'posts',
     }),
     
     gallery: generatePageMetadata({
@@ -178,6 +230,7 @@ export const STATIC_METADATA = {
         description: 'Dokumentasi foto dan video kegiatan OSIS SMK Informatika 2 Fithrah Insani.',
         url: '/gallery',
         type: 'website',
+        pageKey: 'gallery',
     }),
     
     sekbid: generatePageMetadata({
@@ -185,6 +238,7 @@ export const STATIC_METADATA = {
         description: 'Informasi lengkap tentang seksi bidang OSIS SMK Informatika 2 Fithrah Insani beserta program kerjanya.',
         url: '/sekbid',
         type: 'website',
+        pageKey: 'sekbid',
     }),
     
     info: generatePageMetadata({
@@ -192,6 +246,7 @@ export const STATIC_METADATA = {
         description: 'Informasi event, kegiatan, dan pengumuman dari OSIS SMK Informatika 2 Fithrah Insani.',
         url: '/info',
         type: 'website',
+        pageKey: 'info',
     }),
     
     bidang: generatePageMetadata({
@@ -199,6 +254,7 @@ export const STATIC_METADATA = {
         description: 'Daftar program kerja OSIS SMK Informatika 2 Fithrah Insani.',
         url: '/bidang',
         type: 'website',
+        pageKey: 'bidang',
     }),
     
     activity: generatePageMetadata({
@@ -272,4 +328,6 @@ export const STATIC_METADATA = {
     }),
 };
 
-export { SITE_URL, DEFAULT_TITLE, DEFAULT_DESCRIPTION, DEFAULT_IMAGE, DEFAULT_LOGO };
+// Backwards compatibility aliases
+export const DEFAULT_IMAGE = FALLBACK_OG_IMAGE;
+export const DEFAULT_LOGO = `${SITE_URL}/images/logo.png`;

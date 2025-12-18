@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { generatePageMetadata, SITE_URL, getSafeOGImage } from '@/lib/metadata-helper';
 import PostDetailClient from './PostDetailClient';
 
 // Create Supabase client for server-side data fetching
@@ -52,7 +53,7 @@ async function getPost(slug: string): Promise<Post | null> {
   }
 }
 
-// Generate dynamic metadata with Open Graph
+// Generate dynamic metadata with Open Graph (WhatsApp optimized)
 export async function generateMetadata({ 
   params 
 }: { 
@@ -63,77 +64,45 @@ export async function generateMetadata({
 
   // Default metadata if post not found
   if (!post) {
-    return {
-      title: 'Berita Tidak Ditemukan | OSIS SMK Informatika',
+    return generatePageMetadata({
+      title: 'Berita Tidak Ditemukan',
       description: 'Berita yang Anda cari tidak ditemukan.',
-    };
+      url: `/posts/${slug}`,
+      pageKey: 'posts', // Use posts page default OG
+    });
   }
 
   // Get excerpt or generate from content
   const description = post.excerpt || 
     post.content.replace(/<[^>]*>/g, '').slice(0, 160) + '...';
 
-  // Get featured image or use default
-  const ogImage = post.featured_image || '/images/logo.png';
+  // Get WhatsApp-safe OG image
+  // Priority: featured_image (if valid static URL) > posts page default
+  let postImage: string | undefined;
   
-  // Check if it's a video
-  const isVideo = /\.(mp4|webm|ogg)$/i.test(post.featured_image || '');
-  
-  // For videos, we might want to use a poster/thumbnail if available
-  // Otherwise use a default image
-  const imageUrl = isVideo 
-    ? '/images/logo.png' // Use default for videos
-    : ogImage;
+  if (post.featured_image) {
+    // Check if it's NOT a video
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(post.featured_image);
+    if (!isVideo) {
+      // For Supabase URLs, we still use them but they might not work perfectly on WhatsApp
+      // For local/static images, they work great
+      postImage = post.featured_image;
+    }
+  }
 
-  // Build the full URL
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
-  const fullImageUrl = imageUrl.startsWith('http') 
-    ? imageUrl 
-    : `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
-
-  return {
-    title: `${post.title} | OSIS SMK Informatika`,
-    description: description,
-    keywords: post.tags?.join(', ') || 'OSIS, SMK Informatika, Berita',
-    authors: [{ name: 'OSIS SMK Informatika Fithrah Insani' }],
-    
-    openGraph: {
-      title: post.title,
-      description: description,
-      url: `${baseUrl}/posts/${post.slug}`,
-      siteName: 'OSIS SMK Informatika Fithrah Insani',
-      images: [
-        {
-          url: fullImageUrl,
-          width: 1200,
-          height: 630,
-          alt: post.title,
-        },
-      ],
-      locale: 'id_ID',
-      type: 'article',
-      publishedTime: post.published_at || post.created_at,
-      modifiedTime: post.created_at,
-      section: post.category || 'Berita',
-      tags: post.tags || [],
-    },
-    
-    twitter: {
-      card: 'summary_large_image',
-      title: post.title,
-      description: description,
-      images: [fullImageUrl],
-    },
-    
-    robots: {
-      index: true,
-      follow: true,
-    },
-    
-    alternates: {
-      canonical: `${baseUrl}/posts/${post.slug}`,
-    },
-  };
+  return generatePageMetadata({
+    title: post.title,
+    description,
+    url: `/posts/${post.slug}`,
+    type: 'article',
+    image: postImage, // Will fallback to posts page default if undefined
+    pageKey: 'posts',
+    publishedTime: post.published_at || post.created_at,
+    modifiedTime: post.created_at,
+    section: post.category || 'Berita',
+    keywords: post.tags,
+    author: 'OSIS SMK Informatika Fithrah Insani',
+  });
 }
 
 // Page component - Server Component wrapper
