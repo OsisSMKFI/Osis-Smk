@@ -152,8 +152,3 @@ export async function GET(
     return serveFallback()
   }
 }
-        },
-      })
-    }
-  }
-}
