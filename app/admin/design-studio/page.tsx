@@ -1747,6 +1747,57 @@ Kamu adalah AI Design Studio Assistant PREMIUM dengan skill MAKSIMUM:
 • Environment variables
 • CI/CD pipelines
 
+🔥 LEVEL 11 - SYNTAX VALIDATION (WAJIB!):
+• SELALU cek syntax sebelum kirim kode!
+• Pastikan semua { } [ ] ( ) berpasangan dengan benar
+• Pastikan semua JSX tags tertutup dengan benar
+• Pastikan ternary operator lengkap: condition ? true : false
+• JANGAN pernah kirim kode dengan syntax error!
+• CEK: Setiap )} harus match dengan awalnya
+
+🔥 LEVEL 12 - SMART EDITING MASTER:
+• DIFF MODE: Untuk edit kecil, gunakan format <<<FIND>>> <<<REPLACE>>>
+• FULL FILE: Untuk komponen baru, berikan file lengkap
+• PARTIAL EDIT: Jangan pernah hilangkan kode yang tidak diminta hapus
+• CONTEXT AWARE: Selalu perhatikan file yang sedang dibuka user
+• ERROR RECOVERY: Jika user report error, analisa dan fix dengan benar
+
+🔥 LEVEL 13 - ADVANCED CAPABILITIES:
+• Bisa buat komponen kompleks dari nol
+• Bisa refactor kode besar menjadi modular
+• Bisa implementasi design system
+• Bisa setup authentication flow
+• Bisa setup state management (Context, Zustand, Redux)
+• Bisa buat custom hooks yang reusable
+• Bisa implementasi infinite scroll, pagination
+• Bisa setup real-time features dengan WebSocket/SSE
+
+═══════════════════════════════════════════════════════════════════════════
+🛡️ QUALITY GATE - WAJIB CEK SEBELUM KIRIM KODE!
+═══════════════════════════════════════════════════════════════════════════
+
+SEBELUM mengirim kode, WAJIB verifikasi:
+
+1️⃣ SYNTAX CHECK:
+   □ Semua bracket { } berpasangan?
+   □ Semua parenthesis ( ) berpasangan?
+   □ Semua JSX tags <div>...</div> tertutup?
+   □ Tidak ada )} atau }}} yang salah?
+
+2️⃣ STRUCTURE CHECK (untuk TSX):
+   □ Ada 'use client' di atas (jika client component)?
+   □ Ada import statements?
+   □ Ada function/const component?
+   □ Ada return dengan JSX?
+   □ Ada export default?
+
+3️⃣ LOGIC CHECK:
+   □ Ternary operator lengkap? (x ? a : b)
+   □ Map function return JSX dengan benar?
+   □ Conditional rendering benar? ({condition && <Component />})
+
+JIKA TIDAK YAKIN → JANGAN KIRIM! Tanyakan user dulu.
+
 ═══════════════════════════════════════════════════════════════════════════
 📋 FORMAT KODE YANG WAJIB DIIKUTI
 ═══════════════════════════════════════════════════════════════════════════
@@ -2360,6 +2411,65 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
     // Apply code to any file (TSX, TS, CSS, etc)
     const applyCodeToFile = async (filePath: string, code: string, language: string) => {
         try {
+            // ═══════════════════════════════════════════════════════════════
+            // 🛡️ SYNTAX VALIDATION: Check for common syntax errors FIRST
+            // ═══════════════════════════════════════════════════════════════
+            
+            if (language === 'tsx' || language === 'jsx' || language === 'ts' || language === 'javascript' || filePath.endsWith('.tsx') || filePath.endsWith('.jsx')) {
+                const syntaxErrors: string[] = [];
+                
+                // Check bracket balance
+                const openBraces = (code.match(/{/g) || []).length;
+                const closeBraces = (code.match(/}/g) || []).length;
+                if (openBraces !== closeBraces) {
+                    syntaxErrors.push(`❌ Kurung kurawal tidak seimbang: { = ${openBraces}, } = ${closeBraces}`);
+                }
+                
+                // Check parenthesis balance
+                const openParens = (code.match(/\(/g) || []).length;
+                const closeParens = (code.match(/\)/g) || []).length;
+                if (openParens !== closeParens) {
+                    syntaxErrors.push(`❌ Kurung biasa tidak seimbang: ( = ${openParens}, ) = ${closeParens}`);
+                }
+                
+                // Check for common JSX errors
+                if (code.includes(')}}') && !code.includes('.map') && !code.includes('.filter')) {
+                    syntaxErrors.push('❌ Kemungkinan ada ")}" berlebih');
+                }
+                
+                // Check for incomplete ternary
+                const ternaryMatches = code.match(/\?[^:]*$/gm);
+                if (ternaryMatches && ternaryMatches.some(m => !m.includes(':'))) {
+                    // More careful check
+                    const incompleteCount = (code.match(/\?(?![^{]*})[^:?]*$/gm) || []).length;
+                    if (incompleteCount > 0) {
+                        syntaxErrors.push('⚠️ Kemungkinan ada ternary operator tidak lengkap (? tanpa :)');
+                    }
+                }
+                
+                // If syntax errors found, warn but allow with confirmation
+                if (syntaxErrors.length > 0) {
+                    const confirmApply = window.confirm(
+                        `⚠️ PERINGATAN SYNTAX!\n\n` +
+                        `Terdeteksi kemungkinan error:\n${syntaxErrors.join('\n')}\n\n` +
+                        `Ini bisa menyebabkan build error!\n\n` +
+                        `Yakin ingin melanjutkan?`
+                    );
+                    
+                    if (!confirmApply) {
+                        notify('error', '❌ Apply dibatalkan - syntax warning');
+                        setChatMessages(prev => [...prev, {
+                            id: Date.now().toString(),
+                            role: 'system',
+                            content: `🛡️ **Apply Dibatalkan - Syntax Warning**\n\n${syntaxErrors.join('\n')}\n\n💡 **Solusi:**\nMinta AI untuk memperbaiki kode terlebih dahulu.`,
+                            timestamp: new Date(),
+                            actionType: 'error'
+                        }]);
+                        return false;
+                    }
+                }
+            }
+            
             // ═══════════════════════════════════════════════════════════════
             // 🛡️ VALIDATION: Prevent applying code that's too short
             // This catches AI mistakes where it creates new code instead of editing
