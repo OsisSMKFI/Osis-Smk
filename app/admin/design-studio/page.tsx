@@ -1482,21 +1482,37 @@ CHECKLIST WAJIB:
 ═══════════════════════════════════════════════════════════════════════════
 
 LANGKAH 1: Lihat "FILE YANG SEDANG DIBUKA" di bawah
-LANGKAH 2: Copy SELURUH isi file tersebut
+LANGKAH 2: Copy SELURUH isi file tersebut (SEMUA 300+ baris!)
 LANGKAH 3: Cari bagian yang user minta ubah (contoh: email, warna, text)
-LANGKAH 4: Ubah HANYA bagian itu
+LANGKAH 4: Ubah HANYA bagian itu (mungkin hanya 1-2 baris)
 LANGKAH 5: Pastikan SEMUA kode lain TETAP PERSIS SAMA
-LANGKAH 6: Berikan kode LENGKAP hasil edit
+LANGKAH 6: Berikan kode LENGKAP hasil edit (tetap 300+ baris!)
 
 CONTOH YANG BENAR ✅:
-- File original: 342 baris kode kompleks dengan imports, hooks, functions, JSX
+- File original: 342 baris dengan 'use client', import, React.FC, hooks, JSX, export
 - User minta: "ubah email jadi xxx@gmail.com"
-- Hasil: 342 baris kode yang SAMA, hanya 1 line email yang berbeda
+- Hasil: 342 baris yang SAMA, hanya 1 line email berbeda
+- TETAP ADA: 'use client', semua import, semua hooks, semua JSX, export default
 
-CONTOH YANG SALAH ❌:
+CONTOH YANG SALAH ❌ (JANGAN LAKUKAN INI!):
 - File original: 342 baris
 - User minta: "ubah email"
-- AI buat kode baru: 20 baris → SALAH! Kamu menghapus 322 baris!
+- AI buat kode baru: 20 baris JSX saja → FATAL ERROR!
+- HILANG: 'use client', import, React.FC, hooks, export default
+- AKIBAT: Build error, website tidak bisa deploy!
+
+═══════════════════════════════════════════════════════════════════════════
+⚠️ CHECKLIST WAJIB UNTUK FILE TSX (REACT COMPONENT):
+═══════════════════════════════════════════════════════════════════════════
+
+Setiap file .tsx HARUS memiliki struktur ini:
+□ 'use client'; di baris pertama (jika client component)
+□ import statements (React, hooks, icons, dll)
+□ const ComponentName: React.FC = () => { ... }
+□ return ( <div>...</div> ); di dalam function
+□ export default ComponentName; di baris terakhir
+
+JIKA KODE KAMU TIDAK PUNYA STRUKTUR INI → KAMU SALAH!
 
 ═══════════════════════════════════════════════════════════════════════════
 🔴 JIKA KAMU TIDAK BISA MELIHAT FILE ORIGINAL:
@@ -1506,6 +1522,7 @@ Katakan: "Saya perlu melihat file original untuk melakukan edit yang benar.
 Silakan buka file [nama file] di sidebar kiri, lalu tanyakan lagi."
 
 JANGAN PERNAH membuat kode baru jika tidak ada file original!
+JANGAN PERNAH memberikan kode yang hanya berisi JSX tanpa wrapper component!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -2200,7 +2217,7 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                     );
                     
                     if (!confirmApply) {
-                        notify('info', '❌ Apply dibatalkan - kode terlalu pendek');
+                        notify('error', '❌ Apply dibatalkan - kode terlalu pendek');
                         setChatMessages(prev => [...prev, {
                             id: Date.now().toString(),
                             role: 'system',
@@ -2210,6 +2227,56 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                         }]);
                         return false;
                     }
+                }
+            }
+            
+            // ═══════════════════════════════════════════════════════════════
+            // 🛡️ HARD VALIDATION: Check TSX/TS file structure
+            // ═══════════════════════════════════════════════════════════════
+            
+            if (language === 'tsx' || language === 'ts' || language === 'typescript' || filePath.endsWith('.tsx') || filePath.endsWith('.ts')) {
+                const validationErrors: string[] = [];
+                
+                // Check 1: Must have import statements (for tsx components)
+                if (filePath.endsWith('.tsx') && !code.includes('import ')) {
+                    validationErrors.push('❌ Tidak ada import statements (React components harus ada import)');
+                }
+                
+                // Check 2: Must have export (either default or named)
+                if (!code.includes('export ')) {
+                    validationErrors.push('❌ Tidak ada export statement (file tidak bisa diimport)');
+                }
+                
+                // Check 3: If it's a component file, should have React patterns
+                if (filePath.endsWith('.tsx')) {
+                    const hasReactComponent = 
+                        code.includes('React.FC') || 
+                        code.includes(': FC') ||
+                        code.includes('function ') && code.includes('return (') ||
+                        code.includes('const ') && code.includes('= () =>') ||
+                        code.includes('return (') && (code.includes('<div') || code.includes('<section') || code.includes('<footer') || code.includes('<header') || code.includes('<nav') || code.includes('<main'));
+                    
+                    if (!hasReactComponent) {
+                        validationErrors.push('❌ Tidak terdeteksi React component (tidak ada function/const yang return JSX)');
+                    }
+                }
+                
+                // Check 4: Raw JSX without component wrapper is invalid
+                if (code.trim().startsWith('<') && !code.includes('import ') && !code.includes('export ')) {
+                    validationErrors.push('❌ Kode hanya berisi JSX tanpa React component wrapper');
+                }
+                
+                // If there are validation errors, BLOCK the apply
+                if (validationErrors.length > 0) {
+                    notify('error', '❌ Kode tidak valid - Apply diblokir');
+                    setChatMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: 'system',
+                        content: `🚫 **APPLY DIBLOKIR - Kode Tidak Valid!**\n\n**Masalah yang ditemukan:**\n${validationErrors.join('\n')}\n\n**File:** \`${filePath}\`\n\n💡 **Ini terjadi karena AI membuat kode baru dari awal, bukan mengedit file original.**\n\n**Solusi:**\n1. Buka file original di sidebar kiri\n2. Minta AI lagi dengan lebih spesifik\n3. Pastikan AI melihat isi file lengkap sebelum edit`,
+                        timestamp: new Date(),
+                        actionType: 'info'
+                    }]);
+                    return false;
                 }
             }
             
@@ -2223,7 +2290,7 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                 );
                 
                 if (!confirmShort) {
-                    notify('info', '❌ Apply dibatalkan');
+                    notify('error', '❌ Apply dibatalkan');
                     return false;
                 }
             }
