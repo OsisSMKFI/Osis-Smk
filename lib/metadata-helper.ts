@@ -1,7 +1,14 @@
 import { Metadata } from 'next';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎯 METADATA HELPER - Centralized metadata generation for all pages
+// 🎯 METADATA HELPER v2.0 - Dynamic OG Image Generation
+// ═══════════════════════════════════════════════════════════════════════════════
+// 
+// Features:
+// - Dynamic OG images via /api/og endpoint
+// - Unique thumbnails per page/post
+// - Content-aware styling
+// - Fallback to static image if needed
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
@@ -10,6 +17,26 @@ const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani
 // Use logo.png as default OG image (ensure this file exists in public/images)
 const DEFAULT_IMAGE = `${SITE_URL}/images/logo.png`;
 const DEFAULT_LOGO = `${SITE_URL}/images/logo.png`;
+
+/**
+ * Generate dynamic OG image URL with content parameters
+ */
+export function generateDynamicOGImage(params: {
+    title: string;
+    description?: string;
+    type?: 'default' | 'post' | 'sekbid' | 'event' | 'member' | 'gallery';
+    image?: string;
+    category?: string;
+}): string {
+    const searchParams = new URLSearchParams();
+    searchParams.set('title', params.title.slice(0, 100));
+    if (params.description) searchParams.set('description', params.description.slice(0, 200));
+    if (params.type) searchParams.set('type', params.type);
+    if (params.image) searchParams.set('image', params.image);
+    if (params.category) searchParams.set('category', params.category);
+    
+    return `${SITE_URL}/api/og?${searchParams.toString()}`;
+}
 
 interface MetadataParams {
     title?: string;
@@ -22,11 +49,15 @@ interface MetadataParams {
     author?: string;
     section?: string;
     keywords?: string[];
+    ogType?: 'default' | 'post' | 'sekbid' | 'event' | 'member' | 'gallery';
+    category?: string;
+    useDynamicOG?: boolean; // Enable dynamic OG image generation
 }
 
 /**
  * Generate complete metadata for any page
  * Handles all fallbacks and ensures proper format
+ * Now supports dynamic OG image generation!
  */
 export function generatePageMetadata(params: MetadataParams): Metadata {
     const title = params.title || DEFAULT_TITLE;
@@ -34,19 +65,30 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
     const url = params.url ? `${SITE_URL}${params.url}` : SITE_URL;
     const type = params.type || 'website';
     
-    // Handle image - ensure it's a valid public URL
-    let image = DEFAULT_IMAGE;
+    // Determine the OG image to use
+    let image: string;
+    
+    // Priority: 1) Explicit image, 2) Dynamic OG, 3) Default
     if (params.image) {
         // Check if it's a full URL
         if (params.image.startsWith('http')) {
             image = params.image;
         } else if (params.image.startsWith('/')) {
             image = `${SITE_URL}${params.image}`;
+        } else {
+            image = DEFAULT_IMAGE;
         }
+    } else if (params.useDynamicOG !== false) {
+        // Generate dynamic OG image (enabled by default)
+        image = generateDynamicOGImage({
+            title,
+            description: description.slice(0, 200),
+            type: params.ogType || 'default',
+            category: params.category || params.section
+        });
+    } else {
+        image = DEFAULT_IMAGE;
     }
-    
-    // Ensure image ends with proper extension (not webp for better compatibility)
-    // If it's a Supabase storage URL, it should work
     
     const metadata: Metadata = {
         title,
