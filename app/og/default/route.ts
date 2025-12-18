@@ -1,24 +1,15 @@
 /**
  * Default OG Image Route - WhatsApp Compatible
  * 
- * CRITICAL FOR WHATSAPP:
- * ✅ Binary image response
- * ✅ Status 200 OK
- * ✅ Content-Type: image/jpeg
- * ✅ Use facebookexternalhit User-Agent
- * ✅ COMPRESSED to < 300KB for WhatsApp preview
+ * Serves the original logo-2.png without any compression or resizing
+ * Logo is already optimized and small enough for all platforms
  */
 
 import { NextResponse } from 'next/server'
 import * as fs from 'fs'
 import * as path from 'path'
-import sharp from 'sharp'
 
 export const runtime = 'nodejs'
-
-// WhatsApp OG Image requirements
-const OG_WIDTH = 1200
-const OG_HEIGHT = 630
 
 const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 
   ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo-2.png`
@@ -48,20 +39,12 @@ export async function GET() {
       imageBuffer = Buffer.from(await res.arrayBuffer())
     }
 
-    // Compress with Sharp for WhatsApp
-    const compressed = await sharp(imageBuffer)
-      .resize(OG_WIDTH, OG_HEIGHT, {
-        fit: 'contain',
-        background: '#ffffff',
-      })
-      .jpeg({ quality: 85, mozjpeg: true })
-      .toBuffer()
-
-    return new NextResponse(new Uint8Array(compressed), {
+    // Serve original logo without modification
+    return new NextResponse(new Uint8Array(imageBuffer), {
       status: 200,
       headers: {
-        'Content-Type': 'image/jpeg',
-        'Content-Length': compressed.length.toString(),
+        'Content-Type': 'image/png',
+        'Content-Length': imageBuffer.length.toString(),
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     })
