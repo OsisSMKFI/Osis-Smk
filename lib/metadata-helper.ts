@@ -28,7 +28,8 @@ export const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah
 // OG IMAGE PROXY URLs (served from our domain)
 // ═══════════════════════════════════════════════════════════════════════════════
 // Cache buster version - increment this to force WhatsApp to re-fetch
-const OG_VERSION = 2;
+// IMPORTANT: After fixing NEXT_PUBLIC_SITE_URL on Vercel, increment this!
+const OG_VERSION = 3;
 
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default?v=${OG_VERSION}`;
 export const FALLBACK_OG_IMAGE = `${SITE_URL}/og/default?v=${OG_VERSION}`;
