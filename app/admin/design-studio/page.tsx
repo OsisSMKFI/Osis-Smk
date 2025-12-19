@@ -2354,8 +2354,28 @@ Pahami konteks, berikan detail, dan bantu user dengan MAKSIMAL!`;
                 actionType = 'component';
             }
             
-            // Keep the response as-is for display
+            // Keep the response as-is for display, but hide if no actionable content
             let displayContent = data.reply || 'Maaf, tidak ada respons dari AI.';
+            
+            // ═══════════════════════════════════════════════════════════════
+            // COPILOT UI CONTRACT: Hide verbose chat if no diff/action
+            // Only show execution log when AI has no actionable output
+            // ═══════════════════════════════════════════════════════════════
+            const hasDiff = diffBlocks.length > 0;
+            const hasFileChanges = fileChanges.length > 0;
+            const hasActionable = hasDiff || hasFileChanges || cssCode;
+            
+            // If no actionable content and response is verbose, minimize it
+            if (!hasActionable && displayContent.length > 200) {
+                // Check if it's a failure message
+                if (displayContent.includes('FAILURE:') || displayContent.includes('FAILED:')) {
+                    // Keep failure messages as-is (single line)
+                    displayContent = displayContent.split('\n')[0];
+                } else {
+                    // Minimize verbose "report-only" responses
+                    displayContent = `Tidak ada perubahan kode. Files searched: ${data.toolsUsed?.length || 0}. Coba request yang lebih spesifik.`;
+                }
+            }
             
             const aiMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),

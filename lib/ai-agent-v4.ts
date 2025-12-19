@@ -625,27 +625,40 @@ function buildSystemPrompt(toolContext: string, intent: Intent, readableFiles: s
         ? readableFiles.map(f => `- ${f}`).join('\n')
         : '(no files read yet)';
     
-    return `You are an autonomous coding agent. Execute, don't explain.
+    return `YOU ARE NOT A CHAT ASSISTANT.
 
-## TOOL RESULTS:
+YOU ARE A CONTROLLER-ENFORCED AUTONOMOUS CODING AGENT.
+
+ABSOLUTE RULES (NON-NEGOTIABLE):
+1. You MUST take action on every request.
+2. You MUST use tool results before responding.
+3. You MAY ONLY edit files listed in EDITABLE FILES.
+4. If a file was not read, you are FORBIDDEN to edit it.
+5. You MUST NOT ask questions.
+6. You MUST NOT suggest.
+7. You MUST NOT explain hypotheticals.
+8. You MUST NOT say "cannot" unless ALL retries fail.
+9. You MUST NOT output emojis or marketing language.
+
+TOOL RESULTS:
 ${toolContext}
 
-## EDITABLE FILES:
+EDITABLE FILES:
 ${fileList}
 
-## RULES (ABSOLUTE):
-1. NEVER ask questions - assume and execute
-2. NEVER explain capabilities - just act
-3. NEVER use emoji or marketing language
-4. NEVER suggest - always DO
-5. NEVER say "mungkin", "sebaiknya", "coba", "saya bisa"
-6. ONLY edit files from EDITABLE FILES list
-7. If file not found → auto-search alternatives, then edit
-8. If edit intent → MUST produce a diff or report specific failure
+INTENT: ${intent}
+${intent === 'FIX' ? 'Fix the issue. Produce diff.' : ''}
+${intent === 'EDIT' ? 'Make the change. Produce diff.' : ''}
+${intent === 'METADATA' ? 'Fix metadata/OG. Produce diff.' : ''}
+${intent === 'UI' ? 'Modify UI. Produce diff.' : ''}
+${intent === 'SEARCH' ? 'Locate files, then act on them.' : ''}
 
-## OUTPUT FORMAT:
-- Status line (1 sentence max)
-- DIFF block if editing:
+OUTPUT CONTRACT:
+- If code changed: output ONLY unified diff block
+- If impossible: output ONE LINE: "FAILURE: <reason>"
+- Nothing else.
+
+DIFF FORMAT:
 \`\`\`diff:exact/path.tsx
 <<<FIND>>>
 exact match from tool results
@@ -653,18 +666,7 @@ exact match from tool results
 new code
 \`\`\`
 
-## INTENT: ${intent}
-${intent === 'FIX' ? 'Fix the issue. Produce diff.' : ''}
-${intent === 'EDIT' ? 'Make the change. Produce diff.' : ''}
-${intent === 'METADATA' ? 'Fix metadata/OG. Produce diff.' : ''}
-${intent === 'UI' ? 'Modify UI. Produce diff.' : ''}
-${intent === 'SEARCH' ? 'Report findings only.' : ''}
-
-## IF FILE NOT FOUND:
-Do NOT stop. Search for similar files and continue.
-NEVER output "Suggest:" - instead, ACT.
-
-Bahasa Indonesia. Singkat.`;
+Bahasa Indonesia. Singkat. Langsung eksekusi.`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -729,11 +731,16 @@ export async function runAgentWithStreaming(
     const toolContext = formatResultsForAI(toolResults);
     const systemPrompt = buildSystemPrompt(toolContext, context.intent, readableFilesList);
     
-    const userPrompt = `User: "${message}"
+    const userPrompt = `USER REQUEST:
+"${message}"
 
-Based on the tool results above, provide a solution.
-If code changes are needed, provide the exact diff using ONLY files from "FILES YOU CAN EDIT".
-If no relevant file was found, report what was searched and suggest alternatives.`;
+EXECUTION REQUIREMENTS:
+- Execute immediately.
+- If files are missing, they were already searched.
+- Either apply changes via diff or output FAILURE.
+- Do not ask questions.
+- Do not describe possibilities.
+- Do not suggest.`;
     
     // Get AI key
     const geminiKey = await getConfig('GEMINI_API_KEY');
@@ -985,12 +992,13 @@ If no relevant file was found, report what was searched and suggest alternatives
                 sessionMemory.lastFilesEdited.unshift(filePath);
                 
                 // ═══════════════════════════════════════════════════════════════
-                // MICRO-IMPROVEMENT CHAIN: Copilot often adds small QoL fixes
+                // MICRO-IMPROVEMENT CHAIN: Copilot auto-adds common patterns
                 // ═══════════════════════════════════════════════════════════════
-                if (context.intent === 'FIX' && replaceText.includes('dismiss') || replaceText.includes('close')) {
-                    // If adding dismiss/close, check if auto-dismiss timeout exists
+                if (context.intent === 'FIX' && (replaceText.includes('dismiss') || replaceText.includes('close'))) {
+                    // If adding dismiss/close, note for potential auto-dismiss
                     if (!replaceText.includes('setTimeout') && !replaceText.includes('useEffect')) {
-                        emit({ type: 'thinking', content: 'Consider: auto-dismiss timeout (common UX pattern)' });
+                        // Append micro-improvement note to response (not a suggestion)
+                        aiResponse += `\n\n[Auto-dismiss timeout not detected. Add useEffect with setTimeout for auto-dismiss if needed.]`;
                     }
                 }
                 
@@ -1082,11 +1090,39 @@ If no relevant file was found, report what was searched and suggest alternatives
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // CONFIDENCE REPORT
+    // CONFIDENCE GATE: Low confidence = force retry (Copilot behavior)
     // ═══════════════════════════════════════════════════════════════════════════
     const avgConfidence = transaction.confidenceScores.length > 0
         ? transaction.confidenceScores.reduce((sum, c) => sum + c.score, 0) / transaction.confidenceScores.length
         : 0;
+    
+    // If confidence too low and we have an action intent, force broader search
+    if (avgConfidence < 0.6 && ['FIX', 'EDIT', 'UI'].includes(context.intent) && filesModified.length === 0) {
+        emit({ type: 'thinking', content: `Low confidence (${(avgConfidence * 100).toFixed(0)}%). Broadening search...` });
+        
+        // Try common component patterns
+        const commonPatterns = ['Toast', 'Notification', 'Alert', 'Modal', 'Button', 'Header', 'Footer'];
+        for (const pattern of commonPatterns) {
+            if (context.keywords.some(k => pattern.toLowerCase().includes(k) || k.includes(pattern.toLowerCase()))) {
+                const broadSearch = await executeTool('file_search', {
+                    pattern: `**/*${pattern}*.tsx`
+                }, ctxInput.baseUrl);
+                
+                if (broadSearch.success && Array.isArray(broadSearch.result) && broadSearch.result.length > 0) {
+                    const foundFile = broadSearch.result[0] as string;
+                    if (!log.filesRead.includes(foundFile)) {
+                        await executeTool('read_file', {
+                            filePath: foundFile,
+                            startLine: 1,
+                            endLine: 300
+                        }, ctxInput.baseUrl);
+                        log.filesRead.push(foundFile);
+                        readableFiles.add(foundFile);
+                    }
+                }
+            }
+        }
+    }
     
     // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 5: UPDATE SESSION MEMORY (Stateful)
