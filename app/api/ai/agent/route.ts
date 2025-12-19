@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runAIAgent, detectUserIntent } from '@/lib/ai-agent-v3';
+import { runAIAgent, detectUserIntent } from '@/lib/ai-agent-v4';
 import { headers } from 'next/headers';
 
 // ═══════════════════════════════════════════════════════════════════════════════

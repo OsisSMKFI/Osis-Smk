@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { headers } from 'next/headers';
-import { runAgentWithStreaming } from '@/lib/ai-agent-v3';
+import { runAgentWithStreaming } from '@/lib/ai-agent-v4';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🤖 AI AGENT STREAMING API v2.0 - Full Action Copilot Mode
