@@ -355,7 +355,83 @@ async function executeTool(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🔄 ENFORCE EXECUTION - This is what makes it Copilot-like
+// � AUTO-PATH-RESOLVER - Resolve filename to real repo path
+// Copilot NEVER uses filename-only paths
+// ═══════════════════════════════════════════════════════════════════════════════
+async function resolveRealFilePath(
+    rawPath: string,
+    baseUrl: string,
+    readableFiles: Set<string>,
+    log: ExecutionLog,
+    emit: (step: AgentStep) => void
+): Promise<string | null> {
+    // 1. If already has path separator and is readable → use as-is
+    if (rawPath.includes('/') && readableFiles.has(rawPath)) {
+        return rawPath;
+    }
+    
+    // 2. Check if it's filename-only (no path separator)
+    const isFilenameOnly = !rawPath.includes('/');
+    const fileName = rawPath.split('/').pop() || rawPath;
+    
+    if (!fileName) return null;
+    
+    emit({ type: 'thinking', content: `Resolving path: ${fileName}...` });
+    
+    // 3. Search for file in repo
+    const searchResult = await executeTool('file_search', {
+        pattern: `**/${fileName}`
+    }, baseUrl);
+    
+    if (!searchResult.success || !Array.isArray(searchResult.result) || searchResult.result.length === 0) {
+        // Try broader search
+        const baseName = fileName.replace(/\.(tsx?|jsx?)$/, '');
+        const broaderSearch = await executeTool('file_search', {
+            pattern: `**/*${baseName}*.tsx`
+        }, baseUrl);
+        
+        if (!broaderSearch.success || !Array.isArray(broaderSearch.result) || broaderSearch.result.length === 0) {
+            emit({ type: 'error', content: `Path resolve FAILED: ${fileName} not found in repo` });
+            return null;
+        }
+        
+        searchResult.result = broaderSearch.result;
+    }
+    
+    // 4. Rank candidates (prioritize components/ui/app paths)
+    const ranked = (searchResult.result as string[]).sort((a, b) => {
+        const score = (p: string) =>
+            (p.includes('/components') ? 4 : 0) +
+            (p.includes('/ui') ? 3 : 0) +
+            (p.includes('/app') ? 2 : 0) +
+            (p.includes('/lib') ? 1 : 0);
+        return score(b) - score(a);
+    });
+    
+    const resolvedPath = ranked[0];
+    emit({ type: 'tool-result', content: `Resolved: ${rawPath} → ${resolvedPath}` });
+    
+    // 5. Auto-read file to add to editable scope
+    const readResult = await executeTool('read_file', {
+        filePath: resolvedPath,
+        startLine: 1,
+        endLine: 500
+    }, baseUrl);
+    
+    if (!readResult.success) {
+        emit({ type: 'error', content: `Resolved but failed to read: ${resolvedPath}` });
+        return null;
+    }
+    
+    readableFiles.add(resolvedPath);
+    log.filesRead.push(resolvedPath);
+    emit({ type: 'file-edit', content: `Added to scope: ${resolvedPath}` });
+    
+    return resolvedPath;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// �🔄 ENFORCE EXECUTION - This is what makes it Copilot-like
 // ═══════════════════════════════════════════════════════════════════════════════
 async function enforceExecution(
     context: ReturnType<typeof collectContext>,
@@ -658,8 +734,14 @@ OUTPUT CONTRACT:
 - If impossible: output ONE LINE: "FAILURE: <reason>"
 - Nothing else.
 
+PATH RULES (CRITICAL):
+- NEVER use filename-only paths like "Toast.tsx"
+- ALWAYS use full path from EDITABLE FILES list
+- Example: "app/components/Toast.tsx" NOT "Toast.tsx"
+- If path is not in EDITABLE FILES, you CANNOT edit it
+
 DIFF FORMAT:
-\`\`\`diff:exact/path.tsx
+\`\`\`diff:exact/path/from/editable/files.tsx
 <<<FIND>>>
 exact match from tool results
 <<<REPLACE>>>
@@ -868,67 +950,38 @@ EXECUTION REQUIREMENTS:
         transaction.confidenceScores.push(confidence);
         
         // ═══════════════════════════════════════════════════════════════════════
-        // FILE REALITY ENFORCEMENT + AUTO-READ ON BLOCK
+        // FILE REALITY ENFORCEMENT + AUTO-PATH-RESOLVER
+        // Filename-only paths (e.g., "Toast.tsx") are auto-resolved to real paths
         // ═══════════════════════════════════════════════════════════════════════
         if (!readableFiles.has(filePath)) {
-            emit({ 
-                type: 'thinking', 
-                content: `File "${filePath}" not in scope. Auto-searching and reading...` 
+            // Use AUTO-PATH-RESOLVER for proper path resolution
+            const resolvedPath = await resolveRealFilePath(
+                filePath,
+                ctxInput.baseUrl,
+                readableFiles,
+                log,
+                emit
+            );
+            
+            if (!resolvedPath) {
+                emit({ type: 'error', content: `Edit BLOCKED: Cannot resolve ${filePath}` });
+                continue; // Skip this diff
+            }
+            
+            // Update diff to use resolved path
+            diff.filePath = resolvedPath;
+            
+            // Store for rollback
+            transaction.files.push({
+                filePath: resolvedPath,
+                originalContent: null, // Will be read separately if needed
+                newContent: null,
+                status: 'pending'
             });
             
-            // BLOCK → AUTO-READ: Search → Read top result → Add to readableFiles
-            const fileName = filePath.split('/').pop() || '';
-            if (fileName) {
-                // Step 1: grep_search for exact filename
-                const searchResult = await executeTool('file_search', {
-                    pattern: `**/*${fileName}*`
-                }, ctxInput.baseUrl);
-                
-                let foundFile: string | null = null;
-                
-                if (searchResult.success && Array.isArray(searchResult.result) && searchResult.result.length > 0) {
-                    foundFile = searchResult.result[0] as string;
-                    emit({ type: 'tool-result', content: `Found: ${foundFile}` });
-                    
-                    // Step 2: read_file top result
-                    const readResult = await executeTool('read_file', {
-                        filePath: foundFile,
-                        startLine: 1,
-                        endLine: 500
-                    }, ctxInput.baseUrl);
-                    
-                    if (readResult.success && foundFile) {
-                        // Step 3: Update readableFiles (make it editable)
-                        readableFiles.add(foundFile);
-                        log.filesRead.push(foundFile);
-                        emit({ type: 'file-edit', content: `Added to editable scope: ${foundFile}` });
-                        
-                        // Store original content for rollback
-                        transaction.files.push({
-                            filePath: foundFile,
-                            originalContent: typeof readResult.result === 'string' ? readResult.result : JSON.stringify(readResult.result),
-                            newContent: null,
-                            status: 'pending'
-                        });
-                        
-                        // Update diff to use the found file
-                        diff.filePath = foundFile;
-                        
-                        // Update confidence
-                        confidence.score = 0.85;
-                        confidence.reason = 'File found and read via auto-search';
-                    }
-                }
-                
-                // If still not found, skip this diff
-                if (!foundFile || !readableFiles.has(diff.filePath)) {
-                    emit({ type: 'error', content: `Cannot locate file matching "${fileName}". Skipping edit.` });
-                    continue;
-                }
-            } else {
-                emit({ type: 'error', content: `Invalid file path: ${filePath}` });
-                continue;
-            }
+            // Update confidence
+            confidence.score = 0.85;
+            confidence.reason = 'Path resolved via auto-resolver';
         } else {
             // File already readable - read for rollback
             const existingRead = await executeTool('read_file', {
