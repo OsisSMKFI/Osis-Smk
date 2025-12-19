@@ -1,7 +1,7 @@
 import { getConfig } from '@/lib/adminConfig';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🤖 AI AGENT v4.0 - COPILOT-CLASS AUTONOMOUS CODING AGENT
+// 🤖 AI AGENT v4.1 - 100% COPILOT-CLASS AUTONOMOUS CODING AGENT
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // ARCHITECTURE: CONTROLLER-FORCED EXECUTION
@@ -12,8 +12,13 @@ import { getConfig } from '@/lib/adminConfig';
 // - No response without tool execution
 // - No idle state
 // - No "no changes" without search
-// - If intent unclear → SEARCH ANYWAY
+// - If intent unclear → ASSUME MOST LIKELY → EXECUTE
 // - AI does NOT control itself
+//
+// COPILOT PHILOSOPHY:
+// - Assumption over clarification
+// - Confidence over correctness
+// - Momentum over politeness
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -38,6 +43,82 @@ interface ExecutionLog {
     filesFound: string[];
     filesRead: string[];
     filesEdited: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🧠 SESSION MEMORY - Stateful context across messages
+// ═══════════════════════════════════════════════════════════════════════════════
+interface SessionMemory {
+    lastFilesRead: string[];
+    lastFilesEdited: string[];
+    lastIntent: Intent;
+    lastSearchPatterns: string[];
+    lastExecutionPlan: { tool: string; params: Record<string, any> }[];
+    ongoingTask: string | null;
+}
+
+// Global session memory (persists across calls in same process)
+let sessionMemory: SessionMemory = {
+    lastFilesRead: [],
+    lastFilesEdited: [],
+    lastIntent: 'UNKNOWN',
+    lastSearchPatterns: [],
+    lastExecutionPlan: [],
+    ongoingTask: null
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🎲 ASSUMPTION ENGINE - Infer intent BEFORE explicit detection
+// Copilot sering salah, tapi SELALU percaya diri
+// ═══════════════════════════════════════════════════════════════════════════════
+function assumeIntent(
+    input: string, 
+    openFile?: { path: string },
+    memory: SessionMemory = sessionMemory
+): Intent | null {
+    const lower = input.toLowerCase().trim();
+    
+    // IMPLICIT CONTINUATION - "masih", "belum", "sama", "tetap", "yaudah"
+    // Reuse last execution plan, don't re-analyze
+    if (/^(masih|belum|sama|tetap|yaudah|lanjut|terus|ok|oke|sip|gas|next)/.test(lower)) {
+        return memory.lastIntent !== 'UNKNOWN' ? memory.lastIntent : 'FIX';
+    }
+    
+    // SHORT INPUT (< 15 chars) = likely continuation of last task
+    if (lower.length < 15 && memory.lastIntent !== 'UNKNOWN') {
+        // Check if it's a status word
+        if (/salah|error|gagal|rusak|gak|tidak|hilang/.test(lower)) {
+            return 'FIX';
+        }
+        return memory.lastIntent;
+    }
+    
+    // DOMINANT FILE BIAS - if recent files are metadata-related
+    if (memory.lastFilesEdited.some(f => /meta|og|seo/i.test(f))) {
+        if (/masih|salah|belum|gak|tidak/.test(lower)) {
+            return 'METADATA';
+        }
+    }
+    
+    // DOMINANT FILE BIAS - if recent files are UI components
+    if (memory.lastFilesEdited.some(f => /component|page|tsx/i.test(f))) {
+        if (/gak|tidak|muncul|hilang|tampil/.test(lower)) {
+            return 'UI';
+        }
+    }
+    
+    // OPEN FILE BIAS - assume intent based on currently open file
+    if (openFile?.path) {
+        if (/meta|og|seo/i.test(openFile.path)) {
+            return 'METADATA';
+        }
+        if (/page|component/i.test(openFile.path)) {
+            return 'UI';
+        }
+    }
+    
+    // No assumption - let explicit detection handle it
+    return null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -85,13 +166,34 @@ function detectIntent(input: string): Intent {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📦 CONTEXT COLLECTOR - Always injected, never asked
 // ═══════════════════════════════════════════════════════════════════════════════
-function collectContext(message: string, openFile?: { path: string; content?: string }): {
+function collectContext(
+    message: string, 
+    openFile?: { path: string; content?: string },
+    memory: SessionMemory = sessionMemory
+): {
     intent: Intent;
     keywords: string[];
     targets: string[];
     searchPatterns: string[];
+    isImplicitContinuation: boolean;
+    preferredFiles: string[];
 } {
-    const intent = detectIntent(message);
+    // STEP 1: Try assumption engine FIRST (Copilot behavior)
+    const assumedIntent = assumeIntent(message, openFile, memory);
+    
+    // STEP 2: Fall back to explicit detection
+    const explicitIntent = detectIntent(message);
+    
+    // Use assumed intent if available, otherwise explicit
+    const intent = assumedIntent || explicitIntent;
+    
+    // Check if this is implicit continuation
+    const lower = message.toLowerCase().trim();
+    const isImplicitContinuation = /^(masih|belum|sama|tetap|yaudah|lanjut|terus|ok|oke|sip|gas|next)/.test(lower) ||
+                                   (lower.length < 15 && memory.lastIntent !== 'UNKNOWN');
+    
+    // DOMINANT FILE BIAS - prefer recently edited files
+    const preferredFiles = [...memory.lastFilesEdited, ...memory.lastFilesRead].slice(0, 3);
     
     // Extract all potential keywords
     const words = message.toLowerCase().match(/\b[a-zA-Z]{3,}\b/g) || [];
@@ -115,28 +217,40 @@ function collectContext(message: string, openFile?: { path: string; content?: st
     }
     
     // Build search patterns based on intent
-    const searchPatterns: string[] = [];
+    let searchPatterns: string[] = [];
     
-    if (intent === 'METADATA') {
-        searchPatterns.push('generateMetadata|openGraph|og:|twitter:');
-        searchPatterns.push('OG_VERSION|SITE_URL|metadata');
-    } else if (intent === 'UI') {
-        searchPatterns.push('className|style|css|tailwind');
-    } else if (intent === 'FIX' || intent === 'EDIT') {
-        // Use targets as search patterns
-        if (targets.length > 0) {
-            searchPatterns.push(targets.join('|'));
+    // If implicit continuation, reuse last search patterns
+    if (isImplicitContinuation && memory.lastSearchPatterns.length > 0) {
+        searchPatterns = [...memory.lastSearchPatterns];
+    } else {
+        if (intent === 'METADATA') {
+            searchPatterns.push('generateMetadata|openGraph|og:|twitter:');
+            searchPatterns.push('OG_VERSION|SITE_URL|metadata');
+        } else if (intent === 'UI') {
+            searchPatterns.push('className|style|css|tailwind');
+        } else if (intent === 'FIX' || intent === 'EDIT') {
+            // Use targets as search patterns
+            if (targets.length > 0) {
+                searchPatterns.push(targets.join('|'));
+            }
+            // Add common patterns
+            searchPatterns.push(keywords.slice(0, 5).join('|'));
         }
-        // Add common patterns
-        searchPatterns.push(keywords.slice(0, 5).join('|'));
+        
+        // Add file path from open file
+        if (openFile?.path) {
+            searchPatterns.push(openFile.path.split('/').pop()?.replace('.tsx', '') || '');
+        }
     }
     
-    // Add file path from open file
-    if (openFile?.path) {
-        searchPatterns.push(openFile.path.split('/').pop()?.replace('.tsx', '') || '');
-    }
-    
-    return { intent, keywords, targets, searchPatterns: [...new Set(searchPatterns)].filter(Boolean) };
+    return { 
+        intent, 
+        keywords, 
+        targets, 
+        searchPatterns: [...new Set(searchPatterns)].filter(Boolean),
+        isImplicitContinuation,
+        preferredFiles
+    };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -185,9 +299,65 @@ async function enforceExecution(
     const toolResults: { tool: string; result: any; params?: any }[] = [];
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // STEP 1: SEARCH (MANDATORY)
+    // IMPLICIT CONTINUATION: Reuse last execution plan
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (context.isImplicitContinuation && sessionMemory.lastFilesRead.length > 0) {
+        emit({ type: 'thinking', content: 'Continuing from last context...' });
+        
+        // Directly read last files instead of searching again
+        for (const file of sessionMemory.lastFilesRead.slice(0, 2)) {
+            emit({ type: 'tool-call', content: `Reading ${file}` });
+            
+            const readResult = await executeTool('read_file', {
+                filePath: file,
+                startLine: 1,
+                endLine: 300
+            }, baseUrl);
+            
+            if (readResult.success) {
+                log.read = true;
+                log.filesRead.push(file);
+                toolResults.push({ 
+                    tool: 'read_file', 
+                    result: { ...readResult.result, path: file },
+                    params: { filePath: file }
+                });
+                emit({ type: 'tool-result', content: `Read ${file}` });
+            }
+        }
+        
+        // Skip search phase for continuation
+        log.search = true;
+        return { log, toolResults };
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STEP 1: SEARCH (MANDATORY) - Prioritize preferred files
     // ═══════════════════════════════════════════════════════════════════════════
     emit({ type: 'tool-call', content: 'Searching codebase...' });
+    
+    // DOMINANT FILE BIAS: Search preferred files first
+    if (context.preferredFiles.length > 0) {
+        for (const file of context.preferredFiles.slice(0, 2)) {
+            const readResult = await executeTool('read_file', {
+                filePath: file,
+                startLine: 1,
+                endLine: 300
+            }, baseUrl);
+            
+            if (readResult.success) {
+                log.read = true;
+                log.filesRead.push(file);
+                log.filesFound.push(file);
+                toolResults.push({ 
+                    tool: 'read_file', 
+                    result: { ...readResult.result, path: file },
+                    params: { filePath: file }
+                });
+                emit({ type: 'tool-result', content: `Read preferred: ${file}` });
+            }
+        }
+    }
     
     // Search with all patterns
     for (const pattern of context.searchPatterns.slice(0, 3)) {
@@ -470,7 +640,8 @@ If code changes are needed, provide the exact diff.`;
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // PHASE 4: AUTO-APPLY DIFFS
+    // PHASE 4: AUTO-APPLY DIFFS (Silent Overwrite Rule)
+    // Copilot tidak tanya sebelum overwrite, kecuali destructive
     // ═══════════════════════════════════════════════════════════════════════════
     const diffRegex = /```diff:([^\n]+)\n<<<FIND>>>\n([\s\S]*?)\n<<<REPLACE>>>\n([\s\S]*?)```/gi;
     let diffMatch;
@@ -480,27 +651,41 @@ If code changes are needed, provide the exact diff.`;
         const findText = diffMatch[2].trim();
         const replaceText = diffMatch[3].trim();
         
-        emit({ type: 'tool-call', content: `Editing ${filePath}` });
+        // Silent Overwrite: auto-apply non-destructive changes
+        const isNonBreaking = replaceText.length > 0; // Not a pure deletion
         
-        const editResult = await executeTool('replace_in_file', {
-            filePath,
-            find: findText,
-            replace: replaceText
-        }, ctxInput.baseUrl);
-        
-        toolsUsed.push(editResult);
-        
-        if (editResult.success) {
-            filesModified.push(filePath);
-            log.edit = true;
-            emit({ type: 'file-edit', content: `Modified: ${filePath}` });
-        } else {
-            emit({ type: 'error', content: `Failed: ${filePath} - ${editResult.error}` });
+        if (isNonBreaking) {
+            emit({ type: 'tool-call', content: `Editing ${filePath}` });
+            
+            const editResult = await executeTool('replace_in_file', {
+                filePath,
+                find: findText,
+                replace: replaceText
+            }, ctxInput.baseUrl);
+            
+            toolsUsed.push(editResult);
+            
+            if (editResult.success) {
+                filesModified.push(filePath);
+                log.edit = true;
+                emit({ type: 'file-edit', content: `Modified: ${filePath}` });
+            } else {
+                emit({ type: 'error', content: `Failed: ${filePath} - ${editResult.error}` });
+            }
         }
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // PHASE 5: VERIFY & REPORT
+    // PHASE 5: UPDATE SESSION MEMORY (Stateful)
+    // ═══════════════════════════════════════════════════════════════════════════
+    sessionMemory.lastFilesRead = log.filesRead.slice(0, 5);
+    sessionMemory.lastFilesEdited = [...filesModified, ...sessionMemory.lastFilesEdited].slice(0, 5);
+    sessionMemory.lastIntent = context.intent;
+    sessionMemory.lastSearchPatterns = context.searchPatterns;
+    sessionMemory.ongoingTask = message.slice(0, 100);
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PHASE 6: VERIFY & REPORT
     // ═══════════════════════════════════════════════════════════════════════════
     emit({ 
         type: 'done', 
@@ -508,7 +693,8 @@ If code changes are needed, provide the exact diff.`;
         data: { 
             filesRead: log.filesRead,
             filesEdited: filesModified,
-            intent: context.intent
+            intent: context.intent,
+            isImplicitContinuation: context.isImplicitContinuation
         }
     });
     
@@ -522,12 +708,31 @@ If code changes are needed, provide the exact diff.`;
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📤 EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Reset session memory (for testing)
+export function resetSessionMemory() {
+    sessionMemory = {
+        lastFilesRead: [],
+        lastFilesEdited: [],
+        lastIntent: 'UNKNOWN',
+        lastSearchPatterns: [],
+        lastExecutionPlan: [],
+        ongoingTask: null
+    };
+}
+
+// Get current session memory (for debugging)
+export function getSessionMemory(): SessionMemory {
+    return { ...sessionMemory };
+}
+
 export function detectUserIntent(message: string) {
     const context = collectContext(message);
     return {
         intent: context.intent,
         keywords: context.keywords,
         targets: context.targets,
+        isImplicitContinuation: context.isImplicitContinuation,
         wantsFileSearch: context.intent === 'SEARCH',
         wantsFileEdit: ['FIX', 'EDIT'].includes(context.intent),
         wantsMetadata: context.intent === 'METADATA',
