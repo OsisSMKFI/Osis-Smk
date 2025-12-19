@@ -6,6 +6,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
 import { fetchSocialMediaConfig, type SocialMediaFullConfig } from '@/lib/socialMediaConfig.client';
 import { useSocialMediaData } from '@/lib/hooks/useSocialMediaData';
+import { useYouTubeData } from '@/lib/hooks/useYouTubeData';
 import Image from 'next/image';
 import { useSoundEffects as useGlobalSoundEffects } from '@/contexts/SoundContext';
 
@@ -522,7 +523,28 @@ const ContentPreviewCard = ({
 const ClientOurSocialMediaPage: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'all' | 'instagram' | 'youtube' | 'tiktok' | 'spotify'>('all');
-  const { instagramPosts, youtubeVideos, tiktokVideos, loading } = useSocialMediaData();
+  const { instagramPosts, youtubeVideos: fallbackYoutubeVideos, tiktokVideos, loading } = useSocialMediaData();
+  
+  // YouTube Auto-Sync: Real-time data from YouTube API
+  const { 
+    channel: youtubeChannel, 
+    videos: youtubeApiVideos, 
+    loading: youtubeLoading,
+    cached: youtubeCached,
+    lastUpdated: youtubeLastUpdated 
+  } = useYouTubeData();
+  
+  // Use API videos if available, otherwise fallback
+  const youtubeVideos = youtubeApiVideos.length > 0 
+    ? youtubeApiVideos.map((v, idx) => ({
+        id: v.videoId,
+        title: v.title,
+        thumbnail: v.thumbnailUrl,
+        url: `https://youtube.com/watch?v=${v.videoId}`,
+        views: 0, // Views not available in search API
+        publishedAt: v.publishedAt
+      }))
+    : fallbackYoutubeVideos;
   
   const [config, setConfig] = useState<SocialMediaFullConfig>(SOCIAL_MEDIA_CONFIG);
   const [configLoading, setConfigLoading] = useState(true);
@@ -550,6 +572,9 @@ const ClientOurSocialMediaPage: React.FC = () => {
     loadConfig();
   }, []);
 
+  // YouTube Auto-Sync: Use real-time subscriber count from API if available
+  const youtubeSubscriberCount = youtubeChannel?.subscriberCount ?? config.youtube.subscribers;
+  
   const socialPlatforms = useMemo(() => [
     {
       platform: 'Instagram',
@@ -567,9 +592,11 @@ const ClientOurSocialMediaPage: React.FC = () => {
       description: t('socialMediaPage.youtubeDesc') || 'Watch our videos and subscribe for more',
       url: config.youtube.url,
       gradient: 'from-red-600 to-red-500',
-      followers: config.youtube.subscribers,
-      username: config.youtube.channelName,
-      isActive: config.youtube.isActive
+      followers: youtubeSubscriberCount, // Auto-synced from YouTube API
+      username: youtubeChannel?.title || config.youtube.channelName,
+      isActive: config.youtube.isActive,
+      autoSync: true, // Indicates this platform uses auto-sync
+      lastUpdated: youtubeLastUpdated
     },
     {
       platform: 'TikTok',
@@ -591,7 +618,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
       username: config.spotify.username,
       isActive: config.spotify.isActive
     }
-  ], [config, t]);
+  ], [config, t, youtubeSubscriberCount, youtubeChannel, youtubeLastUpdated]);
 
   const allContent = useMemo(() => {
     const items: any[] = [];
@@ -640,11 +667,11 @@ const ClientOurSocialMediaPage: React.FC = () => {
   const totalFollowers = useMemo(() => {
     return (
       config.instagram.followers +
-      config.youtube.subscribers +
+      youtubeSubscriberCount + // Use auto-synced YouTube data
       config.tiktok.followers +
       config.spotify.followers
     );
-  }, [config]);
+  }, [config, youtubeSubscriberCount]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
