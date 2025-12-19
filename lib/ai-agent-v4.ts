@@ -538,30 +538,44 @@ function formatResultsForAI(toolResults: { tool: string; result: any; params?: a
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎨 SYSTEM PROMPT - Strict Copilot behavior
+// 🎨 SYSTEM PROMPT - Strict Copilot behavior + FILE REALITY ENFORCEMENT
 // ═══════════════════════════════════════════════════════════════════════════════
-function buildSystemPrompt(toolContext: string, intent: Intent): string {
+function buildSystemPrompt(toolContext: string, intent: Intent, readableFiles: string[]): string {
+    const fileList = readableFiles.length > 0 
+        ? readableFiles.map(f => `- ${f}`).join('\n')
+        : '(no files read yet)';
+    
     return `You are a Copilot-class autonomous coding agent.
 
 ## EXECUTED TOOL RESULTS:
 ${toolContext}
 
-## STRICT RULES:
+## FILES YOU CAN EDIT (ONLY THESE):
+${fileList}
+
+## STRICT FILE RULES (CRITICAL):
+1. NEVER invent filenames - only use files from TOOL RESULTS above
+2. NEVER assume a file exists if it wasn't read
+3. ONLY edit files explicitly listed in "FILES YOU CAN EDIT"
+4. If target file not found → report "File not found" and search alternative
+5. If no relevant file found → report what was searched, suggest next steps
+
+## STRICT BEHAVIOR RULES:
 1. NEVER ask questions
 2. NEVER explain what you will do - just do it
 3. NEVER use emoji
 4. NEVER use friendly/marketing language
 5. Provide DIRECT solutions with code
-6. If you detect code quality issues, suggest fixes (self-initiated refactor)
-7. After successful edit, immediately suggest next improvement if applicable (Assume Success bias)
+6. If you detect code quality issues, suggest fixes
+7. After successful edit, suggest next improvement if applicable
 
 ## OUTPUT FORMAT:
 - Technical and concise
 - Use code blocks with file paths: \`\`\`tsx:path/file.tsx
-- For edits, use DIFF format:
-  \`\`\`diff:path/file.tsx
+- For edits, use DIFF format (ONLY for files in "FILES YOU CAN EDIT"):
+  \`\`\`diff:exact/path/from/tool/results.tsx
   <<<FIND>>>
-  exact code to find
+  exact code to find (copy from TOOL RESULTS)
   <<<REPLACE>>>
   replacement code
   \`\`\`
@@ -573,9 +587,13 @@ ${intent === 'METADATA' ? 'Check/fix OG tags, metadata, SEO.' : ''}
 ${intent === 'UI' ? 'Modify the component/style.' : ''}
 ${intent === 'SEARCH' ? 'Report what was found.' : ''}
 
+## IF FILE NOT FOUND:
+Do NOT invent code. Instead report:
+"Target file not found. Searched: [patterns]. Found files: [list]. Suggest: [next search or alternative]"
+
 ## RESPONSE STYLE:
-- Line 1: Status (Found X, Identified issue, etc.)
-- Code block with solution
+- Line 1: Status (Found X, Identified issue, File not found, etc.)
+- Code block with solution (only if file was read)
 - Brief explanation if needed (no fluff)
 
 Respond in Bahasa Indonesia. Be direct.`;
@@ -630,17 +648,24 @@ export async function runAgentWithStreaming(
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
+    // FILE REALITY SET - Only these files can be edited
+    // ═══════════════════════════════════════════════════════════════════════════
+    const readableFiles = new Set(log.filesRead);
+    const readableFilesList = [...readableFiles];
+    
+    // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 3: AI SYNTHESIS
     // ═══════════════════════════════════════════════════════════════════════════
     emit({ type: 'thinking', content: 'Synthesizing response...' });
     
     const toolContext = formatResultsForAI(toolResults);
-    const systemPrompt = buildSystemPrompt(toolContext, context.intent);
+    const systemPrompt = buildSystemPrompt(toolContext, context.intent, readableFilesList);
     
     const userPrompt = `User: "${message}"
 
 Based on the tool results above, provide a solution.
-If code changes are needed, provide the exact diff.`;
+If code changes are needed, provide the exact diff using ONLY files from "FILES YOU CAN EDIT".
+If no relevant file was found, report what was searched and suggest alternatives.`;
     
     // Get AI key
     const geminiKey = await getConfig('GEMINI_API_KEY');
@@ -718,6 +743,31 @@ If code changes are needed, provide the exact diff.`;
         const filePath = diffMatch[1].trim();
         const findText = diffMatch[2].trim();
         const replaceText = diffMatch[3].trim();
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // FILE REALITY ENFORCEMENT: HARD BLOCK unread files
+        // AI CANNOT edit files that were NEVER READ by tools
+        // ═══════════════════════════════════════════════════════════════════════
+        if (!readableFiles.has(filePath)) {
+            emit({ 
+                type: 'error', 
+                content: `⚠️ BLOCKED: Cannot edit "${filePath}" - file was never read. Searching for correct file...` 
+            });
+            
+            // Self-healing: Try to find the actual file
+            const fileName = filePath.split('/').pop() || '';
+            if (fileName) {
+                emit({ type: 'thinking', content: `Searching for actual file: ${fileName}...` });
+                const searchResult = await executeTool('file_search', {
+                    pattern: `**/*${fileName}*`
+                }, ctxInput.baseUrl);
+                
+                if (searchResult.success && searchResult.result) {
+                    emit({ type: 'tool-result', content: `Found candidates: ${JSON.stringify(searchResult.result).slice(0, 200)}` });
+                }
+            }
+            continue; // SKIP this diff entirely
+        }
         
         // Silent Overwrite: auto-apply non-destructive changes
         const isNonBreaking = replaceText.length > 0; // Not a pure deletion
