@@ -872,7 +872,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
               delay={0}
             />
             <AnimatedCounter 
-              value={config.youtube.subscribers} 
+              value={youtubeSubscriberCount} 
               label="YouTube" 
               icon="fab fa-youtube"
               gradient="from-red-500 to-red-600"
