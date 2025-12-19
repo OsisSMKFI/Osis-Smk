@@ -322,6 +322,7 @@ export default function GalleryPageClient() {
                     autoPlay
                     loop
                     muted
+                    fallbackSrc="/images/logo-2.png"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white">
@@ -381,6 +382,7 @@ export default function GalleryPageClient() {
                   alt={filteredGallery[selectedImage].title}
                   className="w-full h-full object-contain"
                   controlsForVideo={true}
+                  fallbackSrc="/images/logo-2.png"
                 />
               </div>
               <div className="mt-4 text-center text-white">

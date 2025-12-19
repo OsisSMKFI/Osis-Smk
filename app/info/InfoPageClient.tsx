@@ -359,18 +359,19 @@ export default function InfoPageClient() {
                   return (
                   <div
                     key={uniqueKey}
+                    id={`event-${event.id || uniqueKey}`}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
                   >
-                    {event.image_url && (
-                      <div className="relative h-48 w-full overflow-hidden">
-                        <MediaRenderer
-                          src={event.image_url}
-                          alt={event.title}
-                          className="w-full h-full object-cover"
-                          controlsForVideo={true}
-                        />
-                      </div>
-                    )}
+                    {/* Always show image section - with default fallback */}
+                    <div className="relative h-48 w-full overflow-hidden">
+                      <MediaRenderer
+                        src={event.image_url || ''}
+                        alt={event.title}
+                        className="w-full h-full object-cover"
+                        controlsForVideo={true}
+                        fallbackSrc="/images/logo-2.png"
+                      />
+                    </div>
                     <div className="p-6">
                       <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
                         {event.title}
@@ -568,20 +569,20 @@ export default function InfoPageClient() {
                             key={post.id || post.slug}
                             className="group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-2xl transition-all overflow-hidden border border-gray-100 dark:border-gray-700"
                           >
-                            {post.featured_image && (
-                              <div className={`relative w-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center ${isVideo ? 'aspect-video' : 'aspect-video'} max-h-56`}>
-                                <MediaRenderer
-                                  src={post.featured_image}
-                                  alt={post.title}
-                                  className={`w-full h-full ${isVideo ? 'object-contain' : 'object-cover'} transition-transform duration-500 group-hover:scale-[1.03]`}
-                                  controlsForVideo={false}
-                                  autoPlay={isVideo}
-                                  loop={isVideo}
-                                  muted={isVideo}
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                              </div>
-                            )}
+                            {/* Always show image section with fallback */}
+                            <div className={`relative w-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center ${isVideo ? 'aspect-video' : 'aspect-video'} max-h-56`}>
+                              <MediaRenderer
+                                src={post.featured_image || ''}
+                                alt={post.title}
+                                className={`w-full h-full ${isVideo ? 'object-contain' : 'object-cover'} transition-transform duration-500 group-hover:scale-[1.03]`}
+                                controlsForVideo={false}
+                                autoPlay={isVideo}
+                                loop={isVideo}
+                                muted={isVideo}
+                                fallbackSrc="/images/logo-2.png"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </div>
                             <div className="p-5 space-y-3">
                               <h3 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 transition-colors">
                                 {post.title}

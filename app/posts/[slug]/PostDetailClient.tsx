@@ -115,30 +115,29 @@ export default function PostDetailClient({ initialPost }: PostDetailClientProps)
       {/* Article Header */}
       <article className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Featured Media (Adaptive, no cropping) */}
-          {post.featured_image && (
-            <div className="relative w-full rounded-xl sm:rounded-2xl overflow-hidden mb-6 sm:mb-8 md:mb-10 shadow-lg sm:shadow-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              {(() => {
-                const isVideo = /\.(mp4|webm|ogg)$/i.test(post.featured_image || '');
-                return (
-                  <div className="flex items-center justify-center w-full" style={{ maxHeight: isVideo ? '80vh' : '70vh' }}>
-                    <MediaRenderer
-                      src={post.featured_image}
-                      alt={post.title}
-                      className={`w-full h-full ${isVideo ? 'object-contain' : 'object-contain'}`}
-                      controlsForVideo={true}
-                    />
-                  </div>
-                );
-              })()}
-              {post.is_featured && (
-                <div className="absolute top-3 sm:top-4 md:top-5 right-3 sm:right-4 md:right-5 bg-yellow-500/90 backdrop-blur px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 rounded-full text-[10px] sm:text-xs md:text-sm font-bold text-white shadow-lg">
-                  UNGGULAN
+          {/* Featured Media (Adaptive, no cropping) - Always show with fallback */}
+          <div className="relative w-full rounded-xl sm:rounded-2xl overflow-hidden mb-6 sm:mb-8 md:mb-10 shadow-lg sm:shadow-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+            {(() => {
+              const isVideo = /\.(mp4|webm|ogg)$/i.test(post.featured_image || '');
+              return (
+                <div className="flex items-center justify-center w-full" style={{ maxHeight: isVideo ? '80vh' : '70vh' }}>
+                  <MediaRenderer
+                    src={post.featured_image || ''}
+                    alt={post.title}
+                    className={`w-full h-full ${isVideo ? 'object-contain' : 'object-contain'}`}
+                    controlsForVideo={true}
+                    fallbackSrc="/images/logo-2.png"
+                  />
                 </div>
-              )}
-              <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-transparent to-gray-900/0" />
-            </div>
-          )}
+              );
+            })()}
+            {post.is_featured && (
+              <div className="absolute top-3 sm:top-4 md:top-5 right-3 sm:right-4 md:right-5 bg-yellow-500/90 backdrop-blur px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 rounded-full text-[10px] sm:text-xs md:text-sm font-bold text-white shadow-lg">
+                UNGGULAN
+              </div>
+            )}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-transparent to-gray-900/0" />
+          </div>
 
           {/* Title */}
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 md:mb-8 leading-tight tracking-tight">

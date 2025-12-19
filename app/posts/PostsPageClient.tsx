@@ -129,34 +129,33 @@ export default function PostsPageClient() {
                 key={post.id}
                 className="group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden"
               >
-                {/* Featured Image */}
-                {post.featured_image && (
-                  <Link href={`/posts/${post.slug}`} className="relative h-56 w-full overflow-hidden block">
-                    <MediaRenderer
-                      src={post.featured_image}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      controlsForVideo={false}
-                      autoPlay={false}
-                      loop
-                      muted
-                    />
-                    {post.is_featured && (
-                      <div className="absolute top-4 right-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10">
-                        UNGGULAN
-                      </div>
-                    )}
-                    {/* Video indicator badge */}
-                    {/\.(mp4|webm|ogg)$/i.test(post.featured_image) && (
-                      <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 z-10">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                        </svg>
-                        VIDEO
-                      </div>
-                    )}
-                  </Link>
-                )}
+                {/* Featured Image - Always show with fallback */}
+                <Link href={`/posts/${post.slug}`} className="relative h-56 w-full overflow-hidden block">
+                  <MediaRenderer
+                    src={post.featured_image || ''}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    controlsForVideo={false}
+                    autoPlay={false}
+                    loop
+                    muted
+                    fallbackSrc="/images/logo-2.png"
+                  />
+                  {post.is_featured && (
+                    <div className="absolute top-4 right-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10">
+                      UNGGULAN
+                    </div>
+                  )}
+                  {/* Video indicator badge */}
+                  {post.featured_image && /\.(mp4|webm|ogg)$/i.test(post.featured_image) && (
+                    <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 z-10">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
+                      VIDEO
+                    </div>
+                  )}
+                </Link>
 
                 <div className="p-6">
                   {/* Meta Info */}

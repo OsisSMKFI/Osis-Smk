@@ -56,12 +56,31 @@ export function getSekbidOGImage(id: number): string {
 }
 
 /**
+ * Get proxied OG image URL for an event
+ * Image is served from our domain, proxying the Supabase image
+ * Falls back to default logo if event has no image
+ */
+export function getEventOGImage(id: string): string {
+    return `${SITE_URL}/og/event/${id}?v=${OG_VERSION}`;
+}
+
+/**
+ * Get proxied OG image URL for an announcement
+ * Always uses default logo since announcements don't have images
+ */
+export function getAnnouncementOGImage(id: string): string {
+    return `${SITE_URL}/og/announcement/${id}?v=${OG_VERSION}`;
+}
+
+/**
  * Get safe OG image URL
  * Uses proxy URLs for dynamic content, default for static pages
  */
 export function getSafeOGImage(options: {
     postSlug?: string;
     sekbidId?: number;
+    eventId?: string;
+    announcementId?: string;
     staticImage?: string;
 }): string {
     // 1. Post-specific (proxied)
@@ -74,7 +93,17 @@ export function getSafeOGImage(options: {
         return getSekbidOGImage(options.sekbidId);
     }
     
-    // 3. Static local image
+    // 3. Event-specific (proxied with fallback)
+    if (options.eventId) {
+        return getEventOGImage(options.eventId);
+    }
+    
+    // 4. Announcement-specific (proxied with fallback)
+    if (options.announcementId) {
+        return getAnnouncementOGImage(options.announcementId);
+    }
+    
+    // 5. Static local image
     if (options.staticImage) {
         if (options.staticImage.startsWith('http')) {
             return options.staticImage;
@@ -82,7 +111,7 @@ export function getSafeOGImage(options: {
         return `${SITE_URL}${options.staticImage.startsWith('/') ? '' : '/'}${options.staticImage}`;
     }
     
-    // 4. Default (proxied)
+    // 6. Default (proxied)
     return DEFAULT_OG_IMAGE;
 }
 
@@ -97,9 +126,11 @@ interface MetadataParams {
     author?: string;
     section?: string;
     keywords?: string[];
-    // NEW: For OG Image Proxy
-    postSlug?: string;   // For post-specific OG image proxy
-    sekbidId?: number;   // For sekbid-specific OG image proxy
+    // For OG Image Proxy
+    postSlug?: string;        // For post-specific OG image proxy
+    sekbidId?: number;        // For sekbid-specific OG image proxy
+    eventId?: string;         // For event-specific OG image proxy
+    announcementId?: string;  // For announcement-specific OG image proxy
 }
 
 /**
@@ -108,6 +139,8 @@ interface MetadataParams {
  * OG IMAGE PROXY STRATEGY:
  * - Posts: /og/post/{slug} (proxies Supabase image)
  * - Sekbid: /og/sekbid/{id} (proxies Supabase image)
+ * - Event: /og/event/{id} (proxies Supabase image or fallback)
+ * - Announcement: /og/announcement/{id} (fallback to logo)
  * - Static pages: /og/default (serves logo)
  * 
  * WhatsApp sees: osissmktest.biezz.my.id/og/...
@@ -123,6 +156,8 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
     const image = getSafeOGImage({
         postSlug: params.postSlug,
         sekbidId: params.sekbidId,
+        eventId: params.eventId,
+        announcementId: params.announcementId,
         staticImage: params.image || undefined,
     });
     

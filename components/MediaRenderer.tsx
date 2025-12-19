@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface MediaRendererProps {
   src: string;
@@ -8,9 +8,12 @@ interface MediaRendererProps {
   autoPlay?: boolean; // for video previews
   loop?: boolean; // for video previews
   muted?: boolean; // for video previews
+  fallbackSrc?: string; // Optional fallback image
+  retryCount?: number; // Number of retries (default: 2)
 }
 
 const VIDEO_EXT_REGEX = /\.(mp4|webm|ogg)(\?.*)?$/i;
+const DEFAULT_FALLBACK = '/images/logo-2.png';
 
 // Placeholder SVG for broken images
 const BrokenImagePlaceholder = ({ className }: { className?: string }) => (
@@ -38,6 +41,19 @@ const BrokenImagePlaceholder = ({ className }: { className?: string }) => (
   </div>
 );
 
+// Default image placeholder (shows logo)
+const DefaultImagePlaceholder = ({ className, alt }: { className?: string; alt?: string }) => (
+  <div className={`flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 ${className}`}>
+    <div className="text-center p-4">
+      <img 
+        src={DEFAULT_FALLBACK} 
+        alt={alt || 'Default'} 
+        className="w-20 h-20 object-contain mx-auto opacity-80"
+      />
+    </div>
+  </div>
+);
+
 export default function MediaRenderer({
   src,
   alt = '',
@@ -46,20 +62,68 @@ export default function MediaRenderer({
   autoPlay,
   loop,
   muted,
+  fallbackSrc,
+  retryCount = 2,
 }: MediaRendererProps) {
+  const [currentSrc, setCurrentSrc] = useState(src);
+  const [errorCount, setErrorCount] = useState(0);
   const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!src) return <BrokenImagePlaceholder className={className} />;
+  // Reset state when src changes
+  useEffect(() => {
+    setCurrentSrc(src);
+    setErrorCount(0);
+    setHasError(false);
+    setIsLoading(true);
+  }, [src]);
+
+  const handleError = useCallback(() => {
+    if (errorCount < retryCount) {
+      // Try adding cache-busting param
+      const separator = currentSrc.includes('?') ? '&' : '?';
+      const newSrc = `${src}${separator}_retry=${errorCount + 1}&t=${Date.now()}`;
+      setCurrentSrc(newSrc);
+      setErrorCount(prev => prev + 1);
+    } else if (fallbackSrc && currentSrc !== fallbackSrc) {
+      // Try fallback
+      setCurrentSrc(fallbackSrc);
+      setErrorCount(prev => prev + 1);
+    } else {
+      // Final failure
+      setHasError(true);
+    }
+    setIsLoading(false);
+  }, [currentSrc, errorCount, retryCount, fallbackSrc, src]);
+
+  const handleLoad = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  // Show placeholder if no src
+  if (!src) {
+    return fallbackSrc ? (
+      <img src={fallbackSrc} alt={alt} className={className} loading="lazy" />
+    ) : (
+      <DefaultImagePlaceholder className={className} alt={alt} />
+    );
+  }
   
-  // If already errored, show placeholder
-  if (hasError) return <BrokenImagePlaceholder className={className} />;
+  // Show broken image placeholder on final error
+  if (hasError) {
+    return fallbackSrc ? (
+      <img src={fallbackSrc} alt={alt} className={className} loading="lazy" />
+    ) : (
+      <BrokenImagePlaceholder className={className} />
+    );
+  }
 
   const isVideo = VIDEO_EXT_REGEX.test(src);
 
   if (isVideo) {
     return (
       <video
-        src={src}
+        src={currentSrc}
         className={className}
         playsInline
         webkit-playsinline="true"
@@ -70,18 +134,20 @@ export default function MediaRenderer({
         loop={loop}
         muted={muted}
         style={{ maxWidth: '100%', height: 'auto' }}
-        onError={() => setHasError(true)}
+        onError={handleError}
+        onLoadedData={handleLoad}
       />
     );
   }
 
   return (
     <img 
-      src={src} 
+      src={currentSrc} 
       alt={alt} 
       className={className} 
       loading="lazy" 
-      onError={() => setHasError(true)}
+      onError={handleError}
+      onLoad={handleLoad}
     />
   );
 }
