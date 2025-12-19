@@ -363,19 +363,22 @@ export default function InfoPageClient() {
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
                   >
                     {/* Always show image section - with default fallback */}
-                    <div className="relative h-48 w-full overflow-hidden">
+                    <Link href={`/info/event/${event.id}`} className="block relative h-48 w-full overflow-hidden group">
                       <MediaRenderer
                         src={event.image_url || ''}
                         alt={event.title}
-                        className="w-full h-full object-cover"
-                        controlsForVideo={true}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        controlsForVideo={false}
                         fallbackSrc="/images/logo-2.png"
                       />
-                    </div>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                    </Link>
                     <div className="p-6">
-                      <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
-                        {event.title}
-                      </h3>
+                      <Link href={`/info/event/${event.id}`}>
+                        <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                          {event.title}
+                        </h3>
+                      </Link>
                       {event.description && (
                         <div className="mb-4">
                           <p className={`text-gray-600 dark:text-gray-300 whitespace-pre-wrap ${!isExpanded && shouldShowReadMore ? 'line-clamp-3' : ''}`}>

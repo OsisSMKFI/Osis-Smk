@@ -1,11 +1,19 @@
 import { MetadataRoute } from 'next'
+import { createClient } from '@supabase/supabase-js'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// Create Supabase client for server-side
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const currentDate = new Date().toISOString()
   
-  return [
+  // Static pages
+  const staticPages: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
       lastModified: currentDate,
@@ -55,4 +63,47 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
   ]
+  
+  // Dynamic event pages
+  let eventPages: MetadataRoute.Sitemap = []
+  try {
+    const { data: events } = await supabase
+      .from('events')
+      .select('id, updated_at')
+      .order('created_at', { ascending: false })
+    
+    if (events) {
+      eventPages = events.map(event => ({
+        url: `${SITE_URL}/info/event/${event.id}`,
+        lastModified: event.updated_at || currentDate,
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching events for sitemap:', error)
+  }
+  
+  // Dynamic post pages
+  let postPages: MetadataRoute.Sitemap = []
+  try {
+    const { data: posts } = await supabase
+      .from('posts')
+      .select('slug, updated_at')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+    
+    if (posts) {
+      postPages = posts.map(post => ({
+        url: `${SITE_URL}/posts/${post.slug}`,
+        lastModified: post.updated_at || currentDate,
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching posts for sitemap:', error)
+  }
+  
+  return [...staticPages, ...eventPages, ...postPages]
 }
