@@ -1,14 +1,58 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
-import { FaBullhorn, FaCalendarAlt, FaPoll, FaNewspaper, FaFileAlt, FaInfoCircle } from 'react-icons/fa';
+import { FaBullhorn, FaCalendarAlt, FaPoll, FaNewspaper, FaFileAlt, FaInfoCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import MediaRenderer from '@/components/MediaRenderer';
 import ContentInteractions from '@/components/ContentInteractions';
 import Link from 'next/link';
 import PageHero from '@/components/animations/PageHero';
 import { useTranslation } from '@/hooks/useTranslation';
+
+// Helper function to get event status
+function getEventStatus(eventDate: string | null): 'upcoming' | 'ongoing' | 'past' {
+  if (!eventDate) return 'upcoming'; // Default to upcoming if no date
+  
+  const now = new Date();
+  const eventDay = new Date(eventDate);
+  
+  // Reset time to compare just dates
+  now.setHours(0, 0, 0, 0);
+  eventDay.setHours(0, 0, 0, 0);
+  
+  const diffDays = Math.floor((eventDay.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays > 0) return 'upcoming';
+  if (diffDays === 0) return 'ongoing';
+  return 'past';
+}
+
+// Status badge component
+function EventStatusBadge({ status }: { status: 'upcoming' | 'ongoing' | 'past' }) {
+  const config = {
+    upcoming: {
+      label: 'Akan Datang',
+      className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800'
+    },
+    ongoing: {
+      label: 'Berlangsung',
+      className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
+    },
+    past: {
+      label: 'Selesai',
+      className: 'bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-400 border-gray-200 dark:border-gray-600'
+    }
+  };
+
+  const { label, className } = config[status];
+
+  return (
+    <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${className}`}>
+      {label}
+    </span>
+  );
+}
 
 interface Announcement {
   id: string;
@@ -69,6 +113,42 @@ export default function InfoPageClient() {
   const [votingPoll, setVotingPoll] = useState<string | null>(null);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
   const [expandedAnnouncements, setExpandedAnnouncements] = useState<Set<string>>(new Set());
+  const [showPastEvents, setShowPastEvents] = useState(false);
+
+  // Filter events based on status
+  const { upcomingEvents, pastEvents } = useMemo(() => {
+    const upcoming: Event[] = [];
+    const past: Event[] = [];
+    
+    events.forEach(event => {
+      const status = getEventStatus(event.event_date);
+      if (status === 'past') {
+        past.push(event);
+      } else {
+        upcoming.push(event);
+      }
+    });
+    
+    // Sort upcoming by date ascending, past by date descending
+    upcoming.sort((a, b) => {
+      if (!a.event_date) return 1;
+      if (!b.event_date) return -1;
+      return new Date(a.event_date).getTime() - new Date(b.event_date).getTime();
+    });
+    
+    past.sort((a, b) => {
+      if (!a.event_date) return 1;
+      if (!b.event_date) return -1;
+      return new Date(b.event_date).getTime() - new Date(a.event_date).getTime();
+    });
+    
+    return { upcomingEvents: upcoming, pastEvents: past };
+  }, [events]);
+
+  // Events to display
+  const displayEvents = useMemo(() => {
+    return showPastEvents ? [...upcomingEvents, ...pastEvents] : upcomingEvents;
+  }, [upcomingEvents, pastEvents, showPastEvents]);
 
   const toggleEventExpand = (eventId: string) => {
     setExpandedEvents(prev => {
@@ -337,30 +417,60 @@ export default function InfoPageClient() {
             )}
 
             {/* Events Section */}
-            <div className="flex items-center gap-3 mb-6 mt-12 sm:mt-16">
-              <FaCalendarAlt className="text-2xl sm:text-3xl text-green-600" />
-              <h2 className="text-2xl sm:text-3xl font-bold">{t('info.upcomingEvents')}</h2>
+            <div className="flex items-center justify-between gap-3 mb-6 mt-12 sm:mt-16 flex-wrap">
+              <div className="flex items-center gap-3">
+                <FaCalendarAlt className="text-2xl sm:text-3xl text-green-600" />
+                <h2 className="text-2xl sm:text-3xl font-bold">{t('info.upcomingEvents')}</h2>
+              </div>
+              
+              {/* Toggle Past Events Button */}
+              {pastEvents.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowPastEvents(!showPastEvents)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    showPastEvents 
+                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600' 
+                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50'
+                  }`}
+                >
+                  {showPastEvents ? (
+                    <>
+                      <FaEyeSlash className="w-4 h-4" />
+                      Sembunyikan Event Lalu ({pastEvents.length})
+                    </>
+                  ) : (
+                    <>
+                      <FaEye className="w-4 h-4" />
+                      Tampilkan Event Lalu ({pastEvents.length})
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
-            {events.length === 0 ? (
+            {displayEvents.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
                 <p className="text-gray-500 dark:text-gray-400">{t('info.noEvents')}</p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-                {events.map((event, index) => {
+                {displayEvents.map((event, index) => {
                   const uniqueKey = event.id || `${event.title}-${event.event_date}-${index}`;
                   const isExpanded = expandedEvents.has(uniqueKey);
                   const descriptionLength = event.description?.length || 0;
                   const hasNewlines = (event.description?.split('\n').length || 1) > 2;
                   // Show read more if text is long OR has multiple lines
                   const shouldShowReadMore = descriptionLength > 50 || hasNewlines;
+                  const eventStatus = getEventStatus(event.event_date);
                   
                   return (
                   <div
                     key={uniqueKey}
                     id={`event-${event.id || uniqueKey}`}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
+                    className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow ${
+                      eventStatus === 'past' ? 'opacity-75' : ''
+                    }`}
                   >
                     {/* Always show image section - with default fallback */}
                     <Link href={`/info/event/${event.id}`} className="block relative h-48 w-full overflow-hidden group">
@@ -371,6 +481,10 @@ export default function InfoPageClient() {
                         controlsForVideo={false}
                         fallbackSrc="/images/logo-2.png"
                       />
+                      {/* Status Badge on Image */}
+                      <div className="absolute top-3 right-3">
+                        <EventStatusBadge status={eventStatus} />
+                      </div>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                     </Link>
                     <div className="p-6">
@@ -410,16 +524,27 @@ export default function InfoPageClient() {
                         </p>
                         {event.location && <p>📍 {event.location}</p>}
                       </div>
-                      {event.registration_link && (
-                        <a
-                          href={event.registration_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-4 inline-block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      
+                      {/* Action Buttons */}
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Link
+                          href={`/info/event/${event.id}`}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                         >
-                          {t('common.register')}
-                        </a>
-                      )}
+                          <FaInfoCircle className="w-4 h-4" />
+                          Lihat Detail
+                        </Link>
+                        {event.registration_link && (
+                          <a
+                            href={event.registration_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                          >
+                            {t('common.register')}
+                          </a>
+                        )}
+                      </div>
                       
                       {/* Interactions */}
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">

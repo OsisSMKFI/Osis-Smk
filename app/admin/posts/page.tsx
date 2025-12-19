@@ -82,8 +82,9 @@ export default function PostsPage() {
       if (status < 200 || status >= 300) {
         throw new Error(json?.error || 'Upload failed');
       }
-      const { url } = json || {};
-      setFormData(prev => ({ ...prev, image_url: url }));
+      // Prefer publicUrl (no expiry) over signed url
+      const imageUrl = json?.publicUrl || json?.url;
+      setFormData(prev => ({ ...prev, image_url: imageUrl }));
     } catch (error) {
       console.error('Error uploading image:', error);
       alert('Gagal upload gambar');

@@ -239,9 +239,10 @@ export default function GalleryPage() {
         console.error('[Gallery handleImageChange] Upload failed:', json);
         throw new Error(json?.error || 'Upload gagal');
       }
-      const { url } = json || {};
-      console.log('[Gallery handleImageChange] ✅ Upload success, URL:', url);
-      setFormData(prev => ({ ...prev, image_url: url }));
+      // Prefer publicUrl (no expiry) over signed url
+      const imageUrl = json?.publicUrl || json?.url;
+      console.log('[Gallery handleImageChange] ✅ Upload success, URL:', imageUrl);
+      setFormData(prev => ({ ...prev, image_url: imageUrl }));
     } catch (e) {
       console.error('[Gallery handleImageChange] Exception:', e);
       alert('Gagal upload gambar: ' + (e instanceof Error ? e.message : String(e)));

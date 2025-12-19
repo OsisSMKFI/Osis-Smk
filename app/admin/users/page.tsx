@@ -239,8 +239,9 @@ export default function UsersPage() {
       if (status < 200 || status >= 300) {
         throw new Error(json?.error || 'Upload failed');
       }
-      const { url } = json || {};
-      setFormData(prev => ({ ...prev, profile_image: url }));
+      // Prefer publicUrl (no expiry) over signed url
+      const imageUrl = json?.publicUrl || json?.url;
+      setFormData(prev => ({ ...prev, profile_image: imageUrl }));
     } catch (error) {
       console.error('[Users] Upload error:', error);
       alert('Gagal upload foto profil');
