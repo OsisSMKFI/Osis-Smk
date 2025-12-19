@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runAIAgent, detectUserIntent } from '@/lib/ai-agent';
+import { runAIAgent, detectUserIntent } from '@/lib/ai-agent-v3';
 import { headers } from 'next/headers';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🤖 AI AGENT API v1.0 - Copilot-like AI with Real Capabilities
+// 🤖 AI AGENT API v2.0 - Full Action Copilot Mode
 // ═══════════════════════════════════════════════════════════════════════════════
-// This API provides a Copilot-like AI that can:
-// - Search files in workspace
-// - Read and understand code
-// - Edit files directly
-// - Run terminal commands
-// - Query database for real data
+// This API provides a Copilot-like AI that:
+// - ACTS FIRST, explains later
+// - Searches files automatically
+// - Reads and understands code
+// - Edits files directly without asking
+// - Runs terminal commands when needed
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function POST(request: NextRequest) {
