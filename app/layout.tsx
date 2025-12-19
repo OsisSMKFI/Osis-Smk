@@ -127,6 +127,8 @@ export default async function RootLayout({
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <meta name="theme-color" content="#ffffff" />
+                {/* Preload optimized logo for LCP */}
+                <link rel="preload" as="image" type="image/webp" href="/images/logo-64.webp" />
                 {/* Font Awesome CDN for icon classes (fab fa-*, fas fa-*, etc.) */}
                 <link 
                     rel="stylesheet" 
@@ -225,10 +227,9 @@ export default async function RootLayout({
                         {!chatDisabled && <ClientRole role={role as any} />}
                         <SpeedInsights />
                         <Analytics />
-                        {/* Location Permission Prompt - shows after login */}
-                        {typeof window !== 'undefined' && session?.user && (
-                            <LocationPermissionPrompt />
-                        )}
+                        {/* Location Permission Prompt - DISABLED in layout for Lighthouse best practices
+                            Location permission should only be requested when user takes action that requires it
+                            (e.g., clicking attendance button). Import LocationPermissionPrompt in specific pages instead. */}
                     </Providers>
                     </LocationServiceProvider>
                 </div>

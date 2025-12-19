@@ -7,6 +7,7 @@ import { InstagramIcon, SpotifyIcon, TiktokIcon, YoutubeIcon } from './icons/Soc
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/contexts/ToastContext';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
+import OptimizedLogo from './OptimizedLogo';
 import QRCode from 'qrcode';
 
 const Footer: React.FC = () => {
@@ -86,8 +87,8 @@ const Footer: React.FC = () => {
             {/* Brand Section */}
             <div className="sm:col-span-2 lg:col-span-2">
               <div className="flex items-center space-x-3 mb-4 sm:mb-6">
-                <img 
-                  src="/images/logo-2.png" 
+                <OptimizedLogo 
+                  size="md"
                   alt={t('navbar.logoAlt')} 
                   className="rounded-full w-10 h-10 sm:w-12 sm:h-12" 
                 />

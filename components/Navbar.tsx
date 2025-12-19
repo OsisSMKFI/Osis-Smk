@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import LanguageToggle from './LanguageToggle';
 import ClientOnly from './ClientOnly';
+import OptimizedLogo from './OptimizedLogo';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useSession, signOut } from 'next-auth/react';
 
@@ -144,10 +145,11 @@ const Navbar: React.FC = () => {
             aria-label={t('navbar.logoAlt')}
           >
             <div className="relative w-7 h-7 xs:w-8 xs:h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden flex-shrink-0">
-              <img
-                src="/images/logo-2.png"
+              <OptimizedLogo
+                size="md"
                 alt={t('navbar.logoAlt')}
                 className="w-full h-full object-cover"
+                priority
               />
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400/20 to-amber-500/20 group-hover:scale-125 transition-transform duration-300" />
             </div>
@@ -301,8 +303,8 @@ const Navbar: React.FC = () => {
                 className="flex items-center gap-2.5 group flex-shrink-0"
               >
                 <div className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
-                  <img
-                    src="/images/logo-2.png"
+                  <OptimizedLogo
+                    size="sm"
                     alt={t('navbar.logoAlt')}
                     className="w-full h-full object-cover"
                   />

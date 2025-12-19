@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import OptimizedLogo from './OptimizedLogo';
 
 interface LoadingScreenProps {
   isVisible: boolean;
@@ -60,10 +61,11 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
         {/* Logo */}
         <div className="mb-8">
             <div className="relative inline-block">
-            <img
-              src="/images/logo-2.png"
+            <OptimizedLogo
+              size="lg"
               alt="OSIS Logo"
               className="w-24 h-24 rounded-full shadow-2xl animate-pulse-glow mx-auto"
+              priority
             />
             
             {/* Rotating Rings */}

@@ -26,8 +26,18 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Force no-cache for _next/static to ensure updates
+        // Force long cache for _next/static (immutable)
         source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Cache images for 1 year (they have unique filenames)
+        source: '/images/:path*',
         headers: [
           {
             key: 'Cache-Control',
