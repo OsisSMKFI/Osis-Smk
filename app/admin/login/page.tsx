@@ -110,10 +110,23 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md relative z-10">
         <div className="group rounded-2xl shadow-2xl backdrop-blur-xl p-8 border bg-[var(--card-bg)] border-[var(--card-border)]/70 dark:border-[var(--card-border)] text-[var(--text-primary)]">
           <div className="text-center mb-6">
+            {/* 🔒 Clear Branding for Google Anti-Phishing */}
+            <div className="mb-3 flex justify-center">
+              <img 
+                src="/images/logo-2.png" 
+                alt="OSIS SMK Informatika 2 Fithrah Insani" 
+                width={64} 
+                height={64}
+                className="rounded-xl"
+              />
+            </div>
             <div className="inline-flex items-center gap-2 mb-2">
               <span className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-[linear-gradient(to_right,var(--accent-emphasis),var(--accent))]">OSIS Admin</span>
             </div>
             <p className="text-xs font-medium text-[var(--text-muted)]">Masuk untuk mengelola konten & sistem</p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-1 opacity-70">
+              osissmktest.biezz.my.id - SMK Informatika 2 Fithrah Insani
+            </p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-5" aria-label="Form Login Admin" data-form-type="login" suppressHydrationWarning>
             <div>
@@ -201,7 +214,10 @@ export default function AdminLoginPage() {
             )}
           </form>
         </div>
-        <p className="text-center mt-6 text-[10px] tracking-wide text-[var(--text-muted)]">© {new Date().getFullYear()} OSIS Internal Dashboard</p>
+        <p className="text-center mt-6 text-[10px] tracking-wide text-[var(--text-muted)]">
+          © {new Date().getFullYear()} OSIS SMK Informatika 2 Fithrah Insani<br/>
+          <span className="opacity-60">Website Resmi - osissmktest.biezz.my.id</span>
+        </p>
       </div>
     </div>
   );
