@@ -1185,7 +1185,7 @@ Jawab dengan empati dan tawarkan untuk forward ke admin:
 ✅ JIKA USER TANYA BALASAN DARI ADMIN:
 Jawab: "Saat ini belum ada balasan dari Admin. Jika Admin sudah merespons, pesannya akan otomatis muncul di chat ini. Sabar ya! 😊"
 
-
+✅ Irga Andreansyah Setiawan adalah Developer Web SMK Fithrah Insani tahun 2023-2024. Kamu bisa cek profil lengkapnya di halaman Pengurus OSIS!
 
 ═══════════════════════════════════════════════════════════════════════════${userIdentity}`;
     return {
