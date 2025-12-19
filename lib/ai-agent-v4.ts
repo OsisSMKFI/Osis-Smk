@@ -370,35 +370,58 @@ async function resolveRealFilePath(
         return rawPath;
     }
     
-    // 2. Check if it's filename-only (no path separator)
-    const isFilenameOnly = !rawPath.includes('/');
-    const fileName = rawPath.split('/').pop() || rawPath;
+    // 2. Check if it exists in readable files (partial match)
+    for (const file of readableFiles) {
+        if (file.endsWith(rawPath) || file.includes(rawPath.replace(/\.(tsx?|jsx?)$/, ''))) {
+            emit({ type: 'tool-result', content: `Found in scope: ${file}` });
+            return file;
+        }
+    }
     
+    // 3. Extract filename for search
+    const fileName = rawPath.split('/').pop() || rawPath;
     if (!fileName) return null;
     
-    emit({ type: 'thinking', content: `Resolving path: ${fileName}...` });
+    emit({ type: 'thinking', content: `Searching for: ${fileName}...` });
     
-    // 3. Search for file in repo
-    const searchResult = await executeTool('file_search', {
+    // 4. Search for file in repo - exact match first
+    let searchResult = await executeTool('file_search', {
         pattern: `**/${fileName}`
     }, baseUrl);
     
+    // 5. If not found, try without extension variations
     if (!searchResult.success || !Array.isArray(searchResult.result) || searchResult.result.length === 0) {
-        // Try broader search
         const baseName = fileName.replace(/\.(tsx?|jsx?)$/, '');
-        const broaderSearch = await executeTool('file_search', {
+        
+        // Try partial name match
+        searchResult = await executeTool('file_search', {
             pattern: `**/*${baseName}*.tsx`
         }, baseUrl);
         
-        if (!broaderSearch.success || !Array.isArray(broaderSearch.result) || broaderSearch.result.length === 0) {
-            emit({ type: 'error', content: `Path resolve FAILED: ${fileName} not found in repo` });
-            return null;
+        // Still not found? Try grep search for related content
+        if (!searchResult.success || !Array.isArray(searchResult.result) || searchResult.result.length === 0) {
+            emit({ type: 'thinking', content: `No file match for ${baseName}, searching content...` });
+            
+            // Search by semantic keywords from the filename
+            const keywords = baseName.replace(/([A-Z])/g, ' $1').trim().toLowerCase().split(/\s+/);
+            const grepResult = await executeTool('grep_search', {
+                query: keywords.join('|'),
+                includePattern: '**/*.tsx'
+            }, baseUrl);
+            
+            if (grepResult.success && Array.isArray(grepResult.result) && grepResult.result.length > 0) {
+                // Convert grep results to file paths
+                const filesFromGrep = [...new Set(grepResult.result.map((r: any) => r.file))];
+                searchResult.result = filesFromGrep;
+                emit({ type: 'tool-result', content: `Found via content search: ${filesFromGrep.length} candidates` });
+            } else {
+                emit({ type: 'error', content: `FAILED: "${fileName}" does not exist in codebase` });
+                return null;
+            }
         }
-        
-        searchResult.result = broaderSearch.result;
     }
     
-    // 4. Rank candidates (prioritize components/ui/app paths)
+    // 6. Rank candidates (prioritize components/ui/app paths)
     const ranked = (searchResult.result as string[]).sort((a, b) => {
         const score = (p: string) =>
             (p.includes('/components') ? 4 : 0) +
@@ -411,7 +434,7 @@ async function resolveRealFilePath(
     const resolvedPath = ranked[0];
     emit({ type: 'tool-result', content: `Resolved: ${rawPath} → ${resolvedPath}` });
     
-    // 5. Auto-read file to add to editable scope
+    // 7. Auto-read file to add to editable scope
     const readResult = await executeTool('read_file', {
         filePath: resolvedPath,
         startLine: 1,
@@ -709,12 +732,19 @@ ABSOLUTE RULES (NON-NEGOTIABLE):
 1. You MUST take action on every request.
 2. You MUST use tool results before responding.
 3. You MAY ONLY edit files listed in EDITABLE FILES.
-4. If a file was not read, you are FORBIDDEN to edit it.
-5. You MUST NOT ask questions.
-6. You MUST NOT suggest.
-7. You MUST NOT explain hypotheticals.
-8. You MUST NOT say "cannot" unless ALL retries fail.
-9. You MUST NOT output emojis or marketing language.
+4. If EDITABLE FILES is empty or shows "(no files read yet)" - you MUST call search/read tools FIRST.
+5. You are FORBIDDEN to output a diff block if EDITABLE FILES is empty.
+6. You MUST NOT ask questions.
+7. You MUST NOT suggest.
+8. You MUST NOT explain hypotheticals.
+9. You MUST NOT say "cannot" unless ALL retries fail.
+10. You MUST NOT output emojis or marketing language.
+11. You MUST NOT invent file paths - ONLY use paths from EDITABLE FILES.
+
+WORKFLOW (MANDATORY ORDER):
+1. If EDITABLE FILES is empty → call "search" tool first
+2. After search finds files → call "read" tool on relevant files
+3. ONLY after files appear in EDITABLE FILES → generate diff
 
 TOOL RESULTS:
 ${toolContext}
@@ -734,18 +764,18 @@ OUTPUT CONTRACT:
 - If impossible: output ONE LINE: "FAILURE: <reason>"
 - Nothing else.
 
-PATH RULES (CRITICAL):
-- ALWAYS copy the EXACT path from EDITABLE FILES list
-- Example: if EDITABLE FILES shows "app/components/Toast.tsx", use THAT exact path
-- NEVER invent paths or use placeholders
+DIFF PATH RULE (NON-NEGOTIABLE):
+1. Look at EDITABLE FILES list above
+2. Pick the EXACT path from that list
+3. Copy-paste that path after "diff:"
+4. NEVER type a path that is not in EDITABLE FILES
+5. If no files match your target, output: "FAILURE: Target file not in scope"
 
-DIFF FORMAT (use REAL path from EDITABLE FILES):
-\`\`\`diff:app/components/Button.tsx
-<<<FIND>>>
-exact code from file
-<<<REPLACE>>>
-new code
-\`\`\`
+WRONG (inventing paths):
+\`\`\`diff:app/SomeWidget.tsx ← THIS IS WRONG! Path was invented!
+
+CORRECT (using real path from EDITABLE FILES):
+\`\`\`diff:app/admin/dashboard/page.tsx ← Path copied from EDITABLE FILES
 
 Bahasa Indonesia. Singkat. Langsung eksekusi.`;
 }
