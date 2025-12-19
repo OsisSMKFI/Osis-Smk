@@ -115,9 +115,7 @@ export default function AdminLoginPage() {
               <img 
                 src="/images/logo-2.png" 
                 alt="OSIS SMK Informatika 2 Fithrah Insani" 
-                width={64} 
-                height={64}
-                className="rounded-xl"
+                className="w-16 h-16 object-contain rounded-xl"
               />
             </div>
             <div className="inline-flex items-center gap-2 mb-2">

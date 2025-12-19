@@ -90,9 +90,7 @@ export default function RegisterPageClient() {
           <img 
             src="/images/logo-2.png" 
             alt="OSIS SMK Informatika 2 Fithrah Insani" 
-            width={56} 
-            height={56}
-            className="rounded-xl"
+            className="w-14 h-14 object-contain rounded-xl"
           />
         </div>
         <h1 className="text-2xl font-extrabold mb-2 bg-gradient-to-r from-amber-600 to-yellow-500 bg-clip-text text-transparent text-center">Registrasi Akun</h1>
