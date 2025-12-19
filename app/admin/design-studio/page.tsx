@@ -322,14 +322,12 @@ export default function DesignStudioPage() {
     const [isLoadingFile, setIsLoadingFile] = useState(false);
     
     // Chat
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-        {
-            id: 'welcome',
-            role: 'assistant',
-            content: '👋 Hai! Saya Design AI Assistant - Fleksibel seperti GitHub Copilot!\n\n✨ **Saya bisa bantu:**\n• Generate CSS untuk komponen manapun\n• Modifikasi style website secara langsung\n• Jelaskan struktur kode\n• Buat animasi, hover effects, responsive\n• Jawab pertanyaan tentang design\n\n💡 **Contoh perintah:**\n- "Buat navbar lebih transparan"\n- "Tambahkan glassmorphism ke hero section"\n- "Ubah warna tombol jadi gradient"\n- "Bagaimana cara membuat card responsive?"\n\n📌 **Tidak perlu pilih komponen dulu!** Cukup ketik apa yang kamu mau.',
-            timestamp: new Date()
-        }
-    ]);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{
+        id: 'welcome',
+        role: 'system',
+        content: 'Ready. Type your request.',
+        timestamp: new Date()
+    }]);
     const [chatInput, setChatInput] = useState('');
     const [isAILoading, setIsAILoading] = useState(false);
     const [useAgentMode, setUseAgentMode] = useState(true); // Copilot-like AI Agent mode
@@ -516,30 +514,7 @@ export default function DesignStudioPage() {
         setChatMessages([{
             id: '0',
             role: 'system',
-            content: `🚀 **Design Studio AI - Powered by GitHub Copilot Style**
-
-Saya AI yang **fleksibel** dan bisa membantu:
-
-**🎨 CSS & Styling:**
-• Generate CSS untuk komponen apapun
-• Glassmorphism, neumorphism, dark mode
-• Animasi, hover effects, transitions
-• Responsive design
-
-**📝 Penjelasan & Info:**
-• Jelaskan cara kerja CSS
-• Best practices design
-• Troubleshooting style issues
-
-**🔥 Contoh langsung ketik:**
-- "glassmorphism untuk navbar"
-- "dark mode untuk semua card"  
-- "hover effect button gradient"
-- "responsive hero section"
-- "apa itu flexbox?"
-
-**💡 Tidak perlu pilih komponen dulu!**
-Saya akan otomatis mendeteksi dari pertanyaan kamu.`,
+            content: 'Ready. Type your request.',
             timestamp: new Date()
         }]);
     };
@@ -1188,7 +1163,7 @@ ${sel}:hover {
                     setChatMessages(prev => [...prev, {
                         id: Date.now().toString(),
                         role: 'assistant',
-                        content: `⚠️ **Tidak ada perubahan untuk diterapkan.**\n\nTidak ditemukan kode atau perubahan dari percakapan sebelumnya.\n\n💡 **Tips:**\n• Minta AI untuk membuat kode terlebih dahulu\n• Contoh: "Ubah header menjadi glassmorphism"\n• Lalu ketik "terapkan" untuk menerapkan kode tersebut`,
+                        content: `Tidak ada perubahan untuk diterapkan.\n\nBuat request dulu, lalu ketik "terapkan".`,
                         timestamp: new Date(),
                         actionType: 'info'
                     }]);
@@ -1202,7 +1177,7 @@ ${sel}:hover {
                 setChatMessages(prev => [...prev, {
                     id: Date.now().toString(),
                     role: 'assistant',
-                    content: `🔄 **Pembatalan Perubahan**\n\n📋 **Cara Membatalkan:**\n• **CSS Override:** Klik tab "Settings" → "Reset CSS" atau hapus override yang tidak diinginkan\n• **File Changes:** Gunakan \`git checkout -- [filename]\` di terminal\n• **Semua Perubahan:** Gunakan \`git stash\` untuk menyimpan sementara\n\n⚠️ Perubahan yang sudah di-deploy ke production tidak bisa dibatalkan secara otomatis.\n\n❓ File mana yang ingin dikembalikan?`,
+                    content: `Rollback:\n- CSS: Tab Settings > Reset\n- Files: git checkout -- [file]\n- All: git stash\n\nFile mana yang ingin dikembalikan?`,
                     timestamp: new Date(),
                     actionType: 'info'
                 }]);
@@ -1215,7 +1190,7 @@ ${sel}:hover {
                 setChatMessages(prev => [...prev, {
                     id: Date.now().toString(),
                     role: 'assistant',
-                    content: `👋 **Halo!**\n\nSaya siap membantu dengan:\n• 🎨 Mendesain ulang komponen (button, card, header, dll)\n• 📝 Mengedit file source code\n• 🔍 Mencari lokasi file tertentu\n\n💡 Contoh permintaan:\n- "Ubah button menjadi glassmorphism"\n- "Edit navbar agar lebih modern"\n- "Di mana file untuk halaman about?"\n\nApa yang bisa saya bantu?`,
+                    content: `Ketik permintaan spesifik. Contoh:\n- "tambah tombol hapus di notifikasi"\n- "ubah warna header jadi gradient"\n- "fix bug di form login"`,
                     timestamp: new Date(),
                     actionType: 'info'
                 }]);

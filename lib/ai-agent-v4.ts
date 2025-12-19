@@ -577,58 +577,46 @@ function buildSystemPrompt(toolContext: string, intent: Intent, readableFiles: s
         ? readableFiles.map(f => `- ${f}`).join('\n')
         : '(no files read yet)';
     
-    return `You are a Copilot-class autonomous coding agent.
+    return `You are an autonomous coding agent. Execute, don't explain.
 
-## EXECUTED TOOL RESULTS:
+## TOOL RESULTS:
 ${toolContext}
 
-## FILES YOU CAN EDIT (ONLY THESE):
+## EDITABLE FILES:
 ${fileList}
 
-## STRICT FILE RULES (CRITICAL):
-1. NEVER invent filenames - only use files from TOOL RESULTS above
-2. NEVER assume a file exists if it wasn't read
-3. ONLY edit files explicitly listed in "FILES YOU CAN EDIT"
-4. If target file not found → report "File not found" and search alternative
-5. If no relevant file found → report what was searched, suggest next steps
-
-## STRICT BEHAVIOR RULES:
-1. NEVER ask questions
-2. NEVER explain what you will do - just do it
-3. NEVER use emoji
-4. NEVER use friendly/marketing language
-5. Provide DIRECT solutions with code
-6. If you detect code quality issues, suggest fixes
-7. After successful edit, suggest next improvement if applicable
+## RULES (ABSOLUTE):
+1. NEVER ask questions - assume and execute
+2. NEVER explain capabilities - just act
+3. NEVER use emoji or marketing language
+4. NEVER suggest - always DO
+5. NEVER say "mungkin", "sebaiknya", "coba", "saya bisa"
+6. ONLY edit files from EDITABLE FILES list
+7. If file not found → auto-search alternatives, then edit
+8. If edit intent → MUST produce a diff or report specific failure
 
 ## OUTPUT FORMAT:
-- Technical and concise
-- Use code blocks with file paths: \`\`\`tsx:path/file.tsx
-- For edits, use DIFF format (ONLY for files in "FILES YOU CAN EDIT"):
-  \`\`\`diff:exact/path/from/tool/results.tsx
-  <<<FIND>>>
-  exact code to find (copy from TOOL RESULTS)
-  <<<REPLACE>>>
-  replacement code
-  \`\`\`
+- Status line (1 sentence max)
+- DIFF block if editing:
+\`\`\`diff:exact/path.tsx
+<<<FIND>>>
+exact match from tool results
+<<<REPLACE>>>
+new code
+\`\`\`
 
 ## INTENT: ${intent}
-${intent === 'FIX' ? 'Identify the bug and provide the fix.' : ''}
-${intent === 'EDIT' ? 'Make the requested change.' : ''}
-${intent === 'METADATA' ? 'Check/fix OG tags, metadata, SEO.' : ''}
-${intent === 'UI' ? 'Modify the component/style.' : ''}
-${intent === 'SEARCH' ? 'Report what was found.' : ''}
+${intent === 'FIX' ? 'Fix the issue. Produce diff.' : ''}
+${intent === 'EDIT' ? 'Make the change. Produce diff.' : ''}
+${intent === 'METADATA' ? 'Fix metadata/OG. Produce diff.' : ''}
+${intent === 'UI' ? 'Modify UI. Produce diff.' : ''}
+${intent === 'SEARCH' ? 'Report findings only.' : ''}
 
 ## IF FILE NOT FOUND:
-Do NOT invent code. Instead report:
-"Target file not found. Searched: [patterns]. Found files: [list]. Suggest: [next search or alternative]"
+Do NOT stop. Search for similar files and continue.
+NEVER output "Suggest:" - instead, ACT.
 
-## RESPONSE STYLE:
-- Line 1: Status (Found X, Identified issue, File not found, etc.)
-- Code block with solution (only if file was read)
-- Brief explanation if needed (no fluff)
-
-Respond in Bahasa Indonesia. Be direct.`;
+Bahasa Indonesia. Singkat.`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -763,6 +751,27 @@ If no relevant file was found, report what was searched and suggest alternatives
     } catch (err) {
         aiResponse = `Error: ${err instanceof Error ? err.message : 'Unknown'}`;
     }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // OUTPUT SANITIZER: Remove ChatGPT-like phrases (Copilot NEVER suggests)
+    // ═══════════════════════════════════════════════════════════════════════════
+    const FORBIDDEN_PHRASES = [
+        'saya bisa', 'saya dapat', 'saya akan membantu',
+        'mungkin', 'sebaiknya', 'suggest:', 'coba ',
+        'anda bisa', 'anda dapat', 'tidak ada informasi',
+        'perlu diperiksa', 'sepertinya', 'kemungkinan',
+        'saya sarankan', 'disarankan', 'saran:',
+        '💡', '✨', '🔥', '👋', '🚀', '📝', '🎨'
+    ];
+    
+    for (const phrase of FORBIDDEN_PHRASES) {
+        if (aiResponse.toLowerCase().includes(phrase.toLowerCase())) {
+            aiResponse = aiResponse.replace(new RegExp(phrase, 'gi'), '');
+        }
+    }
+    
+    // Clean up orphaned markdown from emoji removal
+    aiResponse = aiResponse.replace(/\*\*\s*\*\*/g, '').replace(/\n{3,}/g, '\n\n').trim();
     
     // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 4: AUTO-APPLY DIFFS WITH TRANSACTION SAFETY
@@ -1031,6 +1040,15 @@ If no relevant file was found, report what was searched and suggest alternatives
     sessionMemory.ongoingTask = message.slice(0, 100);
     
     // ═══════════════════════════════════════════════════════════════════════════
+    // FORCE-RETRY: FIX/EDIT intent MUST produce edits
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (['FIX', 'EDIT', 'UI'].includes(context.intent) && filesModified.length === 0 && log.filesRead.length > 0) {
+        emit({ type: 'thinking', content: 'No edits produced. AI may need more context...' });
+        // Append warning to response instead of blocking
+        aiResponse += `\n\n---\n**[Controller]**: Intent was ${context.intent} but no edits applied. Files read: ${log.filesRead.join(', ')}. Retry with more specific request.`;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 6: VERIFY & REPORT
     // ═══════════════════════════════════════════════════════════════════════════
     const editSuccessRate = filesModified.length > 0 ? 
@@ -1038,9 +1056,9 @@ If no relevant file was found, report what was searched and suggest alternatives
         toolsUsed.some(t => !t.success) ? 'edit attempted, seeking alternative' : 'no edits needed';
     
     const txStatus = transaction.status === 'rolledback' 
-        ? ' | ⚠️ TX ROLLED BACK' 
+        ? ' | TX:ROLLBACK' 
         : transaction.status === 'committed' 
-            ? ' | ✅ TX COMMITTED' 
+            ? ' | TX:OK' 
             : '';
     
     emit({ 
