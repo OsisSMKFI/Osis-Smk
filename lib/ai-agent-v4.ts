@@ -1,12 +1,12 @@
 import { getConfig } from '@/lib/adminConfig';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🤖 AI AGENT v4.1 - 100% COPILOT-CLASS AUTONOMOUS CODING AGENT
+// 🤖 AI AGENT v4.4 - COPILOT++ AUTONOMOUS CODING AGENT
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// ARCHITECTURE: CONTROLLER-FORCED EXECUTION
+// ARCHITECTURE: CONTROLLER-FORCED EXECUTION + TRANSACTION SAFETY
 //
-// User Input → Controller (Forces) → AI Agent → Tools → Controller (Verifies) → Output
+// User Input → Controller → AI Agent → Tools → Verification → Commit/Rollback
 //
 // HARD RULES:
 // - No response without tool execution
@@ -14,6 +14,12 @@ import { getConfig } from '@/lib/adminConfig';
 // - No "no changes" without search
 // - If intent unclear → ASSUME MOST LIKELY → EXECUTE
 // - AI does NOT control itself
+//
+// v4.4 ENHANCEMENTS:
+// - BLOCK → AUTO-READ: When blocked, auto-read top result to enable editing
+// - MULTI-FILE TRANSACTION: Rollback all if any diff fails
+// - CONFIDENCE SCORING: Track confidence per action
+// - TOOL BATCHING: Copilot-style parallel execution
 //
 // COPILOT PHILOSOPHY:
 // - Assumption over clarification
@@ -43,6 +49,32 @@ interface ExecutionLog {
     filesFound: string[];
     filesRead: string[];
     filesEdited: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 📊 CONFIDENCE SCORING - Track certainty per action
+// ═══════════════════════════════════════════════════════════════════════════════
+interface ConfidenceScore {
+    action: string;
+    score: number; // 0.0 - 1.0
+    reason: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔐 MULTI-FILE TRANSACTION - Atomic operations with rollback
+// ═══════════════════════════════════════════════════════════════════════════════
+interface FileTransaction {
+    filePath: string;
+    originalContent: string | null;
+    newContent: string | null;
+    status: 'pending' | 'applied' | 'failed' | 'rolledback';
+}
+
+interface TransactionContext {
+    id: string;
+    files: FileTransaction[];
+    status: 'open' | 'committed' | 'rolledback';
+    confidenceScores: ConfidenceScore[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -733,40 +765,137 @@ If no relevant file was found, report what was searched and suggest alternatives
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // PHASE 4: AUTO-APPLY DIFFS (Silent Overwrite Rule)
+    // PHASE 4: AUTO-APPLY DIFFS WITH TRANSACTION SAFETY
     // Copilot tidak tanya sebelum overwrite, kecuali destructive
     // ═══════════════════════════════════════════════════════════════════════════
     const diffRegex = /```diff:([^\n]+)\n<<<FIND>>>\n([\s\S]*?)\n<<<REPLACE>>>\n([\s\S]*?)```/gi;
     let diffMatch;
     
+    // Collect all diffs first for transaction handling
+    const pendingDiffs: { filePath: string; findText: string; replaceText: string }[] = [];
     while ((diffMatch = diffRegex.exec(aiResponse)) !== null) {
-        const filePath = diffMatch[1].trim();
-        const findText = diffMatch[2].trim();
-        const replaceText = diffMatch[3].trim();
+        pendingDiffs.push({
+            filePath: diffMatch[1].trim(),
+            findText: diffMatch[2].trim(),
+            replaceText: diffMatch[3].trim()
+        });
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MULTI-FILE TRANSACTION: Initialize transaction context
+    // ═══════════════════════════════════════════════════════════════════════════
+    const transaction: TransactionContext = {
+        id: `tx_${Date.now()}`,
+        files: [],
+        status: 'open',
+        confidenceScores: []
+    };
+    
+    // Pre-read all files for rollback capability
+    for (const diff of pendingDiffs) {
+        const { filePath } = diff;
+        
+        // Calculate confidence based on file match quality
+        const confidence: ConfidenceScore = {
+            action: `edit:${filePath}`,
+            score: readableFiles.has(filePath) ? 0.95 : 0.3,
+            reason: readableFiles.has(filePath) ? 'File was read' : 'File not in readable set'
+        };
+        transaction.confidenceScores.push(confidence);
         
         // ═══════════════════════════════════════════════════════════════════════
-        // FILE REALITY ENFORCEMENT: HARD BLOCK unread files
-        // AI CANNOT edit files that were NEVER READ by tools
+        // FILE REALITY ENFORCEMENT + AUTO-READ ON BLOCK
         // ═══════════════════════════════════════════════════════════════════════
         if (!readableFiles.has(filePath)) {
             emit({ 
-                type: 'error', 
-                content: `⚠️ BLOCKED: Cannot edit "${filePath}" - file was never read. Searching for correct file...` 
+                type: 'thinking', 
+                content: `File "${filePath}" not in scope. Auto-searching and reading...` 
             });
             
-            // Self-healing: Try to find the actual file
+            // BLOCK → AUTO-READ: Search → Read top result → Add to readableFiles
             const fileName = filePath.split('/').pop() || '';
             if (fileName) {
-                emit({ type: 'thinking', content: `Searching for actual file: ${fileName}...` });
+                // Step 1: grep_search for exact filename
                 const searchResult = await executeTool('file_search', {
                     pattern: `**/*${fileName}*`
                 }, ctxInput.baseUrl);
                 
-                if (searchResult.success && searchResult.result) {
-                    emit({ type: 'tool-result', content: `Found candidates: ${JSON.stringify(searchResult.result).slice(0, 200)}` });
+                let foundFile: string | null = null;
+                
+                if (searchResult.success && Array.isArray(searchResult.result) && searchResult.result.length > 0) {
+                    foundFile = searchResult.result[0] as string;
+                    emit({ type: 'tool-result', content: `Found: ${foundFile}` });
+                    
+                    // Step 2: read_file top result
+                    const readResult = await executeTool('read_file', {
+                        filePath: foundFile,
+                        startLine: 1,
+                        endLine: 500
+                    }, ctxInput.baseUrl);
+                    
+                    if (readResult.success && foundFile) {
+                        // Step 3: Update readableFiles (make it editable)
+                        readableFiles.add(foundFile);
+                        log.filesRead.push(foundFile);
+                        emit({ type: 'file-edit', content: `Added to editable scope: ${foundFile}` });
+                        
+                        // Store original content for rollback
+                        transaction.files.push({
+                            filePath: foundFile,
+                            originalContent: typeof readResult.result === 'string' ? readResult.result : JSON.stringify(readResult.result),
+                            newContent: null,
+                            status: 'pending'
+                        });
+                        
+                        // Update diff to use the found file
+                        diff.filePath = foundFile;
+                        
+                        // Update confidence
+                        confidence.score = 0.85;
+                        confidence.reason = 'File found and read via auto-search';
+                    }
                 }
+                
+                // If still not found, skip this diff
+                if (!foundFile || !readableFiles.has(diff.filePath)) {
+                    emit({ type: 'error', content: `Cannot locate file matching "${fileName}". Skipping edit.` });
+                    continue;
+                }
+            } else {
+                emit({ type: 'error', content: `Invalid file path: ${filePath}` });
+                continue;
             }
-            continue; // SKIP this diff entirely
+        } else {
+            // File already readable - read for rollback
+            const existingRead = await executeTool('read_file', {
+                filePath,
+                startLine: 1,
+                endLine: 1000
+            }, ctxInput.baseUrl);
+            
+            if (existingRead.success) {
+                transaction.files.push({
+                    filePath,
+                    originalContent: typeof existingRead.result === 'string' ? existingRead.result : JSON.stringify(existingRead.result),
+                    newContent: null,
+                    status: 'pending'
+                });
+            }
+        }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // APPLY DIFFS WITH ROLLBACK ON FAILURE
+    // ═══════════════════════════════════════════════════════════════════════════
+    const appliedEdits: { filePath: string; success: boolean }[] = [];
+    let transactionFailed = false;
+    
+    for (const diff of pendingDiffs) {
+        const { filePath, findText, replaceText } = diff;
+        
+        // Skip if file still not readable
+        if (!readableFiles.has(filePath)) {
+            continue;
         }
         
         // Silent Overwrite: auto-apply non-destructive changes
@@ -788,12 +917,23 @@ If no relevant file was found, report what was searched and suggest alternatives
                 log.edit = true;
                 emit({ type: 'file-edit', content: `Modified: ${filePath}` });
                 
+                // Track in transaction
+                appliedEdits.push({ filePath, success: true });
+                const txFile = transaction.files.find(f => f.filePath === filePath);
+                if (txFile) txFile.status = 'applied';
+                
                 // ═══════════════════════════════════════════════════════════════
                 // ASSUME SUCCESS BIAS: Mark for potential follow-up improvement
                 // ═══════════════════════════════════════════════════════════════
                 sessionMemory.lastFilesEdited.unshift(filePath);
                 
             } else {
+                // Track failure in transaction
+                appliedEdits.push({ filePath, success: false });
+                const txFile = transaction.files.find(f => f.filePath === filePath);
+                if (txFile) txFile.status = 'failed';
+                transactionFailed = true;
+                
                 // ═══════════════════════════════════════════════════════════════
                 // ERROR AMNESIA: Don't explain failure, try alternative
                 // ═══════════════════════════════════════════════════════════════
@@ -819,6 +959,7 @@ If no relevant file was found, report what was searched and suggest alternatives
                         
                         if (readAlt.success) {
                             log.filesRead.push(altFile);
+                            readableFiles.add(altFile); // Add to editable scope
                             emit({ type: 'tool-result', content: `Found alternative: ${altFile}` });
                         }
                     }
@@ -829,6 +970,56 @@ If no relevant file was found, report what was searched and suggest alternatives
             }
         }
     }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MULTI-FILE TRANSACTION: ROLLBACK ON FAILURE (if enabled)
+    // Only rollback if ALL edits in a batch should be atomic
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (transactionFailed && pendingDiffs.length > 1 && appliedEdits.filter(e => e.success).length > 0) {
+        emit({ type: 'thinking', content: `Transaction has failures. Rolling back ${appliedEdits.filter(e => e.success).length} successful edits...` });
+        
+        // Rollback: Restore original content for all applied edits
+        for (const txFile of transaction.files) {
+            if (txFile.status === 'applied' && txFile.originalContent) {
+                emit({ type: 'tool-call', content: `Rolling back: ${txFile.filePath}` });
+                
+                // Read current content to get what was applied
+                const currentRead = await executeTool('read_file', {
+                    filePath: txFile.filePath,
+                    startLine: 1,
+                    endLine: 1000
+                }, ctxInput.baseUrl);
+                
+                if (currentRead.success) {
+                    // Restore original by writing it back
+                    const rollbackResult = await executeTool('write_file', {
+                        filePath: txFile.filePath,
+                        content: txFile.originalContent
+                    }, ctxInput.baseUrl);
+                    
+                    if (rollbackResult.success) {
+                        txFile.status = 'rolledback';
+                        emit({ type: 'file-edit', content: `Rolled back: ${txFile.filePath}` });
+                        // Remove from modified list
+                        const idx = filesModified.indexOf(txFile.filePath);
+                        if (idx > -1) filesModified.splice(idx, 1);
+                    }
+                }
+            }
+        }
+        
+        transaction.status = 'rolledback';
+        emit({ type: 'error', content: `Transaction rolled back due to failures. Please fix issues and retry.` });
+    } else if (!transactionFailed && appliedEdits.length > 0) {
+        transaction.status = 'committed';
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONFIDENCE REPORT
+    // ═══════════════════════════════════════════════════════════════════════════
+    const avgConfidence = transaction.confidenceScores.length > 0
+        ? transaction.confidenceScores.reduce((sum, c) => sum + c.score, 0) / transaction.confidenceScores.length
+        : 0;
     
     // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 5: UPDATE SESSION MEMORY (Stateful)
@@ -846,14 +1037,26 @@ If no relevant file was found, report what was searched and suggest alternatives
         `${filesModified.length} file(s) modified` : 
         toolsUsed.some(t => !t.success) ? 'edit attempted, seeking alternative' : 'no edits needed';
     
+    const txStatus = transaction.status === 'rolledback' 
+        ? ' | ⚠️ TX ROLLED BACK' 
+        : transaction.status === 'committed' 
+            ? ' | ✅ TX COMMITTED' 
+            : '';
+    
     emit({ 
         type: 'done', 
-        content: `Executed: search=${log.search}, read=${log.read}, edit=${log.edit} | ${editSuccessRate}`,
+        content: `Executed: search=${log.search}, read=${log.read}, edit=${log.edit} | ${editSuccessRate} | confidence=${(avgConfidence * 100).toFixed(0)}%${txStatus}`,
         data: { 
             filesRead: log.filesRead,
             filesEdited: filesModified,
             intent: context.intent,
-            isImplicitContinuation: context.isImplicitContinuation
+            isImplicitContinuation: context.isImplicitContinuation,
+            transaction: {
+                id: transaction.id,
+                status: transaction.status,
+                filesInTransaction: transaction.files.length,
+                avgConfidence
+            }
         }
     });
     
