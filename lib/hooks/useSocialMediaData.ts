@@ -5,19 +5,20 @@ import { useState, useEffect } from 'react';
 import { fetchInstagramPosts, formatInstagramPost } from '../api/instagram';
 import { fetchYouTubeVideos, formatYouTubeVideo } from '../api/youtube';
 
-// Import fallback data
-import { 
-  instagramPosts as fallbackInstagramPosts,
-  youtubeVideos as fallbackYoutubeVideos,
-  spotifyContent as fallbackSpotifyContent,
-  tiktokVideos as fallbackTiktokVideos
+// Type imports only - no sample data
+import type { 
+  InstagramPost,
+  YouTubeVideo,
+  SpotifyContent,
+  TikTokVideo
 } from '../socialMediaData';
 
 export function useSocialMediaData() {
-  const [instagramPosts, setInstagramPosts] = useState(fallbackInstagramPosts);
-  const [youtubeVideos, setYoutubeVideos] = useState(fallbackYoutubeVideos);
-  const [spotifyContent] = useState(fallbackSpotifyContent); // Spotify requires specific IDs
-  const [tiktokVideos] = useState(fallbackTiktokVideos); // TikTok API more complex
+  // Initialize with empty arrays - NO sample/fallback data
+  const [instagramPosts, setInstagramPosts] = useState<InstagramPost[]>([]);
+  const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([]);
+  const [spotifyContent] = useState<SpotifyContent[]>([]); // Empty - no account yet
+  const [tiktokVideos] = useState<TikTokVideo[]>([]); // Empty - no account yet
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
