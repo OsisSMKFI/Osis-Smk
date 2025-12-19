@@ -52,22 +52,22 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- 7. Update Page Content untuk hero subtitle
 UPDATE page_content 
-SET content_value = 'Raveka Sena 2025-2026'
+SET content = 'Raveka Sena 2025-2026'
 WHERE page_key = 'home_hero_subtitle';
 
 -- 8. Update About page description
 UPDATE page_content 
-SET content_value = 'OSIS SMK Informatika Fithrah Insani - Raveka Sena adalah organisasi siswa yang aktif, kreatif, dan berprestasi. Nama Raveka Sena berarti "pasukan yang menjadi sinar terang".'
+SET content = 'OSIS SMK Informatika Fithrah Insani - Raveka Sena adalah organisasi siswa yang aktif, kreatif, dan berprestasi. Nama Raveka Sena berarti "pasukan yang menjadi sinar terang".'
 WHERE page_key = 'about_description';
 
 -- 9. Update visi di page_content
 UPDATE page_content 
-SET content_value = 'Menjadi organisasi yang membersamai terbentuknya karakter siswa yang KAMIL dan inovatif'
+SET content = 'Menjadi organisasi yang membersamai terbentuknya karakter siswa yang KAMIL dan inovatif'
 WHERE page_key = 'visi';
 
 -- 10. Update misi di page_content
 UPDATE page_content 
-SET content_value = '1. Menciptakan program kerja yang inovatif dan menarik
+SET content = '1. Menciptakan program kerja yang inovatif dan menarik
 2. Menerapkan penggunaan teknologi dalam setiap kegiatan
 3. Menanamkan nilai-nilai karakter Islam pada seluruh siswa
 4. Menumbuhkan rasa peduli terhadap lingkungan
