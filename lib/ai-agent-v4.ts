@@ -158,6 +158,51 @@ function assumeIntent(
 // ═══════════════════════════════════════════════════════════════════════════════
 type Intent = 'FIX' | 'EDIT' | 'METADATA' | 'UI' | 'SEARCH' | 'TERMINAL' | 'UNKNOWN';
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🧠 SEMANTIC ALIASES - Copilot knows "notif" means "toast", "snackbar", etc.
+// ═══════════════════════════════════════════════════════════════════════════════
+const SEMANTIC_ALIASES: Record<string, string[]> = {
+    // UI Components
+    notif: ['toast', 'notification', 'snackbar', 'alert', 'message'],
+    bilah: ['toast', 'notification', 'bar', 'banner', 'strip'],
+    popup: ['modal', 'dialog', 'overlay', 'drawer'],
+    tombol: ['button', 'btn', 'action', 'icon', 'clickable'],
+    menu: ['navbar', 'nav', 'sidebar', 'header', 'navigation'],
+    kartu: ['card', 'tile', 'item', 'box'],
+    form: ['input', 'field', 'form', 'textarea', 'select'],
+    daftar: ['list', 'table', 'grid', 'items'],
+    gambar: ['image', 'img', 'photo', 'picture', 'avatar'],
+    
+    // Actions
+    hapus: ['dismiss', 'close', 'remove', 'delete', 'clear', 'x'],
+    tutup: ['close', 'dismiss', 'hide', 'collapse'],
+    buka: ['open', 'show', 'expand', 'reveal'],
+    tambah: ['add', 'create', 'new', 'insert', 'plus'],
+    edit: ['modify', 'update', 'change', 'alter'],
+    
+    // States
+    loading: ['spinner', 'skeleton', 'loading', 'pending'],
+    error: ['error', 'fail', 'invalid', 'warning'],
+    sukses: ['success', 'done', 'complete', 'valid']
+};
+
+function expandWithAliases(keywords: string[]): string[] {
+    const expanded: string[] = [...keywords];
+    for (const keyword of keywords) {
+        const lower = keyword.toLowerCase();
+        if (SEMANTIC_ALIASES[lower]) {
+            expanded.push(...SEMANTIC_ALIASES[lower]);
+        }
+        // Also check if keyword matches any alias value
+        for (const [key, aliases] of Object.entries(SEMANTIC_ALIASES)) {
+            if (aliases.includes(lower)) {
+                expanded.push(key, ...aliases);
+            }
+        }
+    }
+    return [...new Set(expanded)];
+}
+
 function detectIntent(input: string): Intent {
     const lower = input.toLowerCase();
     
@@ -261,12 +306,15 @@ function collectContext(
         } else if (intent === 'UI') {
             searchPatterns.push('className|style|css|tailwind');
         } else if (intent === 'FIX' || intent === 'EDIT') {
-            // Use targets as search patterns
-            if (targets.length > 0) {
-                searchPatterns.push(targets.join('|'));
+            // Use targets + semantic aliases as search patterns
+            const expandedTargets = expandWithAliases(targets);
+            const expandedKeywords = expandWithAliases(keywords.slice(0, 5));
+            
+            if (expandedTargets.length > 0) {
+                searchPatterns.push(expandedTargets.join('|'));
             }
-            // Add common patterns
-            searchPatterns.push(keywords.slice(0, 5).join('|'));
+            // Add expanded keywords
+            searchPatterns.push(expandedKeywords.join('|'));
         }
         
         // Add file path from open file
@@ -936,6 +984,16 @@ If no relevant file was found, report what was searched and suggest alternatives
                 // ═══════════════════════════════════════════════════════════════
                 sessionMemory.lastFilesEdited.unshift(filePath);
                 
+                // ═══════════════════════════════════════════════════════════════
+                // MICRO-IMPROVEMENT CHAIN: Copilot often adds small QoL fixes
+                // ═══════════════════════════════════════════════════════════════
+                if (context.intent === 'FIX' && replaceText.includes('dismiss') || replaceText.includes('close')) {
+                    // If adding dismiss/close, check if auto-dismiss timeout exists
+                    if (!replaceText.includes('setTimeout') && !replaceText.includes('useEffect')) {
+                        emit({ type: 'thinking', content: 'Consider: auto-dismiss timeout (common UX pattern)' });
+                    }
+                }
+                
             } else {
                 // Track failure in transaction
                 appliedEdits.push({ filePath, success: false });
@@ -1040,12 +1098,45 @@ If no relevant file was found, report what was searched and suggest alternatives
     sessionMemory.ongoingTask = message.slice(0, 100);
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // FORCE-RETRY: FIX/EDIT intent MUST produce edits
+    // FORCE-RETRY: FIX/EDIT intent MUST produce edits (Copilot never gives up)
     // ═══════════════════════════════════════════════════════════════════════════
+    let retryAttempted = false;
     if (['FIX', 'EDIT', 'UI'].includes(context.intent) && filesModified.length === 0 && log.filesRead.length > 0) {
-        emit({ type: 'thinking', content: 'No edits produced. AI may need more context...' });
-        // Append warning to response instead of blocking
-        aiResponse += `\n\n---\n**[Controller]**: Intent was ${context.intent} but no edits applied. Files read: ${log.filesRead.join(', ')}. Retry with more specific request.`;
+        emit({ type: 'thinking', content: 'No edits applied. Expanding search...' });
+        retryAttempted = true;
+        
+        // AUTO-RETRY: Broaden search with semantic aliases
+        const broadenedPatterns = expandWithAliases(context.targets);
+        emit({ type: 'tool-call', content: `Retry search: ${broadenedPatterns.slice(0, 3).join(', ')}...` });
+        
+        for (const pattern of broadenedPatterns.slice(0, 3)) {
+            const retrySearch = await executeTool('file_search', {
+                pattern: `**/*${pattern}*.tsx`
+            }, ctxInput.baseUrl);
+            
+            if (retrySearch.success && Array.isArray(retrySearch.result) && retrySearch.result.length > 0) {
+                const foundFile = retrySearch.result[0] as string;
+                if (!log.filesRead.includes(foundFile)) {
+                    emit({ type: 'tool-call', content: `Reading: ${foundFile}` });
+                    const readResult = await executeTool('read_file', {
+                        filePath: foundFile,
+                        startLine: 1,
+                        endLine: 300
+                    }, ctxInput.baseUrl);
+                    
+                    if (readResult.success) {
+                        log.filesRead.push(foundFile);
+                        readableFiles.add(foundFile);
+                        emit({ type: 'tool-result', content: `Found alternative: ${foundFile}` });
+                    }
+                }
+            }
+        }
+        
+        // FAIL HARD if still nothing
+        if (filesModified.length === 0) {
+            aiResponse = `FAILED: Intent=${context.intent}, searched=${context.searchPatterns.join(', ')}, read=${log.filesRead.join(', ')}, but no applicable edit found. File structure may differ from expected.`;
+        }
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
@@ -1053,7 +1144,8 @@ If no relevant file was found, report what was searched and suggest alternatives
     // ═══════════════════════════════════════════════════════════════════════════
     const editSuccessRate = filesModified.length > 0 ? 
         `${filesModified.length} file(s) modified` : 
-        toolsUsed.some(t => !t.success) ? 'edit attempted, seeking alternative' : 'no edits needed';
+        retryAttempted ? 'retry exhausted, no match' : 
+        toolsUsed.some(t => !t.success) ? 'edit attempted, no match' : 'search only';
     
     const txStatus = transaction.status === 'rolledback' 
         ? ' | TX:ROLLBACK' 
