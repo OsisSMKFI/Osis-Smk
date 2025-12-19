@@ -541,7 +541,9 @@ const ClientOurSocialMediaPage: React.FC = () => {
         title: v.title,
         thumbnail: v.thumbnailUrl,
         url: `https://youtube.com/watch?v=${v.videoId}`,
-        views: 0, // Views not available in search API
+        views: v.viewCount || 0,
+        likes: v.likeCount || 0,
+        duration: v.duration || '',
         publishedAt: v.publishedAt
       }))
     : fallbackYoutubeVideos;

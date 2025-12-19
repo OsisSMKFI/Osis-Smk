@@ -25,6 +25,11 @@ export interface YouTubeVideo {
   thumbnailUrl: string;
   publishedAt: string;
   channelTitle: string;
+  // Statistics (from videos API)
+  viewCount?: number;
+  likeCount?: number;
+  commentCount?: number;
+  duration?: string;
 }
 
 export interface YouTubeApiResponse {
@@ -98,36 +103,68 @@ export async function fetchChannelStats(): Promise<YouTubeChannelStats> {
 }
 
 /**
- * Fetch latest videos from channel
+ * Fetch latest videos from channel with statistics
  */
 export async function fetchChannelVideos(maxResults: number = 6): Promise<YouTubeVideo[]> {
   const apiKey = getApiKey();
   
-  const url = `${YOUTUBE_API_BASE}/search?part=snippet&channelId=${CHANNEL_ID}&maxResults=${maxResults}&order=date&type=video&key=${apiKey}`;
+  // Step 1: Search for videos
+  const searchUrl = `${YOUTUBE_API_BASE}/search?part=snippet&channelId=${CHANNEL_ID}&maxResults=${maxResults}&order=date&type=video&key=${apiKey}`;
   
-  const response = await fetch(url, {
+  const searchResponse = await fetch(searchUrl, {
     next: { revalidate: 1800 }, // Cache for 30 minutes
   });
   
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`YouTube API Error: ${error.error?.message || response.statusText}`);
+  if (!searchResponse.ok) {
+    const error = await searchResponse.json();
+    throw new Error(`YouTube API Error: ${error.error?.message || searchResponse.statusText}`);
   }
   
-  const data = await response.json();
+  const searchData = await searchResponse.json();
   
-  if (!data.items) {
+  if (!searchData.items || searchData.items.length === 0) {
     return [];
   }
   
-  return data.items.map((item: any) => ({
-    videoId: item.id.videoId,
-    title: item.snippet.title,
-    description: item.snippet.description,
-    thumbnailUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
-    publishedAt: item.snippet.publishedAt,
-    channelTitle: item.snippet.channelTitle,
-  }));
+  // Step 2: Get video IDs for statistics
+  const videoIds = searchData.items.map((item: any) => item.id.videoId).join(',');
+  
+  // Step 3: Fetch video statistics
+  const statsUrl = `${YOUTUBE_API_BASE}/videos?part=snippet,statistics,contentDetails&id=${videoIds}&key=${apiKey}`;
+  
+  const statsResponse = await fetch(statsUrl, {
+    next: { revalidate: 1800 },
+  });
+  
+  let statsMap: Record<string, any> = {};
+  if (statsResponse.ok) {
+    const statsData = await statsResponse.json();
+    statsData.items?.forEach((item: any) => {
+      statsMap[item.id] = {
+        viewCount: parseInt(item.statistics?.viewCount) || 0,
+        likeCount: parseInt(item.statistics?.likeCount) || 0,
+        commentCount: parseInt(item.statistics?.commentCount) || 0,
+        duration: item.contentDetails?.duration || '',
+      };
+    });
+  }
+  
+  // Step 4: Combine search results with statistics
+  return searchData.items.map((item: any) => {
+    const stats = statsMap[item.id.videoId] || {};
+    return {
+      videoId: item.id.videoId,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnailUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+      publishedAt: item.snippet.publishedAt,
+      channelTitle: item.snippet.channelTitle,
+      viewCount: stats.viewCount,
+      likeCount: stats.likeCount,
+      commentCount: stats.commentCount,
+      duration: stats.duration,
+    };
+  });
 }
 
 /**
