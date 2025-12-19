@@ -552,7 +552,7 @@ export default function InfoPageClient() {
                           contentId={event.id || uniqueKey}
                           contentType="event"
                           contentTitle={event.title}
-                          contentUrl={`/info#event-${event.id || uniqueKey}`}
+                          contentUrl={`/info/event/${event.id}`}
                           initialLikes={0}
                           initialComments={0}
                           isLiked={false}
