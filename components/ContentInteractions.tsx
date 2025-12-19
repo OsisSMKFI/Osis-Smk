@@ -1,11 +1,35 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { FaHeart, FaComment, FaShare, FaQrcode, FaLink, FaWhatsapp, FaFacebook, FaTwitter, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { FaHeart, FaComment, FaShare, FaQrcode, FaLink, FaWhatsapp, FaFacebook, FaTwitter, FaTimes, FaEye } from 'react-icons/fa';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/contexts/ToastContext';
+import { useSession } from 'next-auth/react';
 import QRCode from 'qrcode';
 import CommentSectionEnhanced from './CommentSectionEnhanced';
+
+// Generate a simple fingerprint for anonymous users
+function getFingerprint(): string {
+  if (typeof window === 'undefined') return 'ssr';
+  const nav = window.navigator;
+  const screen = window.screen;
+  const data = [
+    nav.userAgent,
+    nav.language,
+    screen.width,
+    screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset()
+  ].join('|');
+  // Simple hash
+  let hash = 0;
+  for (let i = 0; i < data.length; i++) {
+    const char = data.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return 'fp_' + Math.abs(hash).toString(36);
+}
 
 interface ContentInteractionsProps {
   contentId: string;
@@ -34,21 +58,71 @@ export default function ContentInteractions({
 }: ContentInteractionsProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const { data: session } = useSession();
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const [liked, setLiked] = useState(isLiked);
   const [likes, setLikes] = useState(initialLikes);
+  const [views, setViews] = useState(0);
   const [comments, setComments] = useState(initialComments);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [fullUrl, setFullUrl] = useState('');
+  const [statsLoaded, setStatsLoaded] = useState(false);
+  const [liking, setLiking] = useState(false);
   const commentSectionRef = useRef<HTMLDivElement>(null);
 
+  // Fetch stats and track view on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setFullUrl(window.location.origin + contentUrl);
+      
+      // Fetch stats from API
+      const fetchStats = async () => {
+        try {
+          const userId = (session?.user as any)?.id || '';
+          const res = await fetch(`/api/interactions?contentId=${contentId}&contentType=${contentType}&userId=${userId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.stats) {
+              setLikes(data.stats.likes);
+              setViews(data.stats.views);
+              setComments(data.stats.comments);
+              setLiked(data.stats.isLiked);
+            }
+          }
+        } catch (error) {
+          console.error('[ContentInteractions] Failed to fetch stats:', error);
+        } finally {
+          setStatsLoaded(true);
+        }
+      };
+
+      // Track view
+      const trackView = async () => {
+        try {
+          const fingerprint = getFingerprint();
+          const userId = (session?.user as any)?.id || null;
+          await fetch('/api/interactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contentId,
+              contentType,
+              action: 'view',
+              userId,
+              fingerprint
+            })
+          });
+        } catch (error) {
+          console.error('[ContentInteractions] Failed to track view:', error);
+        }
+      };
+
+      fetchStats();
+      trackView();
     }
-  }, [contentUrl]);
+  }, [contentUrl, contentId, contentType, session]);
 
   // Generate QR Code when modal opens
   useEffect(() => {
@@ -66,11 +140,55 @@ export default function ContentInteractions({
     }
   }, [showQRModal, fullUrl]);
 
-  const handleLike = () => {
+  const handleLike = async () => {
+    const userId = (session?.user as any)?.id;
+    
+    if (!userId) {
+      showToast('Login untuk menyukai konten', 'warning');
+      return;
+    }
+
+    if (liking) return;
+    setLiking(true);
+
+    // Optimistic update
+    const wasLiked = liked;
     setLiked(!liked);
     setLikes(liked ? likes - 1 : likes + 1);
+
+    try {
+      const res = await fetch('/api/interactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentId,
+          contentType,
+          action: 'like',
+          userId
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setLikes(data.likes);
+        setLiked(data.liked);
+        showToast(data.liked ? 'Konten disukai!' : 'Like dibatalkan', 'success');
+      } else {
+        // Revert on error
+        setLiked(wasLiked);
+        setLikes(wasLiked ? likes : likes - 1);
+        showToast('Gagal menyukai konten', 'error');
+      }
+    } catch (error) {
+      // Revert on error
+      setLiked(wasLiked);
+      setLikes(wasLiked ? likes : likes - 1);
+      console.error('[ContentInteractions] Like error:', error);
+    } finally {
+      setLiking(false);
+    }
+    
     onLike?.();
-    showToast(liked ? 'Like dibatalkan' : 'Konten disukai!', 'success');
   };
 
   const handleComment = () => {
@@ -154,14 +272,23 @@ export default function ContentInteractions({
     <>
       {/* Interaction Buttons */}
       <div className={`flex items-center gap-4 sm:gap-6 ${className}`}>
+        {/* Views Counter */}
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+          <FaEye className="text-lg sm:text-xl" />
+          <span className="text-sm sm:text-base">
+            {statsLoaded ? views : '...'}
+          </span>
+        </div>
+
         {/* Like Button */}
         <button
           onClick={handleLike}
+          disabled={liking}
           className={`flex items-center gap-2 transition-all duration-300 group ${
             liked 
               ? 'text-red-500' 
               : 'text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-500'
-          }`}
+          } ${liking ? 'opacity-50 cursor-not-allowed' : ''}`}
           aria-label={liked ? 'Unlike' : 'Like'}
         >
           <FaHeart 
