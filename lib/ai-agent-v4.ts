@@ -445,16 +445,73 @@ async function enforceExecution(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// � CODE SMELL DETECTOR - For self-initiated refactor
+// ═══════════════════════════════════════════════════════════════════════════════
+function detectCodeSmells(content: string): string[] {
+    const smells: string[] = [];
+    
+    // Long functions (> 50 lines between function declaration and closing brace)
+    if (/function\s+\w+[^}]{2000,}/s.test(content)) {
+        smells.push('long_function');
+    }
+    
+    // Repeated code patterns
+    const lines = content.split('\n');
+    const lineSet = new Set<string>();
+    let duplicates = 0;
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.length > 30 && lineSet.has(trimmed)) {
+            duplicates++;
+        }
+        lineSet.add(trimmed);
+    }
+    if (duplicates > 3) {
+        smells.push('code_duplication');
+    }
+    
+    // console.log in production code
+    if (/console\.(log|warn|error)\(/.test(content)) {
+        smells.push('console_statements');
+    }
+    
+    // any type usage
+    if (/:\s*any\b/.test(content)) {
+        smells.push('any_type_usage');
+    }
+    
+    // Empty catch blocks
+    if (/catch\s*\([^)]*\)\s*{\s*}/s.test(content)) {
+        smells.push('empty_catch');
+    }
+    
+    // Magic numbers
+    if (/[^0-9.]\d{4,}[^0-9.]/.test(content)) {
+        smells.push('magic_numbers');
+    }
+    
+    return smells;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 📝 FORMAT RESULTS FOR AI
 // ═══════════════════════════════════════════════════════════════════════════════
 function formatResultsForAI(toolResults: { tool: string; result: any; params?: any }[]): string {
     let context = '';
+    const allCodeSmells: { file: string; smells: string[] }[] = [];
     
     for (const res of toolResults) {
         if (res.tool === 'read_file' && res.result?.content) {
-            context += `\n### FILE: ${res.result.path || res.params?.filePath}\n`;
+            const filePath = res.result.path || res.params?.filePath;
+            context += `\n### FILE: ${filePath}\n`;
             context += `Lines: ${res.result.totalLines || '?'}\n`;
             context += `\`\`\`tsx\n${res.result.content.slice(0, 5000)}\n\`\`\`\n`;
+            
+            // Self-initiated refactor: detect code smells
+            const smells = detectCodeSmells(res.result.content);
+            if (smells.length > 0) {
+                allCodeSmells.push({ file: filePath, smells });
+            }
         } else if (res.tool === 'grep_search' && Array.isArray(res.result)) {
             context += `\n### SEARCH: "${res.params?.query || 'pattern'}"\n`;
             res.result.slice(0, 15).forEach((m: any) => {
@@ -466,6 +523,15 @@ function formatResultsForAI(toolResults: { tool: string; result: any; params?: a
                 context += `- ${e.type === 'directory' ? '[DIR]' : '[FILE]'} ${e.name}\n`;
             });
         }
+    }
+    
+    // Add code smells section for self-initiated refactor
+    if (allCodeSmells.length > 0) {
+        context += `\n### CODE QUALITY ISSUES DETECTED:\n`;
+        for (const { file, smells } of allCodeSmells) {
+            context += `- ${file}: ${smells.join(', ')}\n`;
+        }
+        context += `\nNote: You may suggest refactoring if appropriate.\n`;
     }
     
     return context;
@@ -486,6 +552,8 @@ ${toolContext}
 3. NEVER use emoji
 4. NEVER use friendly/marketing language
 5. Provide DIRECT solutions with code
+6. If you detect code quality issues, suggest fixes (self-initiated refactor)
+7. After successful edit, immediately suggest next improvement if applicable (Assume Success bias)
 
 ## OUTPUT FORMAT:
 - Technical and concise
@@ -669,8 +737,45 @@ If code changes are needed, provide the exact diff.`;
                 filesModified.push(filePath);
                 log.edit = true;
                 emit({ type: 'file-edit', content: `Modified: ${filePath}` });
+                
+                // ═══════════════════════════════════════════════════════════════
+                // ASSUME SUCCESS BIAS: Mark for potential follow-up improvement
+                // ═══════════════════════════════════════════════════════════════
+                sessionMemory.lastFilesEdited.unshift(filePath);
+                
             } else {
-                emit({ type: 'error', content: `Failed: ${filePath} - ${editResult.error}` });
+                // ═══════════════════════════════════════════════════════════════
+                // ERROR AMNESIA: Don't explain failure, try alternative
+                // ═══════════════════════════════════════════════════════════════
+                emit({ type: 'thinking', content: `Trying alternative approach for ${filePath}...` });
+                
+                // Try to find similar file if exact match failed
+                const fileName = filePath.split('/').pop() || '';
+                const altSearch = await executeTool('file_search', {
+                    pattern: `**/*${fileName.replace('.tsx', '')}*.tsx`
+                }, ctxInput.baseUrl);
+                
+                if (altSearch.success && Array.isArray(altSearch.result) && altSearch.result.length > 0) {
+                    const altFile = altSearch.result[0];
+                    if (altFile !== filePath) {
+                        emit({ type: 'tool-call', content: `Trying: ${altFile}` });
+                        
+                        // Read the alternative file first
+                        const readAlt = await executeTool('read_file', {
+                            filePath: altFile,
+                            startLine: 1,
+                            endLine: 300
+                        }, ctxInput.baseUrl);
+                        
+                        if (readAlt.success) {
+                            log.filesRead.push(altFile);
+                            emit({ type: 'tool-result', content: `Found alternative: ${altFile}` });
+                        }
+                    }
+                }
+                
+                // Log failure without excessive explanation
+                emit({ type: 'error', content: `Edit failed: ${filePath}` });
             }
         }
     }
@@ -678,8 +783,8 @@ If code changes are needed, provide the exact diff.`;
     // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 5: UPDATE SESSION MEMORY (Stateful)
     // ═══════════════════════════════════════════════════════════════════════════
-    sessionMemory.lastFilesRead = log.filesRead.slice(0, 5);
-    sessionMemory.lastFilesEdited = [...filesModified, ...sessionMemory.lastFilesEdited].slice(0, 5);
+    sessionMemory.lastFilesRead = [...new Set([...log.filesRead, ...sessionMemory.lastFilesRead])].slice(0, 5);
+    sessionMemory.lastFilesEdited = [...new Set([...filesModified, ...sessionMemory.lastFilesEdited])].slice(0, 5);
     sessionMemory.lastIntent = context.intent;
     sessionMemory.lastSearchPatterns = context.searchPatterns;
     sessionMemory.ongoingTask = message.slice(0, 100);
@@ -687,9 +792,13 @@ If code changes are needed, provide the exact diff.`;
     // ═══════════════════════════════════════════════════════════════════════════
     // PHASE 6: VERIFY & REPORT
     // ═══════════════════════════════════════════════════════════════════════════
+    const editSuccessRate = filesModified.length > 0 ? 
+        `${filesModified.length} file(s) modified` : 
+        toolsUsed.some(t => !t.success) ? 'edit attempted, seeking alternative' : 'no edits needed';
+    
     emit({ 
         type: 'done', 
-        content: `Executed: search=${log.search}, read=${log.read}, edit=${log.edit}`,
+        content: `Executed: search=${log.search}, read=${log.read}, edit=${log.edit} | ${editSuccessRate}`,
         data: { 
             filesRead: log.filesRead,
             filesEdited: filesModified,
