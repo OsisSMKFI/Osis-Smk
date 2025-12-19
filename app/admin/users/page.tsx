@@ -240,8 +240,8 @@ export default function UsersPage() {
         throw new Error(json?.error || 'Upload failed');
       }
       // Prefer publicUrl (no expiry) over signed url
-      const imageUrl = json?.publicUrl || json?.url;
-      setFormData(prev => ({ ...prev, profile_image: imageUrl }));
+      const uploadedUrl = json?.publicUrl || json?.url;
+      setFormData(prev => ({ ...prev, profile_image: uploadedUrl }));
     } catch (error) {
       console.error('[Users] Upload error:', error);
       alert('Gagal upload foto profil');

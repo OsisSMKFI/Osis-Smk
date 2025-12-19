@@ -240,9 +240,9 @@ export default function GalleryPage() {
         throw new Error(json?.error || 'Upload gagal');
       }
       // Prefer publicUrl (no expiry) over signed url
-      const imageUrl = json?.publicUrl || json?.url;
-      console.log('[Gallery handleImageChange] ✅ Upload success, URL:', imageUrl);
-      setFormData(prev => ({ ...prev, image_url: imageUrl }));
+      const uploadedUrl = json?.publicUrl || json?.url;
+      console.log('[Gallery handleImageChange] ✅ Upload success, URL:', uploadedUrl);
+      setFormData(prev => ({ ...prev, image_url: uploadedUrl }));
     } catch (e) {
       console.error('[Gallery handleImageChange] Exception:', e);
       alert('Gagal upload gambar: ' + (e instanceof Error ? e.message : String(e)));
