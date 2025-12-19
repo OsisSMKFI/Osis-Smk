@@ -620,7 +620,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
       username: config.spotify.username,
       isActive: config.spotify.isActive
     }
-  ], [config, t, youtubeSubscriberCount, youtubeChannel, youtubeLastUpdated]);
+  ].filter(p => p.isActive), [config, t, youtubeSubscriberCount, youtubeChannel, youtubeLastUpdated]); // Only show active platforms
 
   const allContent = useMemo(() => {
     const items: any[] = [];
@@ -667,12 +667,13 @@ const ClientOurSocialMediaPage: React.FC = () => {
     : allContent.filter(c => c.platform.toLowerCase() === activeTab);
 
   const totalFollowers = useMemo(() => {
-    return (
-      config.instagram.followers +
-      youtubeSubscriberCount + // Use auto-synced YouTube data
-      config.tiktok.followers +
-      config.spotify.followers
-    );
+    // Only count active platforms
+    let total = 0;
+    if (config.instagram.isActive) total += config.instagram.followers;
+    if (config.youtube.isActive) total += youtubeSubscriberCount;
+    if (config.tiktok.isActive) total += config.tiktok.followers;
+    if (config.spotify.isActive) total += config.spotify.followers;
+    return total;
   }, [config, youtubeSubscriberCount]);
 
   return (

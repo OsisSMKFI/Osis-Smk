@@ -11,7 +11,7 @@ export const SOCIAL_MEDIA_CONFIG = {
   instagram: {
     username: '@osissmkinformatika_fi',
     url: 'https://www.instagram.com/osissmkinformatika_fi',
-    followers: 500, // Manual update - cek langsung di IG
+    followers: 0, // Belum ada data asli - update manual jika sudah tau
     targetFollowers: 1000,
     isActive: true,
     // Note: Instagram API requires Business Account + FB Page
@@ -30,19 +30,19 @@ export const SOCIAL_MEDIA_CONFIG = {
   },
   
   tiktok: {
-    username: '', // TODO: Tambahkan username TikTok jika sudah ada
-    url: '#',
+    username: '', // Belum ada akun TikTok
+    url: '',
     followers: 0,
     targetFollowers: 1000,
-    isActive: false,
+    isActive: false, // Tidak aktif - tidak akan ditampilkan
   },
   
   spotify: {
-    username: 'OSIS SMK Informatika',
-    url: '#', // TODO: Update dengan URL Spotify asli
+    username: '', // Belum ada akun Spotify
+    url: '',
     followers: 0,
     targetFollowers: 500,
-    isActive: false,
+    isActive: false, // Tidak aktif - tidak akan ditampilkan
   },
 };
 
