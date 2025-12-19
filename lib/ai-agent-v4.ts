@@ -735,15 +735,14 @@ OUTPUT CONTRACT:
 - Nothing else.
 
 PATH RULES (CRITICAL):
-- NEVER use filename-only paths like "Toast.tsx"
-- ALWAYS use full path from EDITABLE FILES list
-- Example: "app/components/Toast.tsx" NOT "Toast.tsx"
-- If path is not in EDITABLE FILES, you CANNOT edit it
+- ALWAYS copy the EXACT path from EDITABLE FILES list
+- Example: if EDITABLE FILES shows "app/components/Toast.tsx", use THAT exact path
+- NEVER invent paths or use placeholders
 
-DIFF FORMAT:
-\`\`\`diff:exact/path/from/editable/files.tsx
+DIFF FORMAT (use REAL path from EDITABLE FILES):
+\`\`\`diff:app/components/Button.tsx
 <<<FIND>>>
-exact match from tool results
+exact code from file
 <<<REPLACE>>>
 new code
 \`\`\`
