@@ -1,30 +1,29 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { convertToSignedUrl } from '@/lib/signedUrls';
+import { CURRENT_SUPABASE_PROJECT, DEPRECATED_PROJECTS } from '@/lib/supabase/storage';
 
 // Supabase storage base URL - CURRENT PROJECT
-const CURRENT_SUPABASE_URL = 'https://mhefqwregrldvxtqqxbb.supabase.co';
+const CURRENT_SUPABASE_URL = `https://${CURRENT_SUPABASE_PROJECT}.supabase.co`;
 const SUPABASE_STORAGE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL 
   ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gallery`
   : `${CURRENT_SUPABASE_URL}/storage/v1/object/public/gallery`;
 
-// Old Supabase project URLs that need to be migrated
-const OLD_SUPABASE_DOMAINS = [
-  'eilrnslorvfrtwjwvbaw.supabase.co',
-  // Add any other old domains here
-];
+// Old Supabase project URLs that need to be filtered out
+// Using centralized list from storage.ts
+const OLD_SUPABASE_DOMAINS = DEPRECATED_PROJECTS.map(p => `${p}.supabase.co`);
 
 /**
- * Replace old Supabase domain with new one
- * Files are stored on the new project now
+ * Check if URL uses deprecated domain - return null if so
+ * Files from old projects are gone and should not be displayed
  */
-function migrateSupabaseUrl(url: string): string {
-  if (!url) return url;
+function filterDeprecatedUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
   
   for (const oldDomain of OLD_SUPABASE_DOMAINS) {
     if (url.includes(oldDomain)) {
-      // Replace old domain with new domain
-      return url.replace(oldDomain, 'mhefqwregrldvxtqqxbb.supabase.co');
+      console.warn(`[Gallery API] Filtering deprecated URL from: ${oldDomain}`);
+      return null;  // Return null instead of trying to migrate
     }
   }
   return url;
@@ -37,8 +36,9 @@ function migrateSupabaseUrl(url: string): string {
 function fixIncompleteUrl(url: string | null | undefined, folder: string = 'general'): string | null {
   if (!url) return null;
   
-  // First, migrate old domain URLs
-  let fixedUrl = migrateSupabaseUrl(url);
+  // First, filter out deprecated domains
+  let fixedUrl = filterDeprecatedUrl(url);
+  if (!fixedUrl) return null;
   
   // Already a full URL (with correct domain now)
   if (fixedUrl.startsWith('http://') || fixedUrl.startsWith('https://')) {

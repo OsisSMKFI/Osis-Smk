@@ -1,18 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { MembersResponseSchema, buildError, buildSuccess, MemberSchema } from '@/lib/validation';
+import { isValidStorageUrl, CURRENT_SUPABASE_PROJECT, DEPRECATED_PROJECTS } from '@/lib/supabase/storage';
 import crypto from 'crypto';
 
 // Supabase storage base URL for members photos
 const SUPABASE_STORAGE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL 
   ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/gallery/members`
-  : 'https://mhefqwregrldvxtqqxbb.supabase.co/storage/v1/object/public/gallery/members';
+  : `https://${CURRENT_SUPABASE_PROJECT}.supabase.co/storage/v1/object/public/gallery/members`;
 
 /**
  * Fix incomplete URLs that only contain filename
+ * Also filters out URLs from deprecated Supabase projects
  */
 function fixPhotoUrl(url: string | null | undefined): string | null {
   if (!url) return null;
+  
+  // Check for deprecated domains - return null to prevent broken images
+  for (const deprecated of DEPRECATED_PROJECTS) {
+    if (url.includes(deprecated)) {
+      console.warn(`[Members API] Filtering out deprecated URL for project: ${deprecated}`);
+      return null;
+    }
+  }
   
   // Already a full URL
   if (url.startsWith('http://') || url.startsWith('https://')) {
