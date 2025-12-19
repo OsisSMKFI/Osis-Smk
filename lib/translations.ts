@@ -1,8 +1,8 @@
 export const translations = {
   // Navbar
   navbar: {
-    logoAlt: { id: 'Logo SMK Informatika - Dirgantara', en: 'SMK Informatika - Dirgantara Logo' },
-    brandName: { id: 'OSIS SMK Informatika - Dirgantara', en: 'OSIS SMK Informatika - Dirgantara' },
+    logoAlt: { id: 'Logo SMK Informatika - Raveka Sena', en: 'SMK Informatika - Raveka Sena Logo' },
+    brandName: { id: 'OSIS SMK Informatika - Raveka Sena', en: 'OSIS SMK Informatika - Raveka Sena' },
     home: { id: 'Beranda', en: 'Home' },
     about: { id: 'Tentang', en: 'About' },
     programKerja: { id: 'Program Kerja', en: 'Work Programs' },
@@ -28,10 +28,10 @@ export const translations = {
   home: {
     welcome: { id: 'Selamat Datang di', en: 'Welcome to' },
     osisName: { id: 'OSIS SMK Informatika', en: 'OSIS SMK Informatika' },
-    subtitle: { id: 'Dirgantara 2025', en: 'Dirgantara 2025' },
+    subtitle: { id: 'Raveka Sena 2025-2026', en: 'Raveka Sena 2025-2026' },
     description: {
-      id: 'Bersama Dirgantara, kita terbang tinggi melampaui batas untuk mencapai prestasi dan membangun masa depan gemilang.',
-      en: 'Together with Dirgantara, we soar high beyond limits to achieve excellence and build a brilliant future.'
+      id: 'Bersama Raveka Sena, kita menjadi pasukan sinar terang yang membawa perubahan positif dan inovasi untuk masa depan gemilang.',
+      en: 'Together with Raveka Sena, we become the troops of bright light bringing positive change and innovation for a brilliant future.'
     },
     explorePrograms: { id: 'Jelajahi Visi & Misi', en: 'Explore Vision & Mission' },
     viewGallery: { id: 'Lihat Galeri', en: 'View Gallery' },
@@ -40,32 +40,32 @@ export const translations = {
   // Vision Section
   vision: {
     title: { id: 'Visi Kami', en: 'Our Vision' },
-    subtitle: { id: 'Menjadi Organisasi Siswa yang Unggul dan Inspiratif', en: 'Becoming an Excellent and Inspirational Student Organization' },
+    subtitle: { id: 'Menjadi organisasi yang membersamai terbentuknya karakter siswa yang KAMIL dan inovatif', en: 'Becoming an organization that accompanies the formation of KAMIL and innovative student character' },
     
     // Vision statement parts
     visionPart1: { 
-      id: 'Menjadikan OSIS SMK Informatika Fithrah Insani sebagai organisasi yang',
-      en: 'Making OSIS SMK Informatika Fithrah Insani an organization that is'
+      id: 'Menjadi organisasi yang',
+      en: 'Becoming an organization that'
     },
     visionHighlight1: { 
-      id: 'disiplin dan teladan',
-      en: 'disciplined and exemplary'
+      id: 'membersamai terbentuknya',
+      en: 'accompanies the formation of'
     },
     visionPart2: { 
-      id: 'Dan Membersamai Terbentuknya karakter',
-      en: 'And accompanying the formation of'
+      id: 'karakter siswa yang',
+      en: 'student character that is'
     },
     visionHighlight2: { 
-      id: 'Siswa/i yang KAMIL dan Inovatif',
-      en: 'students who are KAMIL (perfect) and innovative'
+      id: 'KAMIL dan Inovatif',
+      en: 'KAMIL (perfect) and Innovative'
     },
     visionPart3: { 
-      id: 'yang berlandaskan',
-      en: 'based on'
+      id: '',
+      en: ''
     },
     visionHighlight3: { 
-      id: 'Al-Qur\'an dan hadits',
-      en: 'Al-Qur\'an and Hadith'
+      id: '',
+      en: ''
     },
     
     card1Title: { id: 'Kepemimpinan', en: 'Leadership' },
@@ -88,30 +88,42 @@ export const translations = {
   // Mission Section
   mission: {
     title: { id: 'Misi Kami', en: 'Our Mission' },
-    subtitle: { id: 'Tiga pilar utama yang menjadi fondasi pergerakan OSIS SMK Informatika', en: 'Three main pillars that form the foundation of OSIS SMK Informatika movement' },
+    subtitle: { id: 'Enam pilar utama yang menjadi fondasi pergerakan OSIS SMK Informatika', en: 'Six main pillars that form the foundation of OSIS SMK Informatika movement' },
     
-    mission1Title: { id: 'Integrasi Nilai Islami', en: 'Islamic Values Integration' },
+    mission1Title: { id: 'Inovasi & Kreativitas', en: 'Innovation & Creativity' },
     mission1: { 
-      id: 'Membantu Membangun terciptanya karakter Islami dan peduli lingkungan pada diri Siswa/i',
-      en: 'Helping to build Islamic character and environmental awareness in students'
+      id: 'Menciptakan program kerja yang inovatif dan menarik',
+      en: 'Creating innovative and engaging work programs'
     },
     
-    mission2Title: { id: 'Kedisiplinan & Keteladanan', en: 'Discipline & Exemplary Behavior' },
+    mission2Title: { id: 'Teknologi & Informasi', en: 'Technology & Information' },
     mission2: { 
-      id: 'Meningkatkan kedisiplinan dan keteladanan bagi seluruh pengurus OSIS serta memberikan contoh perilaku yang baik bagi seluruh siswa',
-      en: 'Improving discipline and exemplary behavior for all OSIS members and providing good behavioral examples for all students'
+      id: 'Menerapkan penggunaan teknologi dalam setiap kegiatan',
+      en: 'Implementing technology in every activity'
     },
     
-    mission3Title: { id: 'Pengembangan Potensi', en: 'Potential Development' },
+    mission3Title: { id: 'Nilai Islami', en: 'Islamic Values' },
     mission3: { 
-      id: 'Memfasilitasi kegiatan yang meningkatkan soft skill siswa',
-      en: 'Facilitating activities that enhance student soft skills'
+      id: 'Menanamkan nilai-nilai karakter Islam pada seluruh siswa',
+      en: 'Instilling Islamic character values in all students'
     },
     
-    mission4Title: { id: 'Komunikasi Efektif', en: 'Effective Communication' },
+    mission4Title: { id: 'Peduli Lingkungan', en: 'Environmental Care' },
     mission4: { 
-      id: 'Membangun komunikasi efektif antara siswa, guru, dan sekolah',
-      en: 'Building effective communication between students, teachers, and school'
+      id: 'Menumbuhkan rasa peduli terhadap lingkungan',
+      en: 'Fostering environmental awareness'
+    },
+    
+    mission5Title: { id: 'Kedisiplinan', en: 'Discipline' },
+    mission5: { 
+      id: 'Meningkatkan kedisiplinan seluruh warga sekolah',
+      en: 'Improving discipline of all school members'
+    },
+    
+    mission6Title: { id: 'Kewirausahaan', en: 'Entrepreneurship' },
+    mission6: { 
+      id: 'Mengembangkan jiwa kewirausahaan siswa',
+      en: 'Developing student entrepreneurial spirit'
     },
   },
 
@@ -223,57 +235,57 @@ export const translations = {
   about: {
     // Hero Section
     heroTitle1: { id: 'Tentang', en: 'About' },
-    heroTitle2: { id: 'DIRGANTARA 2025', en: 'DIRGANTARA 2025' },
+    heroTitle2: { id: 'RAVEKA SENA 2025-2026', en: 'RAVEKA SENA 2025-2026' },
     heroSubtitle1: { id: 'Mengenal lebih dekat', en: 'Get to know' },
-    heroSubtitle2: { id: 'OSIS SMK Informatika - Dirgantara', en: 'OSIS SMK Informatika - Dirgantara' },
+    heroSubtitle2: { id: 'OSIS SMK Informatika - Raveka Sena', en: 'OSIS SMK Informatika - Raveka Sena' },
     
     // Story Section
     storyTitle1: { id: 'Cerita', en: 'Story of' },
-    storyTitle2: { id: 'Dirgantara', en: 'Dirgantara' },
+    storyTitle2: { id: 'Raveka Sena', en: 'Raveka Sena' },
     
     // Philosophy Section
     philosophyTitle: { id: 'Filosofi Nama OSIS', en: 'OSIS Name Philosophy' },
-    philosophyHighlight: { id: 'Dirgantara', en: 'Dirgantara' },
+    philosophyHighlight: { id: 'Raveka Sena', en: 'Raveka Sena' },
     philosophyPart1: { 
       id: 'Nama',
       en: 'The name'
     },
-    philosophyNameHighlight: { id: 'DIRGANTARA', en: 'DIRGANTARA' },
+    philosophyNameHighlight: { id: 'RAVEKA SENA', en: 'RAVEKA SENA' },
     philosophyPart2: { 
-      id: 'berasal dari bahasa Sanskerta yang berarti',
-      en: 'comes from the Sanskrit language meaning'
+      id: 'terdiri dari dua kata:',
+      en: 'consists of two words:'
     },
     philosophySkyHighlight: { 
-      id: '"angkasa" atau "langit"',
-      en: '"sky" or "heaven"'
+      id: '"Raveka" (sinar terang) dan "Sena" (pasukan)',
+      en: '"Raveka" (bright light) and "Sena" (troops)'
     },
     philosophyPart3: { 
-      id: ', melambangkan cita-cita yang tinggi dan tanpa batas.',
-      en: ', symbolizing high and limitless aspirations.'
+      id: ', yang berarti "pasukan yang menjadi sinar terang".',
+      en: ', meaning "troops that become bright light".'
     },
     philosophyDesc1: { 
-      id: 'Seperti angkasa yang luas dan tak terbatas, OSIS Dirgantara berkomitmen untuk terus berkembang, berinovasi, dan memberikan ruang bagi setiap siswa SMK Informatika untuk meraih prestasi setinggi langit. Nama ini juga mencerminkan semangat',
-      en: 'Like the vast and limitless sky, OSIS Dirgantara is committed to continue developing, innovating, and providing space for every SMK Informatika student to achieve as high as the sky. This name also reflects the spirit of'
+      id: 'Filosofi ini mencerminkan semangat OSIS untuk menjadi pasukan yang membawa cahaya perubahan, inovasi, dan inspirasi bagi seluruh siswa SMK Informatika Fithrah Insani. Nama ini juga mencerminkan semangat',
+      en: 'This philosophy reflects OSIS spirit to become troops that bring light of change, innovation, and inspiration for all SMK Informatika Fithrah Insani students. This name also reflects the spirit of'
     },
     philosophyLeadershipHighlight: { 
-      id: 'kepemimpinan visioner',
-      en: 'visionary leadership'
+      id: 'kepemimpinan yang terang dan membawa manfaat',
+      en: 'bright leadership that brings benefits'
     },
     philosophyDesc2: { 
-      id: 'yang membawa organisasi menuju masa depan yang cemerlang.',
-      en: 'that leads the organization towards a brilliant future.'
+      id: 'untuk seluruh warga sekolah.',
+      en: 'for all school members.'
     },
     philosophyDesc3: { 
-      id: 'Dengan filosofi ini, OSIS Dirgantara bertekad menjadi',
-      en: 'With this philosophy, OSIS Dirgantara is determined to become'
+      id: 'Dengan filosofi ini, OSIS Raveka Sena bertekad menjadi',
+      en: 'With this philosophy, OSIS Raveka Sena is determined to become'
     },
     philosophyWadahHighlight: { 
       id: 'wadah aspirasi, inspirasi, dan kreativitas',
       en: 'a vessel of aspiration, inspiration, and creativity'
     },
     philosophyDesc4: { 
-      id: 'yang membawa seluruh siswa SMK Informatika terbang tinggi meraih impian mereka.',
-      en: 'that brings all SMK Informatika students to fly high and achieve their dreams.'
+      id: 'yang membawa seluruh siswa SMK Informatika menjadi generasi yang KAMIL dan inovatif.',
+      en: 'that brings all SMK Informatika students to become KAMIL and innovative generation.'
     },
     
     // Symbol Section
@@ -283,7 +295,7 @@ export const translations = {
       id: 'Setiap elemen dalam logo OSIS memiliki filosofi dan makna yang mendalam',
       en: 'Every element in the OSIS logo has deep philosophy and meaning'
     },
-    symbolLogoCaption: { id: 'Logo OSIS SMK Informatika - Dirgantara', en: 'OSIS SMK Informatika - Dirgantara Logo' },
+    symbolLogoCaption: { id: 'Logo OSIS SMK Informatika - Raveka Sena', en: 'OSIS SMK Informatika - Raveka Sena Logo' },
     symbolLogoTitle: { id: 'Filosofi Logo SMK Informatika', en: 'SMK Informatika Logo Philosophy' },
     
     // Symbol Items
@@ -366,11 +378,11 @@ export const translations = {
     // Achievements Section
     achievementsLabel: { id: 'Perjalanan Kami', en: 'Our Journey' },
     achievementsTitle: { id: 'Pencapaian', en: 'Achievements of' },
-    achievementsTitleHighlight: { id: 'Dirgantara', en: 'Dirgantara' },
-    achieve1Title: { id: 'Terbentuknya OSIS Dirgantara', en: 'Formation of OSIS Dirgantara' },
+    achievementsTitleHighlight: { id: 'Raveka Sena', en: 'Raveka Sena' },
+    achieve1Title: { id: 'Terbentuknya OSIS Raveka Sena', en: 'Formation of OSIS Raveka Sena' },
     achieve1Desc: { 
-      id: 'OSIS SMK Informatika resmi terbentuk dengan nama Dirgantara, membawa semangat baru dalam organisasi siswa.',
-      en: 'OSIS SMK Informatika officially formed with the name Dirgantara, bringing new spirit to the student organization.'
+      id: 'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.',
+      en: 'OSIS SMK Informatika officially formed with the name Raveka Sena, bringing new spirit as troops of bright light.'
     },
     achieve2Title: { id: 'Peluncuran Website Resmi', en: 'Official Website Launch' },
     achieve2Desc: { 
@@ -470,7 +482,7 @@ export const translations = {
   // Sekbid (Work Programs)
   sekbid: {
     title: { id: 'Program Kerja OSIS', en: 'OSIS Work Programs' },
-    subtitle: { id: 'Bidang-Bidang Kerja OSIS Dirgantara 2025', en: 'OSIS Dirgantara 2025 Work Areas' },
+    subtitle: { id: 'Bidang-Bidang Kerja OSIS Raveka Sena 2025-2026', en: 'OSIS Raveka Sena 2025-2026 Work Areas' },
     viewDetails: { id: 'Lihat Detail', en: 'View Details' },
     prokerDescription: { id: 'Semua program kerja dari setiap Sekretariat Bidang (Sekbid) OSIS SMK Informatika Fithrah Insani', en: 'All work programs from each Section (Sekbid) of OSIS SMK Informatika Fithrah Insani' },
     
@@ -514,7 +526,7 @@ export const translations = {
   // People/Members Page
   people: {
     title: { id: 'Anggota OSIS', en: 'OSIS Members' },
-    subtitle: { id: 'Tim OSIS Dirgantara 2025', en: 'OSIS Dirgantara 2025 Team' },
+    subtitle: { id: 'Tim OSIS Raveka Sena 2025-2026', en: 'OSIS Raveka Sena 2025-2026 Team' },
     stats: { id: 'Statistik Anggota', en: 'Member Statistics' },
     totalMembers: { id: 'Total Anggota', en: 'Total Members' },
     sekbidCount: { id: 'Seksi Bidang', en: 'Sections' },
@@ -574,7 +586,7 @@ export const translations = {
   // People Page
   peoplePage: {
     title: { id: 'Anggota OSIS', en: 'OSIS Members' },
-    subtitle: { id: 'Tim Penggerak OSIS Dirgantara 2025', en: 'OSIS Dirgantara 2025 Team' },
+    subtitle: { id: 'Tim Penggerak OSIS Raveka Sena 2025-2026', en: 'OSIS Raveka Sena 2025-2026 Team' },
     chairman: { id: 'Ketua OSIS', en: 'OSIS Chairman' },
     viceChairman: { id: 'Wakil Ketua OSIS', en: 'Vice Chairman' },
     secretary: { id: 'Sekretaris OSIS', en: 'Secretary' },
@@ -959,7 +971,7 @@ export const translations = {
   // Bidang/Program Kerja Page
   bidang: {
     title: { id: 'Program Kerja OSIS', en: 'OSIS Work Programs' },
-    subtitle: { id: 'SMK Informatika Fithrah Insani - Dirgantara 2025', en: 'SMK Informatika Fithrah Insani - Dirgantara 2025' },
+    subtitle: { id: 'SMK Informatika Fithrah Insani - Raveka Sena 2025-2026', en: 'SMK Informatika Fithrah Insani - Raveka Sena 2025-2026' },
     sections: { id: 'Seksi Bidang', en: 'Sections' },
     members: { id: 'Anggota', en: 'Members' },
     programs: { id: 'Program', en: 'Programs' },

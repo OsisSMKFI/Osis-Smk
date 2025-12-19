@@ -79,7 +79,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
           <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent mb-2">
             OSIS SMK INFORMATIKA FITHRAH INSANI
           </h2>
-          <p className="text-yellow-400 font-medium text-lg">Dirgantara 2025</p>
+          <p className="text-yellow-400 font-medium text-lg">Raveka Sena 2025-2026</p>
         </div>
 
         {/* Loading Animation - Simplified */}

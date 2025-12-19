@@ -50,7 +50,7 @@ create policy "Media write" on public.media for all using (auth.role() = 'authen
 -- Home page content
 insert into public.page_content (page_key, content_type, content_value, content_value_id, category, editable_by) values
   ('home_hero_title', 'text', 'OSIS SMK Informatika', null, 'home', '{super_admin,admin}'),
-  ('home_hero_subtitle', 'text', 'Dirgantara 2025', null, 'home', '{super_admin,admin}'),
+  ('home_hero_subtitle', 'text', 'Raveka Sena 2025-2026', null, 'home', '{super_admin,admin}'),
   ('home_hero_description', 'richtext', 'Organisasi Siswa Intra Sekolah yang berdedikasi untuk kemajuan siswa dan sekolah', null, 'home', '{super_admin,admin}'),
   ('home_vision_title', 'text', 'Visi Kami', null, 'home', '{super_admin,admin}'),
   ('home_mission_title', 'text', 'Misi Kami', null, 'home', '{super_admin,admin}')

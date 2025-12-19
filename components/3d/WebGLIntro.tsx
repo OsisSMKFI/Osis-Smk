@@ -248,7 +248,7 @@ export default function WebGLIntro({ onComplete, minDuration = 3000 }: WebGLIntr
             className="text-lg md:text-xl text-yellow-400/80 mb-6"
             animate={{ opacity: isExiting ? 0 : 1 }}
           >
-            Dirgantara 2025
+            Raveka Sena 2025-2026
           </motion.p>
 
           {/* Progress bar */}

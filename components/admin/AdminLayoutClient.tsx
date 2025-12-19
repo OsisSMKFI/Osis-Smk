@@ -94,7 +94,7 @@ export default function AdminLayoutClient({
         {!isLogin && session?.user && (
           <footer className="mt-6 md:mt-8 py-4 md:py-6 px-3 sm:px-4 md:px-6 border-t border-gray-200 dark:border-slate-700">
             <div className="max-w-7xl mx-auto text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              <p>© 2025 OSIS SMK Informatika - Dirgantara. Made with ❤️ by Dirgantara Team</p>
+              <p>© 2025-2026 OSIS SMK Informatika - Raveka Sena. Made with ❤️ by Raveka Sena Team</p>
             </div>
           </footer>
         )}

@@ -43,7 +43,7 @@ const Footer: React.FC = () => {
       try {
         await navigator.share({
           title: 'OSIS SMK Fithrah Insani',
-          text: 'Kunjungi website OSIS SMK Fithrah Insani - Dirgantara',
+          text: 'Kunjungi website OSIS SMK Fithrah Insani - Raveka Sena',
           url: currentUrl
         });
         showToast('Link berhasil dibagikan!', 'success');
@@ -314,7 +314,7 @@ const Footer: React.FC = () => {
           <div className="border-t border-gray-300 dark:border-gray-700/50 pt-6 mt-8">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 gap-4">
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex flex-col sm:flex-row items-center text-center sm:text-left">
-                <span>&copy; {new Date().getFullYear()} OSIS SMK Fithrah Insani - Dirgantara.</span>
+                <span>&copy; {new Date().getFullYear()} OSIS SMK Fithrah Insani - Raveka Sena.</span>
                 <span className="flex items-center mt-1 sm:mt-0 sm:ml-2">
                   {t('footer.madeWith')} <FaHeart className="text-red-400 mx-1" /> {t('footer.forEducation')}
                 </span>

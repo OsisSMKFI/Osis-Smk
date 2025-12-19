@@ -57,7 +57,7 @@ export default function MaintenancePage() {
 
         <div className="mt-12">
           <p className="text-gray-500 text-sm">
-            OSIS SMK Informatika - Dirgantara 2025
+            OSIS SMK Informatika - Raveka Sena 2025-2026
           </p>
         </div>
       </div>

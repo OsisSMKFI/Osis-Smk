@@ -207,7 +207,7 @@ async function main() {
   console.log(`
 ${colors.bold}╔══════════════════════════════════════════════════════╗
 ║      Vercel Integration Health Check                 ║
-║      OSIS SMK Informatika - Dirgantara 2025          ║
+║      OSIS SMK Informatika - Raveka Sena 2025-2026    ║
 ╚══════════════════════════════════════════════════════╝${colors.reset}
 `);
 

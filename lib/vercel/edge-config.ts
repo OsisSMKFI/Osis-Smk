@@ -191,7 +191,7 @@ export interface SiteConfig {
 
 const defaultSiteConfig: SiteConfig = {
   siteName: 'OSIS SMK Informatika',
-  siteDescription: 'Dirgantara 2025',
+  siteDescription: 'Raveka Sena 2025-2026',
   maxUploadSize: 10 * 1024 * 1024, // 10MB
   allowedFileTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
   rateLimit: {

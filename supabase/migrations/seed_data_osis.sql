@@ -87,7 +87,7 @@ INSERT INTO public.page_content (page_key, content_type, content_value, category
 ('misi', 'richtext', '1. Meningkatkan keimanan dan ketakwaan\n2. Mengembangkan potensi dan kreativitas siswa\n3. Menumbuhkan jiwa kepemimpinan dan tanggung jawab', 'home'),
 ('about_description', 'richtext', 'OSIS SMK Informatika Fithrah Insani adalah organisasi siswa yang aktif, kreatif, dan berprestasi.', 'about'),
 ('home_hero_title', 'text', 'OSIS SMK Informatika', 'home'),
-('home_hero_subtitle', 'text', 'Dirgantara 2025', 'home'),
+('home_hero_subtitle', 'text', 'Raveka Sena 2025-2026', 'home'),
 ('home_hero_description', 'richtext', 'Organisasi Siswa Intra Sekolah yang berdedikasi untuk kemajuan siswa dan sekolah', 'home'),
 ('home_vision_title', 'text', 'Visi Kami', 'home'),
 ('home_mission_title', 'text', 'Misi Kami', 'home'),

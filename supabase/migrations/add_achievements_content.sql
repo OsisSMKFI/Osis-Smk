@@ -6,8 +6,8 @@
 INSERT INTO public.page_content (page_key, category, title, content, published) VALUES
 -- Achievement 1
 ('achievement_1_year', 'about_achievements', 'Tahun Achievement 1', '2024', true),
-('achievement_1_title', 'about_achievements', 'Title Achievement 1', 'Terbentuknya OSIS Dirgantara', true),
-('achievement_1_desc', 'about_achievements', 'Deskripsi Achievement 1', 'OSIS SMK Informatika resmi terbentuk dengan nama Dirgantara, membawa semangat baru dalam organisasi siswa.', true),
+('achievement_1_title', 'about_achievements', 'Title Achievement 1', 'Terbentuknya OSIS Raveka Sena', true),
+('achievement_1_desc', 'about_achievements', 'Deskripsi Achievement 1', 'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.', true),
 ('achievement_1_icon', 'about_achievements', 'Icon Achievement 1', '🚀', true),
 
 -- Achievement 2
