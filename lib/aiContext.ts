@@ -286,11 +286,24 @@ export async function getPublicOSISInfo(): Promise<{ ketua: string; visi: string
 export async function buildAIContext(
   userId: string | null | undefined,
   userRole: string | null | undefined,
-  mode: 'admin' | 'public'
+  mode: 'admin' | 'public',
+  userName?: string | null
 ): Promise<AIContext> {
   const role = (userRole || '').toLowerCase();
   const isAdmin = role === 'super_admin' || role === 'admin';
   const effectiveMode = mode === 'admin' && isAdmin ? 'admin' : 'public';
+
+  // Build user identity context
+  const userIdentity = userName 
+    ? `\n\n═══════════════════════════════════════════════════════════════════════════
+🧑 IDENTITAS PENGGUNA YANG SEDANG CHAT:
+═══════════════════════════════════════════════════════════════════════════
+• Nama: ${userName}
+• Role: ${role || 'guest'}
+• User ID: ${userId || 'anonymous'}
+${isAdmin ? '• ⭐ Ini adalah ADMIN - jangan suruh "hubungi admin"!' : ''}
+═══════════════════════════════════════════════════════════════════════════`
+    : '';
 
   if (effectiveMode === 'admin') {
     // Super Admin AI - Full access with database knowledge
@@ -535,7 +548,7 @@ Sebagai AI Super Admin PREMIUM:
 ═══════════════════════════════════════════════════════════════════════════
 💎 STATUS: PREMIUM SUPER ADMIN MODE ACTIVE
 🔓 ALL CAPABILITIES UNLOCKED - MAXIMUM POWER ENABLED
-═══════════════════════════════════════════════════════════════════════════`;
+═══════════════════════════════════════════════════════════════════════════${userIdentity}`;
 
     return {
       mode: 'admin',
@@ -1172,7 +1185,9 @@ Jawab dengan empati dan tawarkan untuk forward ke admin:
 ✅ JIKA USER TANYA BALASAN DARI ADMIN:
 Jawab: "Saat ini belum ada balasan dari Admin. Jika Admin sudah merespons, pesannya akan otomatis muncul di chat ini. Sabar ya! 😊"
 
-═══════════════════════════════════════════════════════════════════════════`;
+
+
+═══════════════════════════════════════════════════════════════════════════${userIdentity}`;
     return {
       mode: 'public',
       userId: userId ?? null,

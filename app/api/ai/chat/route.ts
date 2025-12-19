@@ -1052,7 +1052,9 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const aiContext = await buildAIContext(userId ?? null, role ?? null, mode);
+    // Get user name for AI context
+    const userName = session?.user?.name || null;
+    const aiContext = await buildAIContext(userId ?? null, role ?? null, mode, userName);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // 📨 FORWARD REQUEST DETECTION - Actually forward to Admin/OSIS
