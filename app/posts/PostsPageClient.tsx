@@ -139,7 +139,6 @@ export default function PostsPageClient() {
                     autoPlay={false}
                     loop
                     muted
-                    fallbackSrc="/images/logo-2.png"
                   />
                   {post.is_featured && (
                     <div className="absolute top-4 right-4 bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10">

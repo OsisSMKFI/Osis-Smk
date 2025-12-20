@@ -126,7 +126,6 @@ export default function PostDetailClient({ initialPost }: PostDetailClientProps)
                     alt={post.title}
                     className={`w-full h-full ${isVideo ? 'object-contain' : 'object-contain'}`}
                     controlsForVideo={true}
-                    fallbackSrc="/images/logo-2.png"
                   />
                 </div>
               );

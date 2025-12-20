@@ -58,7 +58,6 @@ export default function EventDetailClient({ event }: Props) {
           src={event.image_url || ''}
           alt={event.title}
           className="w-full h-full object-cover"
-          fallbackSrc="/images/logo-2.png"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         
