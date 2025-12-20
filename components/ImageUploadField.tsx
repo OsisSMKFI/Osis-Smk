@@ -96,6 +96,14 @@ export default function ImageUploadField({
                 src={currentImage}
                 alt="Preview"
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('[ImageUploadField] Image load error:', currentImage);
+                  // Show broken image placeholder
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+                onLoad={() => {
+                  console.log('[ImageUploadField] Image loaded successfully:', currentImage?.substring(0, 80));
+                }}
               />
             )}
             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center gap-3">

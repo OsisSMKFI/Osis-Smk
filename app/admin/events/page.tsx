@@ -99,13 +99,28 @@ export default function EventsPage() {
       }
       // Prefer publicUrl (no expiry) over signed url
       const uploadedUrl = json?.publicUrl || json?.url;
-      setFormData(prev => ({ ...prev, image_url: imageUrl }));
+      console.log('[Events] Upload success:', uploadedUrl);
+      // Use uploaded URL with cache-busting for preview
+      const cacheBustedUrl = `${uploadedUrl}?t=${Date.now()}`;
+      setFormData(prev => ({ ...prev, image_url: cacheBustedUrl }));
     } catch (error) {
       console.error('[Events] Upload error:', error);
       alert('Gagal upload gambar');
     } finally {
       setUploading(false);
       setTimeout(() => setUploadProgress(0), 400);
+    }
+  };
+
+  // Helper to clean cache-busting params from URL before saving to database
+  const cleanImageUrl = (url: string) => {
+    if (!url) return url;
+    try {
+      const urlObj = new URL(url);
+      urlObj.searchParams.delete('t');
+      return urlObj.toString();
+    } catch {
+      return url.replace(/[?&]t=\d+/g, '').replace(/\?$/, '');
     }
   };
 
@@ -124,12 +139,18 @@ export default function EventsPage() {
         : '/api/admin/events';
       const method = editingId ? 'PUT' : 'POST';
       
-      console.log('[Admin Events] Submitting:', { url, method, formData });
+      // Clean cache-busting params from image URL before saving
+      const cleanedFormData = {
+        ...formData,
+        image_url: cleanImageUrl(formData.image_url)
+      };
+      
+      console.log('[Admin Events] Submitting:', { url, method, formData: cleanedFormData });
       
       const response = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(cleanedFormData),
       });
       const result = await safeJson(response, { url, method }).catch(() => ({}));
       
