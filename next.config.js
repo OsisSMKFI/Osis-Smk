@@ -86,11 +86,13 @@ const nextConfig = {
           },
           {
             key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin',
+            value: 'same-origin-allow-popups',
           },
+          // Note: COEP 'require-corp' blocks Supabase images
+          // Using 'credentialless' allows cross-origin images without CORP header
           {
             key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp',
+            value: 'credentialless',
           },
         ],
       },
