@@ -64,9 +64,11 @@ export default function AdminMembersPage() {
 
   const fetchData = useCallback(async () => {
     try {
+      // Add cache-busting to prevent stale data
+      const timestamp = Date.now();
       const [membersRes, sekbidsRes] = await Promise.all([
-        fetch('/api/admin/members'),
-        fetch('/api/admin/sekbid')
+        fetch(`/api/admin/members?t=${timestamp}`, { cache: 'no-store' }),
+        fetch(`/api/admin/sekbid?t=${timestamp}`, { cache: 'no-store' })
       ]);
       
       if (membersRes.ok) {
@@ -126,20 +128,25 @@ export default function AdminMembersPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Upload failed');
       }
 
       const data = await response.json();
+      console.log('[Members] Upload response:', data);
       
       if (data.success && data.publicUrl) {
-        setFormData(prev => ({ ...prev, photo_url: data.publicUrl }));
-        toast.success('Foto berhasil diupload!');
+        // Add cache-busting param to force browser to load new image immediately in preview
+        const cacheBustedUrl = `${data.publicUrl}?t=${Date.now()}`;
+        // Use cached-bust URL for preview but save clean URL to database
+        setFormData(prev => ({ ...prev, photo_url: cacheBustedUrl }));
+        toast.success('Foto berhasil diupload! Klik Simpan untuk menyimpan perubahan.');
       } else {
-        throw new Error('Invalid upload response');
+        throw new Error(data.error || 'Invalid upload response');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error('Gagal mengupload foto');
+      toast.error(`Gagal mengupload foto: ${error.message || 'Unknown error'}`);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -148,6 +155,19 @@ export default function AdminMembersPage() {
 
   const handleImageRemove = () => {
     setFormData(prev => ({ ...prev, photo_url: '' }));
+  };
+
+  // Helper to clean cache-busting params from URL before saving to database
+  const cleanPhotoUrl = (url: string) => {
+    if (!url) return url;
+    try {
+      const urlObj = new URL(url);
+      urlObj.searchParams.delete('t');
+      return urlObj.toString();
+    } catch {
+      // If URL parsing fails, try simple regex
+      return url.replace(/[?&]t=\d+/g, '').replace(/\?$/, '');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,10 +179,16 @@ export default function AdminMembersPage() {
         : '/api/admin/members';
       const method = editingId ? 'PUT' : 'POST';
       
+      // Clean cache-busting params from photo URL before saving
+      const cleanedFormData = {
+        ...formData,
+        photo_url: cleanPhotoUrl(formData.photo_url)
+      };
+      
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(cleanedFormData)
       });
 
       if (!response.ok) throw new Error('Failed to save');
