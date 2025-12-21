@@ -723,8 +723,6 @@ function DetailModal({
                 style={{ 
                   backfaceVisibility: 'hidden',
                   pointerEvents: isFlipped ? 'none' : 'auto',
-                  opacity: isFlipped ? 0 : 1,
-                  transition: 'opacity 0.3s ease'
                 }}
               >
                 <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 sm:p-8 md:p-10 shadow-2xl border border-white/10">
@@ -919,10 +917,8 @@ function DetailModal({
                 className="absolute inset-0"
                 style={{ 
                   backfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
+                  rotateY: 180,
                   pointerEvents: isFlipped ? 'auto' : 'none',
-                  opacity: isFlipped ? 1 : 0,
-                  transition: 'opacity 0.3s ease 0.2s'
                 }}
               >
                 <div className="h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 sm:p-8 md:p-10 shadow-2xl border border-white/10 rounded-3xl">
