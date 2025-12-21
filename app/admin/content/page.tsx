@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
@@ -253,37 +254,39 @@ export default function AdminContentPage() {
     );
   }
 
+  const { t, lang } = useTranslation();
+
   if (!canAccessAdminPanel) {
     return (
-      <AdminPageShell title="Content Management">
+      <AdminPageShell title={t('admin.content.title')}>
         <div className="text-center py-12">
-          <p className="text-red-500">Anda tidak memiliki akses ke halaman ini</p>
+          <p className="text-red-500">{t('admin.content.noAccess')}</p>
         </div>
       </AdminPageShell>
     );
   }
 
   return (
-    <AdminPageShell title="Content Management">
+    <AdminPageShell title={t('admin.content.title')}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Kelola Konten Halaman</h2>
-            <p className="text-gray-600 dark:text-gray-400">Edit konten seperti Tahun Berdiri, Pencapaian, Prinsip, dll.</p>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{t('admin.content.manageContent')}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{t('admin.content.editContentHint')}</p>
           </div>
           <button
             onClick={() => setShowAddForm(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
           >
-            <FaPlus /> Tambah Konten
+            <FaPlus /> {t('admin.content.addContent')}
           </button>
         </div>
 
         {/* Message */}
         {message && (
           <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {message.text}
+            {t(message.text)}
             <button onClick={() => setMessage(null)} className="float-right">&times;</button>
           </div>
         )}
@@ -291,7 +294,7 @@ export default function AdminContentPage() {
         {/* Missing Important Keys */}
         {missingImportantKeys.length > 0 && (
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <h3 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">⚠️ Konten Penting yang Belum Dibuat:</h3>
+            <h3 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">⚠️ {t('admin.content.missingImportantContent')}</h3>
             <div className="flex flex-wrap gap-2">
               {missingImportantKeys.slice(0, 10).map(item => (
                 <button
@@ -304,7 +307,7 @@ export default function AdminContentPage() {
                 </button>
               ))}
               {missingImportantKeys.length > 10 && (
-                <span className="text-yellow-600 text-sm">+{missingImportantKeys.length - 10} lainnya</span>
+                <span className="text-yellow-600 text-sm">+{missingImportantKeys.length - 10} {t('admin.content.more')}</span>
               )}
             </div>
           </div>
@@ -316,7 +319,7 @@ export default function AdminContentPage() {
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Cari konten..."
+              placeholder={t('admin.content.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -329,7 +332,7 @@ export default function AdminContentPage() {
               onChange={(e) => setFilterCategory(e.target.value)}
               className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
-              <option value="all">Semua Kategori</option>
+              <option value="all">{t('admin.content.allCategories')}</option>
               {CONTENT_CATEGORIES.map(cat => (
                 <option key={cat.key} value={cat.key}>{cat.label}</option>
               ))}
@@ -341,30 +344,30 @@ export default function AdminContentPage() {
         {showAddForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-800 dark:text-white">Tambah Konten Baru</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-800 dark:text-white">{t('admin.content.addNewContent')}</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Key (unik)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('admin.content.keyLabel')}</label>
                   <input
                     type="text"
                     value={newContent.key}
                     onChange={(e) => setNewContent({ ...newContent, key: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="contoh: about_founding_year"
+                    placeholder={t('admin.content.keyPlaceholder')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Judul</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('admin.content.titleLabel')}</label>
                   <input
                     type="text"
                     value={newContent.title}
                     onChange={(e) => setNewContent({ ...newContent, title: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Tahun Berdiri"
+                    placeholder={t('admin.content.titlePlaceholder')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('admin.content.categoryLabel')}</label>
                   <select
                     value={newContent.category}
                     onChange={(e) => setNewContent({ ...newContent, category: e.target.value })}
@@ -376,13 +379,13 @@ export default function AdminContentPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Konten</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('admin.content.contentLabel')}</label>
                   <textarea
                     value={newContent.content}
                     onChange={(e) => setNewContent({ ...newContent, content: e.target.value })}
                     rows={4}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Isi konten..."
+                    placeholder={t('admin.content.contentPlaceholder')}
                   />
                 </div>
               </div>
@@ -394,14 +397,14 @@ export default function AdminContentPage() {
                   }}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400"
                 >
-                  Batal
+                  {t('admin.content.cancel')}
                 </button>
                 <button
                   onClick={handleAddContent}
                   disabled={saving}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
                 >
-                  {saving ? 'Menyimpan...' : 'Simpan'}
+                  {saving ? t('admin.content.saving') : t('admin.content.save')}
                 </button>
               </div>
             </div>
@@ -414,18 +417,18 @@ export default function AdminContentPage() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Key</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Judul</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Konten</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kategori</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Aksi</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('admin.content.keyCol')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('admin.content.titleCol')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('admin.content.contentCol')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('admin.content.categoryCol')}</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('admin.content.actionCol')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredContents.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                      {searchTerm || filterCategory !== 'all' ? 'Tidak ada konten yang cocok' : 'Belum ada konten. Tambahkan konten baru!'}
+                      {searchTerm || filterCategory !== 'all' ? t('admin.content.noMatch') : t('admin.content.noContent')}
                     </td>
                   </tr>
                 ) : (
@@ -498,7 +501,7 @@ export default function AdminContentPage() {
                             {item.title}
                           </td>
                           <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs truncate">
-                            {item.content || <span className="italic text-gray-400">Kosong</span>}
+                            {item.content || <span className="italic text-gray-400">{t('admin.content.empty')}</span>}
                           </td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
