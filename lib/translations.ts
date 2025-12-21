@@ -338,8 +338,8 @@ export const translations = {
       en: 'Dedicated students who lead and inspire OSIS SMK Informatika'
     },
     coreTeamWarning: { 
-      id: '✅ Data pengurus inti telah terverifikasi dan dimuat dari database',
-      en: '✅ Core team data has been verified and loaded from database'
+      id: '✅ Pengurus inti telah terverifikasi',
+      en: '✅ Core team have been verified'
     },
     clickForDetail: { id: 'Klik untuk detail', en: 'Click for details' },
     viewProfile: { id: 'Lihat profil', en: 'View profile' },
@@ -371,8 +371,8 @@ export const translations = {
       en: 'Field leaders who drive OSIS work programs'
     },
     deptHeadsWarning: { 
-      id: '✅ Data koordinator sekbid telah terverifikasi dan dimuat dari database',
-      en: '✅ Section coordinator data has been verified and loaded from database'
+      id: '✅ koordinator sekbid telah terverifikasi',
+      en: '✅ Section coordinators have been verified'
     },
     
     // Achievements Section
