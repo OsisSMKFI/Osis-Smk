@@ -914,13 +914,13 @@ export const translations = {
     chairmanSectionDesc: { id: 'Pemimpin organisasi siswa yang memimpin dengan visi dan dedikasi tinggi.', en: 'Student organization leader who leads with high vision and dedication.' },
     coreTeamTitle: { id: 'Pengurus Inti OSIS', en: 'OSIS Core Team' },
     coreTeamDesc: { id: 'Para siswa berdedikasi yang membuat OSIS SMK Informatika menjadi mungkin.', en: 'Dedicated students who make OSIS SMK Informatika possible.' },
-    coreDataWarning: { id: '⚠️ Data Wakil Ketua, Sekretaris, dan Bendahara masih dalam proses verifikasi', en: '⚠️ Vice Chairman, Secretary, and Treasurer data is still under verification' },
+    coreDataWarning: { id: '✅ Data Wakil Ketua, Sekretaris, dan Bendahara telah terverifikasi', en: '✅ Vice Chairman, Secretary, and Treasurer data has been verified' },
     deptHeadTitle: { id: 'Koordinator Sekbid', en: 'Section Coordinators' },
     deptHeadDesc: { id: 'Pemimpin bidang yang menggerakkan program kerja OSIS', en: 'Field leaders who drive OSIS work programs' },
-    deptDataWarning: { id: '⚠️ Data Koordinator Sekbid masih dalam proses verifikasi', en: '⚠️ Section coordinator data is still under verification' },
+    deptDataWarning: { id: '✅ Data Koordinator Sekbid telah terverifikasi', en: '✅ Section coordinator data has been verified' },
     membersTitle: { id: 'Anggota Seksi Bidang', en: 'Field Section Members' },
     membersDesc: { id: 'Para anggota yang bertanggung jawab dalam berbagai bidang kegiatan sekolah.', en: 'Members responsible for various school activity fields.' },
-    memberDataWarning: { id: '⚠️ Beberapa data anggota masih dalam proses verifikasi', en: '⚠️ Some member data is still under verification' },
+    memberDataWarning: { id: '✅ Data anggota telah terverifikasi', en: '✅ Member data has been verified' },
   },
 
   // People page member descriptions
