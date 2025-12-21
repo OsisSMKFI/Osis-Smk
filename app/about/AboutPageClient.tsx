@@ -492,50 +492,43 @@ export default function AboutPageClient() {
   const openModal = (member: TeamMember) => setSelectedMember(member);
   const closeModal = () => setSelectedMember(null);
 
-  // Logo elements data with proper translations
+  // Logo elements data - Filosofi Logo OSIS SMK Informatika Fithrah Insani
   const logoElements = [
     { 
-      icon: '💻', 
-      title: t('about.symbolTech') || 'Simbol Teknologi', 
-      description: t('about.symbolTechDesc') || 'Merepresentasikan identitas SMK Informatika sebagai sekolah berbasis teknologi dan digital yang terus berinovasi.', 
+      icon: '🏫', 
+      title: 'Fithrah Insani', 
+      description: 'Identitas OSIS yaitu SMK Informatika Fithrah Insani. Nama ini mencerminkan nilai-nilai fitrah manusia yang suci dan islami sebagai landasan pendidikan.', 
+      color: '#22c55e',
+      gradient: 'bg-gradient-to-r from-green-500 to-emerald-600' 
+    },
+    { 
+      icon: '⚡', 
+      title: 'Titik & Garis', 
+      description: 'Persatuan dalam perbedaan masing-masing anggota. Seperti titik dan garis yang membentuk kesatuan, setiap anggota OSIS memiliki keunikan yang saling melengkapi.', 
       color: '#3b82f6',
       gradient: 'bg-gradient-to-r from-blue-500 to-indigo-600' 
     },
     { 
-      icon: '🎓', 
-      title: t('about.symbolEducation') || 'Pendidikan Berkualitas', 
-      description: t('about.symbolEducationDesc') || 'Melambangkan komitmen sekolah dalam memberikan pendidikan informatika yang berkualitas dan relevan dengan industri.', 
-      color: '#10b981',
-      gradient: 'bg-gradient-to-r from-green-500 to-emerald-600' 
+      icon: '🛡️', 
+      title: 'Perisai', 
+      description: 'Pelindung untuk melindungi seluruh anggotanya. Simbol perlindungan dan keamanan bagi seluruh warga sekolah dalam menjalankan aktivitas organisasi.', 
+      color: '#f59e0b',
+      gradient: 'bg-gradient-to-r from-amber-500 to-yellow-600' 
     },
     { 
-      icon: '🌟', 
-      title: t('about.symbolCreativity') || 'Kreativitas & Inovasi', 
-      description: t('about.symbolCreativityDesc') || 'Mendorong siswa untuk berpikir kreatif, inovatif, dan berani menciptakan solusi teknologi masa depan.', 
+      icon: '✏️', 
+      title: 'Pensil & Pulpen', 
+      description: 'Anggota adalah seorang pelajar. Melambangkan semangat belajar dan menulis ilmu yang tidak pernah padam sebagai identitas utama siswa.', 
+      color: '#ef4444',
+      gradient: 'bg-gradient-to-r from-red-500 to-rose-600' 
+    },
+    { 
+      icon: '📸', 
+      title: 'Kamera', 
+      description: 'Menegaskan pelajar yaitu pelajar multimedia. Simbol kreativitas dalam bidang multimedia, fotografi, dan videografi sebagai keahlian utama jurusan.', 
       color: '#a855f7',
-      gradient: 'bg-gradient-to-r from-purple-500 to-pink-600' 
+      gradient: 'bg-gradient-to-r from-purple-500 to-violet-600' 
     },
-    { 
-      icon: '🤝', 
-      title: t('about.symbolCollaboration') || 'Kolaborasi', 
-      description: t('about.symbolCollaborationDesc') || 'Menekankan pentingnya kerja sama tim dalam mengembangkan proyek dan mencapai tujuan bersama.', 
-      color: '#f97316',
-      gradient: 'bg-gradient-to-r from-orange-500 to-red-600' 
-    },
-    { 
-      icon: '🚀', 
-      title: t('about.symbolVision') || 'Visi Masa Depan', 
-      description: t('about.symbolVisionDesc') || 'Mempersiapkan siswa menjadi profesional IT yang siap menghadapi tantangan era digital dan industri 4.0.', 
-      color: '#eab308',
-      gradient: 'bg-gradient-to-r from-yellow-500 to-amber-600' 
-    },
-    { 
-      icon: '📖', 
-      title: t('about.symbolIslamic') || 'Nilai Islami', 
-      description: t('about.symbolIslamicDesc') || 'Mengintegrasikan nilai-nilai Islam dalam setiap aspek pembelajaran dan pengembangan karakter siswa.', 
-      color: '#14b8a6',
-      gradient: 'bg-gradient-to-r from-teal-500 to-cyan-600' 
-    }
   ];
 
   return (
@@ -589,9 +582,9 @@ export default function AboutPageClient() {
         {isClient && (
           <InteractiveLogo3D
             logoSrc="/images/logo-2.png"
-            logoAlt={t('navbar.logoAlt') || 'Logo OSIS SMK Informatika'}
-            sectionTitle={t('about.symbolLogoTitle') || 'Filosofi Logo SMK Informatika'}
-            sectionSubtitle={t('about.symbolSubtitle') || 'Setiap elemen dalam logo OSIS memiliki filosofi dan makna yang mendalam'}
+            logoAlt={t('navbar.logoAlt') || 'Logo OSIS SMK Informatika Fithrah Insani'}
+            sectionTitle="FILOSOFI LOGO OSIS"
+            sectionSubtitle="OSIS SMK INFORMATIKA FITHRAH INSANI - Setiap elemen dalam logo memiliki filosofi dan makna yang mendalam"
             elements={logoElements}
           />
         )}

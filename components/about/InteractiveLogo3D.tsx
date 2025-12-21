@@ -329,7 +329,7 @@ function ElementsGrid({
       >
         <span className="inline-flex items-center gap-2 text-gray-500 dark:text-[#b6bac5]/50 text-xs tracking-widest uppercase">
           <span className="w-6 h-px bg-gray-300 dark:bg-white/20" />
-          6 Elemen Filosofi
+          5 Elemen Filosofi Logo
           <span className="w-6 h-px bg-gray-300 dark:bg-white/20" />
         </span>
       </motion.div>
