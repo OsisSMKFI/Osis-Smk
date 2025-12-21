@@ -107,7 +107,7 @@ export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menj
         </Reveal>
 
         {/* Main Title */}
-        <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-6">
+        <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-tight">
           <TextReveal text={title} className="inline-block" delay={0.3} />
         </h1>
 
@@ -580,7 +580,7 @@ interface TeamSectionProps {
   highlightTitle: string;
   subtitle: string;
   warningText?: string;
-  warningColor?: 'yellow' | 'blue';
+  warningColor?: 'yellow' | 'blue' | 'green';
   members: TeamMember[];
   onMemberClick: (member: TeamMember) => void;
   gridCols?: 2 | 3 | 4;
@@ -609,7 +609,8 @@ export function TeamSection({
 
   const warningStyles = {
     yellow: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-400 dark:border-yellow-600 text-yellow-800 dark:text-yellow-300',
-    blue: 'bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600 text-blue-800 dark:text-blue-300'
+    blue: 'bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600 text-blue-800 dark:text-blue-300',
+    green: 'bg-green-100 dark:bg-green-900/30 border-green-400 dark:border-green-600 text-green-800 dark:text-green-300'
   };
 
   return (

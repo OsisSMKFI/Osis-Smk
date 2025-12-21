@@ -338,8 +338,8 @@ export const translations = {
       en: 'Dedicated students who lead and inspire OSIS SMK Informatika'
     },
     coreTeamWarning: { 
-      id: '⚠️ Data Wakil Ketua, Sekretaris, dan Bendahara masih dalam proses verifikasi',
-      en: '⚠️ Vice Chairman, Secretary, and Treasurer data is still under verification'
+      id: '✅ Data pengurus inti telah terverifikasi dan dimuat dari database',
+      en: '✅ Core team data has been verified and loaded from database'
     },
     clickForDetail: { id: 'Klik untuk detail', en: 'Click for details' },
     viewProfile: { id: 'Lihat profil', en: 'View profile' },
@@ -354,12 +354,12 @@ export const translations = {
     
     // Data messages
     coreDataPending: { 
-      id: 'Data pengurus inti masih dalam proses verifikasi.',
-      en: 'Core team data is still under verification.'
+      id: 'Data pengurus inti telah terverifikasi.',
+      en: 'Core team data has been verified.'
     },
     deptDataPending: { 
-      id: 'Data koordinator sekbid masih dalam proses verifikasi.',
-      en: 'Section coordinator data is still under verification.'
+      id: 'Data koordinator sekbid telah terverifikasi.',
+      en: 'Section coordinator data has been verified.'
     },
     dataNotAvailable: { id: 'Data Belum Tersedia', en: 'Data Not Available' },
     
@@ -371,8 +371,8 @@ export const translations = {
       en: 'Field leaders who drive OSIS work programs'
     },
     deptHeadsWarning: { 
-      id: '⚠️ Data Ketua Koordinator masih dalam proses verifikasi',
-      en: '⚠️ Coordinator Head data is still under verification'
+      id: '✅ Data koordinator sekbid telah terverifikasi dan dimuat dari database',
+      en: '✅ Section coordinator data has been verified and loaded from database'
     },
     
     // Achievements Section

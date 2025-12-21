@@ -95,7 +95,8 @@ export default function AdminSidebar() {
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-[9998] backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm"
+          style={{ zIndex: 9997 }}
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -106,14 +107,15 @@ export default function AdminSidebar() {
           'fixed top-0 left-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900',
           'text-white shadow-2xl transition-transform duration-300 ease-in-out',
           collapsed ? 'w-20' : 'w-72',
-          // Desktop: always visible and clickable  
-          'lg:translate-x-0',
-          // Mobile: slide in/out
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          // Desktop: always visible  
+          'lg:translate-x-0 lg:pointer-events-auto',
+          // Mobile: slide in/out with proper width
+          mobileOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none lg:translate-x-0 lg:pointer-events-auto',
+          // Mobile max-width to prevent overflow
+          'max-w-[85vw] lg:max-w-none'
         ].join(' ')}
         style={{ 
-          pointerEvents: 'auto',
-          zIndex: 9999,
+          zIndex: 9998,
           isolation: 'isolate'
         }}
         suppressHydrationWarning

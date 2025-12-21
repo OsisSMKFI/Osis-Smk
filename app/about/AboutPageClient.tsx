@@ -617,8 +617,8 @@ export default function AboutPageClient() {
             title={t('about.coreTeamTitle1') || 'Pengurus'}
             highlightTitle={t('about.coreTeamTitle2') || 'Inti'}
             subtitle={t('about.coreTeamSubtitle') || 'Para pemimpin yang menggerakkan roda organisasi dengan dedikasi tinggi'}
-            warningText={t('about.coreTeamWarning') || 'Data anggota dimuat secara real-time dari database'}
-            warningColor="yellow"
+            warningText={t('about.coreTeamWarning') || '✅ Data telah terverifikasi dan dimuat dari database'}
+            warningColor="green"
             members={coreTeam || []}
             onMemberClick={openModal}
             gridCols={4}
@@ -631,8 +631,8 @@ export default function AboutPageClient() {
             title={t('about.deptHeadsTitle1') || 'Koordinator'}
             highlightTitle={t('about.deptHeadsTitle2') || 'Sekbid'}
             subtitle={t('about.deptHeadsSubtitle') || 'Para koordinator yang memimpin setiap seksi bidang'}
-            warningText={t('about.deptHeadsWarning') || 'Data koordinator dimuat dari database'}
-            warningColor="blue"
+            warningText={t('about.deptHeadsWarning') || '✅ Data telah terverifikasi dan dimuat dari database'}
+            warningColor="green"
             members={koordinatorSekbid}
             onMemberClick={openModal}
             gridCols={3}
