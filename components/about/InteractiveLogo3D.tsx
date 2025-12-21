@@ -700,277 +700,191 @@ function DetailModal({
             </svg>
           </motion.button>
           
-          {/* Main Content with 3D perspective */}
+          {/* Main Content */}
           <motion.div
             className="relative w-full max-w-lg sm:max-w-2xl md:max-w-4xl"
-            initial={{ opacity: 0, rotateX: -15, y: 100, scale: 0.8 }}
-            animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
-            exit={{ opacity: 0, rotateX: 15, y: 50, scale: 0.9 }}
+            initial={{ opacity: 0, y: 100, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            style={{ perspective: '1500px' }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Card Container with 3D flip capability */}
-            <motion.div
-              className="relative rounded-3xl overflow-hidden"
-              style={{ transformStyle: 'preserve-3d' }}
-              animate={{ rotateY: isFlipped ? 180 : 0 }}
-              transition={{ duration: 0.8, type: 'spring', stiffness: 100 }}
-            >
-              {/* Front of Card */}
-              <motion.div
-                className="relative"
-                style={{ 
-                  backfaceVisibility: 'hidden',
-                  pointerEvents: isFlipped ? 'none' : 'auto',
-                }}
-              >
-                <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 sm:p-8 md:p-10 shadow-2xl border border-white/10">
-                  <div className="flex flex-col md:grid md:grid-cols-5 gap-6 md:gap-10 items-center">
-                    
-                    {/* Left: Large Icon/Image with 3D float effect */}
-                    <motion.div 
-                      className="md:col-span-2 flex justify-center"
-                      initial={{ opacity: 0, scale: 0.5, rotateY: -30 }}
-                      animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-                      transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
-                    >
-                      <motion.div 
-                        className={`relative w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64 rounded-3xl ${element.gradient} flex items-center justify-center shadow-2xl overflow-hidden`}
-                        animate={{
-                          y: [0, -10, 0],
-                          rotateZ: [0, 2, -2, 0],
-                        }}
-                        transition={{
-                          duration: 4,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                        whileHover={{ scale: 1.05 }}
-                        style={{ transformStyle: 'preserve-3d' }}
-                      >
-                        {/* Glow effect */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                        
-                        {/* Icon or Image */}
-                        {element.imageSrc ? (
-                          <div className="relative w-full h-full p-6">
-                            <Image
-                              src={element.imageSrc}
-                              alt={element.title}
-                              fill
-                              className="object-contain p-4 drop-shadow-2xl"
-                              style={{ filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.4))' }}
-                            />
-                          </div>
-                        ) : (
-                          <span className="text-7xl sm:text-8xl md:text-9xl drop-shadow-2xl relative z-10">{element.icon}</span>
-                        )}
-                        
-                        {/* Animated shine effect */}
-                        <motion.div
-                          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0"
-                          initial={{ x: '-100%', y: '-100%' }}
-                          animate={{ x: '100%', y: '100%' }}
-                          transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                        />
-                        
-                        {/* Floating particles around the icon */}
-                        {[...Array(3)].map((_, i) => (
-                          <motion.div
-                            key={i}
-                            className="absolute w-3 h-3 rounded-full bg-white/30"
-                            animate={{
-                              x: [0, 20, -20, 0],
-                              y: [-30 - i * 20, 30 + i * 10, -30 - i * 20],
-                              opacity: [0, 1, 0],
-                            }}
-                            transition={{
-                              duration: 3 + i,
-                              repeat: Infinity,
-                              delay: i * 0.5,
-                            }}
-                            style={{
-                              left: `${30 + i * 20}%`,
-                              top: `${20 + i * 15}%`,
-                            }}
-                          />
-                        ))}
-                      </motion.div>
-                    </motion.div>
-                    
-                    {/* Right: Details */}
-                    <motion.div 
-                      className="md:col-span-3 text-center md:text-left w-full"
-                      initial={{ opacity: 0, x: 30 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      {/* Label with animated line */}
-                      <motion.span 
-                        className="inline-flex items-center gap-3 text-yellow-400 text-xs sm:text-sm tracking-[0.2em] uppercase mb-3 sm:mb-4"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
-                      >
-                        <motion.span 
-                          className="w-0 h-px bg-yellow-400"
-                          animate={{ width: 24 }}
-                          transition={{ delay: 0.5, duration: 0.3 }}
-                        />
-                        Filosofi Logo OSIS
-                        <motion.span 
-                          className="w-0 h-px bg-yellow-400"
-                          animate={{ width: 24 }}
-                          transition={{ delay: 0.5, duration: 0.3 }}
-                        />
-                      </motion.span>
+            {/* Simple toggle between Front and Back - no 3D flip */}
+            <AnimatePresence mode="wait">
+              {!isFlipped ? (
+                <motion.div
+                  key="front"
+                  className="rounded-3xl overflow-hidden"
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 50 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                >
+                  <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 sm:p-8 md:p-10 shadow-2xl border border-white/10 rounded-3xl">
+                    <div className="flex flex-col md:grid md:grid-cols-5 gap-6 md:gap-10 items-center">
                       
-                      {/* Title with gradient */}
-                      <motion.h2 
-                        className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.35 }}
+                      {/* Left: Large Icon/Image with 3D float effect */}
+                      <motion.div 
+                        className="md:col-span-2 flex justify-center"
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2, duration: 0.5, type: 'spring' }}
                       >
-                        <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
-                          {element.title}
+                        <motion.div 
+                          className={`relative w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64 rounded-3xl ${element.gradient} flex items-center justify-center shadow-2xl overflow-hidden`}
+                          animate={{
+                            y: [0, -10, 0],
+                          }}
+                          transition={{
+                            duration: 4,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                          }}
+                        >
+                          {/* Glow effect */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                          
+                          {/* Icon or Image */}
+                          {element.imageSrc ? (
+                            <div className="relative w-full h-full p-6">
+                              <Image
+                                src={element.imageSrc}
+                                alt={element.title}
+                                fill
+                                className="object-contain p-4 drop-shadow-2xl"
+                                style={{ filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.4))' }}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-7xl sm:text-8xl md:text-9xl drop-shadow-2xl relative z-10">{element.icon}</span>
+                          )}
+                        </motion.div>
+                      </motion.div>
+                      
+                      {/* Right: Details */}
+                      <motion.div 
+                        className="md:col-span-3 text-center md:text-left w-full"
+                        initial={{ opacity: 0, x: 30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        {/* Label */}
+                        <span className="inline-flex items-center gap-3 text-yellow-400 text-xs sm:text-sm tracking-[0.2em] uppercase mb-3 sm:mb-4">
+                          <span className="w-6 h-px bg-yellow-400" />
+                          Filosofi Logo OSIS
+                          <span className="w-6 h-px bg-yellow-400" />
                         </span>
-                      </motion.h2>
-                      
-                      {/* Animated divider */}
-                      <motion.div 
-                        className="h-1 rounded-full mb-5 mx-auto md:mx-0"
-                        style={{ background: `linear-gradient(to right, ${element.color}, transparent)` }}
-                        initial={{ width: 0 }}
-                        animate={{ width: '120px' }}
-                        transition={{ delay: 0.4, duration: 0.4 }}
-                      />
-                      
-                      {/* Description with fade-in effect */}
-                      <motion.p 
-                        className="text-gray-300 text-base sm:text-lg leading-relaxed mb-6"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.45 }}
-                      >
-                        {element.description}
-                      </motion.p>
-                      
-                      {/* Info cards */}
-                      <motion.div 
-                        className="grid grid-cols-2 gap-3 mb-6"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                      >
-                        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                          <div className="text-yellow-400 text-2xl mb-1">✦</div>
-                          <div className="text-white font-semibold text-sm">Makna Mendalam</div>
-                          <div className="text-gray-400 text-xs mt-1">Simbol bermakna</div>
+                        
+                        {/* Title with gradient */}
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">
+                          <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                            {element.title}
+                          </span>
+                        </h2>
+                        
+                        {/* Divider */}
+                        <div 
+                          className="h-1 w-[120px] rounded-full mb-5 mx-auto md:mx-0"
+                          style={{ background: `linear-gradient(to right, ${element.color}, transparent)` }}
+                        />
+                        
+                        {/* Description */}
+                        <p className="text-gray-300 text-base sm:text-lg leading-relaxed mb-6">
+                          {element.description}
+                        </p>
+                        
+                        {/* Info cards */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                            <div className="text-yellow-400 text-2xl mb-1">✦</div>
+                            <div className="text-white font-semibold text-sm">Makna Mendalam</div>
+                            <div className="text-gray-400 text-xs mt-1">Simbol bermakna</div>
+                          </div>
+                          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                            <div className="text-yellow-400 text-2xl mb-1">◈</div>
+                            <div className="text-white font-semibold text-sm">Nilai Organisasi</div>
+                            <div className="text-gray-400 text-xs mt-1">Karakter OSIS</div>
+                          </div>
                         </div>
-                        <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                          <div className="text-yellow-400 text-2xl mb-1">◈</div>
-                          <div className="text-white font-semibold text-sm">Nilai Organisasi</div>
-                          <div className="text-gray-400 text-xs mt-1">Karakter OSIS</div>
-                        </div>
-                      </motion.div>
-                      
-                      {/* Action buttons */}
-                      <motion.div 
-                        className="flex flex-col sm:flex-row gap-3"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.55 }}
-                      >
-                        <motion.button
-                          onClick={() => setIsFlipped(true)}
-                          className="flex-1 px-6 py-3.5 bg-white/10 backdrop-blur-sm text-white font-semibold text-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all flex items-center justify-center gap-2 group"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <span>Lihat Detail</span>
-                          <motion.span
-                            className="text-lg"
-                            animate={{ rotateY: [0, 360] }}
-                            transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+                        
+                        {/* Action buttons */}
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <motion.button
+                            onClick={() => setIsFlipped(true)}
+                            className="flex-1 px-6 py-3.5 bg-white/10 backdrop-blur-sm text-white font-semibold text-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                           >
-                            ↻
-                          </motion.span>
-                        </motion.button>
-                        <motion.button
-                          onClick={handleClose}
-                          className={`flex-1 px-6 py-3.5 ${element.gradient} text-gray-900 font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all`}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          Tutup
-                        </motion.button>
+                            <span>Lihat Detail</span>
+                            <span className="text-lg">→</span>
+                          </motion.button>
+                          <motion.button
+                            onClick={handleClose}
+                            className={`flex-1 px-6 py-3.5 ${element.gradient} text-gray-900 font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all`}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Tutup
+                          </motion.button>
+                        </div>
                       </motion.div>
-                    </motion.div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-
-              {/* Back of Card */}
-              <motion.div
-                className="absolute inset-0"
-                style={{ 
-                  backfaceVisibility: 'hidden',
-                  rotateY: 180,
-                  pointerEvents: isFlipped ? 'auto' : 'none',
-                }}
-              >
-                <div className="h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 sm:p-8 md:p-10 shadow-2xl border border-white/10 rounded-3xl">
-                  <div className="flex flex-col items-center justify-center h-full min-h-[300px] md:min-h-[400px]">
-                    {/* Back content - more details */}
-                    <motion.div
-                      className="text-center max-w-lg"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: isFlipped ? 1 : 0 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      <h3 className="text-yellow-400 text-lg font-semibold mb-2 tracking-wide uppercase">
-                        Nilai yang Terkandung
-                      </h3>
-                      <h2 className="text-white text-3xl md:text-4xl font-bold mb-6">
-                        {element.title}
-                      </h2>
-                      
-                      <div className="space-y-4 text-left bg-white/5 rounded-2xl p-6 border border-white/10 mb-6">
-                        <div className="flex items-start gap-3">
-                          <span className="text-yellow-400 mt-1">●</span>
-                          <p className="text-gray-300">
-                            Elemen ini mewakili identitas dan karakter utama dari organisasi OSIS SMK Informatika Fithrah Insani.
-                          </p>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="back"
+                  className="rounded-3xl overflow-hidden"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                >
+                  <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 sm:p-8 md:p-10 shadow-2xl border border-white/10 rounded-3xl">
+                    <div className="flex flex-col items-center justify-center min-h-[400px] md:min-h-[500px]">
+                      <div className="text-center max-w-lg">
+                        <h3 className="text-yellow-400 text-lg font-semibold mb-2 tracking-wide uppercase">
+                          Nilai yang Terkandung
+                        </h3>
+                        <h2 className="text-white text-3xl md:text-4xl font-bold mb-6">
+                          {element.title}
+                        </h2>
+                        
+                        <div className="space-y-4 text-left bg-white/5 rounded-2xl p-6 border border-white/10 mb-6">
+                          <div className="flex items-start gap-3">
+                            <span className="text-yellow-400 mt-1">●</span>
+                            <p className="text-gray-300">
+                              Elemen ini mewakili identitas dan karakter utama dari organisasi OSIS SMK Informatika Fithrah Insani.
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <span className="text-yellow-400 mt-1">●</span>
+                            <p className="text-gray-300">
+                              Dirancang dengan penuh makna untuk mencerminkan nilai-nilai yang dijunjung tinggi oleh seluruh anggota.
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <span className="text-yellow-400 mt-1">●</span>
+                            <p className="text-gray-300">
+                              Menjadi pengingat bagi setiap anggota akan tanggung jawab dan peran dalam organisasi.
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-start gap-3">
-                          <span className="text-yellow-400 mt-1">●</span>
-                          <p className="text-gray-300">
-                            Dirancang dengan penuh makna untuk mencerminkan nilai-nilai yang dijunjung tinggi oleh seluruh anggota.
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <span className="text-yellow-400 mt-1">●</span>
-                          <p className="text-gray-300">
-                            Menjadi pengingat bagi setiap anggota akan tanggung jawab dan peran dalam organisasi.
-                          </p>
-                        </div>
+                        
+                        <motion.button
+                          onClick={() => setIsFlipped(false)}
+                          className={`px-8 py-3.5 ${element.gradient} text-gray-900 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all`}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          ← Kembali
+                        </motion.button>
                       </div>
-                      
-                      <motion.button
-                        onClick={() => setIsFlipped(false)}
-                        className={`px-8 py-3.5 ${element.gradient} text-gray-900 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        Kembali
-                      </motion.button>
-                    </motion.div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </motion.div>
       )}
