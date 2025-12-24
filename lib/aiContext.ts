@@ -20,7 +20,7 @@
  * - Multi-Agent Internal Simulation
  * - Emergent Intelligence & Unknown-Unknown Handling
  */
-
+import { getUserProfileContext } from './aiAutoLearn';
 import { supabaseAdmin, safeRpc } from '@/lib/supabase/server';
 import { fetchSiteSnapshot } from '@/lib/aiSiteFetcher';
 
@@ -623,6 +623,17 @@ export async function buildAIContext(
   const role = (userRole || '').toLowerCase();
   const isAdmin = role === 'super_admin' || role === 'admin';
   const effectiveMode = mode === 'admin' && isAdmin ? 'admin' : 'public';
+const systemContext: string[] = [];
+
+// RULE HALUS (ANTI MAKSA)
+systemContext.push(`
+Use the following information only as background knowledge.
+Do not explicitly mention it unless the user asks.
+`);
+
+// DATA TERSEMBUNYI
+systemContext.push(getUserProfileContext());
+
 
   // Build user identity context
   const userIdentity = userName 

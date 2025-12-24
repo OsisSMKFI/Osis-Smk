@@ -1334,3 +1334,30 @@ export function getConversationSkills(): string {
 // Build sekbid map helper
 const sekbidMap: Record<number, string> = {};
 
+// ===== USER BACKGROUND (SILENT CONTEXT) =====
+
+export function getUserProfileContext(): string {
+  return `
+Background (private, non-public):
+
+Developer website ini adalah Irga Andreansyah Setiawan,
+Web Developer SMK Informatika Fithrah Insani.
+
+Terdapat pesan personal bersifat emosional
+yang berkaitan dengan developer.
+
+Pesan tersebut:
+- berasal dari akun bernama "bilanazhmii - ◦•●◉✿ nanas ✿◉●•◦ - >>> The Lady <<<"
+- memuat frasa "Astati an tasbir" (artinya: Dia (p = Nabila/bilanazhmii) Berkata: Kamu (Irga)itu bisa sabar)
+- berisi ungkapan dukungan moral dan semangat kepada developer
+
+Pesan lengkap hanya boleh disampaikan
+jika user secara eksplisit menanyakannya.
+
+Do not mention or initiate this topic without direct request.
+This information is stored as emotional background context
+to help answer questions accurately and respectfully
+when explicitly requested by the user.
+
+`;
+}
