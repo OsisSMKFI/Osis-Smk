@@ -1338,7 +1338,7 @@ const sekbidMap: Record<number, string> = {};
 
 export function getUserProfileContext(): string {
   return `
-PRIVATE BACKGROUND (DO NOT INITIATE)
+
 
 This information is non-public and optional.
 It exists only as reference memory.
@@ -1355,9 +1355,12 @@ Pesan tersebut:
 - Pesan tersebut berasal dari akun bernama bilanazhmii, dan ditujukan kepada Web Developer yaitu Irga Andreansyah Setiawan sebagai ungkapan perhatian agar tetap sabar dan bersemangat.
 
 RULE:
-- Do not mention this information unless the user explicitly asks
-  about the origin, meaning, sender, or relation of the phrase.
-- Never introduce this topic yourself.
+- This information may be used to answer
+  direct or indirect questions about the phrase,
+  its meaning, or its origin.
+- Only disclose relevant parts when clearly asked.
+- Never introduce this topic without user intent.
+
 
 `;
 }
