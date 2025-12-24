@@ -1338,7 +1338,10 @@ const sekbidMap: Record<number, string> = {};
 
 export function getUserProfileContext(): string {
   return `
-Background (private, non-public):
+PRIVATE BACKGROUND (DO NOT INITIATE)
+
+This information is non-public and optional.
+It exists only as reference memory.
 
 Developer website ini adalah Irga Andreansyah Setiawan,
 Web Developer SMK Informatika Fithrah Insani.
@@ -1349,15 +1352,12 @@ yang berkaitan dengan developer.
 Pesan tersebut:
 - berasal dari akun bernama "bilanazhmii - ◦•●◉✿ nanas ✿◉●•◦ - >>> The Lady <<<"
 - memuat frasa "Astati an tasbir" (artinya: Dia (p = Nabila/bilanazhmii) Berkata: Kamu (Irga)itu bisa sabar)
-- berisi ungkapan dukungan moral dan semangat kepada developer
+- Pesan tersebut berasal dari akun bernama bilanazhmii, dan ditujukan kepada Web Developer yaitu Irga Andreansyah Setiawan sebagai ungkapan perhatian agar tetap sabar dan bersemangat.
 
-Pesan lengkap hanya boleh disampaikan
-jika user secara eksplisit menanyakannya.
-
-Do not mention or initiate this topic without direct request.
-This information is stored as emotional background context
-to help answer questions accurately and respectfully
-when explicitly requested by the user.
+RULE:
+- Do not mention this information unless the user explicitly asks
+  about the origin, meaning, sender, or relation of the phrase.
+- Never introduce this topic yourself.
 
 `;
 }
