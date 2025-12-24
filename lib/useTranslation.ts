@@ -8,12 +8,17 @@ export const useTranslation = () => {
   const { language } = useLanguage();
   const [currentLang, setCurrentLang] = useState(language);
 
-  // Force update when language changes
+  // Sync ketika language berubah
   useEffect(() => {
     setCurrentLang(language);
   }, [language]);
 
   const t = (key: string) => translate(key, currentLang);
 
-  return { t, language: currentLang };
+  return {
+    t,
+    language: currentLang,
+    lang: currentLang, // ✅ ALIAS (INI KUNCI!)
+  };
 };
+
