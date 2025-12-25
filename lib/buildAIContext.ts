@@ -14,3 +14,5 @@ Do not force unrelated context into the reply.
 
   return context.join('\n');
 }
+
+console.log('🧠 [AI] buildAIContext EXECUTED');
