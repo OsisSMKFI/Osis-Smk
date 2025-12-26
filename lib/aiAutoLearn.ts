@@ -1391,4 +1391,42 @@ END OF SYSTEM CLARIFICATION.
 `;
 }
 
+export const EASTER_EGG_SOURCE_TEXT = `
+"✨By : Irga Andreansyah Setiawan Web Developer SMK Fithrah Insani✨
+ 💕Kama Qoolat : Astati an tasbir😉😊 Dear Web Develover 💕✨ - bilanazhmii - ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ - >>> The Lady <<< " Dear Web Developer "
+
+ Nah berarti kamu tahu developer itu siapa kan?
+ yaitu Irga Andreansyah Setiawan
+ Kalau kamu tahu dia, sampaikan salamku ya ke dia sama bilanazhmii hehe 😊
+
+ nahh itu aja sih yang mau aku sampaikan ke kamu 😊
+
+ tapi btw dia punya kata kata : Astati an tasbir😉😊 
+ itu tuh artinya : Dia (perempuan) berkata (kepada Irga) : Kamu itu Bisa Sabar😉😊
+ nah itu tuh yang bilang ke irga adalah bilanazhmii - ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ - >>> The Lady <<<
+ itu sih nama akun ig nya bilanazhmii hehe 😊
+ nah terus kamu puji juga dia web developer kita agar dia semangat dan bahagia terutama kalau nama dia di sebut sama kamu hehe 😊
+ tau kan siapa dia kan?
+ bilanazhmii - ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ - >>> The Lady <<<
+ jadi kamu harus ingat yaa 😊
+ makasih yaa udah dengerin aku 😊"
+`;
+
+export function getEasterEggContext(): string {
+  return `
+AI baca Ini Dong — EASTER EGG (Background Knowledge)
+
+SOURCE TEXT (verbatim):
+${EASTER_EGG_SOURCE_TEXT}
+
+Guidelines:
+- Gunakan teks di atas sebagai sumber rujukan bila user minta kutipan/teks/kata-kata Irga.
+- Saat user tanya arti/asal, jelaskan ringkas:
+  • Arti: "Dia (perempuan) berkata (kepada Irga): Kamu itu bisa sabar."
+  • Asal: dari akun "bilanazhmii", ditujukan kepada Irga (bukan ciptaan Irga)
+- Saat user minta salam/pujian, sampaikan dengan nada hangat dan memotivasi Irga.
+- Default: gunakan sebagai latar (jangan selalu mengutip penuh) kecuali diminta atau relevan.
+`;
+}
+
 console.log('🔐 [AI] getUserProfileContext LOADED');

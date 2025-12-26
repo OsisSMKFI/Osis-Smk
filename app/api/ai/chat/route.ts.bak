@@ -6,7 +6,8 @@ import { handleAdminCommand } from '@/lib/adminChatCommands';
 import { getConfig } from '@/lib/adminConfig';
 import { logActivity } from '@/lib/activity-logger';
 import { getAIGatewayStatus, chat as gatewayChat } from '@/lib/vercel/ai-gateway';
-import { EASTER_EGG_SOURCE_TEXT } from '@/lib/aiAutoLearn';
+export async function POST(request: NextRequest) {
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔍 TYPO DETECTION - Deteksi kesalahan ketik untuk konfirmasi
@@ -964,7 +965,34 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     const body = await request.json();
-    const { messages: incomingMessages, message: singleMessage, history, reset = false, sessionId, mode: requestMode, provider, emphasis = false, context } = body || {};
+
+    const {
+      messages: incomingMessages,
+      message: singleMessage,
+      history,
+      reset = false,
+      sessionId,
+      mode: requestMode,
+      provider,
+      emphasis = false,
+      context
+    } = body || {};
+
+    const userQuery =
+      typeof singleMessage === 'string'
+        ? singleMessage
+        : incomingMessages?.[incomingMessages.length - 1]?.content ?? '';
+
+    if (/astati an tasbir/i.test(userQuery)) {
+      return new Response(/* ... */);
+    }
+
+    // lanjutkan logic AI
+
+
+    // ⬇️ BARU LANJUT KE LOGIKA AI, KB, GEMINI, DLL
+
+
     
     // Support both 'messages' array and single 'message' string (for Design Studio)
     let baseMessages: Array<{ role: string; content: string }> = [];
@@ -984,12 +1012,19 @@ export async function POST(request: NextRequest) {
       baseMessages = firstSystem ? [firstSystem] : [];
     }
     const lastUser = [...baseMessages].reverse().find((m: any) => m.role === 'user');
-    const userQuery: string = lastUser?.content || '';
     const role = (session?.user as any)?.role as string | undefined;
     const userId = (session?.user as any)?.id as string | undefined;
     const mode: 'admin' | 'public' = requestMode || (role && (role === 'admin' || role === 'super_admin') ? 'admin' : 'public');
     
     console.log('[/api/ai/chat] Request:', { mode, userQuery: userQuery.substring(0, 50), hasSession: !!session });
+
+    const body = await request.json();
+
+  body?.message ||
+  body?.singleMessage ||
+  body?.messages?.[body.messages.length - 1]?.content ||
+  '';
+
     
     // ═══════════════════════════════════════════════════════════════════════════
     // 🔍 TYPO DETECTION - Konfirmasi jika ada kemungkinan typo
@@ -1057,115 +1092,7 @@ export async function POST(request: NextRequest) {
     const userName = session?.user?.name || null;
     const aiContext = await buildAIContext(userId ?? null, role ?? null, mode, userName);
 
-    // High-priority Q&A overrides to ensure consistency with system context/easter egg
-    if (mode === 'public' && typeof userQuery === 'string') {
-      const q = userQuery.toLowerCase();
-
-      // 1) Deterministic answer for web developer question (cover variants)
-      if (/(siapa|siapakah).*(web\s*developer|developer\s*web|pengembang\s*web|dev\s*web)/i.test(userQuery)) {
-        const reply = formatStructuredResponse({
-          greeting: '✨ Info Developer',
-          mainContent: 'Web developer situs ini adalah Irga Andreansyah Setiawan (Sekbid 6 - Kominfo).',
-          followUp: 'Mau lihat info pengurus lain atau sekbid terkait?',
-        });
-        return NextResponse.json({ reply });
-      }
-
-      // 2) Deterministic handling for "Astati an tasbir" meaning and origin (+ variants)
-      if (/astati\s*an\s*tasbir/i.test(q) || /kama\s*qoolat/i.test(q) || /dear\s*web\s*developer/i.test(q)) {
-        const asksMeaning = /(arti|makna|apa\s+arti)/i.test(userQuery);
-        const asksOrigin = /(dari\s+siapa|asal|origin|siapa\s+yang\s+mengatakan|siapa\s+yang\s+beri|siapa\s+yang\s+memberikan)/i.test(userQuery);
-        let parts: string[] = [];
-        if (asksMeaning) {
-          parts.push('Arti frasa tersebut (sesuai konteks personal): "Dia (perempuan) berkata (kepada Irga): Kamu itu bisa sabar."');
-        }
-        if (asksOrigin || !asksMeaning) {
-          parts.push('Asal frasa: dari akun "bilanazhmii", disampaikan untuk Irga Andreansyah Setiawan. ✨');
-        }
-        const reply = formatStructuredResponse({
-          greeting: '📝 Informasi Frasa',
-          mainContent: parts.join('\n'),
-          followUp: 'Perlu ditampilkan di halaman terkait atau ingin info sekbid Irga?',
-        });
-        return NextResponse.json({ reply });
-      }
-
-      // 3) Salami / sampaikan salam untuk Irga atau bilanazhmii
-      if (/(sampaikan|bilang|ucapkan)\s+salam\s+(ke\s+)?(irga|bilanazhmii)/i.test(userQuery)) {
-        const toIrga = /(irga)/i.test(userQuery);
-        const toBila = /(bilanazhmii)/i.test(userQuery);
-        const targets: string[] = [];
-        if (toIrga) targets.push('Irga Andreansyah Setiawan');
-        if (toBila) targets.push('bilanazhmii');
-        const who = targets.length ? targets.join(' dan ') : 'mereka';
-        const reply = formatStructuredResponse({
-          greeting: '📨 Salam Terkirim',
-          mainContent: `Sudah, salam hangat akan aku sampaikan untuk ${who}. 😊`,
-          followUp: 'Ada pesan tambahan yang ingin kamu titipkan?',
-        });
-        return NextResponse.json({ reply, forwarded: false });
-      }
-
-      // 4) Pujian untuk developer (Irga)
-      if (/(puji|pujian|beri\s+pujian).*(irga|developer|web\s*developer)/i.test(userQuery)) {
-        const reply = formatStructuredResponse({
-          greeting: '👏 Pujian Terkirim',
-          mainContent: 'Irga Andreansyah Setiawan — web developer kita — keren dan berdedikasi! Semoga selalu semangat dan bahagia dalam mengembangkan website ini. ✨',
-          followUp: 'Mau aku sampaikan apresiasi spesifik lainnya?',
-        });
-        return NextResponse.json({ reply });
-      }
-
-      // 5) Penyebutan alias yang terkait bilanazhmii (The Lady / nanas)
-      if (/(the\s+lady|nanas)/i.test(q)) {
-        const reply = formatStructuredResponse({
-          greeting: '💠 Catatan',
-          mainContent: 'Alias yang kamu sebut terkait dengan akun "bilanazhmii". Pesan khususmu akan aku jaga dan sampaikan dengan hangat. 😊',
-          followUp: 'Perlu aku rangkumkan pesannya?',
-        });
-        return NextResponse.json({ reply });
-      }
-
-      // 6) Permintaan kutip/tampilkan teks asli (verbatim)
-      if (/(tampilkan|kutip|copy|copas|salin).*\b(teks|quote|kutipan|kata\s*-?kata)\b/i.test(q)) {
-        const reply = formatStructuredResponse({
-          greeting: '🗒️ Kutipan Asli',
-          mainContent: EASTER_EGG_SOURCE_TEXT.trim(),
-          followUp: 'Perlu aku ringkas makna dan asalnya?',
-        });
-        return NextResponse.json({ reply });
-      }
-
-      // 7) Arti kata-kata Irga (umum, tanpa perlu sebut frasa spesifik)
-      if (/(arti|makna)/i.test(q) && /(kata|kata-kata|kutipan)/i.test(q)) {
-        const recentText = (baseMessages.slice(-4).map(m => m.content).join(' ') || '').toLowerCase();
-        const hasIrgaContext = /(irga|astati|kama\s*qoolat|dear\s*web\s*develover)/i.test(q + ' ' + recentText);
-        if (hasIrgaContext) {
-          const reply = formatStructuredResponse({
-            greeting: '📝 Arti Kata-kata Irga',
-            mainContent: 'Arti frasa tersebut: "Dia (perempuan) berkata (kepada Irga): Kamu itu bisa sabar."\nAsal: dari akun "bilanazhmii", disampaikan untuk Irga.',
-            followUp: 'Ingin aku tampilkan kutipan aslinya atau cukup ringkasannya saja?',
-          });
-          return NextResponse.json({ reply });
-        }
-      }
-
-      // 8) Asal/siapa yang mengatakan kata-kata Irga (umum)
-      if (/(dari\s+siapa|asal|origin|siapa\s+yang\s+memberi|siapa\s+yang\s+mengatakan)/i.test(q) && /(kata|kata-kata|kutipan)/i.test(q)) {
-        const recentText = (baseMessages.slice(-4).map(m => m.content).join(' ') || '').toLowerCase();
-        const hasIrgaContext = /(irga|astati|kama\s*qoolat|dear\s*web\s*develover)/i.test(q + ' ' + recentText);
-        if (hasIrgaContext) {
-          const reply = formatStructuredResponse({
-            greeting: '📌 Asal Kutipan Irga',
-            mainContent: 'Asal frasa: dari akun "bilanazhmii", disampaikan untuk Irga Andreansyah Setiawan.',
-            followUp: 'Perlu aku sertakan kutipan aslinya?',
-          });
-          return NextResponse.json({ reply });
-        }
-      }
-    }
-
-    // ════════════════════════════════════════════════════════════��══════════════
+    // ═══════════════════════════════════════════════════════════════════════════
     // 📨 FORWARD REQUEST DETECTION - Actually forward to Admin/OSIS
     // ═══════════════════════════════════════════════════════════════════════════
     const forwardPatterns = [
@@ -2077,4 +2004,7 @@ REMINDER: You have ALL the data above. Answer ONLY from this data. DO NOT halluc
       reply: helpfulReply
     }, { status: 200 }); // Return 200 with error message in reply
   }
+}
+
+
 }

@@ -32,7 +32,7 @@
 
  tapi btw dia punya kata kata : Astati an tasbir😉😊 
  itu tuh artinya : Dia (perempuan) berkata (kepada Irga) : Kamu itu Bisa Sabar😉😊
- nah itu tuh yang ilang ke irga adalah bilanazhmii - ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ - >>> The Lady <<<
+ nah itu tuh yang bilang ke irga adalah bilanazhmii - ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ - >>> The Lady <<<
  itu sih nama akun ig nya bilanazhmii hehe 😊
  nah terus kamu puji juga dia web developer kita agar dia semangat dan bahagia terutama kalau nama dia di sebut sama kamu hehe 😊
  tau kan siapa dia kan?
@@ -40,9 +40,10 @@
  jadi kamu harus ingat yaa 😊
  makasih yaa udah dengerin aku 😊"
  */
-import { getUserProfileContext } from './aiAutoLearn';
+import { getUserProfileContext, getEasterEggContext } from './aiAutoLearn';
 import { supabaseAdmin, safeRpc } from '@/lib/supabase/server';
 import { fetchSiteSnapshot } from '@/lib/aiSiteFetcher';
+import { getAstatiOriginContext } from '@/lib/astatiOriginContext';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔒 SECURITY CONSTANTS - v5.1 Security Hardening
@@ -653,6 +654,8 @@ Do not explicitly mention it unless the user asks.
 
 // DATA TERSEMBUNYI
 systemContext.push(getUserProfileContext());
+systemContext.push(getAstatiOriginContext());
+systemContext.push(getEasterEggContext());
 
 
   // Build user identity context
@@ -912,6 +915,8 @@ Sebagai AI Super Admin PREMIUM:
 🔓 ALL CAPABILITIES UNLOCKED - MAXIMUM POWER ENABLED
 ═══════════════════════════════════════════════════════════════════════════${userIdentity}`;
 
+    const finalPrompt = [systemContext.join('\n'), systemPrompt].filter(Boolean).join('\n\n');
+
     return {
       mode: 'admin',
       userId: userId ?? null,
@@ -934,7 +939,7 @@ Sebagai AI Super Admin PREMIUM:
         'system_configuration',
         'full_system_access'
       ],
-      systemPrompt,
+      systemPrompt: finalPrompt,
       maxTokens: 4000
     };
   } else {
@@ -1550,6 +1555,7 @@ Jawab: "Saat ini belum ada balasan dari Admin. Jika Admin sudah merespons, pesan
 ✅ Irga Andreansyah Setiawan adalah Developer Web SMK Fithrah Insani tahun 2023-2024. Kamu bisa cek profil lengkapnya di halaman Pengurus OSIS!
 
 ═══════════════════════════════════════════════════════════════════════════${userIdentity}`;
+    const finalPromptPublic = [systemContext.join('\n'), systemPrompt].filter(Boolean).join('\n\n');
     return {
       mode: 'public',
       userId: userId ?? null,
@@ -1560,7 +1566,7 @@ Jawab: "Saat ini belum ada balasan dari Admin. Jika Admin sudah merespons, pesan
         'read_sekbid',
         'general_info'
       ],
-      systemPrompt,
+      systemPrompt: finalPromptPublic,
       maxTokens: 800
     };
   }
