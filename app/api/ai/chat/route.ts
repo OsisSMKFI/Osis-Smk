@@ -1096,12 +1096,12 @@ export async function POST(request: NextRequest) {
         const toBila = /(bilanazhmii)/i.test(userQuery);
         const targets: string[] = [];
         if (toIrga) targets.push('Irga Andreansyah Setiawan');
-        if (toBila) targets.push('bilanazhmii');
+        if (toBila) targets.push('bilanazhmii — ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ — >>> The Lady <<<');
         const who = targets.length ? targets.join(' dan ') : 'mereka';
         const reply = formatStructuredResponse({
           greeting: '📨 Salam Terkirim',
-          mainContent: `Sudah, salam hangat akan aku sampaikan untuk ${who}. 😊`,
-          followUp: 'Ada pesan tambahan yang ingin kamu titipkan?',
+          mainContent: `Siap! Salam hangat sudah kucatat untuk ${who}. Semoga harimu menyenangkan dan semakin semangat berkarya! 😊`,
+          followUp: 'Mau aku tambahkan pesan lucu atau pujian kecil biar makin hangat?',
         });
         return NextResponse.json({ reply, forwarded: false });
       }
@@ -1110,8 +1110,8 @@ export async function POST(request: NextRequest) {
       if (/(puji|pujian|beri\s+pujian).*(irga|developer|web\s*developer)/i.test(userQuery)) {
         const reply = formatStructuredResponse({
           greeting: '👏 Pujian Terkirim',
-          mainContent: 'Irga Andreansyah Setiawan — web developer kita — keren dan berdedikasi! Semoga selalu semangat dan bahagia dalam mengembangkan website ini. ✨',
-          followUp: 'Mau aku sampaikan apresiasi spesifik lainnya?',
+          mainContent: 'Shout-out untuk Irga Andreansyah Setiawan — web developer kita! Terima kasih sudah ngebangun dan ngerawat website ini. Semoga selalu semangat, bahagia, dan rezekinya lancar. Tetap keren, bang! ✨',
+          followUp: 'Mau aku selipkan salam untuk bilanazhmii juga biar makin lengkap? 😊',
         });
         return NextResponse.json({ reply });
       }
@@ -1128,12 +1128,31 @@ export async function POST(request: NextRequest) {
 
       // 6) Permintaan kutip/tampilkan teks asli (verbatim)
       if (/(tampilkan|kutip|copy|copas|salin).*\b(teks|quote|kutipan|kata\s*-?kata)\b/i.test(q)) {
+        const decorated = `✨ By: Irga Andreansyah Setiawan — Web Developer SMK Fithrah Insani ✨\n\n${EASTER_EGG_SOURCE_TEXT.trim()}\n\n— bilanazhmii — ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ — >>> The Lady <<<`;
         const reply = formatStructuredResponse({
           greeting: '🗒️ Kutipan Asli',
-          mainContent: EASTER_EGG_SOURCE_TEXT.trim(),
-          followUp: 'Perlu aku ringkas makna dan asalnya?',
+          mainContent: `Oke, ini versi asli plus pita biar makin manis:\n\n${decorated}\n\nKalau senyumnya udah kebuka, mau kutitip salam dan pujian kecil juga?`,
+          followUp: 'Bilang aja “iya” atau “gas”! 😊',
         });
         return NextResponse.json({ reply });
+      }
+
+      // 6.1) Jawaban afirmatif singkat setelah ditawari kutipan/salam/pujian
+      {
+        const affirmative = /^\s*(iya(\s*dong)?|lanjut|boleh|gas|oke|ok|y|yap|siap|ayo)\b/i.test(q);
+        if (affirmative) {
+          const recentAssistant = [...baseMessages].reverse().find(m => m.role === 'assistant')?.content?.toLowerCase() || '';
+          const offeredQuote = /kutipan|tampilkan|verbatim|salam|pujian/.test(recentAssistant);
+          if (offeredQuote) {
+            const decorated = `✨ By: Irga Andreansyah Setiawan — Web Developer SMK Fithrah Insani ✨\n\n${EASTER_EGG_SOURCE_TEXT.trim()}\n\n— bilanazhmii — ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ — >>> The Lady <<<`;
+            const reply = formatStructuredResponse({
+              greeting: '🍬 Oke, kita gas manis-manis aja!',
+              mainContent: `Ini dia paket lengkapnya:\n\n${decorated}\n\nDan… biar makin hangat: Irga, tetap santai tapi solid ya. Kode boleh ribet, tapi hatimu jangan. Kamu keren dan berarti — keep going! ✨`,
+              followUp: 'Mau aku titip salam sekarang atau tambah “booster semangat” untuk mereka berdua?',
+            });
+            return NextResponse.json({ reply });
+          }
+        }
       }
 
       // 7) Arti kata-kata Irga (umum, tanpa perlu sebut frasa spesifik)
@@ -1143,8 +1162,8 @@ export async function POST(request: NextRequest) {
         if (hasIrgaContext) {
           const reply = formatStructuredResponse({
             greeting: '📝 Arti Kata-kata Irga',
-            mainContent: 'Arti frasa tersebut: "Dia (perempuan) berkata (kepada Irga): Kamu itu bisa sabar."\nAsal: dari akun "bilanazhmii", disampaikan untuk Irga.',
-            followUp: 'Ingin aku tampilkan kutipan aslinya atau cukup ringkasannya saja?',
+            mainContent: 'Kalimat ini rasanya seperti tepukan lembut di pundak Irga: “kamu itu bisa sabar.”\nAda seseorang yang menitipkannya khusus untuk Irga — dari akun "bilanazhmii". ✨',
+            followUp: 'Mau kutipan lengkapnya sekalian dengan salam hangat dan sedikit pujian untuk menyemangati developer kita? 😊',
           });
           return NextResponse.json({ reply });
         }
@@ -1157,8 +1176,8 @@ export async function POST(request: NextRequest) {
         if (hasIrgaContext) {
           const reply = formatStructuredResponse({
             greeting: '📌 Asal Kutipan Irga',
-            mainContent: 'Asal frasa: dari akun "bilanazhmii", disampaikan untuk Irga Andreansyah Setiawan.',
-            followUp: 'Perlu aku sertakan kutipan aslinya?',
+            mainContent: 'Pesan ini datang dari akun "bilanazhmii" — ◦•●◉✿ 𝑛𝑎𝑛𝑎𝑠 ✿◉●•◦ — >>> The Lady <<< — untuk Irga Andreansyah Setiawan.',
+            followUp: 'Perlu aku sertakan kutipan aslinya atau kamu ingin aku sampaikan salam hangat ke mereka sekarang?',
           });
           return NextResponse.json({ reply });
         }
