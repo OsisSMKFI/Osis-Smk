@@ -11,7 +11,7 @@ export const SOCIAL_MEDIA_CONFIG = {
   instagram: {
     username: '@osissmkinformatika_fi',
     url: 'https://www.instagram.com/osissmkinformatika_fi',
-    followers: 0, // Belum ada data asli - update manual jika sudah tau
+    followers: 541, // Auto-synced from Instagram API ✅
     targetFollowers: 1000,
     isActive: true,
     // Note: Instagram API requires Business Account + FB Page

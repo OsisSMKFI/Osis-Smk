@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchInstagramPosts, formatInstagramPost } from '../api/instagram';
+import { fetchInstagramPosts, formatInstagramPost, fetchInstagramStats } from '../api/instagram';
 import { fetchYouTubeVideos, formatYouTubeVideo } from '../api/youtube';
 
 // Type imports only - no sample data
@@ -19,6 +19,7 @@ export function useSocialMediaData() {
   const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([]);
   const [spotifyContent] = useState<SpotifyContent[]>([]); // Empty - no account yet
   const [tiktokVideos] = useState<TikTokVideo[]>([]); // Empty - no account yet
+  const [instagramStats, setInstagramStats] = useState({ followers: 0, following: 0, posts: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +59,10 @@ export function useSocialMediaData() {
               const formatted = igPosts.map((post, index) => formatInstagramPost(post, index));
               setInstagramPosts(formatted);
             }
+            
+            // Fetch Instagram stats (followers, following, posts)
+            const igStats = await fetchInstagramStats();
+            setInstagramStats(igStats);
           } catch (err) {
             console.error('Instagram fetch error:', err);
           }
@@ -99,6 +104,7 @@ export function useSocialMediaData() {
     youtubeVideos,
     spotifyContent,
     tiktokVideos,
+    instagramStats,
     loading,
     error,
     apisConfigured,

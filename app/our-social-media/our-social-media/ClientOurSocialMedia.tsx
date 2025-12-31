@@ -6,7 +6,9 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
 import { fetchSocialMediaConfig, type SocialMediaFullConfig } from '@/lib/socialMediaConfig.client';
 import { useSocialMediaData } from '@/lib/hooks/useSocialMediaData';
+import { useSocialMediaAutoSync } from '@/lib/hooks/useSocialMediaAutoSync';
 import { useYouTubeData } from '@/lib/hooks/useYouTubeData';
+import { SocialMediaSyncMonitor } from '@/components/SocialMediaSyncMonitor';
 import Image from 'next/image';
 import { useSoundEffects as useGlobalSoundEffects } from '@/contexts/SoundContext';
 
@@ -523,7 +525,10 @@ const ContentPreviewCard = ({
 const ClientOurSocialMediaPage: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'all' | 'instagram' | 'youtube' | 'tiktok' | 'spotify'>('all');
-  const { instagramPosts, youtubeVideos: fallbackYoutubeVideos, tiktokVideos, loading } = useSocialMediaData();
+  const { instagramPosts, youtubeVideos: fallbackYoutubeVideos, tiktokVideos, instagramStats, loading } = useSocialMediaData();
+  
+  // Auto-sync monitoring
+  const { syncStatus, isAutoSyncEnabled, syncAll } = useSocialMediaAutoSync();
   
   // YouTube Auto-Sync: Real-time data from YouTube API
   const { 
@@ -577,6 +582,9 @@ const ClientOurSocialMediaPage: React.FC = () => {
   // YouTube Auto-Sync: Use real-time subscriber count from API if available
   const youtubeSubscriberCount = youtubeChannel?.subscriberCount ?? config.youtube.subscribers;
   
+  // Instagram Auto-Sync: Use real-time follower count from API if available
+  const instagramFollowerCount = instagramStats?.followers ?? config.instagram.followers;
+  
   const socialPlatforms = useMemo(() => [
     {
       platform: 'Instagram',
@@ -584,9 +592,11 @@ const ClientOurSocialMediaPage: React.FC = () => {
       description: t('socialMediaPage.instagramDesc') || 'Follow our journey through photos and stories',
       url: config.instagram.url,
       gradient: 'from-purple-600 via-pink-600 to-orange-500',
-      followers: config.instagram.followers,
+      followers: instagramFollowerCount, // Auto-synced from Instagram API
       username: config.instagram.username,
-      isActive: config.instagram.isActive
+      isActive: config.instagram.isActive,
+      autoSync: true, // Indicates this platform uses auto-sync
+      lastUpdated: new Date().toISOString() // Instagram stats are fetched in real-time
     },
     {
       platform: 'YouTube',
@@ -620,7 +630,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
       username: config.spotify.username,
       isActive: config.spotify.isActive
     }
-  ].filter(p => p.isActive), [config, t, youtubeSubscriberCount, youtubeChannel, youtubeLastUpdated]); // Only show active platforms
+  ].filter(p => p.isActive), [config, t, youtubeSubscriberCount, youtubeChannel, youtubeLastUpdated, instagramFollowerCount]); // Only show active platforms
 
   const allContent = useMemo(() => {
     const items: any[] = [];
@@ -669,12 +679,12 @@ const ClientOurSocialMediaPage: React.FC = () => {
   const totalFollowers = useMemo(() => {
     // Only count active platforms
     let total = 0;
-    if (config.instagram.isActive) total += config.instagram.followers;
+    if (config.instagram.isActive) total += instagramFollowerCount;
     if (config.youtube.isActive) total += youtubeSubscriberCount;
     if (config.tiktok.isActive) total += config.tiktok.followers;
     if (config.spotify.isActive) total += config.spotify.followers;
     return total;
-  }, [config, youtubeSubscriberCount]);
+  }, [config, youtubeSubscriberCount, instagramFollowerCount]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
@@ -1095,6 +1105,9 @@ const ClientOurSocialMediaPage: React.FC = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* Sync Monitor - Development Only */}
+      <SocialMediaSyncMonitor />
     </div>
   );
 };
