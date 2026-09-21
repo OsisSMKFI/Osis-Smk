@@ -12,6 +12,8 @@ out/
 backups/
 *.bak
 *.ps1
+*.sql
+supabase/migrations/
 
 # TypeScript build info (causes Railway cache issues)
 tsconfig.tsbuildinfo
