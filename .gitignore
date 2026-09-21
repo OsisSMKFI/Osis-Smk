@@ -8,6 +8,10 @@ out/
 # Production
 /build
 /dist
+**/dist/
+backups/
+*.bak
+*.ps1
 
 # TypeScript build info (causes Railway cache issues)
 tsconfig.tsbuildinfo
