@@ -56,8 +56,8 @@ export default function RegisterPageClient() {
       if (!res.ok) {
         setStatus(`❌ ${data.error || 'Registrasi gagal.'}`);
       } else {
-        // Redirect to waiting verification page
-        router.push('/waiting-verification');
+        // Redirect to waiting verification page (keep email for resend UI)
+        router.push(`/waiting-verification?email=${encodeURIComponent(email)}`);
       }
     } catch (err: any) {
       setStatus('❌ Terjadi kesalahan jaringan.');

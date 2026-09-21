@@ -13,13 +13,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { useTranslation } from '@/hooks/useTranslation';
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from '@clerk/nextjs';
 
 import ClientOnly from './ClientOnly';
 import LanguageToggle from './LanguageToggle';
@@ -210,33 +203,23 @@ const Navbar: React.FC = () => {
 
           {/* Admin/Login Buttons */}
           <div className="flex items-center gap-3 ml-2">
-            {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && (
-              <div className="flex items-center gap-2">
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button type="button" className="px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300/60 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition">
-                      Masuk
-                    </button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <button type="button" className="px-3 py-2 rounded-lg text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 transition">
-                      Daftar
-                    </button>
-                  </SignUpButton>
-                </SignedOut>
-                <SignedIn>
-                  <UserButton afterSignOutUrl="/" />
-                </SignedIn>
-              </div>
-            )}
             {!session ? (
-              <Link
-                href="/admin/login"
-                className="px-3 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow hover:shadow-md hover:opacity-95 transition"
-                aria-label="Login"
-              >
-                LOGIN
-              </Link>
+              <>
+                <Link
+                  href="/register"
+                  className="px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300/60 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
+                  aria-label="Daftar"
+                >
+                  Daftar
+                </Link>
+                <Link
+                  href="/admin/login"
+                  className="px-3 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow hover:shadow-md hover:opacity-95 transition"
+                  aria-label="Login"
+                >
+                  LOGIN
+                </Link>
+              </>
             ) : (
               <>
                 <Link

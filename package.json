@@ -25,7 +25,6 @@
     "@ai-sdk/openai": "^2.0.86",
     "@anthropic-ai/sdk": "^0.71.0",
     "@auth/core": "^0.41.0",
-    "@clerk/nextjs": "^6.36.0",
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-brands-svg-icons": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",

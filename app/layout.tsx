@@ -12,7 +12,6 @@ import {
   parseGlobalBackground,
 } from '@/lib/adminSettings';
 import { auth } from '@/lib/auth';
-import { ClerkProvider } from '@clerk/nextjs';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -238,9 +237,7 @@ export default async function RootLayout({
                     }} 
                     suppressHydrationWarning
                 >
-                    {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
-                        <ClerkProvider>{appContent}</ClerkProvider>
-                    ) : appContent}
+                    {appContent}
                 </div>
             </body>
         </html>

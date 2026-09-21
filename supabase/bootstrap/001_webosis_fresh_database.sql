@@ -35,6 +35,12 @@ create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
   email text not null unique,
   name text not null,
+  nickname text,
+  unit_sekolah text,
+  kelas text,
+  nik text,
+  nisn text,
+  instagram_username text,
   password_hash text,
   role text not null default 'siswa',
   requested_role text,
@@ -42,12 +48,14 @@ create table if not exists public.users (
   photo_url text,
   email_verified boolean not null default false,
   approved boolean not null default false,
+  rejected boolean not null default false,
+  rejection_reason text,
   verification_token text,
   verification_expires timestamptz,
   preferences jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint users_role_check check (role in ('super_admin','admin','moderator','osis','siswa','guru','other','editor','viewer'))
+  constraint users_role_check check (role in ('super_admin','admin','moderator','osis','siswa','guru','other','editor','viewer','pending'))
 );
 
 create table if not exists public.profiles (

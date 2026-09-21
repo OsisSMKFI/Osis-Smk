@@ -89,15 +89,19 @@ export default function LocationServiceProvider({ children }: { children: React.
   };
 
   useEffect(() => {
+    if (permission === 'denied') return;
     getOnce();
-    const onFocus = () => refresh();
+    const onFocus = () => {
+      refresh();
+    };
     window.addEventListener("focus", onFocus);
     return () => {
       window.removeEventListener("focus", onFocus);
     };
-  }, []);
+  }, [permission]);
 
   useEffect(() => {
+    if (permission === 'denied') return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       getOnce();
