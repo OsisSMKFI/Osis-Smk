@@ -66,15 +66,16 @@ export default function AdminLayoutClient({
 }) {
   const pathname = usePathname();
   const isLogin = pathname?.startsWith('/admin/login');
-  
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" suppressHydrationWarning>
       {/* Sidebar */}
-      {!isLogin && session?.user && <AdminSidebar />}
+      {!isLogin && session?.user && <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />}
 
       {/* Main Content - z-index lower than sidebar */}
       <div 
-        className={isLogin || !session?.user ? '' : 'lg:pl-72 transition-all duration-300'} 
+        className={isLogin || !session?.user ? '' : `${collapsed ? 'lg:pl-20' : 'lg:pl-72'} transition-all duration-300`} 
         style={{ position: 'relative', zIndex: 1 }}
         suppressHydrationWarning
       >

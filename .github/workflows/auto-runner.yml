@@ -15,8 +15,17 @@ jobs:
           ADMIN_OPS_TOKEN: ${{ secrets.ADMIN_OPS_TOKEN }} # lint-ignore: secrets context valid in GitHub Actions
         run: |
           if [ -z "$APP_URL" ] || [ -z "$ADMIN_OPS_TOKEN" ]; then
-            echo "APP_URL or ADMIN_OPS_TOKEN not set in secrets";
-            exit 1;
+            echo "::warning::APP_URL or ADMIN_OPS_TOKEN not set in repository secrets - skipping auto-runner call."
+            exit 0
           fi
           echo "Calling $APP_URL/api/admin/auto_runner"
-          curl -s -X POST "$APP_URL/api/admin/auto_runner" -H "x-admin-ops-token: $ADMIN_OPS_TOKEN" -H 'Content-Type: application/json' | jq || true
+          code=$(curl -sS -o /tmp/auto_runner_body.json -w '%{http_code}' -X POST "$APP_URL/api/admin/auto_runner" \
+            -H "x-admin-ops-token: $ADMIN_OPS_TOKEN" \
+            -H 'Content-Type: application/json' || echo "000")
+          cat /tmp/auto_runner_body.json 2>/dev/null || true
+          echo
+          echo "HTTP $code"
+          case "$code" in
+            2??) exit 0 ;;
+            *) exit 1 ;;
+          esac

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -37,10 +37,45 @@ interface MenuItem {
   badge?: number;
 }
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  collapsed: boolean;
+  setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => {
+      if (mq.matches) setMobileOpen(false);
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   const menuItems: MenuItem[] = [
     { name: 'Dashboard', icon: <FaHome />, href: '/admin' },
@@ -80,7 +115,7 @@ export default function AdminSidebar() {
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
         className="lg:hidden fixed top-4 left-4 p-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 rounded-xl shadow-lg hover:shadow-xl transition-all"
-        style={{ zIndex: 10000, pointerEvents: 'auto' }}
+        style={{ zIndex: 100, pointerEvents: 'auto' }}
         aria-label={mobileOpen ? "Close menu" : "Open menu"}
       >
         {mobileOpen ? (
@@ -96,7 +131,7 @@ export default function AdminSidebar() {
       {mobileOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm"
-          style={{ zIndex: 9997 }}
+          style={{ zIndex: 90 }}
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -104,7 +139,7 @@ export default function AdminSidebar() {
       {/* Sidebar */}
       <aside
         className={[
-          'fixed top-0 left-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900',
+          'fixed top-0 left-0 h-dvh bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900',
           'text-white shadow-2xl transition-transform duration-300 ease-in-out',
           collapsed ? 'w-20' : 'w-72',
           // Desktop: always visible  
@@ -115,7 +150,7 @@ export default function AdminSidebar() {
           'max-w-[85vw] lg:max-w-none'
         ].join(' ')}
         style={{ 
-          zIndex: 9998,
+          zIndex: 95,
           isolation: 'isolate'
         }}
         suppressHydrationWarning
@@ -136,17 +171,30 @@ export default function AdminSidebar() {
             </div>
           )}
           
-          {/* Collapse Button - Desktop Only */}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex w-8 h-8 items-center justify-center bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all text-slate-900"
-          >
-            {collapsed ? <FaChevronRight className="text-sm" /> : <FaChevronLeft className="text-sm" />}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Close Button - Mobile Only */}
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="lg:hidden w-8 h-8 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all text-slate-900"
+              aria-label="Close menu"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Collapse Button - Desktop Only */}
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="hidden lg:flex w-8 h-8 items-center justify-center bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all text-slate-900"
+            >
+              {collapsed ? <FaChevronRight className="text-sm" /> : <FaChevronLeft className="text-sm" />}
+            </button>
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100vh-160px)] custom-scrollbar">
+        <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100dvh-160px)] custom-scrollbar">
           {/* Back to Website Button */}
           <Link
             href="/dashboard"

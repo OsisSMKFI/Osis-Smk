@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import { FaBell, FaUser, FaChevronDown, FaMoon, FaSun, FaSearch, FaReply, FaCheck, FaExternalLinkAlt, FaExclamationTriangle } from 'react-icons/fa';
@@ -46,8 +46,11 @@ export default function AdminHeader() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
 
+  const notifFetchRef = useRef(false);
+
   const fetchNotifications = useCallback(async () => {
-    if (loadingNotifs) return;
+    if (notifFetchRef.current) return;
+    notifFetchRef.current = true;
     setLoadingNotifs(true);
     try {
       const res = await apiFetch('/api/admin/notifications', { credentials: 'include' } as any);
@@ -61,15 +64,16 @@ export default function AdminHeader() {
     } catch (e) {
       // ignore
     } finally {
+      notifFetchRef.current = false;
       setLoadingNotifs(false);
     }
-  }, [loadingNotifs]);
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
     const iv = setInterval(fetchNotifications, 30000); // Poll every 30s
     return () => clearInterval(iv);
-  }, []);
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.read && n.status !== 'reviewed').length;
 
@@ -401,7 +405,7 @@ export default function AdminHeader() {
 
     {/* Reply Modal */}
     {showReplyModal && selectedNotif && (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
           {/* Modal Header */}
           <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
