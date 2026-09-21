@@ -114,7 +114,7 @@ async function configureSettings() {
 
     if (fetchError && fetchError.code === '42P01') {
       console.error('❌ Error: admin_settings table does not exist');
-      console.error('Run database migration first: node scripts/run-migration.js');
+      console.error('Run supabase/bootstrap/001_webosis_fresh_database.sql in Supabase SQL Editor first.');
       process.exit(1);
     }
 

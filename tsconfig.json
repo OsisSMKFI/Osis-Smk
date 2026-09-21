@@ -39,8 +39,6 @@
     "node_modules",
     "backups",
     "dev-server",
-    ".next/types",
-    "app/admin/polls/page_old_backup.tsx",
-    "app/admin/announcements/page_old_backup.tsx"
+    ".next/types"
   ]
 }

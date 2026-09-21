@@ -53,3 +53,13 @@ coverage/
 # yarn.lock
 .vercel
 .env*.local
+
+node_modules/
+*.log
+*.tmp
+*.jpg
+*.png
+*.ps1
+*.tsbuildinfo
+.env*
+

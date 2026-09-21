@@ -1,22 +1,28 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import "./globals-mobile.css";
+import './globals.css';
+import './globals-mobile.css';
 import '@/lib/fontawesome';
-import Providers from "../components/Providers";
-import LocationServiceProvider from "@/components/LocationServiceProvider";
-import ClientRole from "../components/ClientRole";
-import BackgroundSync from "../components/BackgroundSync";
-import AIMonitorClient from "../components/AIMonitorClient";
-import LocationPermissionPrompt from "../components/LocationPermissionPrompt";
-import ScrollToTop from "../components/ScrollToTop";
-import DynamicStyles from "../components/DynamicStyles";
-import GlobalDesignLoader from "../components/GlobalDesignLoader";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/next";
-import { auth } from "@/lib/auth";
-import { getAdminSettings, parseGlobalBackground } from '@/lib/adminSettings';
+
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
+
+import LocationServiceProvider from '@/components/LocationServiceProvider';
+import {
+  getAdminSettings,
+  parseGlobalBackground,
+} from '@/lib/adminSettings';
+import { auth } from '@/lib/auth';
+import { ClerkProvider } from '@clerk/nextjs';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+
+import AIMonitorClient from '../components/AIMonitorClient';
+import BackgroundSync from '../components/BackgroundSync';
+import ClientRole from '../components/ClientRole';
+import DynamicStyles from '../components/DynamicStyles';
+import GlobalDesignLoader from '../components/GlobalDesignLoader';
+import Providers from '../components/Providers';
+import ScrollToTop from '../components/ScrollToTop';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -122,6 +128,22 @@ export default async function RootLayout({
         return false;
     })();
 
+    const appContent = (
+        <LocationServiceProvider>
+        <Providers>
+            <ScrollToTop />
+            <BackgroundSync />
+            <AIMonitorClient />
+            <DynamicStyles />
+            <GlobalDesignLoader />
+            {children}
+            {!chatDisabled && <ClientRole role={role as any} />}
+            <SpeedInsights />
+            <Analytics />
+        </Providers>
+        </LocationServiceProvider>
+    );
+
     return (
         <html lang="id" className="scroll-smooth h-full" data-scroll-behavior="smooth" suppressHydrationWarning>
             <head>
@@ -216,22 +238,9 @@ export default async function RootLayout({
                     }} 
                     suppressHydrationWarning
                 >
-                    <LocationServiceProvider>
-                    <Providers>
-                        <ScrollToTop />
-                        <BackgroundSync />
-                        <AIMonitorClient />
-                        <DynamicStyles />
-                        <GlobalDesignLoader />
-                        {children}
-                        {!chatDisabled && <ClientRole role={role as any} />}
-                        <SpeedInsights />
-                        <Analytics />
-                        {/* Location Permission Prompt - DISABLED in layout for Lighthouse best practices
-                            Location permission should only be requested when user takes action that requires it
-                            (e.g., clicking attendance button). Import LocationPermissionPrompt in specific pages instead. */}
-                    </Providers>
-                    </LocationServiceProvider>
+                    {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+                        <ClerkProvider>{appContent}</ClerkProvider>
+                    ) : appContent}
                 </div>
             </body>
         </html>

@@ -1,12 +1,17 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+
 import { auth } from '@/lib/auth';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/__clerk/:path*',
+  ],
 };
 
-export default async function middleware(request: NextRequest) {
+const applicationMiddleware = async (_clerkAuth: unknown, request: NextRequest) => {
   const pathname = request.nextUrl.pathname;
 
   const requestHeaders = new Headers(request.headers);
@@ -62,4 +67,8 @@ export default async function middleware(request: NextRequest) {
   }
 
   return NextResponse.next({ request: { headers: requestHeaders } });
-}
+};
+
+export default process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  ? clerkMiddleware(applicationMiddleware)
+  : applicationMiddleware;
