@@ -10,15 +10,8 @@ import { initAIMonitoring } from '@/lib/ai-monitor';
  */
 export default function AIMonitorClient() {
   useEffect(() => {
-    // Initialize AI monitoring on mount
     initAIMonitoring();
-    
-    console.log('🤖 AI Monitoring System Active');
-    
-    // Cleanup on unmount
-    return () => {
-      console.log('🤖 AI Monitoring System Stopped');
-    };
+    return () => {};
   }, []);
 
   return null; // This component renders nothing

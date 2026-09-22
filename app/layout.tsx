@@ -148,9 +148,7 @@ export default async function RootLayout({
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <meta name="theme-color" content="#ffffff" />
-                {/* Preload optimized logo for LCP */}
-                <link rel="preload" as="image" type="image/webp" href="/images/logo-64.webp" />
-                {/* Font Awesome CDN for icon classes (fab fa-*, fas fa-*, etc.) */}
+                {/* Font Awesome CDN for icon classes */}
                 <link 
                     rel="stylesheet" 
                     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" 

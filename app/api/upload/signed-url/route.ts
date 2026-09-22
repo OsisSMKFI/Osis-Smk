@@ -6,28 +6,18 @@ import { ensurePublicBucket } from '@/lib/supabase/ensureBucket';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Roles that can upload files
 const UPLOAD_ALLOWED_ROLES = ['super_admin', 'admin', 'osis', 'moderator', 'editor'];
 
-/**
- * Get a signed upload URL for direct client-to-Supabase upload
- * This bypasses the 4.5MB Vercel request body limit
- */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check role permission
     const userRole = ((session.user as any).role || '').toLowerCase();
     if (!UPLOAD_ALLOWED_ROLES.includes(userRole)) {
-      return NextResponse.json({ 
-        error: 'Forbidden - Role tidak memiliki izin upload',
-        role: userRole
-      }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', role: userRole }, { status: 403 });
     }
 
     const body = await request.json();
@@ -41,35 +31,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    // Create Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Try to ensure bucket, but don't hard-fail — bucket may exist even if listing/verification fails
     const bucketReady = await ensurePublicBucket(supabase as any, bucket);
     if (!bucketReady) {
-      return NextResponse.json({ error: `Bucket '${bucket}' not available` }, { status: 500 });
+      console.warn(`[signed-url] ensurePublicBucket returned false for '${bucket}', attempting upload anyway`);
     }
 
-    // Generate file path
     const timestamp = Date.now();
     const cleanFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = folder 
+    const filePath = folder
       ? `${folder}/${timestamp}_${cleanFileName}`
       : `${timestamp}_${cleanFileName}`;
 
-    // Create signed upload URL (valid for 1 hour)
+    // Try to create signed upload URL — may work even if ensureBucket failed
     const { data, error } = await supabase.storage
       .from(bucket)
       .createSignedUploadUrl(filePath);
 
     if (error) {
       console.error('[signed-url] Error creating signed URL:', error);
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Failed to create upload URL',
         details: error.message
       }, { status: 500 });
     }
 
-    // Also get the public URL for after upload
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
       .getPublicUrl(filePath);
@@ -79,15 +67,15 @@ export async function POST(request: NextRequest) {
       signedUrl: data.signedUrl,
       token: data.token,
       path: filePath,
-      publicUrl: publicUrl,
-      bucket: bucket,
-      expiresIn: 3600, // 1 hour
+      publicUrl,
+      bucket,
+      expiresIn: 3600,
     });
 
   } catch (error: any) {
     console.error('[signed-url] Error:', error);
-    return NextResponse.json({ 
-      error: error.message || 'Internal server error' 
+    return NextResponse.json({
+      error: error.message || 'Internal server error'
     }, { status: 500 });
   }
 }

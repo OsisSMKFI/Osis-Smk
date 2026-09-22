@@ -29,7 +29,6 @@ export async function directUploadToSupabase(
 
   try {
     // Step 1: Get signed upload URL from our API
-    console.log('[directUpload] Getting signed URL...');
     const signedUrlRes = await fetch('/api/upload/signed-url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -48,7 +47,6 @@ export async function directUploadToSupabase(
     }
 
     const { signedUrl, path, publicUrl } = await signedUrlRes.json();
-    console.log('[directUpload] Got signed URL for path:', path);
 
     // Step 2: Upload directly to Supabase using signed URL
     return new Promise((resolve, reject) => {
@@ -67,7 +65,6 @@ export async function directUploadToSupabase(
 
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          console.log('[directUpload] Upload success!');
           resolve({
             success: true,
             url: publicUrl,
@@ -75,13 +72,11 @@ export async function directUploadToSupabase(
             path,
           });
         } else {
-          console.error('[directUpload] Upload failed:', xhr.status, xhr.responseText);
           reject(new Error(`Upload failed: ${xhr.status}`));
         }
       };
 
       xhr.onerror = () => {
-        console.error('[directUpload] XHR error');
         reject(new Error('Network error during upload'));
       };
 
@@ -89,7 +84,6 @@ export async function directUploadToSupabase(
     });
 
   } catch (error: any) {
-    console.error('[directUpload] Error:', error);
     return {
       success: false,
       url: '',
@@ -109,16 +103,20 @@ export async function smartUpload(
 ): Promise<DirectUploadResult> {
   const { bucket = 'gallery', folder = '', onProgress } = options;
   
-  // For files > 3MB, use direct upload to avoid Vercel limit
+  // For files > 3MB, try direct upload first (avoids Vercel 4.5MB limit)
   const DIRECT_UPLOAD_THRESHOLD = 3 * 1024 * 1024; // 3MB
   
   if (file.size > DIRECT_UPLOAD_THRESHOLD) {
-    console.log(`[smartUpload] File ${file.name} is ${(file.size / 1024 / 1024).toFixed(2)}MB, using direct upload`);
-    return directUploadToSupabase(file, options);
+    console.log(`[smartUpload] File ${file.name} is ${(file.size / 1024 / 1024).toFixed(2)}MB, trying direct upload`);
+    const result = await directUploadToSupabase(file, options);
+    if (result.success) return result;
+    // Fallback to API route if direct upload failed
+    console.warn('[smartUpload] Direct upload failed, falling back to API route:', result.error);
+  } else {
+    console.log(`[smartUpload] File ${file.name} is small, using API route`);
   }
   
-  // For smaller files, use regular API route (faster for small files)
-  console.log(`[smartUpload] File ${file.name} is small, using API route`);
+  // API route fallback (works for files up to ~100MB via Supabase SDK, or Vercel Blob fallback)
   
   const formData = new FormData();
   formData.append('file', file);

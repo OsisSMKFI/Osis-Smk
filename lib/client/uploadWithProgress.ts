@@ -13,13 +13,6 @@ export async function uploadWithProgressSmart(
   onProgress: (percent: number) => void
 ): Promise<UploadResult> {
   try {
-    console.log('[uploadWithProgressSmart] Starting smart upload:', {
-      fileName: file.name,
-      fileSize: file.size,
-      bucket,
-      folder
-    });
-
     const result = await smartUpload(file, {
       bucket,
       folder,
@@ -31,6 +24,7 @@ export async function uploadWithProgressSmart(
         status: 200,
         json: {
           success: true,
+          signedUrl: result.url,
           url: result.url,
           publicUrl: result.publicUrl,
           path: result.path,
@@ -46,7 +40,6 @@ export async function uploadWithProgressSmart(
       };
     }
   } catch (e: any) {
-    console.error('[uploadWithProgressSmart] Error:', e);
     return {
       status: 500,
       json: {
@@ -69,25 +62,8 @@ export function uploadWithProgress(
 ): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     try {
-      // Check if file is large, warn about potential issues
-      const file = formData.get('file') as File;
-      if (file && file.size > 3 * 1024 * 1024) {
-        console.warn('[uploadWithProgress] File is large, consider using uploadWithProgressSmart for better reliability');
-      }
-
-      console.log('[uploadWithProgress] Starting upload to:', url);
-      console.log('[uploadWithProgress] FormData entries:');
-      for (const [key, value] of formData.entries()) {
-        if (value instanceof File) {
-          console.log(`  ${key}: File(${value.name}, ${value.type}, ${value.size} bytes)`);
-        } else {
-          console.log(`  ${key}:`, value);
-        }
-      }
-
       const xhr = new XMLHttpRequest();
       xhr.open('POST', url, true);
-      // Include cookies for same-origin auth routes
       xhr.withCredentials = true;
 
       xhr.upload.onprogress = (event: ProgressEvent<EventTarget>) => {
@@ -99,15 +75,7 @@ export function uploadWithProgress(
 
       xhr.onreadystatechange = () => {
         if (xhr.readyState === 4) {
-          console.log('[uploadWithProgress] Response received:', {
-            status: xhr.status,
-            statusText: xhr.statusText,
-            responseText: xhr.responseText.substring(0, 500)
-          });
-          
-          // Handle 413 specifically
           if (xhr.status === 413) {
-            console.error('[uploadWithProgress] File too large for server (413)');
             resolve({
               status: 413,
               json: {
@@ -117,29 +85,17 @@ export function uploadWithProgress(
             });
             return;
           }
-          
+
           let parsed: any = null;
-          try { 
-            parsed = JSON.parse(xhr.responseText); 
-            console.log('[uploadWithProgress] Parsed response:', parsed);
-          } catch (e) {
-            console.error('[uploadWithProgress] Failed to parse response:', e);
-          }
+          try { parsed = JSON.parse(xhr.responseText); } catch {}
           resolve({ status: xhr.status, json: parsed });
         }
       };
 
-      xhr.onerror = () => {
-        console.error('[uploadWithProgress] XHR network error');
-        reject(new Error('Network error while uploading'));
-      };
-      
-      console.log('[uploadWithProgress] Sending request...');
+      xhr.onerror = () => reject(new Error('Network error while uploading'));
       xhr.send(formData);
     } catch (e) {
-      console.error('[uploadWithProgress] Exception:', e);
       reject(e);
     }
   });
 }
-
