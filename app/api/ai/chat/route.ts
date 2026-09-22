@@ -15,7 +15,7 @@ import { EASTER_EGG_SOURCE_TEXT } from '@/lib/aiAutoLearn';
 // ═══════════════════════════════════════════════════════════════════════════
 async function searchWithTavily(query: string, apiKey: string): Promise<string> {
   try {
-    // Search the website first for local data
+    // ONLY search the local OSIS website — never general web for school data
     const siteResponse = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -40,32 +40,7 @@ async function searchWithTavily(query: string, apiKey: string): Promise<string> 
       }
     }
     
-    // Also search the general web for broader context
-    const webResponse = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: apiKey,
-        query,
-        search_depth: 'basic',
-        max_results: 3,
-        include_answer: true,
-      }),
-    });
-    
-    let webContext = '';
-    if (webResponse.ok) {
-      const webData = await webResponse.json();
-      if (webData.answer) webContext += `Jawaban dari web: ${webData.answer}\n\n`;
-      if (webData.results?.length > 0) {
-        webContext += 'Sumber web:\n';
-        webData.results.forEach((r: any, i: number) => {
-          webContext += `${i + 1}. ${r.title || 'Untitled'}: ${r.content || ''}\n`;
-        });
-      }
-    }
-    
-    return [siteContext, webContext].filter(Boolean).join('\n');
+    return siteContext;
   } catch (err) {
     console.log('[Tavily] Search error:', err);
     return '';
@@ -706,7 +681,7 @@ async function callAnthropic(
 
 // In-memory cache for retrieval context (2 min TTL)
 let retrievalCache: { query: string; result: string; ts: number } | null = null;
-const RETRIEVAL_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const RETRIEVAL_CACHE_TTL = 30 * 1000; // 30 seconds for fresher data
 
 // Enhanced retriever with full member-sekbid mapping and structured data
 async function retrieveContext(query: string) {
@@ -2058,25 +2033,26 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
     // CRITICAL FIX: Inject knowledge directly into user message to force AI to read it
     // Some AI providers ignore system messages, so we prepend to user query
     const lastUserMessage = baseMessages[baseMessages.length - 1];
-    const enhancedUserQuery = `[CONTEXT - YOU MUST READ THIS FIRST]
+    const enhancedUserQuery = `[CONTEXT - DATABASE OSIS SMK INFORMATIKA FITRAH INSANI]
 ${completeKnowledge}
 
-[ADDITIONAL CONTEXT FOR THIS QUERY]
+[DATA SPESIFIK PERTANYAAN INI]
 ${specificContext}
 
-${webContext ? `[WEB SEARCH RESULTS - REAL-TIME DATA]\n${webContext}\n` : ''}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[USER QUESTION - ANSWER USING ONLY THE CONTEXT ABOVE]
+${webContext ? `[WEBSITE OSIS - HANYA DATA DARI OSISSMKFI.BIEZZ.MY.ID]\n${webContext}\n` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[PERTANYAAN USER - JAWAB HANYA BERDASARKAN DATABASE DI ATAS]
 ${lastUserMessage.content}
 
 ⚠️ ATURAN KETAT - WAJIB DIIKUTI:
-1. HANYA gunakan informasi dari CONTEXT di atas (termasuk WEB SEARCH RESULTS jika ada)
-2. JANGAN mengarang nama, sekbid, atau jabatan
-3. Jika nama tidak ada di database, katakan "tidak ditemukan di database"
-4. Sekbid HARUS sesuai dengan yang tercantum di database (Sekbid [ID])
-5. Jika ragu, sebutkan kemungkinan berdasarkan data yang ada
+1. JAWAB HANYA dari DATABASE OSIS di atas — ini adalah satu-satunya sumber data yang benar
+2. JANGAN gunakan data dari website/sekolah lain — semua data anggota, sekbid, berita HARUS dari database lokal
+3. JANGAN mengarang nama, sekbid, atau jabatan yang tidak ada di database
+4. Jika nama/anggota tidak ada di database, katakan "tidak ditemukan di database osis smk informatika fithrah insani"
+5. Sekbid, anggota, program kerja, berita HARUS sesuai dengan database lokal
 6. VALIDASI: Setiap nama yang disebutkan HARUS ada di daftar "ANGGOTA OSIS" di atas
-7. Untuk pertanyaan umum/berita/pengetahuan, gunakan WEB SEARCH RESULTS sebagai sumber
+7. Web search hanya untuk pertanyaan umum yang TIDAK berhubungan dengan data OSIS (contoh: cuaca, berita nasional, dll)
+8. UNTUK SEMUA PERTANYAAN TENTANG ANGGOTA, SEKBID, BERITA OSIS → GUNAKAN DATABASE LOKAL SAJA
 
 REMINDER: You have ALL the data above. Answer from this data. DO NOT hallucinate.`;
     

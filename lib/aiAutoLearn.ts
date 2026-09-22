@@ -37,10 +37,10 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { fetchSiteSnapshot } from '@/lib/aiSiteFetcher';
 
-// In-memory knowledge base (auto-refreshed every 3 minutes for fresher data)
+// In-memory knowledge base (auto-refreshed every 60 seconds for fresher data)
 let knowledgeBase: string | null = null;
 let lastUpdate: number = 0;
-const UPDATE_INTERVAL = 3 * 60 * 1000; // 3 minutes for more responsive updates
+const UPDATE_INTERVAL = 60 * 1000; // 60 seconds for responsive updates
 
 /**
  * Get formatted date strings for temporal awareness
