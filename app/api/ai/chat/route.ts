@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { auth } from '@/lib/auth';
 import { buildAIContext } from '@/lib/aiContext';
 import { handleAdminCommand } from '@/lib/adminChatCommands';
+
+export const runtime = 'nodejs';
 import { getConfig } from '@/lib/adminConfig';
 import { logActivity } from '@/lib/activity-logger';
 import { getAIGatewayStatus, chat as gatewayChat } from '@/lib/vercel/ai-gateway';
@@ -487,6 +489,11 @@ async function callAI(
 
   // No valid API key found
   console.error('[AI] ❌ No valid API key found. All providers unavailable.');
+  console.error('[AI] Debug - Keys found:', {
+    openai: openaiKey ? `${openaiKey.length} chars` : 'null',
+    gemini: geminiKey ? `${geminiKey.length} chars` : 'null',
+    anthropic: anthropicKey ? `${anthropicKey.length} chars` : 'null',
+  });
   return { 
     error: 'AI provider is not configured. Please set API keys in admin settings or configure Vercel AI Gateway.' 
   };
