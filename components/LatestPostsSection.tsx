@@ -39,10 +39,6 @@ export default function LatestPostsSection() {
   return (
     <AnimatedSection id="latest-posts">
       <section data-component="latest-posts" className="py-20 relative overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-yellow-400/5 to-amber-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-400/5 to-indigo-500/5 rounded-full blur-3xl" />
-
         <div className="container mx-auto px-6 relative z-10">
           {/* Header */}
           <div className="text-center mb-16">
@@ -50,9 +46,9 @@ export default function LatestPostsSection() {
               {t('posts.title')} <span className="text-yellow-600 dark:text-yellow-400">{t('posts.latest')}</span>
             </h2>
             <div className="flex justify-center items-center space-x-4 mb-8">
-              <div className="w-16 h-0.5 bg-gradient-to-r from-transparent to-yellow-400" />
+              <div className="w-16 h-0.5 bg-yellow-400" />
               <div className="w-4 h-4 bg-yellow-400 rounded-full" />
-              <div className="w-16 h-0.5 bg-gradient-to-l from-transparent to-yellow-400" />
+              <div className="w-16 h-0.5 bg-yellow-400" />
             </div>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
               {t('posts.description')}
@@ -70,7 +66,7 @@ export default function LatestPostsSection() {
           <div className="text-center">
             <Link
               href="/posts"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold rounded-full transition-colors duration-200 shadow-md"
             >
               {t('posts.viewAllNews')}
               <FaArrowRight />
