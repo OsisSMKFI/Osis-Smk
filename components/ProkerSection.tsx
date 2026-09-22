@@ -55,7 +55,7 @@ export default function ProkerSection() {
       // Group by sekbid
       const grouped: Record<number, SekbidGroup> = {};
       proker.forEach((p: Proker) => {
-        if (p.sekbid_id && p.sekbid_id >= 1 && p.sekbid_id <= 6) {
+        if (p.sekbid_id && typeof p.sekbid_id === 'number' && p.sekbid_id > 0) {
           if (!grouped[p.sekbid_id]) {
             grouped[p.sekbid_id] = {
               sekbid_id: p.sekbid_id,

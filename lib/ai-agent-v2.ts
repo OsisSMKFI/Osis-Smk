@@ -356,12 +356,14 @@ Berdasarkan tool results di atas, berikan solusi lengkap.`;
                             })),
                             { role: 'user', parts: [{ text: userPrompt }] }
                         ],
-                        generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
+                        generationConfig: { temperature: 0.2, maxOutputTokens: 4096, thinkingConfig: { thinkingBudget: 0 } }
                     })
                 }
             );
             const data = await geminiResponse.json();
-            aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const answerParts = parts.filter((p: any) => !p.thought);
+            aiResponse = answerParts.map((p: any) => p.text || '').join('\n').trim() || '';
         } else if (openaiKey) {
             const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',

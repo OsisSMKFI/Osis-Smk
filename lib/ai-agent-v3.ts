@@ -487,13 +487,16 @@ Jika ada masalah, tunjukkan kode perbaikannya dengan format diff.`;
                         generationConfig: { 
                             temperature: 0.1, // Lower = more focused
                             maxOutputTokens: 8192,
-                            topP: 0.8
+                            topP: 0.8,
+                            thinkingConfig: { thinkingBudget: 0 }
                         }
                     })
                 }
             );
             const data = await geminiResponse.json();
-            aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const answerParts = parts.filter((p: any) => !p.thought);
+            aiResponse = answerParts.map((p: any) => p.text || '').join('\n').trim() || '';
             
             if (!aiResponse && data.error) {
                 aiResponse = `❌ Gemini Error: ${data.error.message}`;

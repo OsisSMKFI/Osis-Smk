@@ -45,10 +45,10 @@ export default async function PeoplePage() {
     if (error) {
       console.error('Error fetching members:', error);
     } else {
-      // Filter: only sekbid_id null (tim inti) or 1-6 (valid sekbid)
+      // Filter: only sekbid_id null (tim inti) or valid sekbid (positive number)
       const validMembers = (rawMembers || []).filter((m: any) => {
         const sekbidId = m.sekbid_id;
-        return sekbidId === null || (sekbidId >= 1 && sekbidId <= 6);
+        return sekbidId === null || (typeof sekbidId === 'number' && sekbidId > 0);
       });
 
       // Transform to expected format — use signed URLs so photos work regardless of bucket public status

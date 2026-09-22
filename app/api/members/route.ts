@@ -62,10 +62,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(buildError('MEMBERS_FETCH_ERROR', error.message), { status: 500 });
     }
 
-    // Filter: only sekbid_id null (tim inti) or 1-6 (valid sekbid)
+    // Filter: only sekbid_id null (tim inti) or valid sekbid (positive number)
     const filteredMembers = (allMembers || []).filter((m: any) => {
       const sekbidId = m.sekbid_id;
-      return sekbidId === null || (sekbidId >= 1 && sekbidId <= 6);
+      return sekbidId === null || (typeof sekbidId === 'number' && sekbidId > 0);
     });
 
     // Fix photo URLs and convert to signed URLs for reliable display

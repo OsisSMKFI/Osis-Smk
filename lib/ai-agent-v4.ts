@@ -883,12 +883,14 @@ EXECUTION REQUIREMENTS:
                             })),
                             { role: 'user', parts: [{ text: userPrompt }] }
                         ],
-                        generationConfig: { temperature: 0.05, maxOutputTokens: 8192 }
+                        generationConfig: { temperature: 0.05, maxOutputTokens: 8192, thinkingConfig: { thinkingBudget: 0 } }
                     })
                 }
             );
             const data = await res.json();
-            aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const answerParts = parts.filter((p: any) => !p.thought);
+            aiResponse = answerParts.map((p: any) => p.text || '').join('\n').trim() || '';
             
             if (!aiResponse && data.error) {
                 aiResponse = `Error: ${data.error.message}`;

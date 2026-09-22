@@ -571,6 +571,7 @@ THRESHOLD FOR APPROVAL: matchScore >= 0.85 AND confidence >= 0.70 AND isLive == 
             topK: 1,
             topP: 0.95,
             maxOutputTokens: 2048,
+            thinkingConfig: { thinkingBudget: 0 }
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -589,11 +590,13 @@ THRESHOLD FOR APPROVAL: matchScore >= 0.85 AND confidence >= 0.70 AND isLive == 
 
     const data = await response.json();
     
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+    const allParts = data.candidates?.[0]?.content?.parts || [];
+    const answerParts = allParts.filter((p: any) => !p.thought);
+    const resultText = answerParts.map((p: any) => p.text || '').join('\n').trim();
+    
+    if (!resultText) {
       throw new Error('Invalid Gemini API response');
     }
-
-    const resultText = data.candidates[0].content.parts[0].text;
     
     // Extract JSON from markdown code block if present
     let jsonText = resultText;

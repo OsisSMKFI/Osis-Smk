@@ -195,6 +195,47 @@ async function verifyAndLogAction(action: string, result: any): Promise<ActionRe
 }
 
 // Clean formatter to align chat with vision formatting (remove markdown bold etc.)
+function stripReasoningPatterns(text: string): string {
+  let out = text || '';
+  // Remove common chain-of-thought patterns
+  out = out.replace(/•\s*Context provided:.*?\n/gi, '');
+  out = out.replace(/•\s*User Question:.*?\n/gi, '');
+  out = out.replace(/•\s*Current Date\/Time:.*?\n/gi, '');
+  out = out.replace(/•\s*Current Status:.*?\n/gi, '');
+  out = out.replace(/•\s*Tone\/Personality:.*?\n/gi, '');
+  out = out.replace(/•\s*Specific instructions.*?\n/gi, '');
+  out = out.replace(/•\s*Time:.*?\n/gi, '');
+  out = out.replace(/•\s*Day:.*?\n/gi, '');
+  out = out.replace(/•\s*Greeting suggestion.*?\n/gi, '');
+  out = out.replace(/•\s*Greeting:.*?\n/gi, '');
+  out = out.replace(/•\s*Time-based greeting:.*?\n/gi, '');
+  out = out.replace(/•\s*Engagement:.*?\n/gi, '');
+  out = out.replace(/•\s*Use emojis.*?\n/gi, '');
+  out = out.replace(/•\s*Match tone.*?\n/gi, '');
+  out = out.replace(/•\s*Don't hallucinate.*?\n/gi, '');
+  out = out.replace(/•\s*Follow the.*?\n/gi, '');
+  out = out.replace(/•\s*Is it from context\?.*?\n/gi, '');
+  out = out.replace(/•\s*Is it robotic\?.*?\n/gi, '');
+  out = out.replace(/•\s*Does it use emojis\?.*?\n/gi, '');
+  out = out.replace(/•\s*Analysis:.*?\n/gi, '');
+  out = out.replace(/•\s*Draft:.*?\n/gi, '');
+  out = out.replace(/•\s*Database Content:.*?\n/gi, '');
+  out = out.replace(/•\s*WEB SEARCH RESULTS:.*?\n/gi, '');
+  out = out.replace(/•\s*Rule \d+:.*?\n/gi, '');
+  out = out.replace(/•\s*Direct Answer:.*?\n/gi, '');
+  out = out.replace(/•\s*Tone:.*?\n/gi, '');
+  out = out.replace(/•\s*The user asked.*?\n/gi, '');
+  out = out.replace(/•\s*Looking at.*?\n/gi, '');
+  out = out.replace(/•\s*Result \d+:.*?\n/gi, '');
+  // Remove markdown-style thinking blocks
+  out = out.replace(/\[CONTEXT[^\]]*\]\n[\s\S]*?\[USER QUESTION[^\]]*\]\n/gi, '');
+  // Remove "Wait, let me..." style self-corrections
+  out = out.replace(/Wait,?\s+let me[^.]*\.\n/gi, '');
+  // Collapse multiple blank lines
+  out = out.replace(/\n{3,}/g, '\n\n');
+  return out.trim();
+}
+
 function formatCleanResponse(text: string, opts: { emphasis?: boolean } = {}): string {
   let out = text || '';
   // Strip triple and double asterisks
@@ -536,7 +577,13 @@ async function callGemini(
   const buildUrl = (m: string) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
   const body = JSON.stringify({
     contents,
-    generationConfig: { temperature: 0.2, topP: 0.8, topK: 40, maxOutputTokens: 2048 },
+    generationConfig: {
+      temperature: 0.2,
+      topP: 0.8,
+      topK: 40,
+      maxOutputTokens: 2048,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   });
 
   // Build candidate model list: requested model first, then discovered models
@@ -567,7 +614,10 @@ async function callGemini(
         
         if (res.ok && responseText) {
           const json = JSON.parse(responseText);
-          const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          // Filter out thinking/reasoning parts, only keep actual answer parts
+          const parts = json?.candidates?.[0]?.content?.parts || [];
+          const answerParts = parts.filter((p: any) => !p.thought);
+          const text = answerParts.map((p: any) => p.text || '').join('\n').trim() || '';
           if (text) {
             console.log('[Gemini] Success with model:', attemptModel);
             return { text };
@@ -1647,12 +1697,14 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
                 contents: [
                   { role: 'user', parts: [ { text: visionInstructions }, { inline_data: { mime_type: contentType, data: b64 } } ] }
                 ],
-                generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
+                generationConfig: { temperature: 0.2, maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } }
               })
             });
             const gemJson = await gemRes.json();
             if (!gemRes.ok) throw new Error(gemJson?.error?.message || 'Gemini vision error');
-            visionReply = gemJson?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const vParts = gemJson?.candidates?.[0]?.content?.parts || [];
+            const vAnswerParts = vParts.filter((p: any) => !p.thought);
+            visionReply = vAnswerParts.map((p: any) => p.text || '').join('\n').trim() || '';
           } else if (openaiKey) {
             // OpenAI vision
             const model = (await getConfig('OPENAI_MODEL')) || 'gpt-4o-mini';
@@ -2058,6 +2110,8 @@ REMINDER: You have ALL the data above. Answer from this data. DO NOT hallucinate
     if (isIdentificationQuery && !isDesignStudioContext) {
       finalReply = factCheckMemberSekbid(completeKnowledge, finalReply);
     }
+    // Strip AI reasoning/thinking patterns that leaked into the response
+    finalReply = stripReasoningPatterns(finalReply);
     // Privacy & safety sanitization for public/anonymous users
     if (mode === 'public') {
       finalReply = sanitizePublicAI(finalReply, { vision: false });

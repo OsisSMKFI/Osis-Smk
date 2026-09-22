@@ -507,10 +507,10 @@ export default function AboutPageClient() {
           return ['ketua osis', 'wakil ketua', 'sekretaris', 'bendahara'].includes(pos);
         });
 
-        // Koordinator Sekbid: anggota dengan sekbid_id 1-6 yang rolenya adalah koordinator
+        // Koordinator Sekbid: anggota dengan sekbid_id valid yang rolenya adalah koordinator
         const koordinator = mapped.filter((m: any) => {
           const pos = (m.position || '').trim().toLowerCase();
-          const hasSekbid = m.sekbidId !== null && m.sekbidId >= 1 && m.sekbidId <= 6;
+          const hasSekbid = m.sekbidId !== null && typeof m.sekbidId === 'number' && m.sekbidId > 0;
           // Hanya yang memiliki role koordinator/kepala sekbid
           return hasSekbid && (pos.includes('koordinator') || pos.includes('kepala') || pos.includes('ketua sekbid'));
         });

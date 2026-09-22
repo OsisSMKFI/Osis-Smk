@@ -432,14 +432,17 @@ Respond with actionable code or clear explanations. Always specify file paths.`;
                         })),
                         generationConfig: {
                             temperature: 0.3,
-                            maxOutputTokens: 8192
+                            maxOutputTokens: 8192,
+                            thinkingConfig: { thinkingBudget: 0 }
                         }
                     })
                 }
             );
             
             const data = await response.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const answerParts = parts.filter((p: any) => !p.thought);
+            return answerParts.map((p: any) => p.text || '').join('\n').trim() || 'No response generated.';
         } else if (openaiKey) {
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
