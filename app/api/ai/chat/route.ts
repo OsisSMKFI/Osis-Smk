@@ -13,38 +13,57 @@ import { EASTER_EGG_SOURCE_TEXT } from '@/lib/aiAutoLearn';
 // ═══════════════════════════════════════════════════════════════════════════
 async function searchWithTavily(query: string, apiKey: string): Promise<string> {
   try {
-    const response = await fetch('https://api.tavily.com/search', {
+    // Search the website first for local data
+    const siteResponse = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: apiKey,
-        query,
+        query: `site:osissmkfi.biezz.my.id ${query}`,
         search_depth: 'basic',
         max_results: 5,
         include_answer: true,
       }),
     });
     
-    if (!response.ok) {
-      console.log('[Tavily] Search failed:', response.status);
-      return '';
+    let siteContext = '';
+    if (siteResponse.ok) {
+      const siteData = await siteResponse.json();
+      if (siteData.answer) siteContext += `Jawaban dari website OSIS: ${siteData.answer}\n\n`;
+      if (siteData.results?.length > 0) {
+        siteContext += 'Data dari website OSIS:\n';
+        siteData.results.forEach((r: any, i: number) => {
+          siteContext += `${i + 1}. ${r.title || 'Untitled'}: ${r.content || ''}\n`;
+        });
+      }
     }
     
-    const data = await response.json();
-    const results = data.results || [];
-    const answer = data.answer || '';
+    // Also search the general web for broader context
+    const webResponse = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        query,
+        search_depth: 'basic',
+        max_results: 3,
+        include_answer: true,
+      }),
+    });
     
-    let context = '';
-    if (answer) {
-      context += `Jawaban dari web: ${answer}\n\n`;
+    let webContext = '';
+    if (webResponse.ok) {
+      const webData = await webResponse.json();
+      if (webData.answer) webContext += `Jawaban dari web: ${webData.answer}\n\n`;
+      if (webData.results?.length > 0) {
+        webContext += 'Sumber web:\n';
+        webData.results.forEach((r: any, i: number) => {
+          webContext += `${i + 1}. ${r.title || 'Untitled'}: ${r.content || ''}\n`;
+        });
+      }
     }
-    if (results.length > 0) {
-      context += 'Sumber web:\n';
-      results.forEach((r: any, i: number) => {
-        context += `${i + 1}. ${r.title || 'Untitled'}: ${r.content || ''}\n`;
-      });
-    }
-    return context;
+    
+    return [siteContext, webContext].filter(Boolean).join('\n');
   } catch (err) {
     console.log('[Tavily] Search error:', err);
     return '';
@@ -307,18 +326,18 @@ async function callAI(
   
   // Get model preferences
   const openaiModel = await getConfig('OPENAI_MODEL') || 'gpt-4o-mini';
-  let geminiModel = await getConfig('GEMINI_MODEL') || 'gemini-2.0-flash-exp';
+  let geminiModel = await getConfig('GEMINI_MODEL') || 'gemini-1.5-flash';
   
   // Strip any 'models/' prefix - we'll add it in the URL builder
   geminiModel = geminiModel.replace(/^models\//, '');
   
   // Normalize to valid v1beta model names (without models/ prefix)
   const modelMap: Record<string, string> = {
-    'gemini-pro': 'gemini-2.0-flash-exp',
-    'gemini-1.5-pro': 'gemini-2.0-flash-exp',
-    'gemini-1.5-flash': 'gemini-2.0-flash-exp',
-    'gemini-1.5-flash-latest': 'gemini-2.0-flash-exp',
-    'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
+    'gemini-pro': 'gemini-1.5-flash',
+    'gemini-1.5-pro': 'gemini-1.5-pro',
+    'gemini-1.5-flash': 'gemini-1.5-flash',
+    'gemini-1.5-flash-latest': 'gemini-1.5-flash',
+    'gemini-1.0-pro': 'gemini-1.0-pro',
   };
   
   if (modelMap[geminiModel]) {
@@ -328,8 +347,8 @@ async function callAI(
       geminiModel = normalized;
     }
   } else {
-    console.log(`[AI] ⚠️ Unknown model ${geminiModel}, using gemini-2.0-flash-exp`);
-    geminiModel = 'gemini-2.0-flash-exp';
+    console.log(`[AI] ⚠️ Unknown model ${geminiModel}, using gemini-1.5-flash`);
+    geminiModel = 'gemini-1.5-flash';
   }
   
   // Debug: Show key details (first 10 chars + length)
@@ -2030,8 +2049,8 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
     const tavilyKey = await getConfig('TAVILY_API_KEY');
     if (tavilyKey && tavilyKey.length > 10) {
       const searchQuery = userQuery || '';
-      // Only search for questions that benefit from web data
-      if (/(apa itu|siapa|di mana|kapan|bagaimana|kenapa|berapa|info|berita|terbaru|update|current|recent)/i.test(searchQuery)) {
+      // Search for most questions to get fresh data
+      if (searchQuery.length > 3 && !/^(hi|hello|halo|hai|hey|test|tes)/i.test(searchQuery)) {
         console.log('[AI] 🔍 Tavily web search for:', searchQuery.substring(0, 50));
         webContext = await searchWithTavily(searchQuery, tavilyKey);
         if (webContext) {
