@@ -11,6 +11,22 @@ const hasVercelBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
 
 const UPLOAD_ALLOWED_ROLES = ['super_admin', 'admin', 'osis', 'moderator', 'editor'];
 
+async function ensureMediaBucket(supabase: any) {
+  try {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const exists = buckets?.some((b: any) => b.name === 'media');
+    if (!exists) {
+      await supabase.storage.createBucket('media', {
+        public: true,
+        fileSizeLimit: 104857600,
+        allowedMimeTypes: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'application/octet-stream'],
+      });
+    }
+  } catch (e) {
+    // Bucket may already exist or we lack permission — ignore
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -42,6 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const isVideo = file.type.startsWith('video/');
 
     const timestamp = Date.now();
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -50,22 +67,39 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(arrayBuffer);
 
-    // Use application/octet-stream for video to bypass Supabase bucket MIME type restrictions
-    const isVideo = file.type.startsWith('video/');
-    const uploadContentType = isVideo ? 'application/octet-stream' : file.type;
+    // For videos, try 'media' bucket first (allows video MIME types), then 'gallery', then Vercel Blob
+    // For images, use the specified bucket directly
+    const targetBuckets = isVideo ? ['media', bucket] : [bucket];
 
-    // Always try Supabase upload — bucket may exist even if ensureBucket listing failed
     let uploadError: any = null;
     let uploadData: any = null;
+    let usedBucket = bucket;
 
-    const result = await supabase.storage.from(bucket).upload(filePath, fileBuffer, {
-      contentType: uploadContentType,
-      upsert: false,
-    });
-    uploadData = result.data;
-    uploadError = result.error;
+    if (isVideo) {
+      await ensureMediaBucket(supabase);
+    }
 
-    // If Supabase upload failed → Vercel Blob fallback
+    for (const tryBucket of targetBuckets) {
+      const result = await supabase.storage.from(tryBucket).upload(filePath, fileBuffer, {
+        contentType: isVideo ? 'video/mp4' : file.type,
+        upsert: false,
+      });
+      if (!result.error) {
+        uploadData = result.data;
+        usedBucket = tryBucket;
+        uploadError = null;
+        break;
+      }
+      uploadError = result.error;
+      // If bucket doesn't exist or MIME type error, try next bucket
+      if (result.error?.message?.includes('mime type') || result.error?.message?.includes('not found') || result.error?.message?.includes('does not exist')) {
+        continue;
+      }
+      // Other errors — stop trying
+      break;
+    }
+
+    // If all Supabase attempts failed → Vercel Blob fallback
     if (uploadError) {
       if (hasVercelBlob) {
         try {
@@ -86,30 +120,35 @@ export async function POST(request: NextRequest) {
           // Blob also failed
         }
       }
-      // Both failed — return meaningful error
       const errMsg = uploadError?.message || 'Upload failed';
       return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
     // Supabase upload succeeded
-    const signedUrlResult = await generateSignedUrl(uploadData.path, { bucket });
-    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath);
+    const { data: { publicUrl } } = supabase.storage.from(usedBucket).getPublicUrl(filePath);
+
+    let signedUrlResult: any = null;
+    try {
+      signedUrlResult = await generateSignedUrl(uploadData.path, { bucket: usedBucket });
+    } catch (e) {
+      // Signed URL generation may fail for some buckets — publicUrl is enough
+    }
 
     return NextResponse.json({
       success: true,
-      url: signedUrlResult?.url || publicUrl,
+      url: publicUrl || signedUrlResult?.url,
       publicUrl,
       signedUrl: signedUrlResult?.url,
       expiresAt: signedUrlResult?.expiresAt,
-      bucket: signedUrlResult?.bucket || bucket,
+      bucket: usedBucket,
       path: uploadData.path,
       data: {
         path: uploadData.path,
         publicUrl,
         signedUrl: signedUrlResult?.url,
-        url: signedUrlResult?.url || publicUrl,
+        url: publicUrl || signedUrlResult?.url,
         expiresAt: signedUrlResult?.expiresAt,
-        bucket: signedUrlResult?.bucket || bucket,
+        bucket: usedBucket,
       },
     });
   } catch (error: any) {

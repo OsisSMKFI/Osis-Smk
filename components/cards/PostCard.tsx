@@ -35,7 +35,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, index = 0 }: PostCardProps) {
-  const fallbackImage = '/images/default-post.jpg';
+  const fallbackImage = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" fill="%23e5e7eb"><rect width="800" height="450"/><text x="400" y="225" font-family="sans-serif" font-size="20" fill="%239ca3af" text-anchor="middle" dominant-baseline="middle">No Image</text></svg>');
   const imageUrl = toPublicStorageUrl(post.featured_image) || fallbackImage;
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -92,7 +92,7 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                if (target.src !== window.location.origin + fallbackImage) {
+                if (!target.src.startsWith('data:')) {
                   target.src = fallbackImage;
                 }
               }}
@@ -103,12 +103,6 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
               alt={post.title}
               loading={index === 0 ? 'eager' : 'lazy'}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                if (target.src !== fallbackImage) {
-                  target.src = fallbackImage;
-                }
-              }}
             />
           )}
 
