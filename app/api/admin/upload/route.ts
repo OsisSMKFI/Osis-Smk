@@ -3,45 +3,13 @@ export const runtime = 'nodejs';
 import { auth } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { generateSignedUrl } from '@/lib/signedUrls';
+import { ensurePublicBucket } from '@/lib/supabase/ensureBucket';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Roles that can upload files
 const UPLOAD_ALLOWED_ROLES = ['super_admin', 'admin', 'osis', 'moderator', 'editor'];
-
-// Auto-create bucket if it doesn't exist
-async function ensureBucket(supabase: any, bucketName: string) {
-  try {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const exists = buckets?.some((b: any) => b.id === bucketName || b.name === bucketName);
-    
-    if (!exists) {
-      console.log(`[/api/admin/upload] Creating bucket: ${bucketName}`);
-      const { error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: bucketName === 'backgrounds' ? 10485760 : 104857600, // 10MB backgrounds, 100MB others
-        // No MIME type restriction - allow ALL file types
-      });
-      
-      if (createError) {
-        console.error(`[/api/admin/upload] Failed to create bucket ${bucketName}:`, createError);
-        return false;
-      }
-      console.log(`[/api/admin/upload] Bucket ${bucketName} created successfully`);
-    } else {
-      // Update bucket to remove MIME restrictions
-      await supabase.storage.updateBucket(bucketName, {
-        public: true,
-        fileSizeLimit: bucketName === 'backgrounds' ? 10485760 : 104857600,
-      });
-    }
-    return true;
-  } catch (error) {
-    console.error(`[/api/admin/upload] Error checking/creating bucket:`, error);
-    return false;
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -99,7 +67,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Ensure bucket exists
-    const bucketReady = await ensureBucket(supabase, bucket);
+    const bucketReady = await ensurePublicBucket(supabase, bucket);
     if (!bucketReady) {
       return NextResponse.json({ 
         error: `Bucket '${bucket}' not available. Please create it in Supabase Storage.` 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
-import { FaBell, FaUser, FaChevronDown, FaMoon, FaSun, FaSearch, FaReply, FaCheck, FaExternalLinkAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaBell, FaUser, FaChevronDown, FaMoon, FaSun, FaSearch, FaReply, FaCheck, FaExternalLinkAlt, FaExclamationTriangle, FaInbox, FaComment, FaTimesCircle, FaExclamationCircle, FaCheckCircle } from 'react-icons/fa';
 import ThemeToggle from '@/components/ThemeToggle';
 import LanguageToggle from '@/components/LanguageToggle';
 import RoleBadge from '@/components/RoleBadge';
@@ -166,12 +166,12 @@ export default function AdminHeader() {
 
   // Get notification icon based on type
   const getNotifIcon = (notif: Notification) => {
-    if (notif.type === 'user_message') return '💬';
-    if (notif.is_urgent) return '🚨';
-    if (notif.type === 'error') return '❌';
-    if (notif.type === 'warning') return '⚠️';
-    if (notif.type === 'success') return '✅';
-    return '🔔';
+    if (notif.type === 'user_message') return <FaComment className="text-base text-amber-500" />;
+    if (notif.is_urgent) return <FaExclamationTriangle className="text-base text-red-500" />;
+    if (notif.type === 'error') return <FaTimesCircle className="text-base text-red-500" />;
+    if (notif.type === 'warning') return <FaExclamationCircle className="text-base text-amber-500" />;
+    if (notif.type === 'success') return <FaCheckCircle className="text-base text-emerald-500" />;
+    return <FaBell className="text-base text-slate-500" />;
   };
 
   return (
@@ -214,7 +214,7 @@ export default function AdminHeader() {
             >
               <FaBell className="text-gray-600 dark:text-gray-300 text-lg md:text-xl" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-red-500 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-red-500 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -223,9 +223,9 @@ export default function AdminHeader() {
             {/* Notifications Dropdown */}
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden z-50">
-                <div className="p-3 md:p-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 flex justify-between items-center">
+                <div className="p-3 md:p-4 bg-slate-900 text-white flex justify-between items-center">
                   <div>
-                    <h3 className="font-bold text-base md:text-lg">🔔 Notifications</h3>
+                    <h3 className="font-bold text-base md:text-lg">Notifications</h3>
                     <p className="text-xs md:text-sm opacity-80">{unreadCount} unread</p>
                   </div>
                   {unreadCount > 0 && (
@@ -240,13 +240,13 @@ export default function AdminHeader() {
                 <div className="max-h-80 md:max-h-[400px] overflow-y-auto">
                   {loadingNotifs && (
                     <div className="p-6 text-center">
-                      <div className="animate-spin w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                      <div className="animate-spin w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full mx-auto mb-2"></div>
                       <p className="text-sm text-gray-500">Loading...</p>
                     </div>
                   )}
                   {!loadingNotifs && notifications.length === 0 && (
                     <div className="p-8 text-center">
-                      <div className="text-4xl mb-2">📭</div>
+                      <FaInbox className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
                       <p className="text-sm text-gray-500 dark:text-gray-400">No notifications yet</p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">When users send messages, they'll appear here</p>
                     </div>
@@ -261,7 +261,7 @@ export default function AdminHeader() {
                       {/* Notification Header */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-start gap-2 flex-1 min-w-0">
-                          <span className="text-lg flex-shrink-0">{getNotifIcon(notif)}</span>
+                          <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-700">{getNotifIcon(notif)}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">
                               {notif.title || notif.action}
@@ -274,7 +274,7 @@ export default function AdminHeader() {
                           </div>
                         </div>
                         {!notif.read && (
-                          <span className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0 animate-pulse"></span>
+                          <span className="w-2 h-2 bg-amber-500 rounded-full flex-shrink-0"></span>
                         )}
                       </div>
                       
@@ -296,7 +296,7 @@ export default function AdminHeader() {
                         {notif.type === 'user_message' && (
                           <button
                             onClick={() => handleReply(notif)}
-                            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-all"
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-700 hover:bg-slate-800 text-white rounded-lg transition-all"
                           >
                             <FaReply className="text-[10px]" /> Reply
                           </button>
@@ -338,7 +338,7 @@ export default function AdminHeader() {
           <div className="relative">
             <button
               onClick={() => setShowProfile(!showProfile)}
-              className="flex items-center space-x-3 p-2 pr-4 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 transition-all shadow-lg"
+              className="flex items-center space-x-3 p-2 pr-4 rounded-xl bg-amber-400 hover:bg-amber-500 transition-colors shadow-md"
             >
               <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-inner text-xl font-bold overflow-hidden" style={{ background: 'var(--card-bg)', border: `1px solid var(--card-border)` }}>
                 {userPhoto ? (
@@ -366,7 +366,7 @@ export default function AdminHeader() {
             {/* Profile Dropdown Menu */}
             {showProfile && (
               <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl overflow-hidden" style={{ background: 'var(--surface-alt)', border: `1px solid var(--border)` }}>
-                <div className="p-4 bg-gradient-to-r from-yellow-400 to-amber-500">
+                <div className="p-4 bg-amber-400">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-bold text-slate-900">{userName}</p>
                     <RoleBadge role={userRole} size="sm" />
@@ -408,7 +408,7 @@ export default function AdminHeader() {
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
           {/* Modal Header */}
-          <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <div className="p-4 bg-slate-900 text-white">
             <h3 className="font-bold text-lg flex items-center gap-2">
               <FaReply /> Reply to Message
             </h3>
@@ -434,7 +434,7 @@ export default function AdminHeader() {
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="Type your reply here..."
-              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all resize-none"
               rows={4}
               autoFocus
             />
@@ -458,11 +458,11 @@ export default function AdminHeader() {
             <button
               onClick={sendReply}
               disabled={!replyText.trim() || sendingReply}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-amber-400 hover:bg-amber-500 disabled:bg-gray-400 text-slate-900 rounded-lg transition-all flex items-center gap-2"
             >
               {sendingReply ? (
                 <>
-                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  <div className="animate-spin w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full"></div>
                   Sending...
                 </>
               ) : (

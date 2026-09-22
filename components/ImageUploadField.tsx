@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { FaUpload, FaImage, FaTimes, FaCrop } from 'react-icons/fa';
+import { useState, useRef, useEffect } from 'react';
+import { FaUpload, FaImage, FaTimes, FaCrop, FaExclamationTriangle } from 'react-icons/fa';
 import ImageCropper from './ImageCropper';
 
 interface ImageUploadFieldProps {
@@ -25,7 +25,12 @@ export default function ImageUploadField({
 }: ImageUploadFieldProps) {
   const [showCropper, setShowCropper] = useState(false);
   const [tempImageSrc, setTempImageSrc] = useState<string>('');
+  const [brokenImage, setBrokenImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setBrokenImage(false);
+  }, [currentImage]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,6 +96,12 @@ export default function ImageUploadField({
                 controls
                 playsInline
               />
+            ) : brokenImage ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800">
+                <FaExclamationTriangle className="text-3xl mb-2 text-amber-500" />
+                <p className="text-sm font-medium">Gambar tidak dapat dimuat</p>
+                <p className="text-xs mt-1">URL mungkin kedaluwarsa — coba ganti foto</p>
+              </div>
             ) : (
               <img
                 src={currentImage}
@@ -98,8 +109,8 @@ export default function ImageUploadField({
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   console.error('[ImageUploadField] Image load error:', currentImage);
-                  // Show broken image placeholder
                   (e.target as HTMLImageElement).style.display = 'none';
+                  setBrokenImage(true);
                 }}
                 onLoad={() => {
                   console.log('[ImageUploadField] Image loaded successfully:', currentImage?.substring(0, 80));
@@ -113,14 +124,14 @@ export default function ImageUploadField({
                   setTempImageSrc(currentImage);
                   setShowCropper(true);
                 }}
-                className="opacity-0 group-hover:opacity-100 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
+                className="opacity-0 group-hover:opacity-100 px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
               >
                 <FaCrop /> Edit & Crop
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="opacity-0 group-hover:opacity-100 px-5 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
+                className="opacity-0 group-hover:opacity-100 px-5 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
               >
                 <FaUpload /> Ganti Foto
               </button>
@@ -142,15 +153,15 @@ export default function ImageUploadField({
       ) : (
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="relative aspect-video rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="relative aspect-video rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-amber-400 dark:hover:border-amber-400 transition-colors cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
             <FaImage className="text-4xl mb-3" />
             <p className="text-sm font-medium">Klik untuk upload gambar / video</p>
             <p className="text-xs mt-1">atau drag & drop file di sini</p>
             <div className="mt-3 flex items-center gap-2 text-xs">
-              <FaCrop className="text-blue-600" />
-              <span className="text-blue-600 font-semibold">Auto Crop & Resize</span>
+              <FaCrop className="text-amber-500" />
+              <span className="text-amber-600 dark:text-amber-400 font-semibold">Auto Crop & Resize</span>
             </div>
           </div>
         </div>

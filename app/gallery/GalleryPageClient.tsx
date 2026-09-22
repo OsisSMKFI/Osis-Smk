@@ -125,7 +125,7 @@ export default function GalleryPageClient() {
       <div className="page-content">
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-400 mx-auto"></div>
             <p className="mt-4 text-gray-600">{t('gallery.loading')}</p>
           </div>
         </div>
@@ -134,13 +134,13 @@ export default function GalleryPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section with Animation */}
       <PageHero
         title={t('gallery.activities')}
         subtitle={t('gallery.documentation')}
         description={t('gallery.documentationDesc')}
-        icon={<FaImages className="w-10 h-10 text-purple-500" />}
+        icon={<FaImages className="w-10 h-10 text-amber-500" />}
         gradient="purple"
       />
 
@@ -154,7 +154,7 @@ export default function GalleryPageClient() {
               <select
                 value={eventFilter}
                 onChange={(e) => setEventFilter(e.target.value as any)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-amber-400"
               >
                 <option value="all">{t('gallery.allEvents')}</option>
                 {events.map(ev => (
@@ -171,7 +171,7 @@ export default function GalleryPageClient() {
                 const val = e.target.value;
                 setSekbidFilter(val === 'all' ? 'all' : parseInt(val, 10));
               }}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-amber-400"
             >
               <option value="all">{t('gallery.allSekbid')}</option>
               {sekbids.map(sb => (
@@ -184,13 +184,13 @@ export default function GalleryPageClient() {
         {/* Quick Sekbid Buttons - Elegant Tab Navigation Like People Page */}
         <div className="flex justify-center mt-6 px-4">
           {/* Desktop: Horizontal Tabs */}
-          <div className="hidden sm:inline-flex items-center p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-purple-500/10 dark:shadow-purple-500/5 border border-gray-100/50 dark:border-slate-700/50">
+          <div className="hidden sm:inline-flex items-center p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-500/10 dark:shadow-black/20 border border-gray-100/50 dark:border-slate-700/50">
             {/* All Tab */}
             <button
               onClick={() => setSekbidFilter('all')}
               className={`relative px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
                 sekbidFilter === 'all'
-                  ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                  ? 'bg-amber-400 text-slate-900 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
@@ -217,7 +217,7 @@ export default function GalleryPageClient() {
                   onClick={() => setSekbidFilter(sb.id)}
                   className={`relative px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
                     sekbidFilter === sb.id
-                      ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                      ? 'bg-amber-400 text-slate-900 shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                   title={sb.name}
@@ -233,13 +233,13 @@ export default function GalleryPageClient() {
 
           {/* Mobile: Grid Layout */}
           <div className="sm:hidden w-full max-w-sm">
-            <div className="grid grid-cols-4 gap-2 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-purple-500/10 dark:shadow-purple-500/5 border border-gray-100/50 dark:border-slate-700/50">
+            <div className="grid grid-cols-4 gap-2 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-500/10 dark:shadow-black/20 border border-gray-100/50 dark:border-slate-700/50">
               {/* All Tab - Mobile */}
               <button
                 onClick={() => setSekbidFilter('all')}
                 className={`col-span-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   sekbidFilter === 'all'
-                    ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                    ? 'bg-amber-400 text-slate-900 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
@@ -263,7 +263,7 @@ export default function GalleryPageClient() {
                     onClick={() => setSekbidFilter(sb.id)}
                     className={`col-span-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-300 ${
                       sekbidFilter === sb.id
-                        ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white shadow-lg shadow-purple-500/30'
+                        ? 'bg-amber-400 text-slate-900 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                     }`}
                   >

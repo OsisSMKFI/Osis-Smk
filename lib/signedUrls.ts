@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './supabase/server';
 import { getConfig } from './adminConfig';
+import { CURRENT_SUPABASE_PROJECT } from './supabase/storage';
 
 /**
  * UNIVERSAL SIGNED URL GENERATOR
@@ -46,8 +47,8 @@ interface SignedUrlOptions {
  * Auto-detect storage bucket from file path or URL
  */
 function detectBucket(pathOrUrl: string): StorageBucket {
-  const path = pathOrUrl.toLowerCase();
-  
+  const path = '/' + pathOrUrl.toLowerCase().replace(/^https?:\/\/[^/]+/, '').replace(/^\/+/, '').replace(/\/+$/, '') + '/';
+
   if (path.includes('/user-photos/') || path.includes('selfie') || path.includes('profile')) {
     return 'user-photos';
   }
@@ -69,8 +70,13 @@ function detectBucket(pathOrUrl: string): StorageBucket {
   if (path.includes('/attachment') || path.includes('.pdf') || path.includes('.doc')) {
     return 'attachments';
   }
-  
-  // Default to user-photos for backward compatibility
+
+  const knownBuckets: StorageBucket[] = ['user-photos', 'biometric-data', 'gallery', 'backgrounds', 'videos', 'passkeys', 'attachments'];
+  const firstSegment = path.split('/').filter(Boolean)[0];
+  if (firstSegment && (knownBuckets as string[]).includes(firstSegment)) {
+    return firstSegment as StorageBucket;
+  }
+
   return 'user-photos';
 }
 
@@ -92,10 +98,16 @@ export async function generateSignedUrl(
     // Auto-detect bucket if not provided
     const bucket = options.bucket || detectBucket(filePath);
     
-    // Extract clean file path (remove bucket prefix if present)
+    // Extract clean file path (remove bucket prefix if present, with or without leading slash)
     let cleanPath = filePath;
-    if (cleanPath.includes(`/${bucket}/`)) {
-      cleanPath = cleanPath.split(`/${bucket}/`)[1] || cleanPath;
+    const bucketPrefix = `${bucket}/`;
+    const lowerPath = cleanPath.toLowerCase();
+    const idxNoSlash = lowerPath.indexOf(bucketPrefix);
+    const idxSlash = lowerPath.indexOf(`/${bucketPrefix}`);
+    if (idxNoSlash === 0) {
+      cleanPath = cleanPath.slice(bucketPrefix.length);
+    } else if (idxSlash !== -1) {
+      cleanPath = cleanPath.slice(idxSlash + 1 + bucketPrefix.length);
     }
     
     if (signedUrlsEnabled === 'false') {
@@ -200,11 +212,11 @@ export function extractPhotoPath(urlOrPath: string): string {
 
   try {
     const url = new URL(urlOrPath);
-    
-    // Extract path from Supabase Storage URL
+
+    // Extract bucket + path from Supabase Storage URL
     // Format: /storage/v1/object/public/bucket-name/path/to/file.jpg
-    const pathMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/(.+)/);
-    
+    const pathMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+\/.+)/);
+
     if (pathMatch && pathMatch[1]) {
       return pathMatch[1];
     }
@@ -216,6 +228,20 @@ export function extractPhotoPath(urlOrPath: string): string {
     console.error('[Photo Path] Invalid URL:', urlOrPath);
     return urlOrPath;
   }
+}
+
+/**
+ * Convert an expired/stored signed storage URL back to a permanent public URL.
+ * Non-sign URLs are returned unchanged.
+ */
+export function toPublicStorageUrl(url: string | null | undefined): string | null {
+  if (!url || !url.includes('/storage/v1/object/sign/')) return url ?? null;
+
+  const rel = extractPhotoPath(url);
+  if (!rel || rel.startsWith('http')) return url;
+
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL || `https://${CURRENT_SUPABASE_PROJECT}.supabase.co`;
+  return `${base}/storage/v1/object/public/${rel}`;
 }
 
 /**

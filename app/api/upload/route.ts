@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { generateSignedUrl } from '@/lib/signedUrls';
 import { uploadFile } from '@/lib/vercel/blob';
+import { ensurePublicBucket } from '@/lib/supabase/ensureBucket';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -13,48 +14,6 @@ const hasVercelBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
 
 // Roles that can upload files
 const UPLOAD_ALLOWED_ROLES = ['super_admin', 'admin', 'osis', 'moderator', 'editor'];
-
-// Auto-create bucket if it doesn't exist
-async function ensureBucket(supabase: any, bucketName: string) {
-  try {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const exists = buckets?.some((b: any) => b.id === bucketName || b.name === bucketName);
-    
-    if (!exists) {
-      console.log(`[/api/upload] Creating bucket: ${bucketName}`);
-      const { error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: bucketName === 'backgrounds' ? 10485760 : 104857600, // 10MB for backgrounds, 100MB for others
-        // Allow ALL file types - no restriction
-      });
-      
-      if (createError) {
-        console.error(`[/api/upload] Failed to create bucket ${bucketName}:`, createError);
-        return false;
-      }
-      console.log(`[/api/upload] Bucket ${bucketName} created successfully`);
-    } else {
-      // Bucket exists - try to update settings (no MIME restriction)
-      console.log(`[/api/upload] Bucket ${bucketName} exists, attempting to update settings`);
-      const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
-        public: true,
-        fileSizeLimit: bucketName === 'backgrounds' ? 10485760 : 104857600,
-        // Remove allowedMimeTypes to allow ALL file types
-      });
-      
-      if (updateError) {
-        console.warn(`[/api/upload] Could not update bucket settings:`, updateError);
-        // Don't fail - bucket might have restrictions, try upload anyway
-      } else {
-        console.log(`[/api/upload] ✅ Bucket ${bucketName} settings updated`);
-      }
-    }
-    return true;
-  } catch (error) {
-    console.error(`[/api/upload] Error checking/creating bucket:`, error);
-    return false;
-  }
-}
 
 // Direct upload endpoint (uses same logic as admin upload)
 export async function POST(request: NextRequest) {
@@ -125,7 +84,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Ensure bucket exists
-    const bucketReady = await ensureBucket(supabase, bucket);
+    const bucketReady = await ensurePublicBucket(supabase, bucket);
     if (!bucketReady) {
       return NextResponse.json({ 
         error: `Bucket '${bucket}' not available. Please create it in Supabase Storage.` 

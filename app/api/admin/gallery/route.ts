@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { toPublicStorageUrl } from '@/lib/signedUrls';
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +35,9 @@ export async function GET(request: NextRequest) {
       .map((g: any) => {
         // If image_url ends with .mp4, .webm, .mov etc, it's video; client should render as video not img
         const isVideo = /\.(mp4|webm|mov|avi|mkv)$/i.test(g.image_url || '');
-        return { ...g, _isVideo: isVideo };
+        // Heal expired signed URLs back to permanent public URLs
+        const image_url = toPublicStorageUrl(g.image_url) ?? g.image_url;
+        return { ...g, image_url, _isVideo: isVideo };
       });
 
     console.log(`[admin/gallery GET] Returning ${normalized.length} items (${normalized.filter((g: any) => g._isVideo).length} videos)`);

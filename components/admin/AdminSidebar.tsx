@@ -81,7 +81,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
     { name: 'Dashboard', icon: <FaHome />, href: '/admin' },
     { name: 'Content', icon: <FaEdit />, href: '/admin/content' },
     { name: 'Posts', icon: <FaNewspaper />, href: '/admin/posts' },
-    { name: 'Events', icon: <FaCalendarAlt />, href: '/admin/events', badge: 3 },
+    { name: 'Events', icon: <FaCalendarAlt />, href: '/admin/events' },
     { name: 'Gallery', icon: <FaImages />, href: '/admin/gallery' },
     { name: 'Anggota (Members)', icon: <FaUserFriends />, href: '/admin/data/members' },
     { name: 'Users', icon: <FaUsers />, href: '/admin/users' },
@@ -114,7 +114,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
       {/* Mobile Menu Button - Toggle between hamburger and X */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 p-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 rounded-xl shadow-lg hover:shadow-xl transition-all"
+        className="lg:hidden fixed top-4 left-4 p-3 bg-amber-400 text-slate-900 rounded-xl shadow-lg hover:bg-amber-500 hover:shadow-xl transition-all"
         style={{ zIndex: 100, pointerEvents: 'auto' }}
         aria-label={mobileOpen ? "Close menu" : "Open menu"}
       >
@@ -139,7 +139,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
       {/* Sidebar */}
       <aside
         className={[
-          'fixed top-0 left-0 h-dvh bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900',
+          'fixed top-0 left-0 h-dvh bg-slate-900',
           'text-white shadow-2xl transition-transform duration-300 ease-in-out',
           collapsed ? 'w-20' : 'w-72',
           // Desktop: always visible  
@@ -156,11 +156,11 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
         suppressHydrationWarning
       >
         {/* Header */}
-        <div className="relative h-20 flex items-center justify-between px-4 sm:px-6 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 shadow-xl">
+        <div className="relative h-20 flex items-center justify-between px-4 sm:px-6 bg-amber-400 shadow-xl">
           {!collapsed && (
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-2xl font-bold bg-gradient-to-r from-yellow-500 to-amber-600 bg-clip-text text-transparent">
+                <span className="text-2xl font-bold text-amber-600">
                   O
                 </span>
               </div>
@@ -199,7 +199,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
           <Link
             href="/dashboard"
             target="_blank"
-            className="group relative flex items-center space-x-3 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 mb-4"
+            className="group relative flex items-center space-x-3 px-4 py-3 rounded-xl bg-slate-700 text-white hover:bg-slate-600 shadow transition-all duration-200 mb-4"
           >
             <FaGlobe className={`text-xl ${collapsed ? 'mx-auto' : ''}`} />
             {!collapsed && (
@@ -227,7 +227,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                   group relative flex items-center space-x-3 px-4 py-3 rounded-xl
                   transition-all duration-200 overflow-hidden
                   ${active
-                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 shadow-lg'
+                    ? 'bg-amber-400 text-slate-900'
                     : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
                   }
                 `}
@@ -249,7 +249,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                     
                     {/* Badge */}
                     {item.badge && (
-                      <span className="px-2 py-1 text-xs font-bold bg-red-500 text-white rounded-full animate-pulse">
+                      <span className="px-2 py-1 text-xs font-bold bg-red-500 text-white rounded-full">
                         {item.badge}
                       </span>
                     )}
@@ -292,7 +292,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                   group relative flex items-center space-x-3 px-4 py-3 rounded-xl
                   transition-all duration-200 overflow-hidden
                   ${active
-                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 shadow-lg'
+                    ? 'bg-amber-400 text-slate-900'
                     : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
                   }
                 `}
@@ -307,7 +307,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                   <>
                     <span className="flex-1 font-medium">{item.name}</span>
                     {item.badge && (
-                      <span className="px-2 py-1 text-xs font-bold bg-red-500 text-white rounded-full animate-pulse">
+                      <span className="px-2 py-1 text-xs font-bold bg-red-500 text-white rounded-full">
                         {item.badge}
                       </span>
                     )}
@@ -343,7 +343,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                   group relative flex items-center space-x-3 px-4 py-3 rounded-xl
                   transition-all duration-200 overflow-hidden
                   ${active
-                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-900 shadow-lg'
+                    ? 'bg-amber-400 text-slate-900'
                     : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
                   }
                 `}

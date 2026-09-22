@@ -11,7 +11,7 @@ interface AdminPageShellProps {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
-  gradient?: string; // tailwind gradient classes e.g. from-indigo-600 to-violet-600
+  gradient?: string; // tailwind gradient classes e.g. from-slate-900 to-slate-800
   children: React.ReactNode;
   padded?: boolean;
 }
@@ -22,7 +22,7 @@ export default function AdminPageShell({
   title,
   subtitle,
   actions,
-  gradient = 'from-indigo-600 to-violet-600',
+  gradient = 'from-slate-900 to-slate-800',
   children,
   padded = true
 }: AdminPageShellProps) {
@@ -38,7 +38,7 @@ export default function AdminPageShell({
             )}
             <div className="min-w-0 flex-1">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight truncate">{title}</h1>
-              {subtitle && <p className="text-indigo-100 mt-0.5 md:mt-1 max-w-2xl text-xs sm:text-sm md:text-base line-clamp-2">{subtitle}</p>}
+              {subtitle && <p className="text-slate-300 mt-0.5 md:mt-1 max-w-2xl text-xs sm:text-sm md:text-base line-clamp-2">{subtitle}</p>}
             </div>
           </div>
           {actions && (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
+import { ensurePublicBucket } from '@/lib/supabase/ensureBucket';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -42,6 +43,11 @@ export async function POST(request: NextRequest) {
 
     // Create Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const bucketReady = await ensurePublicBucket(supabase as any, bucket);
+    if (!bucketReady) {
+      return NextResponse.json({ error: `Bucket '${bucket}' not available` }, { status: 500 });
+    }
 
     // Generate file path
     const timestamp = Date.now();

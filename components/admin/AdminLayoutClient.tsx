@@ -69,7 +69,7 @@ export default function AdminLayoutClient({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" suppressHydrationWarning>
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900" suppressHydrationWarning>
       {/* Sidebar */}
       {!isLogin && session?.user && <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />}
 
@@ -95,7 +95,7 @@ export default function AdminLayoutClient({
         {!isLogin && session?.user && (
           <footer className="mt-6 md:mt-8 py-4 md:py-6 px-3 sm:px-4 md:px-6 border-t border-gray-200 dark:border-slate-700">
             <div className="max-w-7xl mx-auto text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              <p>© 2025-2026 OSIS SMK Informatika - Raveka Sena. Made with ❤️ by Raveka Sena Team</p>
+              <p>© 2025-2026 OSIS SMK Informatika - Raveka Sena. Built by Raveka Sena Team.</p>
             </div>
           </footer>
         )}

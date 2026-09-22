@@ -202,7 +202,7 @@ export default function GalleryPage() {
       <div className="ds-container p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-400 mx-auto"></div>
             <p className="mt-4 text-gray-600">Memuat data...</p>
           </div>
         </div>
@@ -261,7 +261,7 @@ export default function GalleryPage() {
       icon={<FaImage className="w-8 h-8" />}
       title="Manajemen Galeri"
       subtitle="Kelola gambar dokumentasi kegiatan dan arsip visual"
-      gradient="from-blue-600 to-indigo-600"
+      gradient="from-slate-900 to-slate-800"
       actions={(
         <button
           onClick={() => {
@@ -269,7 +269,7 @@ export default function GalleryPage() {
             setEditingId(null);
             setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '' });
           }}
-          className="flex items-center space-x-2 bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          className="flex items-center space-x-2 bg-amber-400 text-slate-900 px-6 py-3 rounded-xl font-semibold hover:bg-amber-500 transition-colors shadow-md"
         >
           <FaPlus />
           <span>Tambah Gambar</span>
@@ -280,7 +280,7 @@ export default function GalleryPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-slate-900 text-white p-4 sm:p-6 rounded-t-xl sm:rounded-t-2xl flex items-center justify-between z-10">
               <h2 className="text-lg sm:text-2xl font-bold flex items-center space-x-2 sm:space-x-3">
                 <FaImage />
                 <span>{editingId ? 'Edit Gambar' : 'Tambah Gambar'}</span>
@@ -314,7 +314,7 @@ export default function GalleryPage() {
               {uploading && (
                 <div className="mt-2">
                   <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded">
-                    <div className="h-2 bg-blue-500 rounded transition-all" style={{ width: `${uploadProgress}%` }} />
+                    <div className="h-2 bg-amber-400 rounded transition-all" style={{ width: `${uploadProgress}%` }} />
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Mengupload {uploadProgress}%</p>
                 </div>
@@ -326,7 +326,7 @@ export default function GalleryPage() {
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
                   placeholder="Masukkan judul gambar"
                   required
                 />
@@ -337,7 +337,7 @@ export default function GalleryPage() {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all resize-none"
+                  className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all resize-none"
                   placeholder="Masukkan deskripsi (opsional)"
                   rows={3}
                 />
@@ -351,7 +351,7 @@ export default function GalleryPage() {
                     console.log('[Gallery Form] Event selected:', e.target.value);
                     setFormData({ ...formData, event_id: e.target.value });
                   }}
-                  className="relative z-10 pointer-events-auto w-full px-4 py-3 text-base border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                  className="relative z-10 pointer-events-auto w-full px-4 py-3 text-base border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
                 >
                   <option value="">- Pilih Event -</option>
                   {events.map((event) => (
@@ -368,7 +368,7 @@ export default function GalleryPage() {
                     console.log('[Gallery Form] Sekbid selected:', e.target.value);
                     setFormData({ ...formData, sekbid_id: e.target.value });
                   }}
-                  className="relative z-10 pointer-events-auto w-full px-4 py-3 text-base border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                  className="relative z-10 pointer-events-auto w-full px-4 py-3 text-base border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
                 >
                   <option value="">- Pilih Sekbid -</option>
                   {sekbids.map((sekbid, idx) => {
@@ -384,7 +384,7 @@ export default function GalleryPage() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="flex-1 bg-amber-400 text-slate-900 px-6 py-3 rounded-xl font-semibold hover:bg-amber-500 transition-colors shadow-md"
                 >
                   {editingId ? 'Update Gambar' : 'Simpan Gambar'}
                 </button>
@@ -406,7 +406,7 @@ export default function GalleryPage() {
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.length === 0 ? (
-          <div className="col-span-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center">
+          <div className="col-span-full bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
             <FaImage className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <p className="text-gray-500 dark:text-gray-400 text-lg">Belum ada gambar di galeri</p>
             <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Klik tombol "Tambah Gambar" untuk mulai menambah dokumentasi</p>
@@ -415,7 +415,7 @@ export default function GalleryPage() {
           items.map((item) => (
             <div
               key={item.id}
-              className="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden"
+              className="group bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
             >
               <div className="relative h-56 overflow-hidden">
                 <MediaRenderer
@@ -428,7 +428,7 @@ export default function GalleryPage() {
                 <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEdit(item)}
-                    className="p-2 bg-white/90 backdrop-blur-sm text-blue-600 rounded-lg shadow hover:bg-white"
+                    className="p-2 bg-white/90 backdrop-blur-sm text-slate-700 rounded-lg shadow hover:bg-white"
                     title="Edit"
                   >
                     <FaEdit className="w-4 h-4" />
@@ -450,7 +450,7 @@ export default function GalleryPage() {
                 <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                   <span>{new Date(item.created_at).toLocaleDateString('id-ID')}</span>
                   {(item.event_id || item.sekbid_id) && (
-                    <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-md">
+                    <span className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded-md">
                       {item.event_id ? 'Event' : 'Sekbid'}
                     </span>
                   )}
