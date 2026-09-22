@@ -40,7 +40,6 @@ const Tilt3DCard = ({
   intensity?: number;
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
   
   const rotateX = useMotionValue(0);
   const rotateY = useMotionValue(0);
@@ -67,7 +66,6 @@ const Tilt3DCard = ({
   };
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
     rotateX.set(0);
     rotateY.set(0);
   };
@@ -77,7 +75,6 @@ const Tilt3DCard = ({
       ref={cardRef}
       className={`relative ${className}`}
       onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={handleMouseLeave}
       style={{
         rotateX: rotateXSpring,
@@ -86,93 +83,14 @@ const Tilt3DCard = ({
       }}
     >
       {children}
-      {isHovered && (
-        <div className="absolute inset-0 pointer-events-none rounded-[inherit] bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-50" />
-      )}
     </motion.div>
   );
 };
 
 // ============================================
-// FLOATING PARTICLES
+// PLATFORM CARD
 // ============================================
-const FloatingParticles = () => {
-  const particles = useMemo(() => 
-    Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      size: Math.random() * 4 + 2,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      duration: Math.random() * 15 + 10,
-      delay: Math.random() * 5,
-    })), []
-  );
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((particle) => (
-        <motion.div
-          key={particle.id}
-          className="absolute rounded-full bg-white/30"
-          style={{
-            width: particle.size,
-            height: particle.size,
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-          }}
-          animate={{
-            y: [0, -20, 0],
-            opacity: [0.3, 0.7, 0.3],
-          }}
-          transition={{
-            duration: particle.duration,
-            repeat: Infinity,
-            delay: particle.delay,
-            ease: 'easeInOut',
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-// ============================================
-// GRADIENT ORB
-// ============================================
-const GradientOrb = ({ 
-  className, 
-  colors, 
-  size = 300,
-}: { 
-  className?: string; 
-  colors: string[]; 
-  size?: number;
-}) => (
-  <motion.div
-    className={`absolute rounded-full pointer-events-none blur-3xl ${className}`}
-    style={{
-      width: size,
-      height: size,
-      background: `linear-gradient(135deg, ${colors.join(', ')})`,
-      opacity: 0.6,
-    }}
-    animate={{
-      scale: [1, 1.2, 1],
-      x: [0, 20, 0],
-      y: [0, -15, 0],
-    }}
-    transition={{
-      duration: 8,
-      repeat: Infinity,
-      ease: 'easeInOut',
-    }}
-  />
-);
-
-// ============================================
-// 3D PLATFORM CARD
-// ============================================
-const PlatformCard3D = ({ 
+const PlatformCard = ({ 
   platform, 
   icon, 
   url, 
@@ -221,67 +139,32 @@ const PlatformCard3D = ({
           whileTap={{ scale: 0.98 }}
         >
           <div className={`
-            relative overflow-hidden rounded-3xl p-6 md:p-8 h-full min-h-[300px]
+            relative overflow-hidden rounded-2xl p-6 md:p-8 h-full min-h-[300px]
             bg-gradient-to-br ${gradient}
-            shadow-xl hover:shadow-2xl transition-shadow duration-500
+            shadow-lg hover:shadow-xl transition-shadow duration-300
           `}>
-            {/* Animated background */}
-            <div className="absolute inset-0 overflow-hidden">
-              <motion.div
-                className="absolute -right-16 -top-16 w-48 h-48 bg-white/10 rounded-full blur-2xl"
-                animate={{ 
-                  scale: isHovered ? 1.5 : 1,
-                  rotate: isHovered ? 90 : 0,
-                }}
-                transition={{ duration: 0.6 }}
-              />
-              <motion.div
-                className="absolute -left-16 -bottom-16 w-40 h-40 bg-white/10 rounded-full blur-xl"
-                animate={{ 
-                  scale: isHovered ? 1.3 : 1,
-                }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              />
-              
-              {/* Grid pattern */}
-              <div 
-                className="absolute inset-0 opacity-10"
-                style={{
-                  backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-                  backgroundSize: '24px 24px',
-                }}
-              />
-            </div>
-
             {/* Content */}
             <div className="relative z-10 flex flex-col h-full">
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
                 <motion.div
-                  animate={{ 
-                    rotateY: isHovered ? 360 : 0,
-                    scale: isHovered ? 1.1 : 1,
-                  }}
-                  transition={{ duration: 0.6 }}
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
                 >
-                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                    <i className={`${icon} text-2xl md:text-3xl text-white drop-shadow-lg`} />
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <i className={`${icon} text-2xl md:text-3xl text-white`} />
                   </div>
                 </motion.div>
 
                 {!isActive ? (
-                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium text-white/90">
+                  <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-medium text-white/90">
                     Coming Soon
                   </span>
                 ) : (
-                  <motion.span 
-                    className="px-3 py-1 bg-green-500/40 backdrop-blur-sm rounded-full text-xs font-medium text-white flex items-center gap-1.5"
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
+                  <span className="px-3 py-1 bg-green-500/40 rounded-full text-xs font-medium text-white flex items-center gap-1.5">
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                     Active
-                  </motion.span>
+                  </span>
                 )}
               </div>
 
@@ -708,30 +591,9 @@ const ClientOurSocialMediaPage: React.FC = () => {
             }}
             transition={{ duration: 10, repeat: Infinity, repeatType: 'reverse' }}
           />
-          
-          <GradientOrb className="-top-32 -left-32" colors={['#ec4899', '#8b5cf6']} size={400} />
-          <GradientOrb className="-bottom-32 -right-32" colors={['#06b6d4', '#3b82f6']} size={350} />
-          <GradientOrb className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" colors={['#fbbf24', '#f97316']} size={500} />
         </div>
 
-        {/* Particles layer - z-[1] */}
-        <div className="absolute inset-0 z-[1] pointer-events-none">
-          <FloatingParticles />
-        </div>
-
-        {/* Grid overlay - z-[2] */}
-        <div 
-          className="absolute inset-0 opacity-10 z-[2] pointer-events-none"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
-        />
-
-        {/* Fade overlay - z-[3] */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900 z-[3] pointer-events-none" />
-
-        {/* Content - z-[10] */}
+        {/* Content */}
         <div className="relative z-20 container mx-auto px-4 text-center py-20">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
@@ -759,8 +621,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
                   whileHover={{ scale: 1.15, rotate: 5 }}
                   className="relative"
                 >
-                  <div className={`absolute inset-0 rounded-xl blur-lg bg-gradient-to-br ${item.gradient} opacity-60`} />
-                  <div className={`relative w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-xl`}>
+                  <div className={`w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-lg`}>
                     <i className={`${item.icon} text-xl md:text-2xl text-white`} />
                   </div>
                 </motion.div>
@@ -941,7 +802,7 @@ const ClientOurSocialMediaPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-5xl mx-auto">
             {socialPlatforms.map((platform, index) => (
-              <PlatformCard3D key={platform.platform} {...platform} index={index} />
+              <PlatformCard key={platform.platform} {...platform} index={index} />
             ))}
           </div>
         </div>
@@ -1050,12 +911,6 @@ const ClientOurSocialMediaPage: React.FC = () => {
           >
             <Tilt3DCard intensity={5} className="max-w-4xl mx-auto">
               <div className="relative bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600 rounded-3xl p-8 md:p-12 lg:p-16 text-center overflow-hidden">
-                <div className="absolute inset-0 overflow-hidden">
-                  <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
-                  <div className="absolute bottom-0 left-0 w-56 h-56 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
-                  <FloatingParticles />
-                </div>
-
                 <div className="relative z-10">
                   <motion.div
                     initial={{ scale: 0 }}
@@ -1063,12 +918,8 @@ const ClientOurSocialMediaPage: React.FC = () => {
                     viewport={{ once: true }}
                     transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
                   >
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-6">
-                      <motion.i 
-                        className="fas fa-heart text-4xl text-white"
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                      />
+                    <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                      <i className="fas fa-heart text-4xl text-white" />
                     </div>
                   </motion.div>
 

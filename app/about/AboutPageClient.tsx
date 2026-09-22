@@ -34,11 +34,6 @@ const TeamSection = dynamic(
   { ssr: false, loading: () => <SectionFallback /> }
 );
 
-const CustomCursor = dynamic(
-  () => import('@/components/about/Effects').then(mod => mod.CustomCursor),
-  { ssr: false }
-);
-
 const SoundProvider = dynamic(
   () => import('@/components/about/SoundEffects').then(mod => mod.SoundProvider),
   { ssr: false }
@@ -537,11 +532,6 @@ export default function AboutPageClient() {
   return (
     <SoundProvider>
       <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden scroll-smooth">
-        {/* Custom Cursor - Desktop only */}
-        {isClient && <CustomCursor />}
-        
-        {/* Sound Toggle removed - handled by GlobalFloatingControls in layout */}
-
         {/* Hero Section with 3D */}
         {isClient && (
           <HeroSection3D

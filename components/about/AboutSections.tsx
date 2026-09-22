@@ -22,11 +22,6 @@ const Scene3D = dynamic(() => import('./Scene3D'), {
   loading: () => <div className="absolute inset-0 bg-gradient-to-b from-gray-900 to-black" />
 });
 
-const ParticleField = dynamic(() => import('./ParticleField'), { 
-  ssr: false,
-  loading: () => null
-});
-
 interface HeroSection3DProps {
   title: string;
   subtitle: string;
@@ -197,17 +192,8 @@ export function StorySection({
   descriptions 
 }: StorySectionProps) {
   // PERFORMANCE: Disable particles for better performance
-  const isWebGLSupported = false;
-
   return (
     <section className="relative py-32 overflow-hidden">
-      {/* Background Particles */}
-      {isWebGLSupported && (
-        <Suspense fallback={null}>
-          <ParticleField count={300} color="#fbbf24" size={0.015} spread={15} />
-        </Suspense>
-      )}
-
       {/* Gradient Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-white via-amber-50/30 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
 
@@ -235,7 +221,7 @@ export function StorySection({
           <Reveal direction="up" delay={0.8}>
             <div className="flex items-center justify-center gap-4 mt-8">
               <div className="h-1 w-20 bg-gradient-to-r from-transparent to-yellow-400 rounded-full" />
-              <div className="w-4 h-4 rounded-full bg-yellow-400 animate-pulse" />
+              <div className="w-4 h-4 rounded-full bg-yellow-400" />
               <div className="h-1 w-20 bg-gradient-to-l from-transparent to-yellow-400 rounded-full" />
             </div>
           </Reveal>
@@ -245,10 +231,7 @@ export function StorySection({
         <ScrollSection parallaxOffset={30}>
           <FloatingElement intensity={5} className="max-w-4xl mx-auto">
             <div className="relative group">
-              {/* Glow Effect */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 rounded-3xl blur-lg opacity-30 group-hover:opacity-50 transition duration-500" />
-              
-              <div className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-yellow-200/50 dark:border-yellow-700/30 shadow-2xl">
+              <div className="relative bg-white dark:bg-gray-800 rounded-3xl p-8 md:p-12 border border-yellow-200 dark:border-yellow-700/30 shadow-lg">
                 {/* Sun Icon */}
                 <Reveal direction="scale" delay={0.2}>
                   <div className="flex justify-center mb-8">
@@ -257,16 +240,9 @@ export function StorySection({
                       animate={{ rotate: 360 }}
                       transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
                     >
-                      <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center shadow-lg shadow-yellow-400/30">
+                      <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center shadow-lg">
                         <span className="text-4xl">☀️</span>
                       </div>
-                      {/* Orbiting dot */}
-                      <motion.div
-                        className="absolute w-3 h-3 bg-yellow-300 rounded-full"
-                        style={{ top: -6, left: '50%', marginLeft: -6 }}
-                        animate={{ rotate: -360 }}
-                        transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                      />
                     </motion.div>
                   </div>
                 </Reveal>
@@ -386,12 +362,11 @@ export function SymbolSection({
           <ScrollSection parallaxOffset={20}>
             <FloatingElement intensity={8}>
               <div className="relative group">
-                <div className="absolute -inset-4 bg-gradient-to-r from-yellow-400/20 to-amber-500/20 rounded-3xl blur-2xl group-hover:blur-3xl transition duration-500" />
                 <div className="relative bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-gray-800 dark:to-gray-700 rounded-3xl p-12 border border-yellow-200/50 dark:border-yellow-700/30">
                   <motion.img 
                     src={logoSrc}
                     alt={logoAlt}
-                    className="w-64 h-64 mx-auto object-contain drop-shadow-2xl"
+                    className="w-64 h-64 mx-auto object-contain drop-shadow-lg"
                     whileHover={{ scale: 1.05, rotate: 5 }}
                     transition={{ type: 'spring', stiffness: 300 }}
                   />
@@ -466,9 +441,7 @@ export function TeamCard3D({ member, index, onClick, colorIndex }: TeamCardProps
   
   const handleClick = () => {
     setIsFlipping(true);
-    // Trigger modal immediately, don't wait for animation
     onClick(member);
-    // Reset flip state after animation completes
     setTimeout(() => {
       setIsFlipping(false);
     }, 600);
@@ -482,14 +455,8 @@ export function TeamCard3D({ member, index, onClick, colorIndex }: TeamCardProps
           onClick={handleClick}
           style={{ perspective: 1000 }}
         >
-          {/* Glow Effect */}
           <motion.div 
-            className={`absolute -inset-1 bg-gradient-to-r ${gradient} rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-300`}
-            animate={isFlipping ? { opacity: 0.6, scale: 1.1 } : {}}
-          />
-          
-          <motion.div 
-            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-200/50 dark:border-gray-700/50"
+            className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700"
             animate={isFlipping ? { 
               rotateY: [0, 180, 360],
               scale: [1, 0.9, 1]
@@ -513,27 +480,6 @@ export function TeamCard3D({ member, index, onClick, colorIndex }: TeamCardProps
                   <p className="text-white text-sm font-medium">Klik untuk detail</p>
                 </div>
               </div>
-
-              {/* View Button with pulse animation */}
-              <motion.div
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white/20 backdrop-blur-sm border-2 border-white/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100"
-                whileHover={{ scale: 1.2 }}
-                animate={{ 
-                  boxShadow: ['0 0 0 0 rgba(255,255,255,0.4)', '0 0 0 20px rgba(255,255,255,0)', '0 0 0 0 rgba(255,255,255,0.4)']
-                }}
-                transition={{ 
-                  boxShadow: { duration: 2, repeat: Infinity },
-                  scale: { duration: 0.2 }
-                }}
-              >
-                <motion.span 
-                  className="text-white text-2xl"
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  👤
-                </motion.span>
-              </motion.div>
             </div>
 
             {/* Info */}
@@ -548,21 +494,11 @@ export function TeamCard3D({ member, index, onClick, colorIndex }: TeamCardProps
                 {member.description}
               </p>
 
-              {/* Animated dots */}
               <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50 flex justify-center gap-1">
                 {[...Array(3)].map((_, i) => (
-                  <motion.div
+                  <div
                     key={i}
                     className={`w-2 h-2 rounded-full bg-gradient-to-r ${gradient}`}
-                    animate={{ 
-                      y: [0, -4, 0],
-                      opacity: [0.5, 1, 0.5]
-                    }}
-                    transition={{ 
-                      duration: 1, 
-                      delay: i * 0.15,
-                      repeat: Infinity
-                    }}
                   />
                 ))}
               </div>
@@ -598,9 +534,6 @@ export function TeamSection({
   gridCols = 4,
   colorVariant = false
 }: TeamSectionProps) {
-  // PERFORMANCE: Disable particles for better performance
-  const isWebGLSupported = false;
-
   const gridClassName = {
     2: 'grid-cols-1 md:grid-cols-2',
     3: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
@@ -615,13 +548,6 @@ export function TeamSection({
 
   return (
     <section className="relative py-32 overflow-hidden">
-      {/* Background Particles */}
-      {isWebGLSupported && (
-        <Suspense fallback={null}>
-          <ParticleField count={200} color="#fbbf24" size={0.01} spread={20} className="opacity-30" />
-        </Suspense>
-      )}
-
       <div className="relative z-10 max-w-7xl mx-auto px-4">
         {/* Section Header */}
         <ScrollSection className="text-center mb-16">
@@ -690,4 +616,4 @@ export function TeamSection({
 }
 
 // Export all components
-export { Scene3D, ParticleField };
+export { Scene3D };

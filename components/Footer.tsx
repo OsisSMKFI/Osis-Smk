@@ -138,7 +138,7 @@ const Footer: React.FC = () => {
                         href={social.href} 
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-2xl flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-white hover:bg-white/30 transition-all duration-200 hover:scale-105 focus-ring"
+                        className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 dark:bg-white/10 border border-white/20 dark:border-white/10 rounded-2xl flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-white hover:bg-white/30 transition-all duration-200 hover:scale-105 focus-ring"
                         aria-label={`${t('footer.followUsOn')} ${social.name}`}
                       >
                         <social.icon size={24} className="sm:w-[26px] sm:h-[26px] lg:w-[28px] lg:h-[28px]" />
@@ -146,7 +146,7 @@ const Footer: React.FC = () => {
                     ) : (
                       <button 
                         onClick={(e) => { e.preventDefault(); showToast(t('toast.linkNotActive'), 'warning'); }}
-                        className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center text-gray-400 dark:text-gray-500 transition-all duration-200 hover:bg-white/15 focus-ring opacity-60 cursor-not-allowed"
+                        className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/10 dark:bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-gray-400 dark:text-gray-500 transition-all duration-200 hover:bg-white/15 focus-ring opacity-60 cursor-not-allowed"
                         aria-label={`${social.name} - ${t('socialMediaPage.notAvailable')}`}
                       >
                         <social.icon size={22} className="opacity-70" />
@@ -272,7 +272,7 @@ const Footer: React.FC = () => {
 
                 {/* Current URL Display */}
                 {currentUrl && (
-                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 backdrop-blur-sm">
+                  <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Website URL:</p>
                     <p className="text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
                       {currentUrl}

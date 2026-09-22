@@ -39,7 +39,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ icon, title, description, accentCol
       className="group relative"
       variants={itemVariants}
     >
-      <div className="relative bg-white dark:bg-slate-900/80 backdrop-blur-md rounded-xl p-6 sm:p-8 h-full border border-gray-200 dark:border-slate-700 transition-shadow duration-200 hover:shadow-lg">
+      <div className="relative bg-white dark:bg-slate-900 rounded-xl p-6 sm:p-8 h-full border border-gray-200 dark:border-slate-700 transition-shadow duration-200 hover:shadow-lg">
         {/* Icon */}
         <div className={`inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 ${accentColor} rounded-2xl mb-5 sm:mb-6 text-white shadow-md`}>
           <span className="text-2xl sm:text-3xl">{icon}</span>

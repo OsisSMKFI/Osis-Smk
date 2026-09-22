@@ -184,7 +184,7 @@ export default function GalleryPageClient() {
         {/* Quick Sekbid Buttons - Elegant Tab Navigation Like People Page */}
         <div className="flex justify-center mt-6 px-4">
           {/* Desktop: Horizontal Tabs */}
-          <div className="hidden sm:inline-flex items-center p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-500/10 dark:shadow-black/20 border border-gray-100/50 dark:border-slate-700/50">
+          <div className="hidden sm:inline-flex items-center p-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700">
             {/* All Tab */}
             <button
               onClick={() => setSekbidFilter('all')}
@@ -233,7 +233,7 @@ export default function GalleryPageClient() {
 
           {/* Mobile: Grid Layout */}
           <div className="sm:hidden w-full max-w-sm">
-            <div className="grid grid-cols-4 gap-2 p-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-lg shadow-gray-500/10 dark:shadow-black/20 border border-gray-100/50 dark:border-slate-700/50">
+            <div className="grid grid-cols-4 gap-2 p-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700">
               {/* All Tab - Mobile */}
               <button
                 onClick={() => setSekbidFilter('all')}

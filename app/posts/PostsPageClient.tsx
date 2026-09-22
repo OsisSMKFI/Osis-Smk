@@ -65,10 +65,7 @@ export default function PostsPageClient() {
   return (
     <div className="page-content bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 min-h-screen">
       {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-[url('/patterns/dots.svg')]"></div>
-        </div>
+      <section className="relative py-20 bg-gradient-to-r from-yellow-500 to-amber-600 text-white overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center max-w-3xl mx-auto">
             <FaNewspaper className="text-6xl mx-auto mb-6" />
