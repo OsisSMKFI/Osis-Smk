@@ -135,12 +135,16 @@ export default function AdminMembersPage() {
       const data = await response.json();
       console.log('[Members] Upload response:', data);
       
-      if (data.success && data.publicUrl) {
-        // Add cache-busting param to force browser to load new image immediately in preview
-        const cacheBustedUrl = `${data.publicUrl}?t=${Date.now()}`;
-        // Use cached-bust URL for preview but save clean URL to database
-        setFormData(prev => ({ ...prev, photo_url: cacheBustedUrl }));
-        toast.success('Foto berhasil diupload! Klik Simpan untuk menyimpan perubahan.');
+      if (data.success) {
+        // Use signed URL for preview (works even if bucket is private)
+        const previewUrl = data.signedUrl || data.url || data.publicUrl;
+        if (previewUrl) {
+          const cacheBustedUrl = `${previewUrl}?t=${Date.now()}`;
+          setFormData(prev => ({ ...prev, photo_url: cacheBustedUrl }));
+          toast.success('Foto berhasil diupload! Klik Simpan untuk menyimpan perubahan.');
+        } else {
+          throw new Error('No URL in upload response');
+        }
       } else {
         throw new Error(data.error || 'Invalid upload response');
       }
@@ -235,9 +239,9 @@ export default function AdminMembersPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-purple-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-amber-50">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
+          <div className="w-16 h-16 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto"></div>
           <p className="mt-4 text-slate-600 font-medium">Memuat data...</p>
         </div>
       </div>
@@ -245,13 +249,13 @@ export default function AdminMembersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 p-3 sm:p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
         <div className="bg-white rounded-xl md:rounded-2xl shadow-lg md:shadow-xl border border-slate-200 p-4 md:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br bg-amber-400 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
                 <FaUserGraduate className="text-lg md:text-2xl text-white" />
               </div>
               <div>
@@ -279,7 +283,7 @@ export default function AdminMembersPage() {
                   is_active: true 
                 });
               }}
-              className="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-lg md:rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 text-sm md:text-base"
+              className="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r bg-amber-400 text-white font-semibold rounded-lg md:rounded-xl hover:bg-amber-500 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 text-sm md:text-base"
             >
               <FaPlus /> <span className="hidden sm:inline">Tambah</span> Anggota
             </button>
@@ -290,7 +294,7 @@ export default function AdminMembersPage() {
         {showForm && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-xl md:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300">
-              <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-4 md:px-6 py-4 md:py-5 flex justify-between items-center sticky top-0 z-10">
+              <div className="bg-gradient-to-r bg-amber-400 px-4 md:px-6 py-4 md:py-5 flex justify-between items-center sticky top-0 z-10">
                 <h2 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
                   {editingId ? <FaEdit /> : <FaPlus />}
                   {editingId ? 'Edit Anggota' : 'Tambah Anggota Baru'}
@@ -322,7 +326,7 @@ export default function AdminMembersPage() {
                     <div className="mt-3">
                       <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-gradient-to-r from-purple-500 to-purple-600 transition-all duration-300"
+                          className="h-full bg-gradient-to-r bg-amber-400 transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
@@ -332,9 +336,9 @@ export default function AdminMembersPage() {
                 </div>
 
                 {/* Info Helper */}
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 p-3 md:p-4 rounded-lg">
+                <div className="bg-gradient-to-r bg-amber-50 border-l-4 border-amber-500 p-3 md:p-4 rounded-lg">
                   <div className="flex gap-2 md:gap-3">
-                    <div className="text-purple-600 text-base md:text-xl">ℹ️</div>
+                    <div className="text-amber-600 text-base md:text-xl">ℹ️</div>
                     <div className="text-xs md:text-sm text-slate-700">
                       <p className="font-semibold mb-1">Panduan Pengisian:</p>
                       <ul className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
@@ -355,7 +359,7 @@ export default function AdminMembersPage() {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-slate-50 border-2 border-slate-200 rounded-lg md:rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900 text-sm"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 bg-slate-50 border-2 border-slate-200 rounded-lg md:rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900 text-sm"
                       placeholder="Contoh: Ahmad Rifai"
                       required
                     />
@@ -378,7 +382,7 @@ export default function AdminMembersPage() {
                             : formData.sekbid_id
                         });
                       }}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900"
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900"
                       required
                     >
                       <option value="">Pilih Jabatan</option>
@@ -409,7 +413,7 @@ export default function AdminMembersPage() {
                     <select
                       value={formData.sekbid_id || ''}
                       onChange={(e) => setFormData({ ...formData, sekbid_id: e.target.value ? parseInt(e.target.value) : null })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900"
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900"
                       disabled={['Ketua OSIS', 'Wakil Ketua', 'Sekretaris', 'Bendahara'].includes(formData.role)}
                     >
                       <option value="">
@@ -431,20 +435,20 @@ export default function AdminMembersPage() {
                       type="text"
                       value={formData.class}
                       onChange={(e) => setFormData({ ...formData, class: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900"
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900"
                       placeholder="Contoh: XII IPA 1"
                     />
                   </div>
 
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-                      <FaEnvelope className="text-purple-500" /> Email
+                      <FaEnvelope className="text-amber-500" /> Email
                     </label>
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900"
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900"
                       placeholder="ahmad@example.com"
                     />
                   </div>
@@ -457,20 +461,20 @@ export default function AdminMembersPage() {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900"
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900"
                       placeholder="0812-3456-7890"
                     />
                   </div>
 
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-                      <FaInstagram className="text-purple-500" /> Instagram
+                      <FaInstagram className="text-amber-500" /> Instagram
                     </label>
                     <input
                       type="text"
                       value={formData.instagram}
                       onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900"
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900"
                       placeholder="@username"
                     />
                   </div>
@@ -483,7 +487,7 @@ export default function AdminMembersPage() {
                       type="number"
                       value={formData.display_order}
                       onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900"
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900"
                       placeholder="0"
                     />
                   </div>
@@ -496,7 +500,7 @@ export default function AdminMembersPage() {
                   <textarea
                     value={formData.quote}
                     onChange={(e) => setFormData({ ...formData, quote: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none font-medium text-slate-900 resize-none"
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-100 transition-all outline-none font-medium text-slate-900 resize-none"
                     placeholder="Masukkan quote atau motto pribadi..."
                     rows={3}
                   />
@@ -508,7 +512,7 @@ export default function AdminMembersPage() {
                     id="is_active"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-5 h-5 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+                    className="w-5 h-5 text-amber-600 border-slate-300 rounded focus:ring-amber-500"
                   />
                   <label htmlFor="is_active" className="text-sm font-semibold text-slate-700 cursor-pointer">
                     Anggota Aktif
@@ -519,7 +523,7 @@ export default function AdminMembersPage() {
                   <button
                     type="submit"
                     disabled={uploading}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r bg-amber-400 text-white font-semibold rounded-xl hover:bg-amber-500 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FaSave /> {editingId ? 'Update' : 'Simpan'}
                   </button>
@@ -548,7 +552,7 @@ export default function AdminMembersPage() {
             members.map((member) => (
               <div key={member.id} className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden hover:shadow-2xl transition-all group">
                 {/* Photo */}
-                <div className="relative h-64 bg-gradient-to-br from-purple-100 to-purple-50 overflow-hidden">
+                <div className="relative h-64 bg-gradient-to-br bg-amber-50 overflow-hidden">
                   {member.photo_url ? (
                     <img 
                       src={member.photo_url} 
@@ -557,13 +561,13 @@ export default function AdminMembersPage() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <FaUserGraduate className="text-6xl text-purple-300" />
+                      <FaUserGraduate className="text-6xl text-amber-300" />
                     </div>
                   )}
                   {/* Badge Sekbid */}
                   {member.sekbid?.name && (
                     <div className="absolute top-3 left-3">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm shadow-lg text-xs font-bold text-purple-700 border border-purple-200">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm shadow-lg text-xs font-bold text-amber-700 border border-amber-200">
                         <FaFolder /> {member.sekbid.name}
                       </span>
                     </div>
@@ -582,7 +586,7 @@ export default function AdminMembersPage() {
                 <div className="p-5 space-y-3">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900">{member.name}</h3>
-                    <p className="text-purple-600 font-semibold text-sm">{member.role}</p>
+                    <p className="text-amber-600 font-semibold text-sm">{member.role}</p>
                   </div>
 
                   {member.class && (
@@ -592,7 +596,7 @@ export default function AdminMembersPage() {
                   )}
 
                   {member.quote && (
-                    <p className="text-slate-600 text-sm italic border-l-4 border-purple-300 pl-3 py-1">
+                    <p className="text-slate-600 text-sm italic border-l-4 border-amber-300 pl-3 py-1">
                       "{member.quote}"
                     </p>
                   )}
@@ -600,13 +604,13 @@ export default function AdminMembersPage() {
                   <div className="pt-2 space-y-1.5 text-sm">
                     {member.email && (
                       <div className="flex items-center gap-2 text-slate-600">
-                        <FaEnvelope className="text-purple-500" />
+                        <FaEnvelope className="text-amber-500" />
                         <span className="truncate">{member.email}</span>
                       </div>
                     )}
                     {member.instagram && (
                       <div className="flex items-center gap-2 text-slate-600">
-                        <FaInstagram className="text-purple-500" />
+                        <FaInstagram className="text-amber-500" />
                         <span>{member.instagram}</span>
                       </div>
                     )}
@@ -616,7 +620,7 @@ export default function AdminMembersPage() {
                   <div className="flex gap-2 pt-3 border-t border-slate-200">
                     <button
                       onClick={() => handleEdit(member)}
-                      className="flex-1 px-4 py-2.5 bg-purple-50 text-purple-700 font-semibold rounded-lg hover:bg-purple-100 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2.5 bg-amber-50 text-amber-700 font-semibold rounded-lg hover:bg-amber-100 transition-all flex items-center justify-center gap-2"
                     >
                       <FaEdit /> Edit
                     </button>

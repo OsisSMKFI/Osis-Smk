@@ -82,8 +82,8 @@ export default function PostsPage() {
       if (status < 200 || status >= 300) {
         throw new Error(json?.error || 'Upload failed');
       }
-      // Prefer publicUrl (no expiry) over signed url
-      const uploadedUrl = json?.publicUrl || json?.url;
+      // Prefer signed URL (works even if bucket is private), fallback to publicUrl
+      const uploadedUrl = json?.signedUrl || json?.url || json?.publicUrl;
       setFormData(prev => ({ ...prev, image_url: uploadedUrl }));
     } catch (error) {
       console.error('Error uploading image:', error);

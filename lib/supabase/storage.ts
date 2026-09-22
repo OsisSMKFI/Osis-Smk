@@ -98,8 +98,14 @@ export function getPublicUrl(path: string): string {
 // STORAGE VALIDATION & PROTECTION
 // =============================================================================
 
-// Current Supabase project URL - IMPORTANT: Update this if project changes
-export const CURRENT_SUPABASE_PROJECT = 'mhefqwregrldvxtqqxbb';
+// Current Supabase project ID — derived from env or fallback
+export const CURRENT_SUPABASE_PROJECT = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (url) {
+    try { return new URL(url).hostname.split('.')[0]; } catch { /* fallback */ }
+  }
+  return 'mhefqwregrldvxtqqxbb';
+})();
 export const CURRENT_STORAGE_BASE_URL = `https://${CURRENT_SUPABASE_PROJECT}.supabase.co/storage/v1/object/public`;
 
 // Track all known deprecated Supabase projects

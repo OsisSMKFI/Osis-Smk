@@ -3,23 +3,20 @@ import { Metadata } from 'next';
 import PeopleSectionsClient from '@/components/PeopleSectionsClient';
 import PageHero from '@/components/animations/PageHero';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { convertToSignedUrl, extractPhotoPath } from '@/lib/signedUrls';
+import { CURRENT_SUPABASE_PROJECT } from '@/lib/supabase/storage';
 import { STATIC_METADATA } from '@/lib/metadata-helper';
 
 export const metadata: Metadata = STATIC_METADATA.people;
 export const revalidate = 0; // Always fetch fresh data
 
-// Fix incomplete URLs stored as just filenames
-const SUPABASE_STORAGE_URL = 'https://mhefqwregrldvxtqqxbb.supabase.co/storage/v1/object/public/gallery/members';
+const SUPABASE_STORAGE_URL = `https://${CURRENT_SUPABASE_PROJECT}.supabase.co/storage/v1/object/public/gallery/members`;
 
 function fixPhotoUrl(url: string | null | undefined): string {
   if (!url) return '/images/placeholder.svg';
-  // Already a full URL
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  // Local path
   if (url.startsWith('/images/')) return url;
-  // Path starting with /
-  if (url.startsWith('/')) return `https://mhefqwregrldvxtqqxbb.supabase.co/storage/v1/object/public${url}`;
-  // Just a filename - construct full URL
+  if (url.startsWith('/')) return `https://${CURRENT_SUPABASE_PROJECT}.supabase.co/storage/v1/object/public${url}`;
   return `${SUPABASE_STORAGE_URL}/${url}`;
 }
 
@@ -54,25 +51,38 @@ export default async function PeoplePage() {
         return sekbidId === null || (sekbidId >= 1 && sekbidId <= 6);
       });
 
-      // Transform to expected format
-      members = validMembers.map((m: any) => {
-        // Use role as-is from database - NO cleaning needed
-        // This ensures proper detection in PeopleSectionsClient
+      // Transform to expected format — use signed URLs so photos work regardless of bucket public status
+      const signedUrlPromises = validMembers.map(async (m: any) => {
+        const storedUrl = m.photo_url;
+        let imageUrl = '/images/placeholder.svg';
+
+        if (storedUrl) {
+          // Try signed URL first (works for both public and private buckets)
+          const signed = await convertToSignedUrl(storedUrl, { bucket: 'gallery' });
+          if (signed?.url) {
+            imageUrl = signed.url;
+          } else {
+            // Fallback to fixed public URL
+            imageUrl = fixPhotoUrl(storedUrl);
+          }
+        }
+
         const roleValue = m.role || 'Anggota';
-        
         return {
           id: m.id || 0,
           name: m.name || 'Data Tidak Tersedia',
-          position: roleValue, // Use actual role from DB
+          position: roleValue,
           description: m.quote || '',
-          image: fixPhotoUrl(m.photo_url),
+          image: imageUrl,
           instagram_username: m.instagram || m.instagram_username || undefined,
           kelas: m.class || m.kelas || undefined,
-          department: m.sekbid?.name || undefined, // Only set if has sekbid
+          department: m.sekbid?.name || undefined,
           departmentId: m.sekbid?.id ?? null,
           displayOrder: m.display_order || 0,
         };
       });
+
+      members = await Promise.all(signedUrlPromises);
     }
   } catch (error) {
     console.error('Error fetching members:', error);

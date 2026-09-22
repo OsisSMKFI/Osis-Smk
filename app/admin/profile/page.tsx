@@ -112,9 +112,14 @@ export default function ProfilePage() {
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
 
-      if (data.success && data.publicUrl) {
-        setFormData(prev => ({ ...prev, photo_url: data.publicUrl }));
-        showToast('✅ Foto berhasil diunggah!', 'success');
+      if (data.success) {
+        const previewUrl = data.signedUrl || data.url || data.publicUrl;
+        if (previewUrl) {
+          setFormData(prev => ({ ...prev, photo_url: previewUrl }));
+          showToast('✅ Foto berhasil diunggah!', 'success');
+        } else {
+          showToast('❌ Respons unggah tidak valid', 'error');
+        }
       } else {
         showToast('❌ Respons unggah tidak valid', 'error');
       }

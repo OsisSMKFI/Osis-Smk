@@ -117,29 +117,29 @@ export default function ImageUploadField({
                 }}
               />
             )}
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center gap-3">
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all duration-200 flex items-center justify-center gap-2 sm:gap-3 p-2">
               <button
                 type="button"
                 onClick={() => {
                   setTempImageSrc(currentImage);
                   setShowCropper(true);
                 }}
-                className="opacity-0 group-hover:opacity-100 px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
+                className="px-3 py-2 sm:px-5 sm:py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 text-xs sm:text-sm"
               >
-                <FaCrop /> Edit & Crop
+                <FaCrop /> <span className="hidden sm:inline">Edit &</span> Crop
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="opacity-0 group-hover:opacity-100 px-5 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
+                className="px-3 py-2 sm:px-5 sm:py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 text-xs sm:text-sm"
               >
-                <FaUpload /> Ganti Foto
+                <FaUpload /> Ganti
               </button>
               {onImageRemove && (
                 <button
                   type="button"
                   onClick={handleRemoveImage}
-                  className="opacity-0 group-hover:opacity-100 px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2"
+                  className="px-3 py-2 sm:px-5 sm:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center gap-2 text-xs sm:text-sm"
                 >
                   <FaTimes /> Hapus
                 </button>
@@ -147,7 +147,7 @@ export default function ImageUploadField({
             </div>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-            Hover untuk edit, crop, atau ganti foto
+            Tap atau hover untuk edit, crop, atau ganti foto
           </p>
         </div>
       ) : (

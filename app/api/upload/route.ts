@@ -162,53 +162,45 @@ export async function POST(request: NextRequest) {
 
     if (isDev) console.log('[/api/upload] ✅ Upload success');
 
-    // Generate signed URL for the uploaded file
+    // Generate signed URL for the uploaded file (works regardless of bucket public status)
     const signedUrlResult = await generateSignedUrl(data.path, { bucket });
     
-    if (!signedUrlResult) {
-      console.warn('[/api/upload] Failed to generate signed URL, falling back to public URL');
-      // Fallback to public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-
-      return NextResponse.json({
-        success: true,
-        url: publicUrl,
-        publicUrl: publicUrl,
-        path: data.path,
-        data: {
-          path: data.path,
-          publicUrl,
-          url: publicUrl,
-        },
-      });
-    }
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[/api/upload] \u2705 Signed URL generated');
-    }
-
-    // Get public URL as fallback for storage
+    // Get public URL for database storage reference
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
       .getPublicUrl(filePath);
 
+    // Verify public URL is accessible (HEAD check)
+    let publicUrlOk = false;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const headRes = await fetch(publicUrl, { method: 'HEAD', signal: controller.signal });
+      clearTimeout(timeout);
+      publicUrlOk = headRes.ok;
+    } catch { /* HEAD failed */ }
+
+    if (!publicUrlOk) {
+      console.warn('[/api/upload] Public URL not accessible, bucket may be private. Signed URL will be used for display.');
+    }
+
+    // Return signed URL as primary `url` for client display; publicUrl stored in DB
     return NextResponse.json({
       success: true,
-      url: signedUrlResult.url,
-      publicUrl: publicUrl,  // Add publicUrl for compatibility
-      signedUrl: signedUrlResult.url,
-      expiresAt: signedUrlResult.expiresAt,
-      bucket: signedUrlResult.bucket,
+      url: signedUrlResult?.url || publicUrl,
+      publicUrl: publicUrl,
+      signedUrl: signedUrlResult?.url,
+      expiresAt: signedUrlResult?.expiresAt,
+      bucket: signedUrlResult?.bucket || bucket,
       path: data.path,
+      publicUrlOk,
       data: {
         path: data.path,
         publicUrl,
-        signedUrl: signedUrlResult.url,
-        url: signedUrlResult.url,
-        expiresAt: signedUrlResult.expiresAt,
-        bucket: signedUrlResult.bucket
+        signedUrl: signedUrlResult?.url,
+        url: signedUrlResult?.url || publicUrl,
+        expiresAt: signedUrlResult?.expiresAt,
+        bucket: signedUrlResult?.bucket || bucket,
       },
     });
   } catch (error: any) {

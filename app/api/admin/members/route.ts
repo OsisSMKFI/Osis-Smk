@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { convertToSignedUrl } from '@/lib/signedUrls';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
 export async function GET(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter: only sekbid_id null (tim inti) or 1-6 (valid sekbid)
-    const members = (allMembers || [])
+    const filtered = (allMembers || [])
       .filter((m: any) => {
         const sid = m.sekbid_id;
         const validSekbid = sid === null || (sid >= 1 && sid <= 6);
@@ -43,6 +44,17 @@ export async function GET(request: NextRequest) {
         if (!hasId) console.warn('[admin/members GET] Filtering member without id:', m?.name);
         return validSekbid && hasId && m.name;
       });
+
+    // Convert photo_url to signed URLs so admin panel preview works
+    const members = await Promise.all(
+      filtered.map(async (m: any) => {
+        if (m.photo_url) {
+          const signed = await convertToSignedUrl(m.photo_url, { bucket: 'gallery' });
+          if (signed?.url) return { ...m, photo_url: signed.url };
+        }
+        return m;
+      })
+    );
 
     console.log(`[admin/members GET] Returning ${members.length} members`);
     return NextResponse.json({ members });

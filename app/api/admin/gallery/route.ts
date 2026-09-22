@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { toPublicStorageUrl } from '@/lib/signedUrls';
+import { convertToSignedUrl, toPublicStorageUrl } from '@/lib/signedUrls';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,13 +35,21 @@ export async function GET(request: NextRequest) {
       .map((g: any) => {
         // If image_url ends with .mp4, .webm, .mov etc, it's video; client should render as video not img
         const isVideo = /\.(mp4|webm|mov|avi|mkv)$/i.test(g.image_url || '');
-        // Heal expired signed URLs back to permanent public URLs
-        const image_url = toPublicStorageUrl(g.image_url) ?? g.image_url;
-        return { ...g, image_url, _isVideo: isVideo };
+        return { ...g, _isVideo: isVideo };
       });
 
-    console.log(`[admin/gallery GET] Returning ${normalized.length} items (${normalized.filter((g: any) => g._isVideo).length} videos)`);
-    return NextResponse.json({ gallery: normalized });
+    // Convert image URLs to signed URLs so they display correctly even if bucket is private
+    const itemsWithSignedUrls = await Promise.all(
+      normalized.map(async (g: any) => {
+        if (g._isVideo || !g.image_url) return g;
+        const signed = await convertToSignedUrl(g.image_url, { bucket: 'gallery' });
+        if (signed?.url) return { ...g, image_url: signed.url };
+        return g;
+      })
+    );
+
+    console.log(`[admin/gallery GET] Returning ${itemsWithSignedUrls.length} items (${itemsWithSignedUrls.filter((g: any) => g._isVideo).length} videos)`);
+    return NextResponse.json({ gallery: itemsWithSignedUrls });
   } catch (error: any) {
     // Suppress MIME type validation errors from Supabase storage (e.g., "isn't a valid image" for .mp4)
     if (error?.message?.includes('isn\'t a valid image') || error?.message?.includes('MIME')) {

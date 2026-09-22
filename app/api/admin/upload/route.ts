@@ -104,53 +104,50 @@ export async function POST(request: NextRequest) {
 
     console.log('[/api/admin/upload] Upload success:', data);
 
-    // Generate signed URL for the uploaded file
+    // Generate signed URL for the uploaded file (works regardless of bucket public status)
     const signedUrlResult = await generateSignedUrl(data.path, { bucket });
-    
-    if (!signedUrlResult) {
-      console.warn('[/api/admin/upload] Failed to generate signed URL, falling back to public URL');
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
 
-      return NextResponse.json({
-        success: true,
-        url: publicUrl,
-        publicUrl: publicUrl,
-        path: data.path,
-        data: {
-          path: data.path,
-          publicUrl,
-          url: publicUrl,
-        },
-      });
-    }
-
-    console.log('[/api/admin/upload] ✅ Signed URL generated:', {
-      bucket: signedUrlResult.bucket,
-      expiresAt: signedUrlResult.expiresAt
-    });
-
-    // Get public URL for storage in database
+    // Get public URL for database storage reference
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
       .getPublicUrl(filePath);
 
+    // Verify public URL is accessible (HEAD check)
+    let publicUrlOk = false;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const headRes = await fetch(publicUrl, { method: 'HEAD', signal: controller.signal });
+      clearTimeout(timeout);
+      publicUrlOk = headRes.ok;
+    } catch { /* HEAD failed */ }
+
+    if (!publicUrlOk) {
+      console.warn('[/api/admin/upload] Public URL not accessible, bucket may be private. Signed URL will be used for display.');
+    }
+
+    console.log('[/api/admin/upload] ✅ URLs ready:', {
+      bucket,
+      publicUrlOk,
+      hasSignedUrl: !!signedUrlResult?.url,
+    });
+
     return NextResponse.json({
       success: true,
-      url: signedUrlResult.url,      // Client gets signed URL
-      publicUrl: publicUrl,          // Public URL for database storage
-      signedUrl: signedUrlResult.url,
-      expiresAt: signedUrlResult.expiresAt,
-      bucket: signedUrlResult.bucket,
+      url: signedUrlResult?.url || publicUrl,
+      publicUrl: publicUrl,
+      signedUrl: signedUrlResult?.url,
+      expiresAt: signedUrlResult?.expiresAt,
+      bucket: signedUrlResult?.bucket || bucket,
       path: data.path,
+      publicUrlOk,
       data: {
         path: data.path,
         publicUrl,
-        signedUrl: signedUrlResult.url,
-        url: signedUrlResult.url,
-        expiresAt: signedUrlResult.expiresAt,
-        bucket: signedUrlResult.bucket
+        signedUrl: signedUrlResult?.url,
+        url: signedUrlResult?.url || publicUrl,
+        expiresAt: signedUrlResult?.expiresAt,
+        bucket: signedUrlResult?.bucket || bucket,
       },
     });
   } catch (error: any) {

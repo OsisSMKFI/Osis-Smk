@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { MembersResponseSchema, buildError, buildSuccess, MemberSchema } from '@/lib/validation';
-import { isValidStorageUrl, CURRENT_SUPABASE_PROJECT, DEPRECATED_PROJECTS } from '@/lib/supabase/storage';
+import { convertToSignedUrl, extractPhotoPath } from '@/lib/signedUrls';
+import { CURRENT_SUPABASE_PROJECT, DEPRECATED_PROJECTS } from '@/lib/supabase/storage';
 import crypto from 'crypto';
 
 // Supabase storage base URL for members photos
@@ -67,11 +68,17 @@ export async function GET(request: NextRequest) {
       return sekbidId === null || (sekbidId >= 1 && sekbidId <= 6);
     });
 
-    // Fix photo URLs for each member
-    const membersWithFixedUrls = filteredMembers.map((m: any) => ({
-      ...m,
-      photo_url: fixPhotoUrl(m.photo_url),
-    }));
+    // Fix photo URLs and convert to signed URLs for reliable display
+    const membersWithFixedUrls = await Promise.all(
+      filteredMembers.map(async (m: any) => {
+        const fixedUrl = fixPhotoUrl(m.photo_url);
+        if (fixedUrl && !fixedUrl.startsWith('/images/')) {
+          const signed = await convertToSignedUrl(fixedUrl, { bucket: 'gallery' });
+          if (signed?.url) return { ...m, photo_url: signed.url };
+        }
+        return { ...m, photo_url: fixedUrl };
+      })
+    );
 
     // Validate each member schema (non-fatal collect errors)
     const invalid: any[] = [];

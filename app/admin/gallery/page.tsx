@@ -239,8 +239,8 @@ export default function GalleryPage() {
         console.error('[Gallery handleImageChange] Upload failed:', json);
         throw new Error(json?.error || 'Upload gagal');
       }
-      // Prefer publicUrl (no expiry) over signed url
-      const uploadedUrl = json?.publicUrl || json?.url;
+      // Prefer signed URL (works even if bucket is private), fallback to publicUrl
+      const uploadedUrl = json?.signedUrl || json?.url || json?.publicUrl;
       console.log('[Gallery handleImageChange] ✅ Upload success, URL:', uploadedUrl);
       setFormData(prev => ({ ...prev, image_url: uploadedUrl }));
     } catch (e) {
