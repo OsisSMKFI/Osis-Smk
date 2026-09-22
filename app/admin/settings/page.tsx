@@ -32,12 +32,13 @@ const SETTINGS_GROUPS = {
   ai: {
     title: 'AI & Automation',
     icon: <FaRobot className="w-5 h-5" />,
-    color: 'from-purple-600 to-indigo-600',
+    color: 'from-amber-500 to-orange-500',
     settings: [
-      { key: 'GEMINI_API_KEY', label: 'Google Gemini API Key (AIza...)', secret: true, description: '🔑 Paste Gemini key here - must start with AIza' },
-      { key: 'OPENAI_API_KEY', label: 'OpenAI API Key (sk-proj...)', secret: true, description: '🔑 Paste OpenAI key here - must start with sk- or sk-proj-' },
-      { key: 'ANTHROPIC_API_KEY', label: 'Anthropic Claude API Key (sk-ant...)', secret: true, description: '🔑 Paste Claude key here - must start with sk-ant-' },
-      { key: 'HUGGINGFACE_API_KEY', label: 'HuggingFace API Key (hf_...)', secret: true, description: '🔑 Token HuggingFace Read (https://huggingface.co/settings/tokens) - harus mulai hf_' },
+      { key: 'GEMINI_API_KEY', label: 'Google Gemini API Key', secret: true, description: '🔑 Paste Gemini key (format: AIza... atau key Google lainnya)' },
+      { key: 'OPENAI_API_KEY', label: 'OpenAI API Key', secret: true, description: '🔑 Paste OpenAI key (format: sk-... atau sk-proj-...)' },
+      { key: 'ANTHROPIC_API_KEY', label: 'Anthropic Claude API Key', secret: true, description: '🔑 Paste Claude key (format: sk-ant-...)' },
+      { key: 'HUGGINGFACE_API_KEY', label: 'HuggingFace API Key', secret: true, description: '🔑 Token HuggingFace Read (https://huggingface.co/settings/tokens)' },
+      { key: 'TAVILY_API_KEY', label: 'Tavily API Key (Search Mendalam)', secret: true, description: '🔑 Untuk search/web crawling - daftar di https://tavily.com' },
       { key: 'GEMINI_MODEL', label: 'Gemini Model', secret: false, description: 'models/gemini-1.5-flash (default) | models/gemini-1.5-pro' },
       { key: 'OPENAI_MODEL', label: 'OpenAI Model', secret: false, description: 'gpt-4o-mini | gpt-4o | gpt-4-turbo' },
       { key: 'HUGGINGFACE_MODEL', label: 'HuggingFace Model', secret: false, description: 'black-forest-labs/FLUX.1-schnell (default) | black-forest-labs/FLUX.1-dev' },
@@ -67,7 +68,7 @@ const SETTINGS_GROUPS = {
   socialMedia: {
     title: 'Social Media',
     icon: <FaInstagram className="w-5 h-5" />,
-    color: 'from-pink-500 to-purple-600',
+    color: 'from-rose-500 to-pink-500',
     settings: [
       { key: 'SOCIAL_INSTAGRAM_URL', label: 'Instagram URL', secret: false, description: 'URL profil Instagram OSIS' },
       { key: 'SOCIAL_INSTAGRAM_USERNAME', label: 'Instagram Username', secret: false, description: '@username' },
@@ -86,7 +87,7 @@ const SETTINGS_GROUPS = {
   theme: {
     title: 'Theme & Background',
     icon: <FaPalette className="w-5 h-5" />,
-    color: 'from-pink-600 to-rose-600',
+    color: 'from-emerald-500 to-teal-500',
     settings: [
       { key: 'GLOBAL_BG_MODE', label: 'Background Mode', secret: false, description: 'none | color | gradient | image' },
       { key: 'GLOBAL_BG_SCOPE', label: 'Background Scope', secret: false, description: 'all-pages | homepage-only' },
@@ -154,27 +155,22 @@ export default function AdminSettingsPage() {
     // Validate API key formats BEFORE save
     const validationErrors: string[] = [];
     
-    if (values.OPENAI_API_KEY && values.OPENAI_API_KEY !== '***') {
-      if (!values.OPENAI_API_KEY.startsWith('sk-') && !values.OPENAI_API_KEY.startsWith('sk-proj-')) {
-        validationErrors.push('❌ OPENAI_API_KEY harus dimulai dengan "sk-" atau "sk-proj-"');
-      }
+    if (values.OPENAI_API_KEY && values.OPENAI_API_KEY !== '***' && values.OPENAI_API_KEY.length < 10) {
+      validationErrors.push('❌ OPENAI_API_KEY terlalu pendek (minimal 10 karakter)');
     }
     
-    if (values.GEMINI_API_KEY && values.GEMINI_API_KEY !== '***') {
-      if (!values.GEMINI_API_KEY.startsWith('AIza')) {
-        validationErrors.push('❌ GEMINI_API_KEY harus dimulai dengan "AIza"');
-      }
+    if (values.GEMINI_API_KEY && values.GEMINI_API_KEY !== '***' && values.GEMINI_API_KEY.length < 10) {
+      validationErrors.push('❌ GEMINI_API_KEY terlalu pendek (minimal 10 karakter)');
     }
     
-    if (values.ANTHROPIC_API_KEY && values.ANTHROPIC_API_KEY !== '***') {
-      if (!values.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
-        validationErrors.push('❌ ANTHROPIC_API_KEY harus dimulai dengan "sk-ant-"');
-      }
+    if (values.ANTHROPIC_API_KEY && values.ANTHROPIC_API_KEY !== '***' && values.ANTHROPIC_API_KEY.length < 10) {
+      validationErrors.push('❌ ANTHROPIC_API_KEY terlalu pendek (minimal 10 karakter)');
     }
-    if (values.HUGGINGFACE_API_KEY && values.HUGGINGFACE_API_KEY !== '***') {
-      if (!values.HUGGINGFACE_API_KEY.startsWith('hf_')) {
-        validationErrors.push('❌ HUGGINGFACE_API_KEY harus dimulai dengan "hf_"');
-      }
+    if (values.HUGGINGFACE_API_KEY && values.HUGGINGFACE_API_KEY !== '***' && values.HUGGINGFACE_API_KEY.length < 10) {
+      validationErrors.push('❌ HUGGINGFACE_API_KEY terlalu pendek (minimal 10 karakter)');
+    }
+    if (values.TAVILY_API_KEY && values.TAVILY_API_KEY !== '***' && values.TAVILY_API_KEY.length < 10) {
+      validationErrors.push('❌ TAVILY_API_KEY terlalu pendek (minimal 10 karakter)');
     }
     
     if (validationErrors.length > 0) {
@@ -949,12 +945,14 @@ export default function AdminSettingsPage() {
                   // Validate format for API keys
                   let formatError = '';
                   if (displayValue && !isMasked) {
-                    if (setting.key === 'OPENAI_API_KEY' && !displayValue.startsWith('sk-') && !displayValue.startsWith('sk-proj-')) {
-                      formatError = '❌ OpenAI key harus dimulai dengan "sk-" atau "sk-proj-"';
-                    } else if (setting.key === 'GEMINI_API_KEY' && !displayValue.startsWith('AIza')) {
-                      formatError = '❌ Gemini key harus dimulai dengan "AIza"';
-                    } else if (setting.key === 'ANTHROPIC_API_KEY' && !displayValue.startsWith('sk-ant-')) {
-                      formatError = '❌ Anthropic key harus dimulai dengan "sk-ant-"';
+                    if (setting.key === 'OPENAI_API_KEY' && displayValue.length < 10) {
+                      formatError = '⚠️ OpenAI key minimal 10 karakter';
+                    } else if (setting.key === 'GEMINI_API_KEY' && displayValue.length < 10) {
+                      formatError = '⚠️ Gemini key minimal 10 karakter';
+                    } else if (setting.key === 'ANTHROPIC_API_KEY' && displayValue.length < 10) {
+                      formatError = '⚠️ Anthropic key minimal 10 karakter';
+                    } else if (setting.key === 'TAVILY_API_KEY' && displayValue.length < 10) {
+                      formatError = '⚠️ Tavily key minimal 10 karakter';
                     } else if (setting.key === 'HUGGINGFACE_MODEL') {
                       if (displayValue.startsWith('hf_')) {
                         formatError = '❌ Field model berisi TOKEN (hf_...). Masukkan nama model seperti black-forest-labs/FLUX.1-schnell';

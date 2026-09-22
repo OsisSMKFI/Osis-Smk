@@ -130,19 +130,19 @@ export async function POST(request: NextRequest) {
       {
         name: 'Gemini Vision',
         // Validate format: harus mulai dengan 'AIza'
-        check: () => !!(geminiKey && geminiKey.startsWith('AIza')),
+        check: () => !!(geminiKey && geminiKey.length > 10),
         execute: () => verifyWithGemini(currentPhoto, referencePhotoUrl, geminiKey!)
       },
       {
         name: 'OpenAI Vision',
         // Validate format: harus mulai dengan 'sk-' atau 'sk-proj-'
-        check: () => !!(openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))),
+        check: () => !!(openaiKey && openaiKey.length > 10),
         execute: () => verifyWithOpenAI(currentPhoto, referencePhotoUrl, openaiKey!)
       },
       {
         name: 'Anthropic Vision',
         // Validate format: harus mulai dengan 'sk-ant-'
-        check: () => !!(anthropicKey && anthropicKey.startsWith('sk-ant-')),
+        check: () => !!(anthropicKey && anthropicKey.length > 10),
         execute: () => verifyWithAnthropic(currentPhoto, referencePhotoUrl, anthropicKey!)
       },
       {
@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
  */
 async function verifyWithGemini(currentPhoto: string, referencePhoto: string, apiKey: string): Promise<any> {
   try {
-    if (!apiKey || !apiKey.startsWith('AIza')) {
+    if (!apiKey || apiKey.length < 10) {
       throw new Error('Gemini API key not valid (must start with AIza)');
     }
 
@@ -644,7 +644,7 @@ THRESHOLD FOR APPROVAL: matchScore >= 0.85 AND confidence >= 0.70 AND isLive == 
  */
 async function verifyWithOpenAI(currentPhoto: string, referencePhoto: string, apiKey: string): Promise<any> {
   try {
-    if (!apiKey || (!apiKey.startsWith('sk-') && !apiKey.startsWith('sk-proj-'))) {
+    if (!apiKey || apiKey.length < 10) {
       throw new Error('OpenAI API key not valid (must start with sk-)');
     }
     
@@ -744,7 +744,7 @@ async function verifyWithOpenAI(currentPhoto: string, referencePhoto: string, ap
  */
 async function verifyWithAnthropic(currentPhoto: string, referencePhoto: string, apiKey: string): Promise<any> {
   try {
-    if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+    if (!apiKey || apiKey.length < 10) {
       throw new Error('Anthropic API key not valid (must start with sk-ant-)');
     }
     

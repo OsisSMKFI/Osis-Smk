@@ -3,8 +3,8 @@ import { getConfig } from '@/lib/adminConfig';
 
 export async function GET(_req: NextRequest) {
   const apiKey = await getConfig('GEMINI_API_KEY');
-  if (!apiKey || !apiKey.startsWith('AIza')) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY tidak valid atau belum diset (harus mulai AIza).'}, { status: 400 });
+  if (!apiKey || apiKey.length < 10) {
+    return NextResponse.json({ error: 'GEMINI_API_KEY tidak valid atau belum diset.' }, { status: 400 });
   }
   const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
   try {

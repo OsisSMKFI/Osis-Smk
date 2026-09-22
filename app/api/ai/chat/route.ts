@@ -9,6 +9,49 @@ import { getAIGatewayStatus, chat as gatewayChat } from '@/lib/vercel/ai-gateway
 import { EASTER_EGG_SOURCE_TEXT } from '@/lib/aiAutoLearn';
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 🔍 TAVILY WEB SEARCH - Search mendalam untuk data real-time
+// ═══════════════════════════════════════════════════════════════════════════
+async function searchWithTavily(query: string, apiKey: string): Promise<string> {
+  try {
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        query,
+        search_depth: 'basic',
+        max_results: 5,
+        include_answer: true,
+      }),
+    });
+    
+    if (!response.ok) {
+      console.log('[Tavily] Search failed:', response.status);
+      return '';
+    }
+    
+    const data = await response.json();
+    const results = data.results || [];
+    const answer = data.answer || '';
+    
+    let context = '';
+    if (answer) {
+      context += `Jawaban dari web: ${answer}\n\n`;
+    }
+    if (results.length > 0) {
+      context += 'Sumber web:\n';
+      results.forEach((r: any, i: number) => {
+        context += `${i + 1}. ${r.title || 'Untitled'}: ${r.content || ''}\n`;
+      });
+    }
+    return context;
+  } catch (err) {
+    console.log('[Tavily] Search error:', err);
+    return '';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 🔍 TYPO DETECTION - Deteksi kesalahan ketik untuk konfirmasi
 // ═══════════════════════════════════════════════════════════════════════════
 interface TypoDetectionResult {
@@ -260,6 +303,7 @@ async function callAI(
   const openaiKey = await getConfig('OPENAI_API_KEY');
   const geminiKey = await getConfig('GEMINI_API_KEY');
   const anthropicKey = await getConfig('ANTHROPIC_API_KEY');
+  const tavilyKey = await getConfig('TAVILY_API_KEY');
   
   // Get model preferences
   const openaiModel = await getConfig('OPENAI_MODEL') || 'gpt-4o-mini';
@@ -293,12 +337,14 @@ async function callAI(
     openai: openaiKey ? `${openaiKey.substring(0, 10)}... (${openaiKey.length} chars)` : 'NOT SET',
     gemini: geminiKey ? `${geminiKey.substring(0, 10)}... (${geminiKey.length} chars)` : 'NOT SET',
     anthropic: anthropicKey ? `${anthropicKey.substring(0, 10)}... (${anthropicKey.length} chars)` : 'NOT SET',
+    tavily: tavilyKey ? `${tavilyKey.substring(0, 10)}... (${tavilyKey.length} chars)` : 'NOT SET',
   });
   
   console.log('[AI] Available providers:', {
     openai: !!openaiKey,
     gemini: !!geminiKey,
     anthropic: !!anthropicKey,
+    tavily: !!tavilyKey,
   });
 
   // Explicit provider override handling (single block)
@@ -309,7 +355,7 @@ async function callAI(
       if (identificationQuery) {
         // Identification priority: OpenAI -> Gemini -> Anthropic (all providers allowed as fallback)
         console.log('[AI] Identification query detected - trying all providers in order');
-        if (openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('svcacct-'))) {
+        if (openaiKey && openaiKey.length > 10) {
           const r = await callOpenAI(messages, openaiKey, openaiModel);
           if (!('error' in r)) {
             console.log('[AI] OpenAI succeeded for identification');
@@ -317,7 +363,7 @@ async function callAI(
           }
           console.log('[AI] OpenAI failed, trying Gemini:', r.error);
         }
-        if (geminiKey && geminiKey.startsWith('AIza')) {
+        if (geminiKey && geminiKey.length > 10) {
           const r = await callGemini(messages, geminiKey, geminiModel);
           if (!('error' in r)) {
             console.log('[AI] Gemini succeeded for identification');
@@ -326,21 +372,21 @@ async function callAI(
           console.log('[AI] Gemini failed, trying Anthropic as last resort:', r.error);
         }
         // Allow Anthropic as emergency fallback for identification when others fail
-        if (anthropicKey && anthropicKey.startsWith('sk-ant-')) {
+        if (anthropicKey && anthropicKey.length > 10) {
           console.log('[AI] Using Anthropic as emergency fallback for identification');
           return callAnthropic(messages, anthropicKey);
         }
       } else {
         // Non-identification auto priority: OpenAI -> Gemini -> Anthropic
-        if (openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('svcacct-'))) {
+        if (openaiKey && openaiKey.length > 10) {
           const r = await callOpenAI(messages, openaiKey, openaiModel);
           if (!('error' in r)) return r;
         }
-        if (geminiKey && geminiKey.startsWith('AIza')) {
+        if (geminiKey && geminiKey.length > 10) {
           const r = await callGemini(messages, geminiKey, geminiModel);
           if (!('error' in r)) return r;
         }
-        if (anthropicKey && anthropicKey.startsWith('sk-ant-')) {
+        if (anthropicKey && anthropicKey.length > 10) {
           return callAnthropic(messages, anthropicKey);
         }
       }
@@ -349,19 +395,19 @@ async function callAI(
       if (identificationQuery) {
         console.log('[AI] ⚠️ Anthropic explicitly requested for identification - this may not work well');
       }
-      if (anthropicKey && anthropicKey.startsWith('sk-ant-')) {
+      if (anthropicKey && anthropicKey.length > 10) {
         return callAnthropic(messages, anthropicKey);
       }
       return { error: 'Kunci API Anthropic tidak tersedia atau format salah (harus mulai dengan sk-ant-)' };
     } else if (providerOverride === 'gemini') {
-      if (geminiKey && geminiKey.startsWith('AIza')) {
+      if (geminiKey && geminiKey.length > 10) {
         const r = await callGemini(messages, geminiKey, geminiModel);
         if ('error' in r) return r;
         return r;
       }
       return { error: 'Kunci API Gemini tidak tersedia atau format salah (harus mulai dengan AIza)' };
     } else if (providerOverride === 'openai') {
-      if (openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('svcacct-') || openaiKey.startsWith('sk-proj-'))) {
+      if (openaiKey && openaiKey.length > 10) {
         const r = await callOpenAI(messages, openaiKey, openaiModel);
         if ('error' in r) return r;
         return r;
@@ -372,7 +418,7 @@ async function callAI(
   }
 
   // Normal priority order (Gemini -> OpenAI -> Anthropic) with proper fallback
-  if (geminiKey && geminiKey.startsWith('AIza')) {
+  if (geminiKey && geminiKey.length > 10) {
     console.log('[AI] ✅ Trying Gemini provider');
     const geminiResult = await callGemini(messages, geminiKey, geminiModel);
     if (!('error' in geminiResult)) {
@@ -384,7 +430,7 @@ async function callAI(
     console.log('[AI] ⚠️ Gemini key exists but does not start with "AIza":', geminiKey.substring(0, 15));
   }
   
-  if (openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))) {
+  if (openaiKey && openaiKey.length > 10) {
     console.log('[AI] ✅ Trying OpenAI provider');
     const openaiResult = await callOpenAI(messages, openaiKey, openaiModel);
     if (!('error' in openaiResult)) {
@@ -396,7 +442,7 @@ async function callAI(
     console.log('[AI] ⚠️ OpenAI key exists but invalid format:', openaiKey.substring(0, 15));
   }
   
-  if (anthropicKey && anthropicKey.startsWith('sk-ant-')) {
+  if (anthropicKey && anthropicKey.length > 10) {
     console.log('[AI] ✅ Using Anthropic provider (last resort)');
     return callAnthropic(messages, anthropicKey);
   } else if (anthropicKey) {
@@ -1979,8 +2025,24 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
     const completeKnowledge = await getAIKnowledge(); // Full DB snapshot, auto-refreshed every 3min with temporal awareness
     const specificContext = await retrieveContext(userQuery || ''); // Query-specific search
     
+    // Tavily web search for real-time data (if key available)
+    let webContext = '';
+    const tavilyKey = await getConfig('TAVILY_API_KEY');
+    if (tavilyKey && tavilyKey.length > 10) {
+      const searchQuery = userQuery || '';
+      // Only search for questions that benefit from web data
+      if (/(apa itu|siapa|di mana|kapan|bagaimana|kenapa|berapa|info|berita|terbaru|update|current|recent)/i.test(searchQuery)) {
+        console.log('[AI] 🔍 Tavily web search for:', searchQuery.substring(0, 50));
+        webContext = await searchWithTavily(searchQuery, tavilyKey);
+        if (webContext) {
+          console.log('[AI] ✅ Tavily results:', webContext.length, 'chars');
+        }
+      }
+    }
+    
     console.log('[AI] Knowledge base size:', completeKnowledge.length, 'chars');
     console.log('[AI] Specific context size:', specificContext.length, 'chars');
+    console.log('[AI] Web context size:', webContext.length, 'chars');
     console.log('[AI] Sample knowledge (first 800 chars):', completeKnowledge.substring(0, 800));
     console.log('[AI] User query:', userQuery);
     
@@ -1993,19 +2055,21 @@ ${completeKnowledge}
 [ADDITIONAL CONTEXT FOR THIS QUERY]
 ${specificContext}
 
+${webContext ? `[WEB SEARCH RESULTS - REAL-TIME DATA]\n${webContext}\n` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [USER QUESTION - ANSWER USING ONLY THE CONTEXT ABOVE]
 ${lastUserMessage.content}
 
 ⚠️ ATURAN KETAT - WAJIB DIIKUTI:
-1. HANYA gunakan informasi dari CONTEXT di atas
+1. HANYA gunakan informasi dari CONTEXT di atas (termasuk WEB SEARCH RESULTS jika ada)
 2. JANGAN mengarang nama, sekbid, atau jabatan
 3. Jika nama tidak ada di database, katakan "tidak ditemukan di database"
 4. Sekbid HARUS sesuai dengan yang tercantum di database (Sekbid [ID])
 5. Jika ragu, sebutkan kemungkinan berdasarkan data yang ada
 6. VALIDASI: Setiap nama yang disebutkan HARUS ada di daftar "ANGGOTA OSIS" di atas
+7. Untuk pertanyaan umum/berita/pengetahuan, gunakan WEB SEARCH RESULTS sebagai sumber
 
-REMINDER: You have ALL the data above. Answer ONLY from this data. DO NOT hallucinate.`;
+REMINDER: You have ALL the data above. Answer from this data. DO NOT hallucinate.`;
     
     // Build messages with enhanced user query
     // Extend system prompt with public member field policy & correction acceptance
