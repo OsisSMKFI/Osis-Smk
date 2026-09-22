@@ -37,11 +37,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Filter: only sekbid_id null (tim inti) or 1-6 (valid sekbid)
+    // Filter: only members with valid sekbid_id (null or positive number) and have name + id
     const filtered = (allMembers || [])
       .filter((m: any) => {
         const sid = m.sekbid_id;
-        const validSekbid = sid === null || (sid >= 1 && sid <= 6);
+        const validSekbid = sid === null || (typeof sid === 'number' && sid > 0);
         const hasId = m.id != null && m.id !== undefined && m.id !== '';
         if (!hasId) console.warn('[admin/members GET] Filtering member without id:', m?.name);
         return validSekbid && hasId && m.name;
