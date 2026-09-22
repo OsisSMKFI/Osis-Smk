@@ -1,46 +1,52 @@
-/**
- * AI Gateway Status Endpoint
- * Check if AI services are properly configured
- */
-
 import { NextRequest, NextResponse } from 'next/server';
+import { getConfig } from '@/lib/adminConfig';
 import { getAIGatewayStatus } from '@/lib/vercel/ai-gateway';
-import { auth } from '@/lib/auth';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
-export async function GET(request: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
-    // Check authentication - only admin can see status
-    const session = await auth();
-    const isAdmin = session?.user?.role && ['super_admin', 'admin'].includes(session.user.role);
+    const [openaiKey, geminiKey, anthropicKey, tavilyKey] = await Promise.all([
+      getConfig('OPENAI_API_KEY'),
+      getConfig('GEMINI_API_KEY'),
+      getConfig('ANTHROPIC_API_KEY'),
+      getConfig('TAVILY_API_KEY'),
+    ]);
 
-    const status = getAIGatewayStatus();
+    const hasOpenAI = !!openaiKey && openaiKey.length > 10;
+    const hasGemini = !!geminiKey && geminiKey.length > 10;
+    const hasAnthropic = !!anthropicKey && anthropicKey.length > 10;
+    const hasTavily = !!tavilyKey && tavilyKey.length > 10;
 
-    // For non-admin, only show if AI is available
-    if (!isAdmin) {
-      return NextResponse.json({
-        available: status.anyAvailable,
-        message: status.anyAvailable ? 'AI services ready' : 'AI services not configured',
-      });
-    }
+    const gatewayStatus = getAIGatewayStatus();
 
-    // For admin, show detailed status
+    const providers = [
+      { id: 'auto', name: 'Auto (Smart Pick)', available: hasGemini || hasOpenAI || hasAnthropic || gatewayStatus.anyAvailable },
+      { id: 'gemini', name: 'Google Gemini', available: hasGemini },
+      { id: 'openai', name: 'OpenAI (GPT)', available: hasOpenAI },
+      { id: 'anthropic', name: 'Anthropic (Claude)', available: hasAnthropic },
+    ];
+
     return NextResponse.json({
-      available: status.anyAvailable,
-      mode: status.mode,
-      endpoint: status.endpoint,
-      configured: status.configured,
-      availableModels: status.availableModels,
-      message: status.anyAvailable 
-        ? `AI Gateway active (${status.mode})` 
-        : 'No AI Gateway configured. Add AI_GATEWAY_API_KEY or VERCEL_AI_GATEWAY_KEY in Vercel environment variables.',
+      providers,
+      features: {
+        webSearch: hasTavily,
+        vision: hasGemini || hasOpenAI,
+        gateway: gatewayStatus.anyAvailable,
+      },
+      anyAvailable: hasGemini || hasOpenAI || hasAnthropic || gatewayStatus.anyAvailable,
     });
   } catch (error) {
     console.error('[AI Status] Error:', error);
-    return NextResponse.json({ 
-      available: false,
-      error: 'Failed to check AI status',
-    }, { status: 500 });
+    return NextResponse.json({
+      providers: [
+        { id: 'auto', name: 'Auto (Smart Pick)', available: false },
+        { id: 'gemini', name: 'Google Gemini', available: false },
+        { id: 'openai', name: 'OpenAI (GPT)', available: false },
+        { id: 'anthropic', name: 'Anthropic (Claude)', available: false },
+      ],
+      features: { webSearch: false, vision: false, gateway: false },
+      anyAvailable: false,
+    });
   }
 }

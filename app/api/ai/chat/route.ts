@@ -370,135 +370,93 @@ async function callAI(
     tavily: !!tavilyKey,
   });
 
-  // Explicit provider override handling (single block)
-  if (providerOverride) {
-    console.log('[AI] Provider override requested:', providerOverride);
-    const identificationQuery = !!rawQuery && /(siapa|sekbid|jabatan|ini siapa|dia siapa)/i.test(rawQuery);
-    if (providerOverride === 'auto') {
-      if (identificationQuery) {
-        // Identification priority: OpenAI -> Gemini -> Anthropic (all providers allowed as fallback)
-        console.log('[AI] Identification query detected - trying all providers in order');
-        if (openaiKey && openaiKey.length > 10) {
-          const r = await callOpenAI(messages, openaiKey, openaiModel);
-          if (!('error' in r)) {
-            console.log('[AI] OpenAI succeeded for identification');
-            return r;
-          }
-          console.log('[AI] OpenAI failed, trying Gemini:', r.error);
-        }
-        if (geminiKey && geminiKey.length > 10) {
-          const r = await callGemini(messages, geminiKey, geminiModel);
-          if (!('error' in r)) {
-            console.log('[AI] Gemini succeeded for identification');
-            return r;
-          }
-          console.log('[AI] Gemini failed, trying Anthropic as last resort:', r.error);
-        }
-        // Allow Anthropic as emergency fallback for identification when others fail
-        if (anthropicKey && anthropicKey.length > 10) {
-          console.log('[AI] Using Anthropic as emergency fallback for identification');
-          return callAnthropic(messages, anthropicKey);
-        }
-      } else {
-        // Non-identification auto priority: OpenAI -> Gemini -> Anthropic
-        if (openaiKey && openaiKey.length > 10) {
-          const r = await callOpenAI(messages, openaiKey, openaiModel);
-          if (!('error' in r)) return r;
-        }
-        if (geminiKey && geminiKey.length > 10) {
-          const r = await callGemini(messages, geminiKey, geminiModel);
-          if (!('error' in r)) return r;
-        }
-        if (anthropicKey && anthropicKey.length > 10) {
-          return callAnthropic(messages, anthropicKey);
-        }
+  // Provider selection logic - each path has its own gateway fallback + error
+  const identificationQuery = !!rawQuery && /(siapa|sekbid|jabatan|ini siapa|dia siapa)/i.test(rawQuery);
+  const hasOpenAI = !!openaiKey && openaiKey.length > 10;
+  const hasGemini = !!geminiKey && geminiKey.length > 10;
+  const hasAnthropic = !!anthropicKey && anthropicKey.length > 10;
+
+  async function tryGateway(): Promise<{ text?: string; error?: string }> {
+    const gatewayStatus = getAIGatewayStatus();
+    if (gatewayStatus.anyAvailable) {
+      console.log('[AI] Trying Vercel AI Gateway');
+      try {
+        const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
+        const systemMessage = messages.find(m => m.role === 'system')?.content;
+        const text = await gatewayChat(lastUserMessage, { model: 'gpt-4o-mini', system: systemMessage });
+        return { text };
+      } catch (e: any) {
+        console.error('[AI] Gateway failed:', e.message);
       }
-    } else if (providerOverride === 'anthropic') {
-      // Only block Anthropic when explicitly selected (not auto fallback)
-      if (identificationQuery) {
-        console.log('[AI] ⚠️ Anthropic explicitly requested for identification - this may not work well');
-      }
-      if (anthropicKey && anthropicKey.length > 10) {
-        return callAnthropic(messages, anthropicKey);
-      }
-      return { error: 'Kunci API Anthropic tidak tersedia atau format salah (harus mulai dengan sk-ant-)' };
-    } else if (providerOverride === 'gemini') {
-      if (geminiKey && geminiKey.length > 10) {
-        const r = await callGemini(messages, geminiKey, geminiModel);
-        if ('error' in r) return r;
-        return r;
-      }
-      return { error: 'Kunci API Gemini tidak tersedia atau format salah (harus mulai dengan AIza)' };
-    } else if (providerOverride === 'openai') {
-      if (openaiKey && openaiKey.length > 10) {
-        const r = await callOpenAI(messages, openaiKey, openaiModel);
-        if ('error' in r) return r;
-        return r;
-      }
-      return { error: 'Kunci API OpenAI tidak tersedia atau format salah (harus mulai dengan sk-)' };
     }
-    // If we handled override but no provider succeeded, continue to normal priority below
+    return { error: 'AI provider is not configured. Set API keys in admin settings (Gemini/OpenAI/Anthropic) atau aktifkan Vercel AI Gateway.' };
   }
 
-  // Normal priority order (Gemini -> OpenAI -> Anthropic) with proper fallback
-  if (geminiKey && geminiKey.length > 10) {
-    console.log('[AI] ✅ Trying Gemini provider');
-    const geminiResult = await callGemini(messages, geminiKey, geminiModel);
-    if (!('error' in geminiResult)) {
-      console.log('[AI] ✅ Gemini succeeded');
-      return geminiResult;
+  if (providerOverride === 'auto' || !providerOverride) {
+    // Auto / no override: try all providers, then gateway
+    console.log('[AI] Provider mode:', providerOverride || 'auto (no override)');
+    
+    const tryOrder = identificationQuery
+      ? [hasOpenAI ? 'openai' : null, hasGemini ? 'gemini' : null, hasAnthropic ? 'anthropic' : null].filter(Boolean)
+      : [hasGemini ? 'gemini' : null, hasOpenAI ? 'openai' : null, hasAnthropic ? 'anthropic' : null].filter(Boolean);
+
+    for (const p of tryOrder) {
+      console.log('[AI] Trying provider:', p);
+      if (p === 'openai') {
+        const r = await callOpenAI(messages, openaiKey!, openaiModel);
+        if (!('error' in r)) return r;
+        console.log('[AI] OpenAI failed:', r.error);
+      } else if (p === 'gemini') {
+        const r = await callGemini(messages, geminiKey!, geminiModel);
+        if (!('error' in r)) return r;
+        console.log('[AI] Gemini failed:', r.error);
+      } else if (p === 'anthropic') {
+        const r = await callAnthropic(messages, anthropicKey!);
+        if (!('error' in r)) return r;
+        console.log('[AI] Anthropic failed:', r.error);
+      }
     }
-    console.log('[AI] ⚠️ Gemini failed, trying next provider:', geminiResult.error);
-  } else if (geminiKey) {
-    console.log('[AI] ⚠️ Gemini key too short:', geminiKey.length, 'chars');
+    
+    const gw = await tryGateway();
+    if (!gw.error) return gw;
+    
+    console.error('[AI] ❌ All providers failed. Debug:', {
+      hasOpenAI, hasGemini, hasAnthropic,
+      openaiLen: openaiKey?.length || 0,
+      geminiLen: geminiKey?.length || 0,
+      anthropicLen: anthropicKey?.length || 0,
+    });
+    return gw;
+    
+  } else if (providerOverride === 'gemini') {
+    if (!hasGemini) return { error: 'Gemini API key belum diset. Masukkan di Admin → Settings → GEMINI_API_KEY.' };
+    const r = await callGemini(messages, geminiKey, geminiModel);
+    if (!('error' in r)) return r;
+    console.log('[AI] Gemini explicit failed:', r.error);
+    const gw = await tryGateway();
+    if (!gw.error) return gw;
+    return r; // return original error
+    
+  } else if (providerOverride === 'openai') {
+    if (!hasOpenAI) return { error: 'OpenAI API key belum diset. Masukkan di Admin → Settings → OPENAI_API_KEY.' };
+    const r = await callOpenAI(messages, openaiKey, openaiModel);
+    if (!('error' in r)) return r;
+    console.log('[AI] OpenAI explicit failed:', r.error);
+    const gw = await tryGateway();
+    if (!gw.error) return gw;
+    return r;
+    
+  } else if (providerOverride === 'anthropic') {
+    if (!hasAnthropic) return { error: 'Anthropic API key belum diset. Masukkan di Admin → Settings → ANTHROPIC_API_KEY.' };
+    const r = await callAnthropic(messages, anthropicKey);
+    if (!('error' in r)) return r;
+    console.log('[AI] Anthropic explicit failed:', r.error);
+    const gw = await tryGateway();
+    if (!gw.error) return gw;
+    return r;
   }
   
-  if (openaiKey && openaiKey.length > 10) {
-    console.log('[AI] ✅ Trying OpenAI provider');
-    const openaiResult = await callOpenAI(messages, openaiKey, openaiModel);
-    if (!('error' in openaiResult)) {
-      console.log('[AI] ✅ OpenAI succeeded');
-      return openaiResult;
-    }
-    console.log('[AI] ⚠️ OpenAI failed, trying next provider:', openaiResult.error);
-  } else if (openaiKey) {
-    console.log('[AI] ⚠️ OpenAI key exists but invalid format:', openaiKey.substring(0, 15));
-  }
-  
-  if (anthropicKey && anthropicKey.length > 10) {
-    console.log('[AI] ✅ Using Anthropic provider (last resort)');
-    return callAnthropic(messages, anthropicKey);
-  } else if (anthropicKey) {
-    console.log('[AI] ⚠️ Anthropic key exists but does not start with "sk-ant-":', anthropicKey.substring(0, 15));
-  }
-
-  // Try Vercel AI Gateway as final fallback
-  const gatewayStatus = getAIGatewayStatus();
-  if (gatewayStatus.anyAvailable) {
-    console.log('[AI] ✅ Using Vercel AI Gateway as fallback');
-    try {
-      const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
-      const systemMessage = messages.find(m => m.role === 'system')?.content;
-      const text = await gatewayChat(lastUserMessage, { 
-        model: 'gpt-4o-mini',
-        system: systemMessage,
-      });
-      return { text };
-    } catch (gatewayError: any) {
-      console.error('[AI] ❌ AI Gateway failed:', gatewayError.message);
-    }
-  }
-
-  // No valid API key found
-  console.error('[AI] ❌ No valid API key found. All providers unavailable.');
-  console.error('[AI] Debug - Keys found:', {
-    openai: openaiKey ? `${openaiKey.length} chars` : 'null',
-    gemini: geminiKey ? `${geminiKey.length} chars` : 'null',
-    anthropic: anthropicKey ? `${anthropicKey.length} chars` : 'null',
-  });
-  return { 
-    error: 'AI provider is not configured. Please set API keys in admin settings or configure Vercel AI Gateway.' 
-  };
+  return { error: 'Provider tidak dikenali: ' + providerOverride };
 }
 
 async function callOpenAI(
@@ -528,205 +486,135 @@ async function callOpenAI(
   return { text };
 }
 
+// Cache for available Gemini models to avoid repeated API calls
+let cachedGeminiModels: string[] | null = null;
+let cachedGeminiModelsTime = 0;
+const GEMINI_MODELS_CACHE_TTL = 300_000; // 5 minutes
+
+async function fetchAvailableGeminiModels(apiKey: string): Promise<string[]> {
+  const now = Date.now();
+  if (cachedGeminiModels && (now - cachedGeminiModelsTime) < GEMINI_MODELS_CACHE_TTL) {
+    return cachedGeminiModels;
+  }
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    const models = (json.models || [])
+      .filter((m: any) => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map((m: any) => m.name?.replace(/^models\//, '') || '')
+      .filter(Boolean);
+    cachedGeminiModels = models;
+    cachedGeminiModelsTime = now;
+    console.log('[Gemini] Discovered models:', models);
+    return models;
+  } catch (e) {
+    console.error('[Gemini] Failed to fetch models list:', e);
+    return [];
+  }
+}
+
 async function callGemini(
   messages: Array<{ role: 'system'|'user'|'assistant'; content: string }>,
   apiKey: string,
   model: string = 'gemini-2.0-flash'
 ) {
-  // Normalize model name - ensure it has models/ prefix but not duplicated
-  let geminiModel = model.trim();
-  // Strip any leading 'models/' for internal handling; we'll add exactly once in URL
-  geminiModel = geminiModel.replace(/^models\//, '');
+  let geminiModel = model.trim().replace(/^models\//, '');
   
-  // Convert OpenAI format to Gemini format
   const systemPrompt = messages.find(m => m.role === 'system')?.content || '';
   const conversationMessages = messages.filter(m => m.role !== 'system');
   
-  // Gemini format: parts array with text
   const contents = conversationMessages.map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }]
   }));
 
-  // Prepend system prompt to first user message if exists
   if (systemPrompt && contents.length > 0 && contents[0].role === 'user') {
     contents[0].parts[0].text = `${systemPrompt}\n\n${contents[0].parts[0].text}`;
   }
 
   const buildUrl = (m: string) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
-  let attemptModel = geminiModel;
-  let url = buildUrl(attemptModel);
-  console.log('[Gemini] Attempting model:', attemptModel);
-  console.log('[Gemini] Request URL:', url);
+  const body = JSON.stringify({
+    contents,
+    generationConfig: { temperature: 0.2, topP: 0.8, topK: 40, maxOutputTokens: 2048 },
+  });
 
-  // Retry logic for network errors (ECONNRESET, timeout, etc.)
-  const maxRetries = 3;
-  let lastError: any = null;
+  // Build candidate model list: requested model first, then discovered models
+  const discovered = await fetchAvailableGeminiModels(apiKey);
+  const candidates = [geminiModel, ...discovered.filter(m => m !== geminiModel)];
   
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[Gemini] Attempt ${attempt}/${maxRetries}`);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-      
-      let res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.2,
-            topP: 0.8,
-            topK: 40,
-            maxOutputTokens: 2048,
-          },
-        }),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
+  console.log('[Gemini] Candidate models:', candidates);
 
-      console.log('[Gemini] Response status:', res.status, res.statusText);
-      console.log('[Gemini] Response headers:', Object.fromEntries(res.headers.entries()));
-      
-      const responseText = await res.text();
-      console.log('[Gemini] Response body:', responseText);
-      
-      if (!responseText) {
-        if (res.status === 404) {
-          console.error('[Gemini] 404 empty body - model or endpoint not found for', attemptModel);
-          // Fallback strategy: try valid models in order
-          const fallbackModels = ['gemini-1.5-pro', 'gemini-flash-1.5', 'gemini-pro'];
-          for (const altModel of fallbackModels) {
-            if (altModel === attemptModel) continue;
-            console.log('[Gemini] Retrying with alternate model:', altModel);
-            attemptModel = altModel;
-            url = buildUrl(attemptModel);
-            
-            const altController = new AbortController();
-            const altTimeoutId = setTimeout(() => altController.abort(), 30000);
-            
-            const altRes = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents,
-                generationConfig: { temperature: 0.2, topP: 0.8, topK: 40, maxOutputTokens: 2048 },
-              }),
-              signal: altController.signal,
-            });
-            
-            clearTimeout(altTimeoutId);
-            const altText = await altRes.text();
-            console.log('[Gemini] Alt model response status:', altRes.status);
-            if (altRes.status === 200 && altText) {
-              let altJson: any;
-              try { altJson = JSON.parse(altText); } catch { continue; }
-              const altReply = altJson?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-              if (altReply) return { text: altReply };
-            }
-          }
-          return { error: 'Gemini 404: model/endpoint tidak ditemukan setelah semua fallback. Cek apakah Generative Language API aktif di Google Cloud Console.' };
-        }
-        console.error('[Gemini] Empty response body');
-        return { error: 'Gemini API response kosong. Pastikan API aktif & kuota tersedia.' };
-      }
-
-      let json;
+  for (const attemptModel of candidates) {
+    const url = buildUrl(attemptModel);
+    
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        json = JSON.parse(responseText);
-      } catch (e) {
-        console.error('[Gemini] JSON parse error:', e);
-        console.error('[Gemini] Raw response:', responseText);
-        return { error: 'Invalid JSON response from Gemini' };
-      }
-
-      if (!res.ok) {
-        console.error('[Gemini] Error:', json);
-        const errMsg = json?.error?.message || `Gemini API error status ${res.status}`;
+        console.log(`[Gemini] Trying model: ${attemptModel} (attempt ${attempt})`);
         
-        // If model not found (404), try fallback models
-        if (res.status === 404 && json?.error?.status === 'NOT_FOUND') {
-          const fallbackModels = ['gemini-1.5-pro', 'gemini-flash-1.5', 'gemini-pro'];
-          for (const altModel of fallbackModels) {
-            if (altModel === attemptModel) continue;
-            console.log('[Gemini] Model not found, trying fallback:', altModel);
-            attemptModel = altModel;
-            url = buildUrl(attemptModel);
-            
-            const altController = new AbortController();
-            const altTimeoutId = setTimeout(() => altController.abort(), 30000);
-            
-            const altRes = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents,
-                generationConfig: { temperature: 0.2, topP: 0.8, topK: 40, maxOutputTokens: 2048 },
-              }),
-              signal: altController.signal,
-            });
-            
-            clearTimeout(altTimeoutId);
-            const altText = await altRes.text();
-            console.log('[Gemini] Fallback model response status:', altRes.status);
-            
-            if (altRes.status === 200 && altText) {
-              let altJson: any;
-              try { altJson = JSON.parse(altText); } catch { continue; }
-              const altReply = altJson?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-              if (altReply) {
-                console.log('[Gemini] Fallback model succeeded:', altModel);
-                return { text: altReply };
-              }
-            }
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        const responseText = await res.text();
+        
+        if (res.ok && responseText) {
+          const json = JSON.parse(responseText);
+          const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (text) {
+            console.log('[Gemini] Success with model:', attemptModel);
+            return { text };
           }
-          return { error: `Gemini: model "${attemptModel}" tidak ditemukan. Semua fallback gagal. Cek api/v1beta/models di Google Cloud Console.` };
         }
         
-        return { error: `Gemini: ${errMsg} | Tips: cek enable API & billing.` };
-      }
-      
-      console.log('[Gemini] Success response:', JSON.stringify(json, null, 2));
-      const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      console.log('[Gemini] Extracted text:', text);
-      if (!text) {
-        return { error: 'Gemini tidak mengembalikan teks jawaban.' };
-      }
-      return { text };
-      
-    } catch (error: any) {
-      lastError = error;
-      const errorCode = error?.cause?.code || error?.code;
-      console.error(`[Gemini] Attempt ${attempt} failed:`, {
-        message: error.message,
-        code: errorCode,
-        cause: error.cause,
-      });
-      
-      // Retry on network errors (ECONNRESET, ETIMEDOUT, etc.)
-      if (errorCode === 'ECONNRESET' || errorCode === 'ETIMEDOUT' || error.name === 'AbortError') {
-        if (attempt < maxRetries) {
-          const backoff = attempt * 1000; // 1s, 2s, 3s
-          console.log(`[Gemini] Retrying in ${backoff}ms...`);
-          await new Promise(resolve => setTimeout(resolve, backoff));
+        // If 404 NOT_FOUND, skip to next model immediately
+        if (res.status === 404) {
+          console.log(`[Gemini] Model ${attemptModel} not found, trying next...`);
+          break; // break retry loop, go to next candidate
+        }
+        
+        // For other errors (403, 429, 500), retry once
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 1000));
           continue;
         }
+        
+        // Parse error for helpful message
+        let errMsg = `Gemini API error ${res.status}`;
+        try {
+          const errJson = JSON.parse(responseText);
+          errMsg = errJson?.error?.message || errMsg;
+        } catch {}
+        console.error(`[Gemini] Model ${attemptModel} error:`, errMsg);
+        
+        // If it's a key/API issue (not model not found), return immediately
+        if (res.status === 403 || res.status === 401) {
+          return { error: `Gemini: ${errMsg}` };
+        }
+        
+      } catch (error: any) {
+        const errorCode = error?.cause?.code || error?.code;
+        if (errorCode === 'ECONNRESET' || errorCode === 'ETIMEDOUT' || error.name === 'AbortError') {
+          if (attempt === 1) {
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+        }
+        console.error(`[Gemini] Network error for ${attemptModel}:`, error.message);
+        break; // move to next model
       }
-      
-      // Non-retryable error or max retries reached
-      break;
     }
   }
   
-  // All retries exhausted
-  const errorCode = lastError?.cause?.code || lastError?.code || 'UNKNOWN';
-  console.error('[Gemini] All retries failed. Last error:', lastError);
   return { 
-    error: `Gemini network error (${errorCode}). ${errorCode === 'ECONNRESET' ? 'Connection reset - check network/proxy/firewall settings.' : 'Please try again later.'}` 
+    error: `Gemini: semua model gagal. Model dicoba: ${candidates.join(', ')}. Pastikan Generative Language API aktif di console.cloud.google.com` 
   };
 }
 
@@ -1751,7 +1639,7 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
             const buf = Buffer.from(await imgRes.arrayBuffer());
             const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
             const b64 = buf.toString('base64');
-            const geminiModel = (await getConfig('GEMINI_MODEL')) || 'gemini-2.0-flash-exp';
+            const geminiModel = (await getConfig('GEMINI_MODEL')) || 'gemini-2.0-flash';
             const gemRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel.replace(/^models\//,'')}:generateContent?key=${geminiKey}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

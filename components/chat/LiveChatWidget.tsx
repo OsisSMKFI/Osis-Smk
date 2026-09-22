@@ -147,6 +147,12 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [provider, setProvider] = React.useState<'auto'|'anthropic'|'gemini'|'openai'>('auto');
+  const [providerStatus, setProviderStatus] = React.useState<{ id: string; name: string; available: boolean }[]>([
+    { id: 'auto', name: 'Auto (Smart Pick)', available: true },
+    { id: 'gemini', name: 'Gemini', available: false },
+    { id: 'openai', name: 'GPT', available: false },
+    { id: 'anthropic', name: 'Claude', available: false },
+  ]);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = React.useState(false);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
@@ -206,6 +212,19 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
         y: window.innerHeight - size.height - 24,
       });
     }
+  }, []);
+
+  // Fetch available AI providers on mount
+  React.useEffect(() => {
+    fetch('/api/ai/status')
+      .then(r => r.json())
+      .then(data => {
+        if (data.providers) {
+          setProviderStatus(data.providers);
+          console.log('[LiveChat] Providers:', data.providers);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // 🎨 Load custom design CSS from database on mount
@@ -994,10 +1013,11 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                   className="text-[10px] px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 ml-1"
                   title="AI Provider"
                 >
-                  <option value="auto">Auto</option>
-                  <option value="anthropic">Claude</option>
-                  <option value="gemini">Gemini</option>
-                  <option value="openai">GPT</option>
+                  {providerStatus.map(p => (
+                    <option key={p.id} value={p.id} disabled={!p.available}>
+                      {p.name}{!p.available ? ' (no key)' : ''}
+                    </option>
+                  ))}
                 </select>
               )}
               <button
@@ -1484,10 +1504,11 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                   className="text-[10px] px-2 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
                   title="Provider AI"
                 >
-                  <option value="auto">Auto</option>
-                  <option value="anthropic">Claude</option>
-                  <option value="gemini">Gemini</option>
-                  <option value="openai">GPT</option>
+                  {providerStatus.map(p => (
+                    <option key={p.id} value={p.id} disabled={!p.available}>
+                      {p.name}{!p.available ? ' (no key)' : ''}
+                    </option>
+                  ))}
                 </select>
               )}
             </div>
