@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { clearSnapshotCache } from '@/lib/aiSiteFetcher';
+import { refreshAIKnowledge } from '@/lib/aiAutoLearn';
 
 export async function DELETE(
   request: NextRequest,
@@ -27,6 +29,10 @@ export async function DELETE(
     revalidatePath('/people');
     revalidatePath('/');
     revalidatePath('/api/members');
+
+    // Invalidate AI knowledge cache
+    clearSnapshotCache();
+    refreshAIKnowledge();
 
     return NextResponse.json({ success: true, message: 'Member deleted' });
   } catch (error: any) {
@@ -72,6 +78,10 @@ export async function PUT(
     revalidatePath('/people');
     revalidatePath('/');
     revalidatePath('/api/members');
+
+    // Invalidate AI knowledge cache
+    clearSnapshotCache();
+    refreshAIKnowledge();
 
     return NextResponse.json({ success: true, data });
   } catch (error: any) {

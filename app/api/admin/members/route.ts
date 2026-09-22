@@ -4,6 +4,8 @@ import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { convertToSignedUrl } from '@/lib/signedUrls';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { clearSnapshotCache } from '@/lib/aiSiteFetcher';
+import { refreshAIKnowledge } from '@/lib/aiAutoLearn';
 
 export async function GET(request: NextRequest) {
   try {
@@ -96,6 +98,10 @@ export async function POST(request: NextRequest) {
     revalidatePath('/people');
     revalidatePath('/');
     revalidatePath('/api/members');
+
+    // Invalidate AI knowledge cache so chatbot gets fresh data
+    clearSnapshotCache();
+    refreshAIKnowledge();
 
     return NextResponse.json({ success: true, data });
   } catch (error: any) {

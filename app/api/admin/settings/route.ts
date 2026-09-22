@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { invalidateSettingsCache } from '@/lib/getAdminSettings';
+import { clearSnapshotCache } from '@/lib/aiSiteFetcher';
+import { refreshAIKnowledge } from '@/lib/aiAutoLearn';
 
 export async function GET(request: NextRequest) {
   try {
@@ -132,7 +134,10 @@ export async function POST(request: NextRequest) {
 
     // Invalidate AI Manager cache so it reloads keys from database
     invalidateSettingsCache();
-    console.log('[/api/admin/settings] AI settings cache invalidated - AI will reload keys on next use');
+    // Invalidate AI knowledge cache so chatbot gets fresh site data (SITE_KETUA, etc.)
+    clearSnapshotCache();
+    refreshAIKnowledge();
+    console.log('[/api/admin/settings] AI settings + knowledge cache invalidated');
 
     return NextResponse.json({ 
       success: true, 
