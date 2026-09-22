@@ -107,13 +107,8 @@ export async function smartUpload(
   const DIRECT_UPLOAD_THRESHOLD = 3 * 1024 * 1024; // 3MB
   
   if (file.size > DIRECT_UPLOAD_THRESHOLD) {
-    console.log(`[smartUpload] File ${file.name} is ${(file.size / 1024 / 1024).toFixed(2)}MB, trying direct upload`);
     const result = await directUploadToSupabase(file, options);
     if (result.success) return result;
-    // Fallback to API route if direct upload failed
-    console.warn('[smartUpload] Direct upload failed, falling back to API route:', result.error);
-  } else {
-    console.log(`[smartUpload] File ${file.name} is small, using API route`);
   }
   
   // API route fallback (works for files up to ~100MB via Supabase SDK, or Vercel Blob fallback)
