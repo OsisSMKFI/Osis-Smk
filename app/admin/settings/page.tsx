@@ -39,7 +39,7 @@ const SETTINGS_GROUPS = {
       { key: 'ANTHROPIC_API_KEY', label: 'Anthropic Claude API Key', secret: true, description: '🔑 Paste Claude key (format: sk-ant-...)' },
       { key: 'HUGGINGFACE_API_KEY', label: 'HuggingFace API Key', secret: true, description: '🔑 Token HuggingFace Read (https://huggingface.co/settings/tokens)' },
       { key: 'TAVILY_API_KEY', label: 'Tavily API Key (Search Mendalam)', secret: true, description: '🔑 Untuk search/web crawling - daftar di https://tavily.com' },
-      { key: 'GEMINI_MODEL', label: 'Gemini Model', secret: false, description: 'gemini-1.5-flash (default, recommended) | gemini-1.5-pro | gemini-1.0-pro' },
+      { key: 'GEMINI_MODEL', label: 'Gemini Model', secret: false, description: 'gemini-2.0-flash (default, recommended) | gemini-1.5-pro | gemini-1.5-flash' },
       { key: 'OPENAI_MODEL', label: 'OpenAI Model', secret: false, description: 'gpt-4o-mini | gpt-4o | gpt-4-turbo' },
       { key: 'HUGGINGFACE_MODEL', label: 'HuggingFace Model', secret: false, description: 'black-forest-labs/FLUX.1-schnell (default) | black-forest-labs/FLUX.1-dev' },
       { key: 'AUTO_EXECUTE_MODE', label: 'Auto Execute Mode', secret: false, description: 'off | delay | auto' },

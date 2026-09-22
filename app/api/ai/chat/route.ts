@@ -328,18 +328,20 @@ async function callAI(
   
   // Get model preferences
   const openaiModel = await getConfig('OPENAI_MODEL') || 'gpt-4o-mini';
-  let geminiModel = await getConfig('GEMINI_MODEL') || 'gemini-1.5-flash';
+  let geminiModel = await getConfig('GEMINI_MODEL') || 'gemini-2.0-flash';
   
   // Strip any 'models/' prefix - we'll add it in the URL builder
   geminiModel = geminiModel.replace(/^models\//, '');
   
   // Normalize to valid v1beta model names (without models/ prefix)
   const modelMap: Record<string, string> = {
-    'gemini-pro': 'gemini-1.5-flash',
-    'gemini-1.5-pro': 'gemini-1.5-pro',
-    'gemini-1.5-flash': 'gemini-1.5-flash',
-    'gemini-1.5-flash-latest': 'gemini-1.5-flash',
-    'gemini-1.0-pro': 'gemini-1.0-pro',
+    'gemini-pro': 'gemini-2.0-flash',
+    'gemini-1.5-pro': 'gemini-2.0-flash',
+    'gemini-1.5-flash': 'gemini-2.0-flash',
+    'gemini-1.5-flash-latest': 'gemini-2.0-flash',
+    'gemini-1.0-pro': 'gemini-2.0-flash',
+    'gemini-2.0-flash-exp': 'gemini-2.0-flash',
+    'gemini-2.0-flash-lite': 'gemini-2.0-flash',
   };
   
   if (modelMap[geminiModel]) {
@@ -349,8 +351,8 @@ async function callAI(
       geminiModel = normalized;
     }
   } else {
-    console.log(`[AI] ⚠️ Unknown model ${geminiModel}, using gemini-1.5-flash`);
-    geminiModel = 'gemini-1.5-flash';
+    console.log(`[AI] ⚠️ Unknown model ${geminiModel}, using gemini-2.0-flash`);
+    geminiModel = 'gemini-2.0-flash';
   }
   
   // Debug: Show key details (first 10 chars + length)
@@ -448,7 +450,7 @@ async function callAI(
     }
     console.log('[AI] ⚠️ Gemini failed, trying next provider:', geminiResult.error);
   } else if (geminiKey) {
-    console.log('[AI] ⚠️ Gemini key exists but does not start with "AIza":', geminiKey.substring(0, 15));
+    console.log('[AI] ⚠️ Gemini key too short:', geminiKey.length, 'chars');
   }
   
   if (openaiKey && openaiKey.length > 10) {
@@ -529,7 +531,7 @@ async function callOpenAI(
 async function callGemini(
   messages: Array<{ role: 'system'|'user'|'assistant'; content: string }>,
   apiKey: string,
-  model: string = 'gemini-1.5-flash'
+  model: string = 'gemini-2.0-flash'
 ) {
   // Normalize model name - ensure it has models/ prefix but not duplicated
   let geminiModel = model.trim();
@@ -596,9 +598,10 @@ async function callGemini(
       if (!responseText) {
         if (res.status === 404) {
           console.error('[Gemini] 404 empty body - model or endpoint not found for', attemptModel);
-          // Fallback strategy: try gemini-1.5-pro-latest as stable alternative
-          const altModel = attemptModel === 'gemini-2.0-flash-exp' ? 'gemini-1.5-pro-latest' : 'gemini-2.0-flash-exp';
-          if (altModel !== attemptModel) {
+          // Fallback strategy: try valid models in order
+          const fallbackModels = ['gemini-1.5-pro', 'gemini-flash-1.5', 'gemini-pro'];
+          for (const altModel of fallbackModels) {
+            if (altModel === attemptModel) continue;
             console.log('[Gemini] Retrying with alternate model:', altModel);
             attemptModel = altModel;
             url = buildUrl(attemptModel);
@@ -606,7 +609,7 @@ async function callGemini(
             const altController = new AbortController();
             const altTimeoutId = setTimeout(() => altController.abort(), 30000);
             
-            res = await fetch(url, {
+            const altRes = await fetch(url, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -617,17 +620,16 @@ async function callGemini(
             });
             
             clearTimeout(altTimeoutId);
-            const altText = await res.text();
-            console.log('[Gemini] Alt model response status:', res.status);
-            if (res.status === 200 && altText) {
+            const altText = await altRes.text();
+            console.log('[Gemini] Alt model response status:', altRes.status);
+            if (altRes.status === 200 && altText) {
               let altJson: any;
-              try { altJson = JSON.parse(altText); } catch { return { error: 'Gemini alt model JSON parse error' }; }
+              try { altJson = JSON.parse(altText); } catch { continue; }
               const altReply = altJson?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                if (altReply) return { text: altReply };
-                return { error: 'Gemini alt model tidak mengembalikan teks jawaban.' };
+              if (altReply) return { text: altReply };
             }
           }
-          return { error: 'Gemini 404: model/endpoint tidak ditemukan setelah fallback. Model tersedia: gemini-2.0-flash-exp, gemini-1.5-pro-latest' };
+          return { error: 'Gemini 404: model/endpoint tidak ditemukan setelah semua fallback. Cek apakah Generative Language API aktif di Google Cloud Console.' };
         }
         console.error('[Gemini] Empty response body');
         return { error: 'Gemini API response kosong. Pastikan API aktif & kuota tersedia.' };
@@ -644,7 +646,48 @@ async function callGemini(
 
       if (!res.ok) {
         console.error('[Gemini] Error:', json);
-        return { error: (json?.error?.message ? `Gemini: ${json.error.message}` : `Gemini API error status ${res.status}`) + ' | Tips: cek enable API & billing.' };
+        const errMsg = json?.error?.message || `Gemini API error status ${res.status}`;
+        
+        // If model not found (404), try fallback models
+        if (res.status === 404 && json?.error?.status === 'NOT_FOUND') {
+          const fallbackModels = ['gemini-1.5-pro', 'gemini-flash-1.5', 'gemini-pro'];
+          for (const altModel of fallbackModels) {
+            if (altModel === attemptModel) continue;
+            console.log('[Gemini] Model not found, trying fallback:', altModel);
+            attemptModel = altModel;
+            url = buildUrl(attemptModel);
+            
+            const altController = new AbortController();
+            const altTimeoutId = setTimeout(() => altController.abort(), 30000);
+            
+            const altRes = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents,
+                generationConfig: { temperature: 0.2, topP: 0.8, topK: 40, maxOutputTokens: 2048 },
+              }),
+              signal: altController.signal,
+            });
+            
+            clearTimeout(altTimeoutId);
+            const altText = await altRes.text();
+            console.log('[Gemini] Fallback model response status:', altRes.status);
+            
+            if (altRes.status === 200 && altText) {
+              let altJson: any;
+              try { altJson = JSON.parse(altText); } catch { continue; }
+              const altReply = altJson?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (altReply) {
+                console.log('[Gemini] Fallback model succeeded:', altModel);
+                return { text: altReply };
+              }
+            }
+          }
+          return { error: `Gemini: model "${attemptModel}" tidak ditemukan. Semua fallback gagal. Cek api/v1beta/models di Google Cloud Console.` };
+        }
+        
+        return { error: `Gemini: ${errMsg} | Tips: cek enable API & billing.` };
       }
       
       console.log('[Gemini] Success response:', JSON.stringify(json, null, 2));
