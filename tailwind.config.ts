@@ -15,9 +15,8 @@ const config: Config = {
         'xsm': '500px',
       },
       fontFamily: {
-        'poppins': ['Poppins', 'sans-serif'],
-        'inter': ['Inter', 'sans-serif'],
-        'playfair': ['Playfair Display', 'serif'],
+        'sans': ['DM Sans', 'system-ui', 'sans-serif'],
+        'dm-sans': ['DM Sans', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         'ds-soft': '0 8px 24px rgba(2,6,23,0.06)',

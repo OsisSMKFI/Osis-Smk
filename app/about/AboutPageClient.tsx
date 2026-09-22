@@ -77,21 +77,14 @@ function VisionMissionSection() {
   const { t } = useTranslation();
   
   return (
-    <section className="relative py-32 overflow-hidden bg-gradient-to-b from-gray-100 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Background grid */}
-      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.03]" style={{
-        backgroundImage: `linear-gradient(to right, rgba(251, 191, 36, 0.5) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(251, 191, 36, 0.5) 1px, transparent 1px)`,
-        backgroundSize: '60px 60px'
-      }} />
-
+    <section className="relative py-32 overflow-hidden bg-gray-50 dark:bg-gray-900">
       <div className="relative z-10 max-w-7xl mx-auto px-4">
         <motion.div 
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
+          className="mb-16"
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm font-medium tracking-widest uppercase mb-4">
             <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
@@ -107,17 +100,15 @@ function VisionMissionSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Vision Card */}
           <motion.div
-            className="group relative"
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition duration-500" />
-            <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-yellow-500/20 h-full shadow-lg dark:shadow-none">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 md:p-10 border border-gray-200 dark:border-gray-700 h-full">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-yellow-500/30">
-                  🎯
+                <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                  V
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   {t('about.visionLabel') || 'Visi'}
@@ -131,17 +122,15 @@ function VisionMissionSection() {
 
           {/* Mission Card */}
           <motion.div
-            className="group relative"
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-3xl blur-lg opacity-20 group-hover:opacity-40 transition duration-500" />
-            <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 border border-blue-500/20 h-full shadow-lg dark:shadow-none">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 md:p-10 border border-gray-200 dark:border-gray-700 h-full">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-blue-500/30">
-                  🚀
+                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                  M
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   {t('about.missionLabel') || 'Misi'}
@@ -154,19 +143,15 @@ function VisionMissionSection() {
                   t('about.mission3') || 'Menanamkan nilai-nilai keislaman dalam setiap aktivitas',
                   t('about.mission4') || 'Membangun kerjasama yang solid antar anggota dan stakeholder'
                 ].map((mission, index) => (
-                  <motion.li 
+                  <li 
                     key={index}
                     className="flex items-start gap-3 text-gray-600 dark:text-gray-300"
-                    initial={{ opacity: 0, x: 20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
                   >
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold mt-0.5">
+                    <span className="flex-shrink-0 w-6 h-6 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center text-yellow-700 dark:text-yellow-400 text-xs font-bold mt-0.5">
                       {index + 1}
                     </span>
                     <span>{mission}</span>
-                  </motion.li>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -197,19 +182,19 @@ function AchievementsSection() {
       year: '2024',
       title: t('about.achieve1Title'),
       description: t('about.achieve1Desc'),
-      icon: '🚀',
+      icon: '1',
     },
     {
       year: '2024',
       title: t('about.achieve2Title'),
       description: t('about.achieve2Desc'),
-      icon: '💻',
+      icon: '2',
     },
     {
       year: '2025',
       title: t('about.achieve3Title'),
       description: t('about.achieve3Desc'),
-      icon: '🎯',
+      icon: '3',
     },
   ];
 
@@ -240,11 +225,7 @@ function AchievementsSection() {
   const displayAchievements = loading ? defaultAchievements : achievements;
 
   return (
-    <section className="relative py-20 md:py-28 overflow-hidden bg-gradient-to-br from-gray-100 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Background accents */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 dark:bg-yellow-500/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-3xl" />
-      
+    <section className="relative py-20 md:py-28 overflow-hidden bg-white dark:bg-gray-900">
       <div className="relative z-10 max-w-5xl mx-auto px-4">
         {/* Section Header */}
         <motion.div

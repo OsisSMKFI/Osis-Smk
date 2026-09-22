@@ -3,7 +3,7 @@ import './globals-mobile.css';
 import '@/lib/fontawesome';
 
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { DM_Sans } from 'next/font/google';
 import { headers } from 'next/headers';
 
 import LocationServiceProvider from '@/components/LocationServiceProvider';
@@ -23,7 +23,11 @@ import GlobalDesignLoader from '../components/GlobalDesignLoader';
 import Providers from '../components/Providers';
 import ScrollToTop from '../components/ScrollToTop';
 
-const inter = Inter({ subsets: ["latin"] });
+const dmSans = DM_Sans({ 
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap"
+});
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
 
@@ -223,7 +227,7 @@ export default async function RootLayout({
                 />
             </head>
             <body
-                className={`${inter.className} antialiased min-h-screen`}
+                className={`${dmSans.className} antialiased min-h-screen`}
                 suppressHydrationWarning
             >
                 {/* Content wrapper */}
