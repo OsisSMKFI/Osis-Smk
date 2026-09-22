@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
     const { data: sekbid, error } = await supabaseAdmin
       .from('sekbid')
       .select('*')
-      .lte('id', 6)
       .order('id', { ascending: true });
 
     if (error) {

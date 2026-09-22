@@ -6,8 +6,7 @@ export async function GET(request: NextRequest) {
     const { data: sekbid, error } = await supabaseAdmin
       .from('sekbid')
       .select('*')
-      .order('id', { ascending: true })
-      .limit(6); // Only return sekbid 1-6
+      .order('id', { ascending: true });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

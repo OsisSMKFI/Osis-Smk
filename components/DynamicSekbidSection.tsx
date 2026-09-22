@@ -17,12 +17,12 @@ interface Sekbid {
 }
 
 const canonicalSekbids: Sekbid[] = [
-  { id: 1, nama: 'Sekbid 1 - Keagamaan', deskripsi: 'Membina keimanan dan ketakwaan siswa', icon: '/icons/keagamaan.svg', color: '#10B981' },
-  { id: 2, nama: 'Sekbid 2 - Kaderisasi', deskripsi: 'Meningkatkan kedisiplinan, tanggung jawab, dan keteladanan bagi seluruh siswa dan pengurus OSIS', icon: '/icons/kaderisasi.svg', color: '#6366F1' },
-  { id: 3, nama: 'Sekbid 3 - Akademik', deskripsi: 'Mengembangkan prestasi akademik dan non-akademik', icon: '/icons/akademik.svg', color: '#A78BFA' },
-  { id: 4, nama: 'Sekbid 4 - Ekonomi Kreatif', deskripsi: 'Meningkatkan keterampilan dan jiwa wirausaha', icon: '/icons/ekonomi.svg', color: '#F59E0B' },
-  { id: 5, nama: 'Sekbid 5 - Kesehatan', deskripsi: 'Menjaga kesehatan dan kelestarian lingkungan', icon: '/icons/kesehatan.svg', color: '#14B8A6' },
-  { id: 6, nama: 'Sekbid 6 - Kominfo', deskripsi: 'Kominfo / Web Development', icon: '/icons/kominfo.svg', color: '#06B6D4' }
+  { id: 1, name: 'Sekbid 1 - Kerohanian', deskripsi: 'Membina keimanan dan ketakwaan siswa', icon: '🕌', color: '#10B981' },
+  { id: 2, name: 'Sekbid 2 - Kedisiplinan', deskripsi: 'Meningkatkan kedisiplinan dan keteladanan', icon: '📋', color: '#6366F1' },
+  { id: 3, name: 'Sekbid 3 - Akademik Non Akademik', deskripsi: 'Mengembangkan prestasi akademik dan non-akademik', icon: '📚', color: '#A78BFA' },
+  { id: 4, name: 'Sekbid 4 - Ekonomi Kreatif', deskripsi: 'Meningkatkan keterampilan dan jiwa wirausaha', icon: '💼', color: '#F59E0B' },
+  { id: 5, name: 'Sekbid 5 - Kesehatan dan Kebersihan', deskripsi: 'Menjaga kesehatan dan kelestarian lingkungan', icon: '🌿', color: '#14B8A6' },
+  { id: 6, name: 'Sekbid 6 - Kominfo', deskripsi: 'Komunikasi dan Informasi / Web Development', icon: '💻', color: '#06B6D4' },
 ];
 
 export default function SekbidSection() {
@@ -51,14 +51,23 @@ export default function SekbidSection() {
             }
           }
 
-          // Merge with canonical list of 6 Sekbid. Prefer fetched values when present,
-          // but always render exactly these 6 in the specified order on the homepage.
+          // Merge with canonical list. Prefer fetched values when present.
+          // Match by ID or by name containing key terms
           const merged = canonicalSekbids.map((c) => {
             const found = unique.find((u) => {
               if (!u) return false;
               if (u.id === c.id) return true;
-              if (u.name && u.name.toLowerCase().includes(`sekbid-${c.id}`)) return true;
-              if (u.nama && u.nama.toLowerCase().includes(`sekbid ${c.id}`)) return true;
+              const uName = (u.name ?? u.nama ?? '').toLowerCase();
+              // Match by keyword in name
+              if (c.name && uName) {
+                const cName = c.name.toLowerCase();
+                if (cName.includes('kerohanian') && uName.includes('kerohanian')) return true;
+                if (cName.includes('kedisiplinan') && uName.includes('kedisiplinan')) return true;
+                if (cName.includes('akademik') && uName.includes('akademik')) return true;
+                if (cName.includes('ekonomi') && uName.includes('ekonomi')) return true;
+                if (cName.includes('kesehatan') && uName.includes('kesehatan')) return true;
+                if (cName.includes('kominfo') && uName.includes('kominfo')) return true;
+              }
               return false;
             });
             return {

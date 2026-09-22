@@ -50,12 +50,16 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(arrayBuffer);
 
+    // Use application/octet-stream for video to bypass Supabase bucket MIME type restrictions
+    const isVideo = file.type.startsWith('video/');
+    const uploadContentType = isVideo ? 'application/octet-stream' : file.type;
+
     // Always try Supabase upload — bucket may exist even if ensureBucket listing failed
     let uploadError: any = null;
     let uploadData: any = null;
 
     const result = await supabase.storage.from(bucket).upload(filePath, fileBuffer, {
-      contentType: file.type,
+      contentType: uploadContentType,
       upsert: false,
     });
     uploadData = result.data;

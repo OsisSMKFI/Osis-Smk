@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { FaCalendar, FaEye } from 'react-icons/fa';
 import { toPublicStorageUrl } from '@/lib/signedUrls';
@@ -62,8 +61,6 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
     rotateY.set(0);
   };
 
-  const blurDataURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-
   return (
     <motion.div
       ref={cardRef}
@@ -87,22 +84,33 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
       >
         {/* Featured Image */}
         <div className="relative aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-800">
-          <Image
-            src={imageUrl}
-            alt={post.title}
-            fill
-            priority={index === 0}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            placeholder="blur"
-            blurDataURL={blurDataURL}
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              if (target.src !== fallbackImage) {
-                target.src = fallbackImage;
-              }
-            }}
-          />
+          {imageUrl.startsWith('http') ? (
+            <img
+              src={imageUrl}
+              alt={post.title}
+              loading={index === 0 ? 'eager' : 'lazy'}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (target.src !== window.location.origin + fallbackImage) {
+                  target.src = fallbackImage;
+                }
+              }}
+            />
+          ) : (
+            <img
+              src={imageUrl}
+              alt={post.title}
+              loading={index === 0 ? 'eager' : 'lazy'}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (target.src !== fallbackImage) {
+                  target.src = fallbackImage;
+                }
+              }}
+            />
+          )}
 
           {post.sekbid && (
             <div
@@ -144,12 +152,12 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
 
           <div className="flex items-center gap-2.5 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700/50">
             {post.author?.photo_url ? (
-              <Image
+              <img
                 src={post.author.photo_url}
                 alt={post.author.name}
                 width={32}
                 height={32}
-                className="rounded-full"
+                className="w-8 h-8 rounded-full object-cover"
               />
             ) : (
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
