@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+export const runtime = 'nodejs';
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
