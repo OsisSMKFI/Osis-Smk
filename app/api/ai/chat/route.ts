@@ -847,7 +847,7 @@ async function retrieveContext(query: string) {
         const { data: allMembers } = await supabaseAdmin
           .from('members')
           .select('id,name,nama,role,jabatan,sekbid_id,class,is_active')
-          .or('is_active.eq.true,active.eq.true')
+          .eq('is_active', true)
           .order('display_order', { ascending: true })
           .limit(200);
         

@@ -412,11 +412,15 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push('═══════════════════════════════════════════════════════════════════');
     kb.push('👥 ANGGOTA OSIS - DIREKTORI LENGKAP DENGAN SEKBID');
     kb.push('═══════════════════════════════════════════════════════════════════');
-    const { data: allMembers } = await supabaseAdmin
+    const { data: allMembers, error: membersError } = await supabaseAdmin
       .from('members')
       .select('*')
-      .or('is_active.eq.true,active.eq.true')
+      .eq('is_active', true)
       .order('display_order', { ascending: true });
+
+    if (membersError) {
+      console.error('[AI AutoLearn] Members fetch error:', membersError.message);
+    }
     
     if (allMembers?.length) {
       // Build sekbid lookup

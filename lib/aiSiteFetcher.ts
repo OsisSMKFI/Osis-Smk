@@ -90,24 +90,15 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
   // Ambil seluruh anggota aktif (tanpa limit)
   let members: any[] | null = null;
   try {
-    const selectCols = 'id, name, nama, jabatan, sekbid_id, photo_url, foto_url, role, is_active, active';
     const res = await supabaseAdmin
       .from('members')
-      .select(selectCols)
-      .or('is_active.eq.true,active.eq.true')
+      .select('*')
+      .eq('is_active', true)
       .order('display_order', { ascending: true });
     members = res.data || null;
   } catch (e) {
-    // Fallback to wildcard select if the explicit columns caused an error
-    try {
-      const res2 = await supabaseAdmin
-        .from('members')
-        .select('*')
-        .eq('is_active', true);
-      members = res2.data || null;
-    } catch (e2) {
-      members = null;
-    }
+    console.error('[aiSiteFetcher] Members fetch error:', e);
+    members = null;
   }
 
   // Top gallery items
