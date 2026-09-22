@@ -27,7 +27,7 @@ export async function GET(
       return NextResponse.json({ error: 'Program kerja not found' }, { status: 404 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, title: data.nama || data.title });
   } catch (error: any) {
     console.error('[GET /api/admin/proker/[id]] Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -50,14 +50,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
+    const waktu = [start_date, end_date].filter(Boolean).join(' - ') || null;
+
     const { data, error } = await supabaseAdmin
       .from('program_kerja')
       .update({
-        title,
+        nama: title,
         description: description || null,
         sekbid_id: sekbid_id || null,
-        start_date: start_date || null,
-        end_date: end_date || null,
+        waktu,
         status: status || 'planned',
         updated_at: new Date().toISOString(),
       })
@@ -70,7 +71,7 @@ export async function PUT(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, title: data.nama || data.title });
   } catch (error: any) {
     console.error('Error in PUT /api/admin/proker/[id]:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

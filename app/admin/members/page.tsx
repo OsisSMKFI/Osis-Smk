@@ -283,7 +283,7 @@ export default function AdminMembersPage() {
                   is_active: true 
                 });
               }}
-              className="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r bg-amber-400 text-white font-semibold rounded-lg md:rounded-xl hover:bg-amber-500 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 text-sm md:text-base"
+              className="px-4 md:px-6 py-2 md:py-3 bg-amber-400 text-slate-900 font-semibold rounded-lg md:rounded-xl hover:bg-amber-500 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 text-sm md:text-base"
             >
               <FaPlus /> <span className="hidden sm:inline">Tambah</span> Anggota
             </button>
@@ -294,7 +294,7 @@ export default function AdminMembersPage() {
         {showForm && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-xl md:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300">
-              <div className="bg-gradient-to-r bg-amber-400 px-4 md:px-6 py-4 md:py-5 flex justify-between items-center sticky top-0 z-10">
+              <div className="bg-amber-400 px-4 md:px-6 py-4 md:py-5 flex justify-between items-center sticky top-0 z-10">
                 <h2 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
                   {editingId ? <FaEdit /> : <FaPlus />}
                   {editingId ? 'Edit Anggota' : 'Tambah Anggota Baru'}
@@ -523,7 +523,7 @@ export default function AdminMembersPage() {
                   <button
                     type="submit"
                     disabled={uploading}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r bg-amber-400 text-white font-semibold rounded-xl hover:bg-amber-500 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-6 py-3 bg-amber-400 text-slate-900 font-semibold rounded-xl hover:bg-amber-500 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FaSave /> {editingId ? 'Update' : 'Simpan'}
                   </button>

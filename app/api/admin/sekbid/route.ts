@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 100);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authErr = await requirePermission('sekbid:read');
@@ -41,12 +49,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
+    const slug = slugify(name);
+
     const { data, error } = await supabaseAdmin
       .from('sekbid')
       .insert({
         name,
+        slug,
         description: description || null,
-        display_order: display_order || 0
       })
       .select()
       .single();

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { FaCalendar, FaEye } from 'react-icons/fa';
+import { toPublicStorageUrl } from '@/lib/signedUrls';
 
 interface Author {
   name: string;
@@ -12,7 +13,7 @@ interface Author {
 }
 
 interface Sekbid {
-  nama: string;
+  name: string;
   icon: string;
   color: string;
 }
@@ -36,7 +37,7 @@ interface PostCardProps {
 
 export function PostCard({ post, index = 0 }: PostCardProps) {
   const fallbackImage = '/images/default-post.jpg';
-  const imageUrl = post.featured_image || fallbackImage;
+  const imageUrl = toPublicStorageUrl(post.featured_image) || fallbackImage;
   const cardRef = useRef<HTMLDivElement>(null);
 
   const rotateX = useMotionValue(0);
@@ -109,7 +110,7 @@ export function PostCard({ post, index = 0 }: PostCardProps) {
               style={{ backgroundColor: `${post.sekbid.color}E6` }}
             >
               <span className="hidden sm:inline">{post.sekbid.icon} </span>
-              {post.sekbid.nama}
+              {post.sekbid.name}
             </div>
           )}
         </div>

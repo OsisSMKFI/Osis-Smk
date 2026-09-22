@@ -16,7 +16,7 @@ export interface Post {
   published_at: string;
   views: number;
   author: { name: string; photo_url: string | null } | null;
-  sekbid: { name: string; nama: string; color: string; icon: string } | null;
+  sekbid: { name: string; color: string; icon: string } | null;
 }
 
 export interface Announcement {
@@ -84,7 +84,7 @@ export async function fetchPosts(limit: number = 3): Promise<Post[]> {
       .select(`
         id, title, slug, excerpt, featured_image, published_at, views, status,
         author:users(id, name, photo_url),
-        sekbid:sekbid(id, name, nama, color, icon)
+        sekbid:sekbid(id, name, color, icon)
       `)
       .eq('status', 'published')
       .order('published_at', { ascending: false })

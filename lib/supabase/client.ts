@@ -209,7 +209,7 @@ export async function getPublishedPosts(limit?: number) {
   const baseSelect = `
       id,title,slug,excerpt,featured_image,published_at,views,status,author_id,sekbid_id,
       author:users(id,name,photo_url),
-      sekbid:sekbid(id,name,nama,color,icon)
+      sekbid:sekbid(id,name,color,icon)
     `;
   let query = supabase
     .from('posts')
@@ -257,7 +257,7 @@ export async function getPublishedPosts(limit?: number) {
     if (sekbidIds.length) {
       const { data: sekbids } = await supabase
         .from('sekbid')
-        .select('id,name,nama,color,icon')
+        .select('id,name,color,icon')
         .in('id', sekbidIds);
       if (sekbids) {
         sekbidMap = Object.fromEntries(sekbids.map(s => [s.id, s]));
@@ -306,7 +306,7 @@ export async function getPostBySlug(slug: string) {
     .select(`
       id,slug,title,content,excerpt,featured_image,published_at,views,status,author_id,sekbid_id,
       author:users(id,name,photo_url),
-      sekbid:sekbid(id,name,nama,color,icon)
+      sekbid:sekbid(id,name,color,icon)
     `)
     .eq('slug', slug)
     .eq('status', 'published')
@@ -355,7 +355,7 @@ export async function getActiveMembers(sekbidId?: number) {
     .from('members')
     .select(`
       *,
-      sekbid(id, name, nama, color, icon)
+      sekbid(id, name, color, icon)
     `)
     .eq('is_active', true)
     ;

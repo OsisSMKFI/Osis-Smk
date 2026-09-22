@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(proker || []);
+    return NextResponse.json((proker || []).map((p: any) => ({ ...p, title: p.nama || p.title })));
   } catch (error: any) {
     console.error('Error in GET /api/admin/proker:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -43,14 +43,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
+    const waktu = [start_date, end_date].filter(Boolean).join(' - ') || null;
+
     const { data, error } = await supabaseAdmin
       .from('program_kerja')
       .insert({
-        title,
+        nama: title,
         description: description || null,
         sekbid_id: sekbid_id || null,
-        start_date: start_date || null,
-        end_date: end_date || null,
+        waktu,
         status: status || 'planned',
       })
       .select()

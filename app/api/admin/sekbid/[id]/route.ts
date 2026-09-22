@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 100);
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -50,12 +58,14 @@ export async function PUT(
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
+    const slug = slugify(name);
+
     const { data, error } = await supabaseAdmin
       .from('sekbid')
       .update({
         name,
+        slug,
         description: description || null,
-        display_order: display_order !== undefined ? display_order : 0
       })
       .eq('id', id)
       .select()
