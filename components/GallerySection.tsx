@@ -120,23 +120,33 @@ const GallerySection: React.FC = () => {
             className="group relative overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 cursor-pointer transform hover:scale-105 active:scale-95"
             onClick={() => openModal(index)}
           >
-            {/* Image */}
+            {/* Image / Video */}
             <div className="aspect-[4/3] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 min-h-[200px] sm:min-h-[250px]">
-              <img
-                src={image.image_url}
-                alt={image.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                loading="lazy"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = `https://picsum.photos/800/600?random=${index + 1}`;
-                }}
-                onLoad={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.opacity = '1';
-                }}
-                style={{ opacity: '0', transition: 'opacity 0.3s ease' }}
-              />
+              {/\.(mp4|webm|ogg|mov)$/i.test(image.image_url) ? (
+                <video
+                  src={image.image_url}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  muted loop playsInline
+                  onMouseEnter={(e) => e.currentTarget.play()}
+                  onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+                />
+              ) : (
+                <img
+                  src={image.image_url}
+                  alt={image.title}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = `https://picsum.photos/800/600?random=${index + 1}`;
+                  }}
+                  onLoad={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.opacity = '1';
+                  }}
+                  style={{ opacity: '0', transition: 'opacity 0.3s ease' }}
+                />
+              )}
             </div>
 
             {/* Overlay - Always visible on mobile, hover on desktop */}
@@ -234,28 +244,34 @@ const GallerySection: React.FC = () => {
               </div>
             )}
 
-            {/* Main image */}
-            <img
-              src={images[selectedImage].image_url}
-              alt={images[selectedImage].title}
-              className={`max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'
-                }`}
-              onLoad={() => {
-                setImageLoading(false);
-                setImageError(false);
-              }}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                setImageLoading(false);
-                // Try fallback image first
-                if (!target.src.includes('picsum.photos')) {
-                  target.src = `https://picsum.photos/800/600?random=${selectedImage + 1}`;
-                } else {
-                  // If even fallback fails, show error state
-                  setImageError(true);
-                }
-              }}
-            />
+            {/* Main image / video */}
+            {/\.(mp4|webm|ogg|mov)$/i.test(images[selectedImage].image_url) ? (
+              <video
+                src={images[selectedImage].image_url}
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                controls autoPlay loop playsInline
+              />
+            ) : (
+              <img
+                src={images[selectedImage].image_url}
+                alt={images[selectedImage].title}
+                className={`max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'
+                  }`}
+                onLoad={() => {
+                  setImageLoading(false);
+                  setImageError(false);
+                }}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  setImageLoading(false);
+                  if (!target.src.includes('picsum.photos')) {
+                    target.src = `https://picsum.photos/800/600?random=${selectedImage + 1}`;
+                  } else {
+                    setImageError(true);
+                  }
+                }}
+              />
+            )}
 
             {/* Image info - only show when image is loaded and no error */}
             {!imageLoading && !imageError && (

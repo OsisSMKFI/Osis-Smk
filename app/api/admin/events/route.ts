@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const session = await auth();
 
     const body = await request.json();
-    const { title, description, event_date, location, image_url, registration_link } = body;
+    const { title, description, event_date, start_date, location, image_url, registration_link } = body;
 
     console.log('[admin/events POST] Creating event:', { title, event_date });
 
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       .insert({
         title,
         description,
+        start_date: start_date || event_date || new Date().toISOString(),
         event_date,
         location,
         image_url,

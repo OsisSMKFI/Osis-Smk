@@ -137,7 +137,7 @@ export default function AdminMembersPage() {
       
       if (data.success) {
         // Use signed URL for preview (works even if bucket is private)
-        const previewUrl = data.signedUrl || data.url || data.publicUrl;
+        const previewUrl = data.publicUrl || data.url || data.signedUrl;
         if (previewUrl) {
           const cacheBustedUrl = `${previewUrl}?t=${Date.now()}`;
           setFormData(prev => ({ ...prev, photo_url: cacheBustedUrl }));

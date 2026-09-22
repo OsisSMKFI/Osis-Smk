@@ -50,7 +50,7 @@ export default function PollsWidget() {
       const response = await apiFetch(`/api/polls/${pollId}/vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ optionId }),
+        body: JSON.stringify({ option_id: optionId }),
       });
       const result = await safeJson(response, { url: `/api/polls/${pollId}/vote`, method: 'POST' }).catch(() => ({}));
 

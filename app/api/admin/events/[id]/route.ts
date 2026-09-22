@@ -39,13 +39,14 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, description, event_date, location, image_url, registration_link } = body;
+    const { title, description, event_date, start_date, location, image_url, registration_link } = body;
 
     const { data, error } = await supabaseAdmin
       .from('events')
       .update({
         title,
         description,
+        start_date: start_date || event_date,
         event_date,
         location,
         image_url,

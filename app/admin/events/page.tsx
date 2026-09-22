@@ -97,8 +97,8 @@ export default function EventsPage() {
       if (status < 200 || status >= 300) {
         throw new Error(json?.error || 'Upload failed');
       }
-      // Prefer signed URL (works even if bucket is private), fallback to publicUrl
-      const uploadedUrl = json?.signedUrl || json?.url || json?.publicUrl;
+      // Prefer public URL (permanent, no expiry), fallback to signed URL
+      const uploadedUrl = json?.publicUrl || json?.url || json?.signedUrl;
       console.log('[Events] Upload success:', uploadedUrl);
       // Use uploaded URL with cache-busting for preview
       const cacheBustedUrl = `${uploadedUrl}?t=${Date.now()}`;

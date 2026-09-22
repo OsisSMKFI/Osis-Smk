@@ -239,8 +239,8 @@ export default function UsersPage() {
       if (status < 200 || status >= 300) {
         throw new Error(json?.error || 'Upload failed');
       }
-      // Prefer signed URL (works even if bucket is private), fallback to publicUrl
-      const uploadedUrl = json?.signedUrl || json?.url || json?.publicUrl;
+      // Prefer public URL (permanent, no expiry), fallback to signed URL
+      const uploadedUrl = json?.publicUrl || json?.url || json?.signedUrl;
       setFormData(prev => ({ ...prev, profile_image: uploadedUrl }));
     } catch (error) {
       console.error('[Users] Upload error:', error);

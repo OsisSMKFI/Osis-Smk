@@ -38,18 +38,16 @@ export async function GET(request: NextRequest) {
         return { ...g, _isVideo: isVideo };
       });
 
-    // Convert image URLs to signed URLs so they display correctly even if bucket is private
-    const itemsWithSignedUrls = await Promise.all(
-      normalized.map(async (g: any) => {
-        if (g._isVideo || !g.image_url) return g;
-        const signed = await convertToSignedUrl(g.image_url, { bucket: 'gallery' });
-        if (signed?.url) return { ...g, image_url: signed.url };
-        return g;
-      })
-    );
+    // Convert image URLs to public URLs (permanent, no expiry)
+    const itemsWithUrls = normalized.map((g: any) => {
+      if (g._isVideo || !g.image_url) return g;
+      const publicUrl = toPublicStorageUrl(g.image_url);
+      if (publicUrl) return { ...g, image_url: publicUrl };
+      return g;
+    });
 
-    console.log(`[admin/gallery GET] Returning ${itemsWithSignedUrls.length} items (${itemsWithSignedUrls.filter((g: any) => g._isVideo).length} videos)`);
-    return NextResponse.json({ gallery: itemsWithSignedUrls });
+    console.log(`[admin/gallery GET] Returning ${itemsWithUrls.length} items (${itemsWithUrls.filter((g: any) => g._isVideo).length} videos)`);
+    return NextResponse.json({ gallery: itemsWithUrls });
   } catch (error: any) {
     // Suppress MIME type validation errors from Supabase storage (e.g., "isn't a valid image" for .mp4)
     if (error?.message?.includes('isn\'t a valid image') || error?.message?.includes('MIME')) {

@@ -113,7 +113,7 @@ export default function ProfilePage() {
       const data = await res.json();
 
       if (data.success) {
-        const previewUrl = data.signedUrl || data.url || data.publicUrl;
+        const previewUrl = data.publicUrl || data.url || data.signedUrl;
         if (previewUrl) {
           setFormData(prev => ({ ...prev, photo_url: previewUrl }));
           showToast('✅ Foto berhasil diunggah!', 'success');
