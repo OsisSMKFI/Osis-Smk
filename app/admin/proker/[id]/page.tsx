@@ -13,7 +13,8 @@ interface Sekbid {
 
 interface Proker {
   id: number;
-  title: string;
+  title?: string;
+  nama?: string;
   description: string | null;
   sekbid_id: number | null;
   start_date: string | null;
@@ -84,7 +85,7 @@ export default function EditProkerPage() {
       const proker: Proker = await response.json();
       
       setFormData({
-        title: proker.title || '',
+        title: proker.title || proker.nama || '',
         description: proker.description || '',
         sekbid_id: proker.sekbid_id?.toString() || '',
         start_date: proker.start_date ? proker.start_date.split('T')[0] : '',
@@ -102,7 +103,12 @@ export default function EditProkerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prokerId) return;
-    
+
+    if (!formData.sekbid_id) {
+      alert('Sekbid wajib dipilih agar program kerja tampil di halaman /bidang.');
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -117,15 +123,15 @@ export default function EditProkerPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save');
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || error?.message || `HTTP ${response.status}`);
       }
-      
+
       alert('Program kerja berhasil diupdate!');
       router.push('/admin/proker');
     } catch (error: any) {
       console.error('Error saving proker:', error);
-      alert(error.message || 'Gagal menyimpan program kerja');
+      alert('Gagal menyimpan program kerja: ' + (error.message || 'Unknown error'));
     } finally {
       setSaving(false);
     }
@@ -202,14 +208,15 @@ export default function EditProkerPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Seksi Bidang
+                Seksi Bidang *
               </label>
               <select
                 value={formData.sekbid_id}
                 onChange={(e) => setFormData({ ...formData, sekbid_id: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                required
               >
-                <option value="">Pilih Seksi Bidang (Opsional)</option>
+                <option value="">Pilih Seksi Bidang</option>
                 {sekbidList.map((sekbid) => (
                   <option key={sekbid.id} value={sekbid.id}>
                     {sekbid.name}

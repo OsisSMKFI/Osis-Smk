@@ -1,14 +1,8 @@
 import { Metadata } from 'next';
-import { createClient } from '@supabase/supabase-js';
 import { generatePageMetadata, SITE_URL } from '@/lib/metadata-helper';
 import { notFound, redirect } from 'next/navigation';
 import EventDetailClient from './EventDetailClient';
-
-// Create Supabase client for server-side
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 
 interface PageProps {
   params: Promise<{ id: string }>;

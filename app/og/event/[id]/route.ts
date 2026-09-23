@@ -12,17 +12,12 @@
  */
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin as supabase } from '@/lib/supabase/server'
 import sharp from 'sharp'
 import * as fs from 'fs'
 import * as path from 'path'
 
 export const runtime = 'nodejs'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // Fallback image - MUST be accessible without auth
 const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 

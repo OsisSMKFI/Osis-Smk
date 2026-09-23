@@ -56,7 +56,9 @@ export async function GET(request: NextRequest) {
       const msg = (error as any).message || '';
       // Graceful degradation
       if (code === 'PGRST205' || code === '42P01' || msg.includes('schema cache') || msg.includes('relation') || msg.includes('does not exist')) {
-        return NextResponse.json({ ok: true, notifications: [], actions: [] });
+        return NextResponse.json({ ok: true, notifications: [], actions: [] }, {
+          headers: { 'Cache-Control': 'private, max-age=15' },
+        });
       }
       return NextResponse.json({ error: msg }, { status: 500 });
     }
@@ -88,6 +90,10 @@ export async function GET(request: NextRequest) {
       ok: true,
       notifications: normalizedNotifications,
       actions: normalizedNotifications, // For backwards compatibility with AdminHeader
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=15, stale-while-revalidate=30',
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

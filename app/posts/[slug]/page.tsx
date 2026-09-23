@@ -1,19 +1,7 @@
 import { Metadata } from 'next';
-import { createClient } from '@supabase/supabase-js';
 import { generatePageMetadata } from '@/lib/metadata-helper';
 import PostDetailClient from './PostDetailClient';
-
-// Create Supabase client for server-side data fetching
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 
 interface Post {
   id: string;

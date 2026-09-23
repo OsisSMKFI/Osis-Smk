@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import AdminPageShell from '@/components/admin/AdminPageShell';
 import { FaEdit, FaSave, FaTimes, FaSearch, FaEye, FaChevronDown, FaChevronRight } from 'react-icons/fa';
@@ -274,6 +274,7 @@ const DEFAULT_CONTENT: Record<string, string> = {
 
 export default function AdminContentPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const role = ((session?.user as any)?.role || '').toLowerCase();
   const canAccess = ['super_admin', 'admin', 'osis'].includes(role);
 
@@ -286,34 +287,54 @@ export default function AdminContentPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'filled' | 'empty'>('all');
+  const msgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (status === 'unauthenticated') redirect('/admin/login');
-    if (status === 'authenticated') fetchContents();
-  }, [status]);
+  const showMessage = useCallback((type: 'success' | 'error', text: string) => {
+    setMessage({ type, text });
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    msgTimerRef.current = setTimeout(() => setMessage(null), 4000);
+  }, []);
 
-  const fetchContents = async () => {
+  useEffect(() => () => {
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+  }, []);
+
+  const fetchContents = useCallback(async (opts?: { initial?: boolean }) => {
     try {
-      setLoading(true);
+      // Only show full-page spinner on first load — never remount after save
+      if (opts?.initial) setLoading(true);
       const res = await apiFetch('/api/admin/content');
       if (res.ok) {
         const data = await safeJson(res, { url: '/api/admin/content', method: 'GET' });
         setContents(Array.isArray(data) ? data : []);
       }
     } catch {
-      setMessage({ type: 'error', text: 'Gagal memuat konten' });
+      showMessage('error', 'Gagal memuat konten');
     } finally {
       setLoading(false);
     }
-  };
+  }, [showMessage]);
 
-  const contentMap = new Map(contents.map(c => [c.key || c.page_key, c]));
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/admin/login');
+      return;
+    }
+    if (status === 'authenticated') fetchContents({ initial: true });
+  }, [status, router, fetchContents]);
+
+  const contentMap = useMemo(
+    () => new Map(contents.map(c => [c.key || c.page_key, c])),
+    [contents]
+  );
 
   const toggleSection = (id: string) => {
-    const next = new Set(expandedSections);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setExpandedSections(next);
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const startEdit = (section: SectionConfig) => {
@@ -331,63 +352,87 @@ export default function AdminContentPage() {
     setEditValues({});
   };
 
+  const setFieldValue = useCallback((key: string, value: string) => {
+    setEditValues(prev => ({ ...prev, [key]: value }));
+  }, []);
+
   const saveSection = async (section: SectionConfig) => {
     setSaving(true);
     try {
-      const saves = section.fields.map(async (field) => {
+      const items: Array<{ id?: string; page_key: string; title?: string; content: string; category?: string }> = [];
+
+      for (const field of section.fields) {
         const existing = contentMap.get(field.key);
         const raw = editValues[field.key];
         const value = raw !== undefined ? raw : (existing?.content || DEFAULT_CONTENT[field.key] || '');
 
         if (existing) {
-          if ((existing.content || '') === value) return;
-          return apiFetch('/api/admin/content', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: existing.id, content: value }),
-          });
+          if ((existing.content || '') === value) continue;
+          items.push({ id: existing.id, page_key: field.key, content: value });
         } else if (value !== '') {
-          return apiFetch('/api/admin/content', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              page_key: field.key,
-              title: field.label,
-              content: value,
-              category: section.id,
-            }),
+          items.push({
+            page_key: field.key,
+            title: field.label,
+            content: value,
+            category: section.id,
           });
         }
+      }
+
+      if (items.length === 0) {
+        showMessage('success', 'Tidak ada perubahan untuk disimpan.');
+        setEditingSection(null);
+        setEditValues({});
+        setSaving(false);
+        return;
+      }
+
+      // ONE request for the whole section (was N requests = N auth+DB)
+      const res = await apiFetch('/api/admin/content', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
       });
 
-      await Promise.all(saves.filter(Boolean));
-      setMessage({ type: 'success', text: `${section.title} berhasil disimpan!` });
+      if (!res.ok) {
+        let detail = '';
+        try {
+          const j = await res.json();
+          detail = j?.error || '';
+        } catch { /* ignore */ }
+        throw new Error(detail || `HTTP ${res.status}`);
+      }
+
+      showMessage('success', `${section.title} berhasil disimpan!`);
       setEditingSection(null);
       setEditValues({});
+      // Silent refresh — does NOT flip full-page loading spinner
       fetchContents();
-    } catch {
-      setMessage({ type: 'error', text: 'Gagal menyimpan' });
+    } catch (e: any) {
+      showMessage('error', e?.message || 'Gagal menyimpan');
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredSections = SECTIONS.filter(s => {
-    if (!searchTerm) return true;
+  const filteredSections = useMemo(() => {
+    if (!searchTerm) return SECTIONS;
     const q = searchTerm.toLowerCase();
-    return s.title.toLowerCase().includes(q) ||
+    return SECTIONS.filter(s =>
+      s.title.toLowerCase().includes(q) ||
       s.description.toLowerCase().includes(q) ||
-      s.fields.some(f => f.label.toLowerCase().includes(q) || f.key.toLowerCase().includes(q));
-  });
+      s.fields.some(f => f.label.toLowerCase().includes(q) || f.key.toLowerCase().includes(q))
+    );
+  }, [searchTerm]);
 
-  const filledCounts = SECTIONS.map(s => ({
+  const filledCounts = useMemo(() => SECTIONS.map(s => ({
     id: s.id,
     filled: s.fields.filter(f => contentMap.has(f.key) && (contentMap.get(f.key)?.content || '') !== '').length,
     total: s.fields.length,
-  }));
+  })), [contentMap]);
 
-  const totalFields = SECTIONS.reduce((a, s) => a + s.fields.length, 0);
-  const totalFilled = filledCounts.reduce((a, c) => a + c.filled, 0);
+  const totalFields = useMemo(() => SECTIONS.reduce((a, s) => a + s.fields.length, 0), []);
+  const totalFilled = useMemo(() => filledCounts.reduce((a, c) => a + c.filled, 0), [filledCounts]);
 
   if (status === 'loading' || loading) {
     return (
@@ -544,7 +589,7 @@ export default function AdminContentPage() {
                               field.type === 'textarea' ? (
                                 <textarea
                                   value={value}
-                                  onChange={(e) => setEditValues({ ...editValues, [field.key]: e.target.value })}
+                                  onChange={(e) => setFieldValue(field.key, e.target.value)}
                                   rows={2}
                                   className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                                 />
@@ -553,13 +598,13 @@ export default function AdminContentPage() {
                                   <input
                                     type="color"
                                     value={value || '#facc15'}
-                                    onChange={(e) => setEditValues({ ...editValues, [field.key]: e.target.value })}
+                                    onChange={(e) => setFieldValue(field.key, e.target.value)}
                                     className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
                                   />
                                   <input
                                     type="text"
                                     value={value}
-                                    onChange={(e) => setEditValues({ ...editValues, [field.key]: e.target.value })}
+                                    onChange={(e) => setFieldValue(field.key, e.target.value)}
                                     className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono"
                                     placeholder="#facc15"
                                   />
@@ -568,7 +613,7 @@ export default function AdminContentPage() {
                                 <input
                                   type="text"
                                   value={value}
-                                  onChange={(e) => setEditValues({ ...editValues, [field.key]: e.target.value })}
+                                  onChange={(e) => setFieldValue(field.key, e.target.value)}
                                   className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                                 />
                               )

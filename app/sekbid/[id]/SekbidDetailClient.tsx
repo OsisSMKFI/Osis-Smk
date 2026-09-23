@@ -10,7 +10,8 @@ import { useTranslation } from '@/hooks/useTranslation';
 
 interface Proker {
   id: string;
-  title: string;
+  title?: string;
+  nama?: string;
   description: string | null;
   sekbid_id: number | null;
   start_date: string | null;
@@ -135,11 +136,13 @@ export default function SekbidDetailClient({ sekbidId }: SekbidDetailClientProps
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                 {prokerList.map((program, idx) => {
-                  const statusInfo = STATUS_CONFIG[program.status];
-                  const StatusIcon = statusInfo.icon;
+                  const statusInfo = STATUS_CONFIG[program.status] || STATUS_CONFIG.planned;
+                    const StatusIcon = statusInfo.icon;
+                    const programTitle =
+                      (program.title || program.nama || '').trim() || 'Program Kerja';
 
-                  return (
-                    <AnimatedSection key={program.id} delay={0.05 * idx}>
+                    return (
+                      <AnimatedSection key={program.id} delay={0.05 * idx}>
                       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group border-2 border-gray-100 dark:border-gray-700">
                         {/* Status Header */}
                         <div className={`${statusInfo.bg} ${statusInfo.color} px-6 py-3 flex items-center justify-between`}>
@@ -153,7 +156,7 @@ export default function SekbidDetailClient({ sekbidId }: SekbidDetailClientProps
                         {/* Content */}
                         <div className="p-6">
                           <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
-                            {program.title}
+                            {programTitle}
                           </h3>
                           
                           {program.description && (

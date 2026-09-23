@@ -9,7 +9,8 @@ import Link from 'next/link';
 
 interface Proker {
   id: string;
-  title: string;
+  title?: string;
+  nama?: string;
   description: string | null;
   sekbid_id: number | null;
   start_date: string | null;
@@ -18,7 +19,7 @@ interface Proker {
   sekbid?: {
     id: number;
     name: string;
-  };
+  } | null;
 }
 
 interface SekbidGroup {
@@ -35,10 +36,28 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Dibatalkan', icon: FaBan, color: 'text-red-600', bg: 'bg-red-100' },
 };
 
+const GENERAL_GROUP_ID = 0;
+
+function prokerTitle(p: Proker): string {
+  return (p.title || p.nama || '').trim() || 'Program Kerja';
+}
+
+function prokerDates(p: Proker): { start_date: string | null; end_date: string | null } {
+  if (p.start_date || p.end_date) {
+    return { start_date: p.start_date, end_date: p.end_date };
+  }
+  const waktu = (p as any).waktu;
+  if (typeof waktu === 'string' && waktu.includes(' - ')) {
+    const [a, b] = waktu.split(' - ');
+    return { start_date: a?.trim() || null, end_date: b?.trim() || null };
+  }
+  return { start_date: null, end_date: null };
+}
+
 export default function ProkerSection() {
-  const [prokerData, setProkerData] = useState<Proker[]>([]);
   const [groupedData, setGroupedData] = useState<SekbidGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProker();
@@ -47,31 +66,41 @@ export default function ProkerSection() {
   const fetchProker = async () => {
     try {
       const response = await apiFetch('/api/proker');
-      if (!response.ok) throw new Error('Failed to fetch');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await safeJson(response, { url: '/api/proker', method: 'GET' });
-      const proker = data.proker || [];
-      setProkerData(proker);
+      const proker: Proker[] = data.proker || [];
 
-      // Group by sekbid
       const grouped: Record<number, SekbidGroup> = {};
-      proker.forEach((p: Proker) => {
-        if (p.sekbid_id && typeof p.sekbid_id === 'number' && p.sekbid_id > 0) {
-          if (!grouped[p.sekbid_id]) {
-            grouped[p.sekbid_id] = {
-              sekbid_id: p.sekbid_id,
-              sekbid_name: p.sekbid?.name || `Sekbid ${p.sekbid_id}`,
-              programs: [],
-              count: 0,
-            };
-          }
-          grouped[p.sekbid_id].programs.push(p);
-          grouped[p.sekbid_id].count++;
+      proker.forEach((p) => {
+        const hasSekbid =
+          typeof p.sekbid_id === 'number' && Number.isFinite(p.sekbid_id) && p.sekbid_id > 0;
+        const key = hasSekbid ? (p.sekbid_id as number) : GENERAL_GROUP_ID;
+
+        if (!grouped[key]) {
+          grouped[key] = {
+            sekbid_id: key,
+            sekbid_name: hasSekbid
+              ? p.sekbid?.name || `Sekbid ${key}`
+              : 'Umum',
+            programs: [],
+            count: 0,
+          };
         }
+        grouped[key].programs.push(p);
+        grouped[key].count++;
       });
 
-      setGroupedData(Object.values(grouped).sort((a, b) => a.sekbid_id - b.sekbid_id));
-    } catch (error) {
-      console.error('Error fetching proker:', error);
+      const groups = Object.values(grouped).sort((a, b) => {
+        if (a.sekbid_id === GENERAL_GROUP_ID) return -1;
+        if (b.sekbid_id === GENERAL_GROUP_ID) return 1;
+        return a.sekbid_id - b.sekbid_id;
+      });
+      setGroupedData(groups);
+      setError(null);
+    } catch (err: any) {
+      console.error('Error fetching proker:', err);
+      setError(err?.message || 'Gagal memuat program kerja');
+      setGroupedData([]);
     } finally {
       setLoading(false);
     }
@@ -94,6 +123,18 @@ export default function ProkerSection() {
     );
   }
 
+  if (error) {
+    return (
+      <section className="py-12 sm:py-16 lg:py-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg">
+            Gagal memuat program kerja. Coba muat ulang halaman.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   if (groupedData.length === 0) {
     return (
       <section className="py-12 sm:py-16 lg:py-20">
@@ -108,8 +149,13 @@ export default function ProkerSection() {
     <section className="py-12 sm:py-16 lg:py-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {groupedData.map((group, idx) => {
-          const sekbidInfo = getSekbidIcon(group.sekbid_id);
+          const isGeneral = group.sekbid_id === GENERAL_GROUP_ID;
+          const sekbidInfo = isGeneral ? null : getSekbidIcon(group.sekbid_id);
           const Icon = sekbidInfo?.icon;
+          const headerBg = sekbidInfo?.bgColor || 'bg-amber-100';
+          const borderColor = sekbidInfo
+            ? sekbidInfo.color.replace('text-', '')
+            : '#f59e0b';
 
           // Show only first 3 programs per sekbid on homepage
           const displayPrograms = group.programs.slice(0, 3);
@@ -118,7 +164,7 @@ export default function ProkerSection() {
             <AnimatedSection key={group.sekbid_id} delay={0.1 * idx}>
               <div className="mb-12 sm:mb-16 last:mb-0">
                 {/* Sekbid Header */}
-                <div className={`${sekbidInfo?.bgColor} dark:bg-opacity-20 rounded-2xl p-4 sm:p-6 mb-6 border-l-4`} style={{ borderColor: sekbidInfo?.color.replace('text-', '') }}>
+                <div className={`${headerBg} dark:bg-opacity-20 rounded-2xl p-4 sm:p-6 mb-6 border-l-4`} style={{ borderColor }}>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 sm:gap-4">
                       {Icon && (
@@ -128,27 +174,33 @@ export default function ProkerSection() {
                       )}
                       <div>
                         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                          Sekbid {group.sekbid_id}: {group.sekbid_name}
+                          {isGeneral
+                            ? group.sekbid_name
+                            : `Sekbid ${group.sekbid_id}: ${group.sekbid_name}`}
                         </h2>
                         <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                           {group.count} Program Kerja
                         </p>
                       </div>
                     </div>
-                    <Link 
-                      href={`/sekbid/${group.sekbid_id}`}
-                      className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-yellow-50 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base text-gray-700 dark:text-gray-300 font-semibold"
-                    >
-                      Lihat Semua <FaArrowRight />
-                    </Link>
+                    {!isGeneral && (
+                      <Link
+                        href={`/sekbid/${group.sekbid_id}`}
+                        className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-yellow-50 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base text-gray-700 dark:text-gray-300 font-semibold"
+                      >
+                        Lihat Semua <FaArrowRight />
+                      </Link>
+                    )}
                   </div>
                 </div>
 
                 {/* Program Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {displayPrograms.map((program) => {
-                    const statusInfo = STATUS_CONFIG[program.status];
+                    const statusInfo =
+                      STATUS_CONFIG[program.status] || STATUS_CONFIG.planned;
                     const StatusIcon = statusInfo.icon;
+                    const dates = prokerDates(program);
 
                     return (
                       <div
@@ -163,9 +215,9 @@ export default function ProkerSection() {
 
                         <div className="p-6">
                           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
-                            {program.title}
+                            {prokerTitle(program)}
                           </h3>
-                          
+
                           {program.description && (
                             <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
                               {program.description}
@@ -174,16 +226,16 @@ export default function ProkerSection() {
 
                           {/* Dates */}
                           <div className="space-y-2 text-sm">
-                            {program.start_date && (
+                            {dates.start_date && (
                               <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                 <FaCalendar className="text-yellow-600" />
-                                <span>Mulai: {formatDate(program.start_date)}</span>
+                                <span>Mulai: {formatDate(dates.start_date)}</span>
                               </div>
                             )}
-                            {program.end_date && (
+                            {dates.end_date && (
                               <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                 <FaCalendar className="text-yellow-600" />
-                                <span>Selesai: {formatDate(program.end_date)}</span>
+                                <span>Selesai: {formatDate(dates.end_date)}</span>
                               </div>
                             )}
                           </div>

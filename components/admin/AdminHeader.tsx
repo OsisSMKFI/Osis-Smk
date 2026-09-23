@@ -70,9 +70,34 @@ export default function AdminHeader() {
   }, []);
 
   useEffect(() => {
+    let iv: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (iv) return;
+      iv = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        fetchNotifications();
+      }, 60000);
+    };
+    const stop = () => {
+      if (iv) clearInterval(iv);
+      iv = null;
+    };
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchNotifications();
+        start();
+      } else {
+        stop();
+      }
+    };
+
     fetchNotifications();
-    const iv = setInterval(fetchNotifications, 30000); // Poll every 30s
-    return () => clearInterval(iv);
+    if (typeof document === 'undefined' || !document.hidden) start();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [fetchNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.read && n.status !== 'reviewed').length;

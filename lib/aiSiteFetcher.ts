@@ -121,7 +121,7 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
     prokerData = p || null;
   } catch (e) {
     try {
-      const { data: p2 } = await supabaseAdmin.from('program_kerja').select('id,title,description').order('id', { ascending: true }).limit(50);
+      const { data: p2 } = await supabaseAdmin.from('program_kerja').select('id,nama,waktu,sekbid_id,status').order('id', { ascending: true }).limit(50);
       prokerData = p2 || null;
     } catch (e2) {
       prokerData = null;
@@ -144,7 +144,7 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
       }
       return acc;
     }, {}),
-    proker: (prokerData || []).map((p: any) => ({ id: p.id, title: truncate(p.title || p.name || '', 120), description: truncate(p.description || '', 200) })),
+    proker: (prokerData || []).map((p: any) => ({ id: p.id, title: truncate(p.title || p.nama || p.name || '', 120), description: truncate(p.description || p.tujuan || p.waktu || '', 200) })),
     top_gallery: (gallery || []).map((g: any) => ({ title: truncate(g.title, 100), url: g.url }))
   };
 

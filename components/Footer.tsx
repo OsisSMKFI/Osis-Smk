@@ -201,6 +201,7 @@ const Footer: React.FC = () => {
                     {link.available ? (
                       <Link 
                         href={link.href} 
+                        prefetch={false}
                         className="text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-300 flex items-center group"
                       >
                         <span className="w-2 h-2 bg-yellow-400 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

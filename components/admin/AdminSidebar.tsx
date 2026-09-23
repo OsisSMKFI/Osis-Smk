@@ -198,6 +198,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
           {/* Back to Website Button */}
           <Link
             href="/dashboard"
+            prefetch={false}
             target="_blank"
             className="group relative flex items-center space-x-3 px-4 py-3 rounded-xl bg-slate-700 text-white hover:bg-slate-600 shadow transition-all duration-200 mb-4"
           >
@@ -222,6 +223,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={() => setMobileOpen(false)}
                 className={`
                   group relative flex items-center space-x-3 px-4 py-3 rounded-xl
@@ -287,6 +289,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={() => setMobileOpen(false)}
                 className={`
                   group relative flex items-center space-x-3 px-4 py-3 rounded-xl
@@ -338,6 +341,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={() => setMobileOpen(false)}
                 className={`
                   group relative flex items-center space-x-3 px-4 py-3 rounded-xl

@@ -93,44 +93,102 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Update content
+// Bulk update/create content — 1 auth + 1 roundtrip per save click
 export async function PUT(request: NextRequest) {
-  // Check permission
   const authError = await requirePermission('content:update');
   if (authError) return authError;
-  
+
   try {
     const body = await request.json();
+
+    // Bulk mode: { items: [{ id?, page_key, title?, content, category? }] }
+    if (Array.isArray(body?.items)) {
+      const items = body.items.filter(Boolean);
+      if (items.length === 0) {
+        return NextResponse.json({ success: true, updated: 0, inserted: 0 });
+      }
+
+      const now = new Date().toISOString();
+      let updated = 0;
+      let inserted = 0;
+      const errors: string[] = [];
+
+      // Parallelize DB writes but keep a single auth above
+      await Promise.all(items.map(async (item: any) => {
+        try {
+          if (item.id) {
+            const { error } = await supabaseAdmin
+              .from('page_content')
+              .update({ content: item.content ?? '', updated_at: now })
+              .eq('id', item.id);
+            if (error) errors.push(`${item.page_key || item.id}: ${error.message}`);
+            else updated++;
+          } else if (item.page_key && (item.content ?? '') !== '') {
+            const { error } = await supabaseAdmin
+              .from('page_content')
+              .insert({
+                page_key: item.page_key,
+                category: item.category || 'general',
+                title: item.title || item.page_key,
+                content: item.content || '',
+                published: true,
+                updated_at: now,
+              });
+            if (error) {
+              // Unique conflict → update instead
+              const { error: updErr } = await supabaseAdmin
+                .from('page_content')
+                .update({ content: item.content ?? '', title: item.title, category: item.category, updated_at: now })
+                .eq('page_key', item.page_key);
+              if (updErr) errors.push(`${item.page_key}: ${updErr.message}`);
+              else updated++;
+            } else {
+              inserted++;
+            }
+          }
+        } catch (e: any) {
+          errors.push(`${item.page_key || item.id}: ${e?.message || 'failed'}`);
+        }
+      }));
+
+      if (errors.length > 0 && updated + inserted === 0) {
+        return NextResponse.json({ error: errors.join('; ') }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: errors.length === 0, updated, inserted, errors });
+    }
+
+    // Single-item mode (back-compat)
     const { id, page_key, category, title, content, published } = body;
-    
+
     if (!id && !page_key) {
       return NextResponse.json({ error: 'id or page_key is required' }, { status: 400 });
     }
-    
+
     const updateData: any = {
       updated_at: new Date().toISOString()
     };
-    
+
     if (title !== undefined) updateData.title = title;
     if (content !== undefined) updateData.content = content;
     if (category !== undefined) updateData.category = category;
     if (published !== undefined) updateData.published = published;
-    
+
     let query = supabaseAdmin.from('page_content').update(updateData);
-    
+
     if (id) {
       query = query.eq('id', id);
     } else {
       query = query.eq('page_key', page_key);
     }
-    
+
     const { data, error } = await query.select().single();
-    
+
     if (error) {
       console.error('[/api/admin/content] Update error:', error);
       throw error;
     }
-    
+
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
     console.error('[/api/admin/content] PUT Error:', error);

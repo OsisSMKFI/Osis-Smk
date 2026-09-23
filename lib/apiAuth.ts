@@ -67,14 +67,16 @@ export async function requirePermission(permission: Permission) {
 
   const effectiveRole = resolveEffectiveRole(sessionRole, freshRole);
 
-  console.log('[requirePermission]', {
-    userEmail: session.user.email,
-    sessionRole,
-    freshRole,
-    effectiveRole,
-    permission,
-    hasPermission: hasPermission(effectiveRole || undefined, permission)
-  });
+  if (process.env.DEBUG_AUTH === '1') {
+    console.log('[requirePermission]', {
+      userEmail: session.user.email,
+      sessionRole,
+      freshRole,
+      effectiveRole,
+      permission,
+      hasPermission: hasPermission(effectiveRole || undefined, permission)
+    });
+  }
 
   if (!hasPermission(effectiveRole || undefined, permission)) {
     return NextResponse.json(

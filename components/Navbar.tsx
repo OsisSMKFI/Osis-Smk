@@ -178,10 +178,10 @@ const Navbar: React.FC = () => {
           <Link href="/" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Home">{t('navbar.home')}</Link>
           <Link href="/about" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="About">{t('navbar.about')}</Link>
           <Link href="/info" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Info">📰 Info</Link>
-          <Link href="/bidang" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Program Kerja">{t('navbar.programKerja')}</Link>
+          <Link href="/bidang" prefetch={false} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Program Kerja">{t('navbar.programKerja')}</Link>
           <Link href="/gallery" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Gallery">{t('navbar.gallery')}</Link>
           <Link href="/our-social-media" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Social Media">{t('navbar.socialMedia')}</Link>
-          <Link href="/people" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Members">{t('navbar.members')}</Link>
+          <Link href="/people" prefetch={false} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Members">{t('navbar.members')}</Link>
 
           {/* Language Toggle */}
           <div className="ml-4">
@@ -214,6 +214,7 @@ const Navbar: React.FC = () => {
                 </Link>
                 <Link
                   href="/admin/login"
+                  prefetch={false}
                   className="px-3 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow hover:shadow-md hover:opacity-95 transition"
                   aria-label="Login"
                 >
@@ -224,6 +225,7 @@ const Navbar: React.FC = () => {
               <>
                 <Link
                   href={['super_admin', 'admin', 'osis'].includes(session?.user?.role || '') ? '/admin' : '/dashboard'}
+                  prefetch={false}
                   className="px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300/60 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
                   aria-label="Dashboard"
                 >
@@ -409,6 +411,7 @@ const Navbar: React.FC = () => {
 
             <Link 
               href="/bidang" 
+              prefetch={false}
               onClick={() => setIsOpen(false)} 
               className="flex flex-col gap-1 px-3 xs:px-4 py-2.5 xs:py-3 min-h-[44px] rounded-xl text-base font-medium tracking-wide opacity-90 hover:opacity-100 hover:bg-white/5 dark:hover:bg-white/5 text-gray-800 dark:text-gray-200 transition-all duration-200 group"
               aria-label="Navigate to programs"
@@ -445,6 +448,7 @@ const Navbar: React.FC = () => {
 
             <Link 
               href="/people" 
+              prefetch={false}
               onClick={() => setIsOpen(false)} 
               className="flex flex-col gap-1 px-3 xs:px-4 py-2.5 xs:py-3 min-h-[44px] rounded-xl text-base font-medium tracking-wide opacity-90 hover:opacity-100 hover:bg-white/5 dark:hover:bg-white/5 text-gray-800 dark:text-gray-200 transition-all duration-200 group"
               aria-label="Navigate to members"

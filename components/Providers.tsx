@@ -63,7 +63,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const shouldAddPadding = isPublicPage && !hasFullscreenHero;
 
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false}>
       <SecurityAnalyzerProvider>
         <LanguageProvider>
           <ThemeProvider>

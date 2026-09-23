@@ -7,7 +7,8 @@ import { FaClipboardList, FaPlus, FaEdit, FaTrash, FaTimes, FaCheckCircle, FaClo
 
 interface Proker {
   id: string;
-  title: string;
+  title?: string;
+  nama?: string;
   description: string | null;
   sekbid_id: number | null;
   start_date: string | null;
@@ -17,7 +18,7 @@ interface Proker {
   sekbid?: {
     id: number;
     name: string;
-  };
+  } | null;
 }
 
 interface Sekbid {
@@ -81,16 +82,20 @@ export default function ProkerPage() {
         fetch('/api/admin/sekbid')
       ]);
       
-      if (!prokerRes.ok) throw new Error('Failed to fetch proker');
+      if (!prokerRes.ok) {
+        const errBody = await prokerRes.json().catch(() => null);
+        throw new Error(errBody?.error || `HTTP ${prokerRes.status}`);
+      }
       const prokerData = await prokerRes.json();
       setItems(Array.isArray(prokerData) ? prokerData : []);
-      
+
       if (sekbidRes.ok) {
         const sekbidData = await sekbidRes.json();
         setSekbids(Array.isArray(sekbidData) ? sekbidData : []);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
+      alert('Gagal memuat data program kerja: ' + (error?.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -112,6 +117,11 @@ export default function ProkerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.sekbid_id) {
+      alert('Sekbid wajib dipilih agar program kerja tampil di halaman /bidang.');
+      return;
+    }
+
     try {
       const url = editingId 
         ? `/api/admin/proker/${editingId}` 
@@ -129,22 +139,25 @@ export default function ProkerPage() {
         })
       });
 
-      if (!response.ok) throw new Error('Failed to save');
-      
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => null);
+        throw new Error(errBody?.error || errBody?.message || `HTTP ${response.status}`);
+      }
+
       await fetchData();
       setShowForm(false);
       setEditingId(null);
       setFormData({ title: '', description: '', sekbid_id: '', start_date: '', end_date: '', status: 'planned' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving proker:', error);
-      alert('Gagal menyimpan program kerja');
+      alert('Gagal menyimpan program kerja: ' + (error?.message || 'Unknown error'));
     }
   };
 
   const handleEdit = (item: Proker) => {
     setEditingId(item.id);
     setFormData({
-      title: item.title,
+      title: item.title || item.nama || '',
       description: item.description || '',
       sekbid_id: item.sekbid_id?.toString() || '',
       start_date: item.start_date ? item.start_date.split('T')[0] : '',
@@ -162,11 +175,14 @@ export default function ProkerPage() {
         method: 'DELETE'
       });
       
-      if (!response.ok) throw new Error('Failed to delete');
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => null);
+        throw new Error(errBody?.error || `HTTP ${response.status}`);
+      }
       await fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting proker:', error);
-      alert('Gagal menghapus program kerja');
+      alert('Gagal menghapus program kerja: ' + (error?.message || 'Unknown error'));
     }
   };
 
@@ -268,20 +284,24 @@ export default function ProkerPage() {
                 {/* Sekbid */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                    Sekbid
+                    Sekbid <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={formData.sekbid_id}
                     onChange={(e) => setFormData({ ...formData, sekbid_id: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all"
+                    required
                   >
-                    <option value="">- Pilih Sekbid (Opsional) -</option>
+                    <option value="">- Pilih Sekbid -</option>
                     {sekbids.map((sekbid) => (
                       <option key={sekbid.id} value={sekbid.id}>
                         {sekbid.name}
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Wajib dipilih agar program kerja tampil di halaman /bidang
+                  </p>
                 </div>
 
                 {/* Dates */}
@@ -376,7 +396,7 @@ export default function ProkerPage() {
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                          {proker.title}
+                          {proker.title || proker.nama || 'Program Kerja'}
                         </h3>
                         {proker.description && (
                           <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
@@ -392,12 +412,15 @@ export default function ProkerPage() {
 
                     {/* Details */}
                     <div className="space-y-2 mb-4">
-                      {proker.sekbid && (
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                          <FaLayerGroup className="w-4 h-4 text-teal-600" />
-                          <span>{proker.sekbid.name}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                        <FaLayerGroup className="w-4 h-4 text-teal-600" />
+                        <span>
+                          {proker.sekbid?.name ||
+                            (proker.sekbid_id
+                              ? `Sekbid ${proker.sekbid_id}`
+                              : 'Tanpa Sekbid')}
+                        </span>
+                      </div>
                       {(proker.start_date || proker.end_date) && (
                         <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
                           <FaCalendarAlt className="w-4 h-4 text-teal-600" />

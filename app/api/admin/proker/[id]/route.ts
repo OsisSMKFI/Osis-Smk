@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { mapProkerRow, updateProkerSafe } from '@/lib/proker';
 
 export async function GET(
   request: NextRequest,
@@ -17,19 +17,20 @@ export async function GET(
       .from('program_kerja')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
+      console.error('[admin/proker/[id] GET] error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     if (!data) {
-      return NextResponse.json({ error: 'Program kerja not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Program kerja tidak ditemukan' }, { status: 404 });
     }
 
-    return NextResponse.json({ ...data, title: data.nama || data.title });
+    return NextResponse.json(mapProkerRow(data));
   } catch (error: any) {
-    console.error('[GET /api/admin/proker/[id]] Error:', error);
+    console.error('[admin/proker/[id] GET] exception:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -44,36 +45,37 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, description, sekbid_id, start_date, end_date, status } = body;
+    const title = (body.title || body.nama || '').trim();
 
     if (!title) {
-      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Nama program kerja wajib diisi' }, { status: 400 });
     }
 
-    const waktu = [start_date, end_date].filter(Boolean).join(' - ') || null;
-
-    const { data, error } = await supabaseAdmin
-      .from('program_kerja')
-      .update({
-        nama: title,
-        description: description || null,
-        sekbid_id: sekbid_id || null,
-        waktu,
-        status: status || 'planned',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single();
+    const { data, error } = await updateProkerSafe(supabaseAdmin, id, {
+      title,
+      description: body.description ?? null,
+      sekbid_id: body.sekbid_id ?? null,
+      start_date: body.start_date ?? null,
+      end_date: body.end_date ?? null,
+      status: body.status || 'planned',
+      progress: body.progress ?? null,
+    });
 
     if (error) {
-      console.error('Error updating proker:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[admin/proker/[id] PUT] error:', error);
+      return NextResponse.json(
+        { error: error.message || 'Gagal memperbarui program kerja' },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ ...data, title: data.nama || data.title });
+    if (!data) {
+      return NextResponse.json({ error: 'Program kerja tidak ditemukan' }, { status: 404 });
+    }
+
+    return NextResponse.json(mapProkerRow(data));
   } catch (error: any) {
-    console.error('Error in PUT /api/admin/proker/[id]:', error);
+    console.error('[admin/proker/[id] PUT] exception:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -93,13 +95,13 @@ export async function DELETE(
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting proker:', error);
+      console.error('[admin/proker/[id] DELETE] error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error in DELETE /api/admin/proker/[id]:', error);
+    console.error('[admin/proker/[id] DELETE] exception:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

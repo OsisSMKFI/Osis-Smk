@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { mapProkerList } from '@/lib/proker';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,26 +22,35 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: false });
 
-    // Filter by sekbid if provided
     if (sekbidId) {
       query = query.eq('sekbid_id', parseInt(sekbidId));
     }
 
-    // Filter by status if provided
     if (status) {
       query = query.eq('status', status);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching program kerja:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[api/proker] join failed, retrying without embed:', error.message);
+      let retry = supabaseAdmin
+        .from('program_kerja')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (sekbidId) retry = retry.eq('sekbid_id', parseInt(sekbidId));
+      if (status) retry = retry.eq('status', status);
+      const retried = await retry;
+      if (retried.error) {
+        console.error('[api/proker] error:', retried.error);
+        return NextResponse.json({ error: retried.error.message }, { status: 500 });
+      }
+      data = retried.data;
     }
 
-    return NextResponse.json({ proker: data || [] });
+    return NextResponse.json({ proker: mapProkerList(data) });
   } catch (error: any) {
-    console.error('Error in GET /api/proker:', error);
+    console.error('[api/proker] exception:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

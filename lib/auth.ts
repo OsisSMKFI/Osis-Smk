@@ -78,19 +78,20 @@ export const authConfig: NextAuthConfig = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials, request) {
-          console.log('[NextAuth] authorize called with email:', credentials?.email);
+          const dbg = process.env.DEBUG_AUTH === '1';
+          if (dbg) console.log('[NextAuth] authorize called with email:', credentials?.email);
           
           // Basic validation + normalization
           const rawEmail = credentials?.email as string | undefined;
           const password = credentials?.password as string | undefined;
           
           if (!rawEmail || !password) {
-            console.log('[NextAuth] Missing email or password');
+            if (dbg) console.log('[NextAuth] Missing email or password');
             await logAuthEvent('warn', { event: 'authorize_missing_fields' });
             throw new Error('Email dan password harus diisi');
           }
           const email = rawEmail.trim().toLowerCase();
-          console.log('[NextAuth] Normalized email:', email);
+          if (dbg) console.log('[NextAuth] Normalized email:', email);
 
           // rate-limit by normalized email (process-local)
           const attemptKey = `login:${email}`;
@@ -102,7 +103,7 @@ export const authConfig: NextAuthConfig = {
 
           const user = await findUserByEmail(email);
           
-          console.log('[NextAuth] User lookup result:', { 
+          if (dbg) console.log('[NextAuth] User lookup result:', { 
             found: !!user, 
             hasPassword: !!user?.password_hash,
             email_verified: user?.email_verified,
@@ -123,9 +124,9 @@ export const authConfig: NextAuthConfig = {
 
           // Dynamically import bcrypt to verify password first
           const bcrypt = (await import('bcryptjs')).default;
-          console.log('[NextAuth] Comparing password...');
+          if (dbg) console.log('[NextAuth] Comparing password...');
           const valid = await bcrypt.compare(password, user.password_hash as string);
-          console.log('[NextAuth] Password valid:', valid);
+          if (dbg) console.log('[NextAuth] Password valid:', valid);
           
           if (!valid) {
             incrementAttempts(attemptKey);
@@ -167,7 +168,7 @@ export const authConfig: NextAuthConfig = {
 
           // Activity will be logged in signIn callback
           const returnUser = { id: user.id, email: user.email, name: user.name ?? undefined, role: user.role ?? undefined };
-          console.log('[NextAuth] authorize SUCCESS, returning user:', returnUser);
+          if (dbg) console.log('[NextAuth] authorize SUCCESS, returning user:', returnUser);
           return returnUser;
       },
     }),
@@ -180,16 +181,18 @@ export const authConfig: NextAuthConfig = {
   // In production, consider 15-30 minutes. For testing role changes, use 5 minutes.
   session: { 
     strategy: 'jwt', 
-    maxAge: 5 * 60, // 5 minutes - user must refresh to see role changes
-    updateAge: 60, // Update session every 60 seconds to check for role changes
+    maxAge: 7 * 24 * 60 * 60, // 7 days - role still refreshed from DB via roleCheckedAt
+    updateAge: 15 * 60, // Re-issue token every 15 minutes (was 60s → constant churn)
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log('[NextAuth] signIn callback triggered:', { 
-        user: user?.email, 
-        hasUser: !!user,
-        account: account?.provider 
-      });
+      if (process.env.DEBUG_AUTH === '1') {
+        console.log('[NextAuth] signIn callback triggered:', { 
+          user: user?.email, 
+          hasUser: !!user,
+          account: account?.provider 
+        });
+      }
       
       // Log successful sign in to activity_logs
       if (user?.id && user?.email) {
@@ -209,7 +212,9 @@ export const authConfig: NextAuthConfig = {
             },
             status: 'success',
           });
-          console.log('[NextAuth] Activity logged for user:', user.email);
+          if (process.env.DEBUG_AUTH === '1') {
+            console.log('[NextAuth] Activity logged for user:', user.email);
+          }
         } catch (error) {
           console.error('[NextAuth] Failed to log activity:', error);
           // Don't block sign in if logging fails
@@ -220,25 +225,20 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
     async jwt({ token, user, trigger }) {
-      console.log('[NextAuth] jwt callback:', { 
-        hasUser: !!user, 
-        trigger,
-        tokenSub: token?.sub,
-        currentRole: (token as any)?.role
-      });
-      
       // On sign in, add user data to token
       if (user && typeof token === 'object' && token !== null) {
         (token as Record<string, unknown>)['role'] = ((user as unknown) as { role?: string }).role;
-        // Ensure the user's id is preserved in the token so server APIs can access it
         (token as Record<string, unknown>)['id'] = ((user as unknown) as { id?: string }).id;
-        console.log('[NextAuth] jwt - Added user to token:', { id: user.id, role: (user as any).role });
+        (token as Record<string, unknown>)['roleCheckedAt'] = Date.now();
       }
-      
-      // ALWAYS refresh role from database on EVERY jwt callback to ensure it's current
-      // This ensures role changes take effect on next page load/refresh
+
+      // Refresh role from DB at most once per 60s (or on explicit update)
+      // Avoids a Supabase query on EVERY auth()/session/middleware call
       const userId = (token as any)?.id || token?.sub;
-      if (userId) {
+      const lastChecked = Number((token as any)?.roleCheckedAt || 0);
+      const stale = !lastChecked || Date.now() - lastChecked > 60_000;
+
+      if (userId && (trigger === 'update' || stale)) {
         try {
           const { createClient } = await import('@supabase/supabase-js');
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -246,57 +246,40 @@ export const authConfig: NextAuthConfig = {
           const supabase = createClient(supabaseUrl, serviceKey, {
             auth: { persistSession: false, autoRefreshToken: false }
           });
-          
+
           const { data: userData } = await supabase
             .from('users')
             .select('role, approved, email_verified')
             .eq('id', userId)
             .single();
-          
+
           if (userData?.role) {
             const oldRole = (token as any)?.role;
             (token as Record<string, unknown>)['role'] = userData.role;
             (token as Record<string, unknown>)['approved'] = userData.approved;
             (token as Record<string, unknown>)['email_verified'] = userData.email_verified;
-            
-            if (oldRole !== userData.role) {
-              console.log('[NextAuth] jwt - ROLE CHANGED in DB:', { 
-                userId, 
-                oldRole,
-                newRole: userData.role 
-              });
-            } else {
-              console.log('[NextAuth] jwt - Refreshed role from DB:', { 
-                userId, 
-                role: userData.role,
-                approved: userData.approved,
-                email_verified: userData.email_verified
-              });
+            (token as Record<string, unknown>)['roleCheckedAt'] = Date.now();
+
+            if (oldRole !== userData.role && process.env.DEBUG_AUTH === '1') {
+              console.log('[NextAuth] jwt - ROLE CHANGED:', { userId, oldRole, newRole: userData.role });
             }
+          } else {
+            (token as Record<string, unknown>)['roleCheckedAt'] = Date.now();
           }
         } catch (error) {
-          console.error('[NextAuth] jwt - Error refreshing role:', error);
+          if (process.env.DEBUG_AUTH === '1') {
+            console.error('[NextAuth] jwt - Error refreshing role:', error);
+          }
         }
       }
-      
+
       return token;
     },
     async session({ session, token }) {
-            console.log('[NextAuth] session callback:', { 
-              hasSession: !!session,
-              hasToken: !!token,
-              tokenId: (token as any)?.id 
-            });
       if (session.user && typeof token === 'object' && token !== null) {
         ((session.user as unknown) as Record<string, unknown>)['role'] = (token as Record<string, unknown>)['role'];
-        // Copy id from token into session.user so server routes can use `session.user.id`
         if ((token as Record<string, unknown>)['id']) {
           ((session.user as unknown) as Record<string, unknown>)['id'] = (token as Record<string, unknown>)['id'];
-                console.log('[NextAuth] session - User in session:', { 
-                  id: (session.user as any).id, 
-                  email: session.user.email,
-                  role: (session.user as any).role 
-                });
         }
       }
       return session;

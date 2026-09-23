@@ -230,6 +230,7 @@ export default function DashboardPageClient() {
               
               <Link
                 href="/dashboard"
+                prefetch={false}
                 target="_blank"
                 className="flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105"
               >
@@ -238,6 +239,7 @@ export default function DashboardPageClient() {
               </Link>
               <Link
                 href={['super_admin', 'admin', 'osis'].includes(userRole) ? '/admin/profile' : '/profile/edit'}
+                prefetch={false}
                 className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105"
               >
                 <FaUser className="text-xl" />
@@ -494,6 +496,7 @@ export default function DashboardPageClient() {
             </p>
             <Link
               href="/dashboard"
+              prefetch={false}
               target="_blank"
               className="block text-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors"
             >
@@ -513,6 +516,7 @@ export default function DashboardPageClient() {
             </p>
             <Link
               href={['super_admin', 'admin', 'osis'].includes(userRole) ? '/admin/profile' : '/profile/edit'}
+              prefetch={false}
               className="block text-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
             >
               Edit Profil
@@ -531,6 +535,7 @@ export default function DashboardPageClient() {
             </p>
             <Link 
               href="/activity"
+              prefetch={false}
               className="block w-full text-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:shadow-xl transition-all"
             >
               Lihat Aktivitas →

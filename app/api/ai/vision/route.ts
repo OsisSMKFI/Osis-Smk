@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { auth } from '@/lib/auth';
 import { getAIGatewayStatus } from '@/lib/vercel/ai-gateway';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 /**
  * Clean up AI response for better readability
@@ -124,7 +119,7 @@ export async function POST(req: NextRequest) {
       supabaseAdmin.from('posts').select('*').eq('status', 'published').order('created_at', { ascending: false }).limit(10),
       supabaseAdmin.from('events').select('*').order('event_date', { ascending: false }).limit(10),
       supabaseAdmin.from('announcements').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('program_kerja').select('*').order('target_date', { ascending: false }).limit(10),
+      supabaseAdmin.from('program_kerja').select('*').order('created_at', { ascending: false }).limit(10),
       supabaseAdmin.from('gallery').select('*').order('uploaded_at', { ascending: false }).limit(20)
     ]);
 
