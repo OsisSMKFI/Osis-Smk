@@ -8,6 +8,7 @@ import { FaTimes, FaChevronLeft, FaChevronRight, FaImages } from 'react-icons/fa
 import PageHero from '@/components/animations/PageHero';
 import { AnimatedSection, StaggerContainer, StaggerItem } from '@/components/animations/AnimatedSection';
 import { useTranslation } from '@/hooks/useTranslation';
+import { cachedGetJson } from '@/lib/clientCache';
 
 interface GalleryItem {
   id: string;
@@ -61,20 +62,17 @@ export default function GalleryPageClient() {
 
   const fetchGallery = async () => {
     try {
-      const res = await fetch('/api/gallery');
-      if (res.ok) {
-        const data = await res.json();
-        const raw = data.gallery || [];
-        const safe = raw.map((g: any, i: number) => {
-          let id = g?.id;
-          if (id === null || id === undefined || id === '') {
-            const base = g?.image_url || g?.title || 'item';
-            id = `gal-${i}-${base}`;
-          }
-          return { ...g, id };
-        });
-        setGallery(safe);
-      }
+      const data = await cachedGetJson<any>('/api/gallery');
+      const raw = data.gallery || [];
+      const safe = raw.map((g: any, i: number) => {
+        let id = g?.id;
+        if (id === null || id === undefined || id === '') {
+          const base = g?.image_url || g?.title || 'item';
+          id = `gal-${i}-${base}`;
+        }
+        return { ...g, id };
+      });
+      setGallery(safe);
     } catch (error) {
       console.error('Error fetching gallery:', error);
     } finally {
@@ -90,13 +88,9 @@ export default function GalleryPageClient() {
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch('/api/events');
-      if (res.ok) {
-        const data = await res.json();
-        const arr: EventItem[] = Array.isArray(data?.events) ? data.events : [];
-        // Basic normalization of id/title
-        setEvents(arr.map(e => ({ id: e.id, title: e.title, event_date: e.event_date })));
-      }
+      const data = await cachedGetJson<any>('/api/events');
+      const arr: EventItem[] = Array.isArray(data?.events) ? data.events : [];
+      setEvents(arr.map(e => ({ id: e.id, title: e.title, event_date: e.event_date })));
     } catch (err) {
       console.error('Error fetching events:', err);
     }
@@ -104,12 +98,9 @@ export default function GalleryPageClient() {
 
   const fetchSekbids = async () => {
     try {
-      const res = await fetch('/api/sekbid');
-      if (res.ok) {
-        const data = await res.json();
-        const arr: SekbidItem[] = Array.isArray(data?.sekbid) ? data.sekbid : [];
-        setSekbids(arr.map(s => ({ id: s.id, name: s.name })));
-      }
+      const data = await cachedGetJson<any>('/api/sekbid');
+      const arr: SekbidItem[] = Array.isArray(data?.sekbid) ? data.sekbid : [];
+      setSekbids(arr.map(s => ({ id: s.id, name: s.name })));
     } catch (err) {
       console.error('Error fetching sekbids:', err);
     }

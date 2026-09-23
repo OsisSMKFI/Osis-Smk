@@ -46,7 +46,43 @@ export async function safeJson(res: Response, context?: { url?: string; method?:
   }
 }
 
+/** Only cache public content GETs — never admin/auth/theme mutations. */
+function isCacheablePublicGet(method: string, urlStr: string) {
+  if (method !== 'GET' || !urlStr.startsWith('/api/')) return false;
+  if (urlStr.includes('/admin') || urlStr.includes('/auth') || urlStr.includes('/profile')) return false;
+  return (
+    urlStr.startsWith('/api/proker') ||
+    urlStr.startsWith('/api/sekbid') ||
+    urlStr.startsWith('/api/announcements') ||
+    urlStr.startsWith('/api/events') ||
+    urlStr.startsWith('/api/polls') ||
+    urlStr.startsWith('/api/posts') ||
+    urlStr.startsWith('/api/gallery') ||
+    urlStr.startsWith('/api/stats') ||
+    urlStr.startsWith('/api/public/') ||
+    urlStr.startsWith('/api/members')
+  );
+}
+
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const method = (init?.method || 'GET').toUpperCase();
+  const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.href : String(input);
+  const cacheable = isCacheablePublicGet(method, urlStr) && !init?.cache;
+
+  // Cache-first for public GETs (clientCache warmed by RouteWarmup + prior visits)
+  if (cacheable) {
+    const { cachedGetJson } = await import('@/lib/clientCache');
+    try {
+      const data = await cachedGetJson(urlStr);
+      return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch {
+      // fall through to network on cache miss / error
+    }
+  }
+
   const res = await fetch(input, init);
   if (!res.ok) {
     const url = typeof input === 'string' ? input : (input as URL).toString();
@@ -63,6 +99,15 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit) {
         }),
       }).catch(() => {});
     } catch {}
+  } else if (cacheable && res.headers.get('content-type')?.includes('application/json')) {
+    try {
+      const { cacheSet } = await import('@/lib/clientCache');
+      const clone = res.clone();
+      const data = await clone.json();
+      cacheSet(urlStr, data);
+    } catch {
+      // non-json body etc.
+    }
   }
   return res;
 }

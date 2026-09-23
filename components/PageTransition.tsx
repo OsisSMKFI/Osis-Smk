@@ -70,13 +70,12 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
   }
 
   // No AnimatePresence mode="wait" — it delayed paint on every nav.
-  // Plain keyed div: instant swap, tiny CSS enter only.
+  // No key={pathname} remount — that forced full subtree remount (jank).
   return (
     <div className="relative min-h-screen" suppressHydrationWarning>
       <CurtainOverlay isVisible={showCurtain && mounted} />
 
       <div
-        key={pathname}
         className={`${showCurtain ? 'opacity-0 ' : ''}page-enter`}
         suppressHydrationWarning
       >

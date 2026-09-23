@@ -81,26 +81,19 @@ export default function SekbidPageClient() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch sekbid data
-        const sekbidRes = await fetch('/api/sekbid');
-        if (sekbidRes.ok) {
-          const data = await sekbidRes.json();
-          setSekbidData(data.sekbid || []);
-        }
-        
-        // Fetch proker counts per sekbid
-        const prokerRes = await fetch('/api/proker');
-        if (prokerRes.ok) {
-          const prokerData = await prokerRes.json();
-          const programs = prokerData.programs || prokerData.proker || [];
-          const counts: Record<number, number> = {};
-          programs.forEach((p: { sekbid_id?: number }) => {
-            if (p.sekbid_id) {
-              counts[p.sekbid_id] = (counts[p.sekbid_id] || 0) + 1;
-            }
-          });
-          setProkerCounts(counts);
-        }
+        const { cachedGetJson } = await import('@/lib/clientCache');
+        const sekbidDataRes = await cachedGetJson<any>('/api/sekbid');
+        setSekbidData(sekbidDataRes.sekbid || []);
+
+        const prokerData = await cachedGetJson<any>('/api/proker');
+        const programs = prokerData.programs || prokerData.proker || [];
+        const counts: Record<number, number> = {};
+        programs.forEach((p: { sekbid_id?: number }) => {
+          if (p.sekbid_id) {
+            counts[p.sekbid_id] = (counts[p.sekbid_id] || 0) + 1;
+          }
+        });
+        setProkerCounts(counts);
       } catch (error) {
         console.error('Error fetching sekbid data:', error);
       } finally {

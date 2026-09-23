@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
+import { cachedGetJson } from '@/lib/clientCache';
 import TeamMemberModal from '@/components/TeamMemberModal';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getPageContentBatch } from '@/lib/pageContent';
@@ -145,12 +146,9 @@ function AchievementsSection({ db }: { db: Record<string, string> }) {
   useEffect(() => {
     async function fetchAchievements() {
       try {
-        const res = await fetch('/api/public/achievements');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.achievements && data.achievements.length > 0 && data.source === 'database') {
-            setAchievements(data.achievements);
-          }
+        const data = await cachedGetJson<any>('/api/public/achievements');
+        if (data.achievements && data.achievements.length > 0 && data.source === 'database') {
+          setAchievements(data.achievements);
         }
       } catch {}
       setLoading(false);
@@ -380,12 +378,9 @@ export default function AboutPageClient() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/public/filosofi-logo');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.elements && data.elements.length > 0) {
-            setLogoElements(data.elements);
-          }
+        const data = await cachedGetJson<any>('/api/public/filosofi-logo');
+        if (data.elements && data.elements.length > 0) {
+          setLogoElements(data.elements);
         }
       } catch {}
     })();
