@@ -232,16 +232,28 @@ export function extractPhotoPath(urlOrPath: string): string {
 
 /**
  * Convert an expired/stored signed storage URL back to a permanent public URL.
- * Non-sign URLs are returned unchanged.
+ * Also converts relative paths (e.g., "gallery/posts/123.jpg") to full public URLs.
+ * Non-sign URLs that are already full URLs are returned unchanged.
  */
 export function toPublicStorageUrl(url: string | null | undefined): string | null {
-  if (!url || !url.includes('/storage/v1/object/sign/')) return url ?? null;
+  if (!url) return null;
 
-  const rel = extractPhotoPath(url);
-  if (!rel || rel.startsWith('http')) return url;
+  // Already a full HTTP URL — return as-is
+  if (url.startsWith('http')) {
+    // But if it's a signed URL, convert to public
+    if (url.includes('/storage/v1/object/sign/')) {
+      const rel = extractPhotoPath(url);
+      if (rel && !rel.startsWith('http')) {
+        const base = process.env.NEXT_PUBLIC_SUPABASE_URL || `https://${CURRENT_SUPABASE_PROJECT}.supabase.co`;
+        return `${base}/storage/v1/object/public/${rel}`;
+      }
+    }
+    return url;
+  }
 
+  // Relative path (e.g., "gallery/posts/123.jpg") — convert to full public URL
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL || `https://${CURRENT_SUPABASE_PROJECT}.supabase.co`;
-  return `${base}/storage/v1/object/public/${rel}`;
+  return `${base}/storage/v1/object/public/${url}`;
 }
 
 /**

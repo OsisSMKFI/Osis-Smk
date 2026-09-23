@@ -67,8 +67,29 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(arrayBuffer);
 
-    // For videos, try 'media' bucket first (allows video MIME types), then 'gallery', then Vercel Blob
-    // For images, use the specified bucket directly
+    // For videos, always try Vercel Blob first (Supabase buckets often reject video MIME types)
+    // For images, use Supabase directly
+    if (isVideo && hasVercelBlob) {
+      try {
+        const blobResult = await uploadFile(filePath, fileBuffer, {
+          access: 'public',
+          contentType: file.type || 'video/mp4',
+        });
+        return NextResponse.json({
+          success: true,
+          url: blobResult.url,
+          publicUrl: blobResult.url,
+          signedUrl: blobResult.url,
+          path: blobResult.pathname,
+          storage: 'vercel-blob',
+          data: { path: blobResult.pathname, publicUrl: blobResult.url, signedUrl: blobResult.url, url: blobResult.url },
+        });
+      } catch (blobError: any) {
+        console.error('[Upload] Vercel Blob video upload failed:', blobError.message);
+      }
+    }
+
+    // For videos without Vercel Blob, try Supabase media bucket
     const targetBuckets = isVideo ? ['media', bucket] : [bucket];
 
     let uploadError: any = null;
@@ -119,6 +140,10 @@ export async function POST(request: NextRequest) {
         } catch (blobError: any) {
           // Blob also failed
         }
+      }
+      // Helpful error for video uploads
+      if (isVideo && !hasVercelBlob) {
+        return NextResponse.json({ error: 'Video upload requires Vercel Blob storage. Please set BLOB_READ_WRITE_TOKEN environment variable.' }, { status: 500 });
       }
       const errMsg = uploadError?.message || 'Upload failed';
       return NextResponse.json({ error: errMsg }, { status: 500 });
