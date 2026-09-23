@@ -127,7 +127,11 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       // Helpful error for video uploads without Vercel Blob
       if (isVideo && !hasVercelBlob) {
-        return NextResponse.json({ error: 'Video upload requires Vercel Blob storage. Please set BLOB_READ_WRITE_TOKEN environment variable.' }, { status: 500 });
+        console.error('[Upload] Video upload failed: BLOB_READ_WRITE_TOKEN not set');
+        return NextResponse.json({
+          error: 'Video upload gagal: BLOB_READ_WRITE_TOKEN belum dikonfigurasi di Vercel.',
+          help: 'Buka Vercel Dashboard → Project → Settings → Environment Variables → tambah BLOB_READ_WRITE_TOKEN dari Blob store settings.',
+        }, { status: 500 });
       }
       const errMsg = uploadError?.message || 'Upload failed';
       return NextResponse.json({ error: errMsg }, { status: 500 });

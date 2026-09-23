@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       { data: programKerja },
       { data: gallery }
     ] = await Promise.all([
-      supabaseAdmin.from('members').select('*').or('is_active.eq.true,active.eq.true'),
+      supabaseAdmin.from('members').select('*').eq('is_active', true),
       supabaseAdmin.from('sekbid').select('*'),
       supabaseAdmin.from('posts').select('*').eq('status', 'published').order('created_at', { ascending: false }).limit(10),
       supabaseAdmin.from('events').select('*').order('event_date', { ascending: false }).limit(10),
