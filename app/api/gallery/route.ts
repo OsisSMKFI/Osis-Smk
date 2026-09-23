@@ -56,6 +56,9 @@ function fixIncompleteUrl(url: string | null | undefined, folder: string = 'gene
 
 export async function GET() {
   try {
+    // Ensure gallery bucket is public
+    try { await supabaseAdmin.storage.updateBucket('gallery', { public: true }); } catch (_) {}
+
     const { data: gallery, error } = await supabaseAdmin
       .from('gallery')
       .select('*')

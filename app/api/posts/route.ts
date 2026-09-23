@@ -4,6 +4,9 @@ import { convertToSignedUrl } from '@/lib/signedUrls';
 
 export async function GET(request: NextRequest) {
   try {
+    // Ensure gallery bucket is public (needed for client-side image loading)
+    try { await supabaseAdmin.storage.updateBucket('gallery', { public: true }); } catch (_) {}
+
     const searchParams = request.nextUrl.searchParams;
     const featured = searchParams.get('featured');
     const limit = searchParams.get('limit') || '10';
@@ -49,22 +52,31 @@ export async function GET(request: NextRequest) {
         
         // Convert featured_image if present
         if (post.featured_image) {
-          const signedUrl = await convertToSignedUrl(post.featured_image);
-          if (signedUrl) {
-            updatedPost.featured_image = signedUrl.url;
-            updatedPost.featured_image_expires_at = signedUrl.expiresAt;
+          // If already a full HTTP URL, use as-is (don't re-sign)
+          if (post.featured_image.startsWith('http')) {
+            updatedPost.featured_image = post.featured_image;
+          } else {
+            const signedUrl = await convertToSignedUrl(post.featured_image);
+            if (signedUrl) {
+              updatedPost.featured_image = signedUrl.url;
+              updatedPost.featured_image_expires_at = signedUrl.expiresAt;
+            }
           }
         }
         
         // Convert author photo_url if present
         if (post.author?.photo_url) {
-          const signedUrl = await convertToSignedUrl(post.author.photo_url);
-          if (signedUrl) {
-            updatedPost.author = {
-              ...post.author,
-              photo_url: signedUrl.url,
-              photo_url_expires_at: signedUrl.expiresAt
-            };
+          if (post.author.photo_url.startsWith('http')) {
+            // Keep as-is
+          } else {
+            const signedUrl = await convertToSignedUrl(post.author.photo_url);
+            if (signedUrl) {
+              updatedPost.author = {
+                ...post.author,
+                photo_url: signedUrl.url,
+                photo_url_expires_at: signedUrl.expiresAt
+              };
+            }
           }
         }
         

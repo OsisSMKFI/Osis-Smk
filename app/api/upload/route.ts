@@ -27,6 +27,14 @@ async function ensureMediaBucket(supabase: any) {
   }
 }
 
+async function ensureBucketPublic(supabase: any, bucketName: string) {
+  try {
+    await supabase.storage.updateBucket(bucketName, { public: true });
+  } catch (e) {
+    // May lack permission or bucket doesn't exist — ignore
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -102,6 +110,9 @@ export async function POST(request: NextRequest) {
     if (isVideo) {
       await ensureMediaBucket(supabase);
     }
+
+    // Ensure target bucket is public so images load correctly
+    await ensureBucketPublic(supabase, bucket);
 
     for (const tryBucket of targetBuckets) {
       const result = await supabase.storage.from(tryBucket).upload(filePath, fileBuffer, {
