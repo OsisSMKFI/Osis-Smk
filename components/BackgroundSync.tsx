@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { fetchGlobalBackground, shouldApplyBackgroundForPath } from '@/lib/adminSettings.client';
+import {
+  fetchGlobalBackground,
+  shouldApplyBackgroundForPath,
+  type GlobalBackgroundConfig,
+} from '@/lib/adminSettings.client';
 
-/**
- * Sync CSS variables with admin background settings
- * Applies scope logic (homepage-only / selected-pages) client-side.
- * Re-apply is sync-only on pathname change (cached fetch, no observer churn).
- */
-function applyBackground(bg: Awaited<ReturnType<typeof fetchGlobalBackground>>, pathname: string) {
+function applyBackground(bg: GlobalBackgroundConfig, pathname: string) {
   const root = document.documentElement;
   const body = document.body;
 
@@ -34,67 +33,51 @@ function applyBackground(bg: Awaited<ReturnType<typeof fetchGlobalBackground>>, 
   }
 }
 
+/**
+ * Sync CSS variables with admin background settings.
+ * Single fetch path: pathname change + class/storage listeners all use the 60s module cache.
+ */
 export default function BackgroundSync() {
   const pathname = usePathname();
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Scope re-apply on nav — uses cached settings, no network after first load
-  useEffect(() => {
-    if (!isClient) return;
     let cancelled = false;
-    fetchGlobalBackground()
-      .then((bg) => {
-        if (!cancelled) applyBackground(bg, pathname);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [isClient, pathname]);
 
-  // Fetch + watch theme/storage once per session
-  useEffect(() => {
-    if (!isClient) return;
-
-    const sync = async () => {
+    const sync = async (path: string) => {
       try {
         const bg = await fetchGlobalBackground();
-        applyBackground(bg, window.location.pathname);
-      } catch (error) {
-        console.error('[BackgroundSync] Error:', error);
+        if (!cancelled) applyBackground(bg, path);
+      } catch {
+        // ignore — defaults stay
       }
     };
 
-    sync();
+    sync(pathname);
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.attributeName === 'class') {
-          sync();
-          break;
-        }
-      }
-    });
+    let themeTimer: number | undefined;
+    const onClassMutate = () => {
+      window.clearTimeout(themeTimer);
+      themeTimer = window.setTimeout(() => {
+        if (!cancelled) sync(window.location.pathname);
+      }, 150);
+    };
 
+    const observer = new MutationObserver(onClassMutate);
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['class'],
     });
 
-    const handleStorageChange = () => {
-      sync();
-    };
-    window.addEventListener('storage', handleStorageChange);
+    const onStorage = () => sync(window.location.pathname);
+    window.addEventListener('storage', onStorage);
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(themeTimer);
       observer.disconnect();
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', onStorage);
     };
-  }, [isClient]);
+  }, [pathname]);
 
   return null;
 }

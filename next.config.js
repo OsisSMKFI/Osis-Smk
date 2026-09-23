@@ -93,7 +93,7 @@ const nextConfig = {
   // Experimental features consolidated (avoid duplicate keys)
   experimental: {
     serverActions: { bodySizeLimit: '50mb' },
-    optimizePackageImports: ['react-icons', 'framer-motion'],
+    optimizePackageImports: ['react-icons', 'framer-motion', 'lucide-react', 'date-fns'],
   },
   // NOTE: The former `api.bodyParser.sizeLimit` key is not valid in Next 15.
   // For custom limits, use route-level: export const config = { api: { bodyParser: { sizeLimit: '50mb' } } }

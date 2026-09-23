@@ -1,6 +1,5 @@
 import './globals.css';
 import './globals-mobile.css';
-import '@/lib/fontawesome';
 
 import type { Metadata } from 'next';
 import { DM_Sans } from 'next/font/google';
@@ -9,11 +8,10 @@ import LocationServiceProvider from '@/components/LocationServiceProvider';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
-import AIMonitorClient from '../components/AIMonitorClient';
 import BackgroundSync from '../components/BackgroundSync';
 import ClientRole from '../components/ClientRole';
-import DynamicStyles from '../components/DynamicStyles';
-import GlobalDesignLoader from '../components/GlobalDesignLoader';
+import DeferredMount from '../components/DeferredMount';
+import DesignThemeLoader from '../components/DesignThemeLoader';
 import Providers from '../components/Providers';
 import ScrollToTop from '../components/ScrollToTop';
 
@@ -80,12 +78,12 @@ export default function RootLayout({
         <LocationServiceProvider>
         <Providers>
             <ScrollToTop />
-            <BackgroundSync />
-            <AIMonitorClient />
-            <DynamicStyles />
-            <GlobalDesignLoader />
+            <DeferredMount>
+              <BackgroundSync />
+              <DesignThemeLoader />
+              {!chatDisabled && <ClientRole />}
+            </DeferredMount>
             {children}
-            {!chatDisabled && <ClientRole />}
             <SpeedInsights />
             <Analytics />
         </Providers>
@@ -135,42 +133,42 @@ export default function RootLayout({
                 <script
                     dangerouslySetInnerHTML={{
                         __html: `
-                            // Enable client-side error logging
+                            // Enable client-side error logging (throttled to avoid flood)
                             (function() {
-                                // Log uncaught errors
+                                var lastLog = 0;
+                                function postError(payload) {
+                                    var now = Date.now();
+                                    if (now - lastLog < 3000) return;
+                                    lastLog = now;
+                                    fetch('/api/log-error', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(payload),
+                                    }).catch(function() {});
+                                }
                                 window.addEventListener('error', function(event) {
-                                    fetch('/api/log-error', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            error_type: 'runtime_error',
-                                            error_message: event.message || 'Uncaught error',
-                                            error_stack: event.error?.stack,
-                                            url: window.location.href,
-                                            user_agent: navigator.userAgent,
-                                            context: {
-                                                filename: event.filename,
-                                                lineno: event.lineno,
-                                                colno: event.colno,
-                                            },
-                                        }),
-                                    }).catch(function() {});
+                                    postError({
+                                        error_type: 'runtime_error',
+                                        error_message: event.message || 'Uncaught error',
+                                        error_stack: event.error && event.error.stack,
+                                        url: window.location.href,
+                                        user_agent: navigator.userAgent,
+                                        context: {
+                                            filename: event.filename,
+                                            lineno: event.lineno,
+                                            colno: event.colno,
+                                        },
+                                    });
                                 });
-                                
-                                // Log unhandled promise rejections
                                 window.addEventListener('unhandledrejection', function(event) {
-                                    fetch('/api/log-error', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            error_type: 'runtime_error',
-                                            error_message: 'Unhandled Promise Rejection: ' + String(event.reason),
-                                            error_stack: event.reason?.stack,
-                                            url: window.location.href,
-                                            user_agent: navigator.userAgent,
-                                            context: { reason: String(event.reason) },
-                                        }),
-                                    }).catch(function() {});
+                                    postError({
+                                        error_type: 'runtime_error',
+                                        error_message: 'Unhandled Promise Rejection: ' + String(event.reason),
+                                        error_stack: event.reason && event.reason.stack,
+                                        url: window.location.href,
+                                        user_agent: navigator.userAgent,
+                                        context: { reason: String(event.reason) },
+                                    });
                                 });
                             })();
                         `

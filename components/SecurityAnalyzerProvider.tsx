@@ -2,74 +2,21 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
-import { backgroundSecurityAnalyzer, SecurityAnalysisResult } from '@/lib/backgroundSecurityAnalyzer';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import type { SecurityAnalysisResult } from '@/lib/backgroundSecurityAnalyzer';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
 /**
  * SECURITY ANALYZER PROVIDER
- * Automatically runs security analysis after login
- * Provides instant feedback when user navigates to attendance page
+ * Dynamically imports the analyzer only after login (siswa/guru) so the
+ * ~26KB module stays out of the initial client bundle for guests.
  */
 export function SecurityAnalyzerProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
-  const [analysisResult, setAnalysisResult] = useState<SecurityAnalysisResult | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
 
-  useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      const userId = (session.user as any).id;
-      const userEmail = session.user.email || '';
-      const userRole = ((session.user as any).role || '').toLowerCase();
-
-      // Only analyze for siswa and guru
-      if (!['siswa', 'guru'].includes(userRole)) {
-        return;
-      }
-
-      runBackgroundAnalysis(userId, userEmail);
-
-      // Re-run analysis every 10 minutes to keep data fresh (was 2 min - too frequent)
-      const interval = setInterval(() => {
-        runBackgroundAnalysis(userId, userEmail, true);
-      }, 10 * 60 * 1000);
-
-      return () => clearInterval(interval);
-    }
-  }, [status, session]);
-
-  const runBackgroundAnalysis = async (
-    userId: string,
-    userEmail: string,
-    silent = false
-  ) => {
-    try {
-      if (!silent) setAnalyzing(true);
-
-      const result = await backgroundSecurityAnalyzer.startAnalysis(userId, userEmail);
-      setAnalysisResult(result);
-
-      if (isDev) {
-        console.log('[Security Analyzer] Analysis complete:', {
-          status: result.overallStatus,
-          wifiValid: result.wifi.isValid,
-        });
-      }
-
-      // Show toast notification based on status (only on initial analysis)
-      if (!silent) {
-        showAnalysisNotification(result);
-      }
-    } catch (error) {
-      console.error('[Security Analyzer] Analysis failed:', error);
-    } finally {
-      if (!silent) setAnalyzing(false);
-    }
-  };
-
-  const showAnalysisNotification = (result: SecurityAnalysisResult) => {
+  const showAnalysisNotification = useCallback((result: SecurityAnalysisResult) => {
     if (result.overallStatus === 'READY') {
       toast.success(
         <div>
@@ -119,10 +66,55 @@ export function SecurityAnalyzerProvider({ children }: { children: React.ReactNo
         }
       );
     }
-  };
+  }, []);
 
-  // Expose analysis result to children via context if needed
-  // For now, just run in background
+  const runBackgroundAnalysis = useCallback(async (
+    userId: string,
+    userEmail: string,
+    silent = false
+  ) => {
+    try {
+      const { backgroundSecurityAnalyzer } = await import('@/lib/backgroundSecurityAnalyzer');
+      await backgroundSecurityAnalyzer.startAnalysis(userId, userEmail);
+
+      const result = backgroundSecurityAnalyzer.getCachedAnalysis(userId);
+      if (!result) return;
+
+      if (isDev) {
+        console.log('[Security Analyzer] Analysis complete:', {
+          status: result.overallStatus,
+          wifiValid: result.wifi.isValid,
+        });
+      }
+
+      if (!silent) {
+        showAnalysisNotification(result);
+      }
+    } catch (error) {
+      console.error('[Security Analyzer] Analysis failed:', error);
+    }
+  }, [showAnalysisNotification]);
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const userId = (session.user as any).id;
+      const userEmail = session.user.email || '';
+      const userRole = ((session.user as any).role || '').toLowerCase();
+
+      if (!['siswa', 'guru'].includes(userRole)) {
+        return;
+      }
+
+      runBackgroundAnalysis(userId, userEmail);
+
+      const interval = setInterval(() => {
+        runBackgroundAnalysis(userId, userEmail, true);
+      }, 10 * 60 * 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [status, session, runBackgroundAnalysis]);
+
   return <>{children}</>;
 }
 
@@ -132,17 +124,30 @@ export function SecurityAnalyzerProvider({ children }: { children: React.ReactNo
 export function useSecurityAnalysis() {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id;
+  const [result, setResult] = useState<SecurityAnalysisResult | null>(null);
 
-  if (!userId) {
-    return {
-      result: null,
-      isReady: false,
-      isBlocked: false,
-      blockReasons: [],
+  useEffect(() => {
+    let cancelled = false;
+    if (!userId) {
+      setResult(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const { backgroundSecurityAnalyzer } = await import('@/lib/backgroundSecurityAnalyzer');
+        if (!cancelled) {
+          setResult(backgroundSecurityAnalyzer.getCachedAnalysis(userId));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-  }
-
-  const result = backgroundSecurityAnalyzer.getCachedAnalysis(userId);
+  }, [userId]);
 
   return {
     result,
