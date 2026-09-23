@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { convertToSignedUrl } from '@/lib/signedUrls';
 
 export async function GET(request: NextRequest) {
   try {
-    // Ensure gallery bucket is public (needed for client-side image loading)
-    try { await supabaseAdmin.storage.updateBucket('gallery', { public: true }); } catch (_) {}
-
     const searchParams = request.nextUrl.searchParams;
     const featured = searchParams.get('featured');
     const limit = searchParams.get('limit') || '10';
@@ -29,7 +25,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('is_featured', true);
     }
 
-    query = query.limit(parseInt(limit));
+    query = query.limit(Math.min(parseInt(limit) || 10, 50));
 
     const { data, error } = await query;
 

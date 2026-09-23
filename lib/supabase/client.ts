@@ -41,6 +41,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
+  global: {
+    // Fail fast instead of hanging on blocked/slow Supabase network
+    fetch: (url: RequestInfo | URL, init?: RequestInit) =>
+      fetch(url, { ...init, signal: AbortSignal.timeout(8000) }),
+  },
 });
 
 // Database Types

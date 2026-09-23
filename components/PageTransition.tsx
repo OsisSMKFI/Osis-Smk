@@ -53,12 +53,12 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     setMounted(true);
   }, []);
 
-  // Curtain on first load only
+  // Short curtain — content must stay visible (no opacity-0 hang)
   useEffect(() => {
     if (!mounted) return;
     if (isFirstMount.current) {
       isFirstMount.current = false;
-      const curtainTimer = setTimeout(() => setShowCurtain(false), 700);
+      const curtainTimer = setTimeout(() => setShowCurtain(false), 220);
       return () => clearTimeout(curtainTimer);
     }
   }, [mounted]);
@@ -69,16 +69,11 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     return <>{children}</>;
   }
 
-  // No AnimatePresence mode="wait" — it delayed paint on every nav.
-  // No key={pathname} remount — that forced full subtree remount (jank).
+  // Overlay only — never hide children behind opacity-0
   return (
     <div className="relative min-h-screen" suppressHydrationWarning>
       <CurtainOverlay isVisible={showCurtain && mounted} />
-
-      <div
-        className={`${showCurtain ? 'opacity-0 ' : ''}page-enter`}
-        suppressHydrationWarning
-      >
+      <div className="page-enter" suppressHydrationWarning>
         {children}
       </div>
     </div>

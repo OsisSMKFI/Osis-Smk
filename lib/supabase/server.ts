@@ -21,6 +21,11 @@ function getSupabaseAdmin(): SupabaseClient {
     }
     adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        // Prevent indefinite hang when network to Supabase stalls
+        fetch: (url: RequestInfo | URL, init?: RequestInit) =>
+          fetch(url, { ...init, signal: AbortSignal.timeout(8000) }),
+      },
     });
     // Provide a safe fallback for `rpc` in environments where the client
     // doesn't expose it (some test mocks or lightweight Supabase clients).

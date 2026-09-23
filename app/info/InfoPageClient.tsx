@@ -177,7 +177,6 @@ export default function InfoPageClient() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('[Info Page] Fetching all data...');
         const [annRes, evtRes, pollRes, postsRes] = await Promise.all([
           apiFetch('/api/announcements'),
           apiFetch('/api/events'),
@@ -187,7 +186,6 @@ export default function InfoPageClient() {
 
         if (annRes.ok) {
           const data = await safeJson(annRes, { url: '/api/announcements', method: 'GET' });
-          console.log('[Info Page] Announcements:', data.announcements?.length || 0);
           setAnnouncements(data.announcements || []);
         } else {
           console.error('[Info Page] Announcements error:', annRes.status);
@@ -195,14 +193,11 @@ export default function InfoPageClient() {
 
         if (evtRes.ok) {
           const data = await safeJson(evtRes, { url: '/api/events', method: 'GET' });
-          console.log('[Info Page] Events raw:', data);
-          console.log('[Info Page] Events count:', data.events?.length || 0);
           const normalized = (data.events || []).map((e: any) => ({
             ...e,
             event_date: e.event_date || e.start_date || null,
             start_date: e.start_date || e.event_date || null,
           }));
-          console.log('[Info Page] Normalized events:', normalized.length, normalized);
           setEvents(normalized);
         } else {
           const errorData = await safeJson(evtRes, { url: '/api/events', method: 'GET' }).catch(() => ({}));
@@ -212,7 +207,6 @@ export default function InfoPageClient() {
 
         if (pollRes.ok) {
           const data = await safeJson(pollRes, { url: '/api/polls', method: 'GET' });
-          console.log('[Info Page] Polls:', data.polls?.length || 0);
           setPolls(data.polls || []);
         } else {
           console.error('[Info Page] Polls error:', pollRes.status);
@@ -220,7 +214,6 @@ export default function InfoPageClient() {
 
         if (postsRes.ok) {
           const data = await safeJson(postsRes, { url: '/api/posts?limit=6', method: 'GET' });
-          console.log('[Info Page] Posts:', data.posts?.length || 0);
           setPosts(data.posts || []);
         } else {
           console.error('[Info Page] Posts error:', postsRes.status);

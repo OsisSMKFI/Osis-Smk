@@ -18,7 +18,7 @@ const PUBLIC_ROUTES = [
   '/activity',
 ];
 
-/** Public GETs used by client pages on mount. */
+/** Public GETs used by client pages on mount — keep small so we never fight first paint. */
 const WARM_APIS = [
   '/api/proker',
   '/api/sekbid',
@@ -26,23 +26,18 @@ const WARM_APIS = [
   '/api/events',
   '/api/polls',
   '/api/posts?limit=6',
-  '/api/posts?limit=100',
-  '/api/gallery',
   '/api/stats',
-  '/api/public/achievements',
-  '/api/public/filosofi-logo',
-  '/api/members?active=true',
 ];
 
 const ROUTE_FLAG = 'osis:routes-warmed';
 const API_FLAG = 'osis:apis-warmed';
 
-function runIdle(fn: () => void, timeout = 4000) {
+function runIdle(fn: () => void, timeout = 8000) {
   if (typeof window.requestIdleCallback === 'function') {
     window.requestIdleCallback(() => fn(), { timeout });
     return;
   }
-  window.setTimeout(fn, 800);
+  window.setTimeout(fn, 2500);
 }
 
 /**
@@ -106,18 +101,23 @@ export default function RouteWarmup() {
       }
     };
 
-    runIdle(() => {
-      warmRoutes();
-      // slightly later than routes so first paint / hero wins
-      window.setTimeout(() => {
-        runIdle(() => {
-          void warmApis();
-        }, 8000);
-      }, 600);
-    }, 3500);
+    // Wait for first paint + user interaction settle before warming
+    const startWarm = () => {
+      runIdle(() => {
+        warmRoutes();
+        window.setTimeout(() => {
+          runIdle(() => {
+            void warmApis();
+          }, 12000);
+        }, 2000);
+      }, 8000);
+    };
+
+    const startTimer = window.setTimeout(startWarm, 3500);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(startTimer);
     };
   }, [router]);
 

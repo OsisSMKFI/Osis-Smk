@@ -2,38 +2,50 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { mapProkerList } from '@/lib/proker';
 
+// Remember join failure so we don't re-run the full join on every request
+let joinBroken = false;
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const sekbidId = searchParams.get('sekbid_id');
     const status = searchParams.get('status');
 
-    let query = supabaseAdmin
-      .from('program_kerja')
-      .select(`
-        *,
-        sekbid:sekbid_id (
-          id,
-          name,
-          description,
-          color,
-          icon
-        )
-      `)
-      .order('created_at', { ascending: false });
+    let data: any[] | null = null;
 
-    if (sekbidId) {
-      query = query.eq('sekbid_id', parseInt(sekbidId));
+    if (!joinBroken) {
+      let query = supabaseAdmin
+        .from('program_kerja')
+        .select(`
+          *,
+          sekbid:sekbid_id (
+            id,
+            name,
+            description,
+            color,
+            icon
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (sekbidId) {
+        query = query.eq('sekbid_id', parseInt(sekbidId));
+      }
+
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      const joined = await query;
+      if (joined.error) {
+        console.error('[api/proker] join failed, retrying without embed:', joined.error.message);
+        joinBroken = true;
+      } else {
+        data = joined.data;
+      }
     }
 
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    let { data, error } = await query;
-
-    if (error) {
-      console.error('[api/proker] join failed, retrying without embed:', error.message);
+    if (!data) {
       let retry = supabaseAdmin
         .from('program_kerja')
         .select('*')

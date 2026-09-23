@@ -9,7 +9,6 @@ import { useToast } from '@/contexts/ToastContext';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
 import { getPageContentBatch } from '@/lib/pageContent';
 import OptimizedLogo from './OptimizedLogo';
-import QRCode from 'qrcode';
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
@@ -41,7 +40,10 @@ const Footer: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (showQR && qrCanvasRef.current && currentUrl) {
+    if (!showQR || !qrCanvasRef.current || !currentUrl) return;
+    let cancelled = false;
+    import('qrcode').then((QRCode) => {
+      if (cancelled || !qrCanvasRef.current) return;
       QRCode.toCanvas(qrCanvasRef.current, currentUrl, {
         width: 200,
         margin: 2,
@@ -52,7 +54,8 @@ const Footer: React.FC = () => {
       }).catch((err: Error) => {
         console.error('QR Code generation error:', err);
       });
-    }
+    });
+    return () => { cancelled = true; };
   }, [showQR, currentUrl]);
 
   const handleShareLink = async () => {

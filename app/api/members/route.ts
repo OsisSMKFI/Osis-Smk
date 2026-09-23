@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { MembersResponseSchema, buildError, buildSuccess, MemberSchema } from '@/lib/validation';
-import { convertToSignedUrl, extractPhotoPath } from '@/lib/signedUrls';
+import { toPublicStorageUrl } from '@/lib/signedUrls';
 import { CURRENT_SUPABASE_PROJECT, DEPRECATED_PROJECTS } from '@/lib/supabase/storage';
 import crypto from 'crypto';
 
@@ -68,17 +68,14 @@ export async function GET(request: NextRequest) {
       return sekbidId === null || (typeof sekbidId === 'number' && sekbidId > 0);
     });
 
-    // Fix photo URLs and convert to signed URLs for reliable display
-    const membersWithFixedUrls = await Promise.all(
-      filteredMembers.map(async (m: any) => {
-        const fixedUrl = fixPhotoUrl(m.photo_url);
-        if (fixedUrl && !fixedUrl.startsWith('/images/')) {
-          const signed = await convertToSignedUrl(fixedUrl, { bucket: 'gallery' });
-          if (signed?.url) return { ...m, photo_url: signed.url };
-        }
-        return { ...m, photo_url: fixedUrl };
-      })
-    );
+    // Public URLs only — no per-member signed URL round trips
+    const membersWithFixedUrls = filteredMembers.map((m: any) => {
+      const fixedUrl = fixPhotoUrl(m.photo_url);
+      if (fixedUrl && !fixedUrl.startsWith('/images/')) {
+        return { ...m, photo_url: toPublicStorageUrl(fixedUrl) || fixedUrl };
+      }
+      return { ...m, photo_url: fixedUrl };
+    });
 
     // Validate each member schema (non-fatal collect errors)
     const invalid: any[] = [];

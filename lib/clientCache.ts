@@ -40,9 +40,10 @@ export function cacheSet<T>(url: string, data: T, persist = true) {
   memory.set(url, entry);
   if (persist) {
     try {
-      const size = JSON.stringify(entry).length;
-      if (size < 400_000) {
-        sessionStorage.setItem(ssKey(url), JSON.stringify(entry));
+      // Single stringify — measure size from the same string we store
+      const raw = JSON.stringify(entry);
+      if (raw.length < 400_000) {
+        sessionStorage.setItem(ssKey(url), raw);
       }
     } catch {
       // quota / private mode

@@ -5,8 +5,9 @@ import { FaHeart, FaComment, FaShare, FaQrcode, FaLink, FaWhatsapp, FaFacebook, 
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/contexts/ToastContext';
 import { useSession } from 'next-auth/react';
-import QRCode from 'qrcode';
-import CommentSectionEnhanced from './CommentSectionEnhanced';
+import dynamic from 'next/dynamic';
+
+const CommentSectionEnhanced = dynamic(() => import('./CommentSectionEnhanced'), { ssr: false });
 
 // Generate a simple fingerprint for anonymous users
 function getFingerprint(): string {
@@ -70,63 +71,72 @@ export default function ContentInteractions({
   const [fullUrl, setFullUrl] = useState('');
   const [statsLoaded, setStatsLoaded] = useState(false);
   const [liking, setLiking] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const commentSectionRef = useRef<HTMLDivElement>(null);
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  const viewTracked = useRef(false);
 
-  // Fetch stats and track view on mount
+  // Defer stats/view off the critical path (idle) to avoid request storms on list pages
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setFullUrl(window.location.origin + contentUrl);
-      
-      // Fetch stats from API
-      const fetchStats = async () => {
-        try {
-          const userId = (session?.user as any)?.id || '';
-          const res = await fetch(`/api/interactions?contentId=${contentId}&contentType=${contentType}&userId=${userId}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.stats) {
-              setLikes(data.stats.likes);
-              setViews(data.stats.views);
-              setComments(data.stats.comments);
-              setLiked(data.stats.isLiked);
-            }
+    if (typeof window === 'undefined') return;
+    setFullUrl(window.location.origin + contentUrl);
+
+    let cancelled = false;
+    const run = async () => {
+      if (cancelled || viewTracked.current) return;
+      viewTracked.current = true;
+      try {
+        const userId = (sessionRef.current?.user as any)?.id || '';
+        const res = await fetch(`/api/interactions?contentId=${contentId}&contentType=${contentType}&userId=${userId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.stats && !cancelled) {
+            setLikes(data.stats.likes);
+            setViews(data.stats.views);
+            setComments(data.stats.comments);
+            setLiked(data.stats.isLiked);
           }
-        } catch (error) {
-          console.error('[ContentInteractions] Failed to fetch stats:', error);
-        } finally {
-          setStatsLoaded(true);
         }
-      };
+      } catch (error) {
+        console.error('[ContentInteractions] Failed to fetch stats:', error);
+      } finally {
+        if (!cancelled) setStatsLoaded(true);
+      }
+      try {
+        const fingerprint = getFingerprint();
+        const userId = (sessionRef.current?.user as any)?.id || null;
+        await fetch('/api/interactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contentId,
+            contentType,
+            action: 'view',
+            userId,
+            fingerprint
+          })
+        });
+      } catch (error) {
+        console.error('[ContentInteractions] Failed to track view:', error);
+      }
+    };
 
-      // Track view
-      const trackView = async () => {
-        try {
-          const fingerprint = getFingerprint();
-          const userId = (session?.user as any)?.id || null;
-          await fetch('/api/interactions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contentId,
-              contentType,
-              action: 'view',
-              userId,
-              fingerprint
-            })
-          });
-        } catch (error) {
-          console.error('[ContentInteractions] Failed to track view:', error);
-        }
-      };
+    const idle = (cb: () => void) => {
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(cb, { timeout: 3000 });
+      else setTimeout(cb, 800);
+    };
+    idle(() => { void run(); });
 
-      fetchStats();
-      trackView();
-    }
-  }, [contentUrl, contentId, contentType, session]);
+    return () => { cancelled = true; };
+  }, [contentUrl, contentId, contentType]);
 
-  // Generate QR Code when modal opens
+  // Generate QR Code when modal opens (lazy-load qrcode lib)
   useEffect(() => {
-    if (showQRModal && qrCanvasRef.current && fullUrl) {
+    if (!showQRModal || !qrCanvasRef.current || !fullUrl) return;
+    let cancelled = false;
+    import('qrcode').then((QRCode) => {
+      if (cancelled || !qrCanvasRef.current) return;
       QRCode.toCanvas(qrCanvasRef.current, fullUrl, {
         width: 300,
         margin: 2,
@@ -137,7 +147,8 @@ export default function ContentInteractions({
       }).catch((err: Error) => {
         console.error('QR Code generation error:', err);
       });
-    }
+    });
+    return () => { cancelled = true; };
   }, [showQRModal, fullUrl]);
 
   const handleLike = async () => {
@@ -193,6 +204,7 @@ export default function ContentInteractions({
 
   const handleComment = () => {
     onComment?.();
+    setShowComments(true);
     // Scroll to comment section and trigger open
     if (commentSectionRef.current) {
       commentSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -488,13 +500,15 @@ export default function ContentInteractions({
         </div>
       )}
 
-      {/* Comment Section */}
+      {/* Comment Section — mount only when user opens comments */}
       <div ref={commentSectionRef}>
-        <CommentSectionEnhanced
-          contentId={contentId}
-          contentType={contentType}
-          onCommentCountChange={setComments}
-        />
+        {showComments && (
+          <CommentSectionEnhanced
+            contentId={contentId}
+            contentType={contentType}
+            onCommentCountChange={setComments}
+          />
+        )}
       </div>
     </>
   );

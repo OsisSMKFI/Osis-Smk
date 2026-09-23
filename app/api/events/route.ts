@@ -23,7 +23,8 @@ export async function GET() {
     const { data: events, error: evtError } = await supabaseAdmin
       .from('events')
       .select('*')
-      .order('event_date', { ascending: false });
+      .order('event_date', { ascending: false })
+      .limit(50);
 
     if (evtError) {
       console.error('[api/events GET] Error:', evtError);

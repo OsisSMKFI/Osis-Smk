@@ -11,10 +11,15 @@ const nextConfig = {
     return config;
   },
   
-  // Force new build ID to invalidate all caches
+  // Stable build ID: only change when GIT_SHA/VERCEL_GIT_COMMIT_SHA changes
+  // (Date.now() forced every deploy to invalidate all client caches)
   generateBuildId: async () => {
-    // Use timestamp to ensure unique build ID every time
-    return `build-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const sha =
+      process.env.VERCEL_GIT_COMMIT_SHA ||
+      process.env.GIT_SHA ||
+      process.env.NEXT_PUBLIC_BUILD_ID;
+    if (sha) return `build-${sha.slice(0, 12)}`;
+    return 'build-stable';
   },
   
   // Turbopack configuration with absolute path to avoid warnings

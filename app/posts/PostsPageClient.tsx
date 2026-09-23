@@ -32,8 +32,8 @@ export default function PostsPageClient() {
     const fetchPosts = async () => {
       try {
         const url = filter === 'featured' 
-          ? '/api/posts?featured=true&limit=100'
-          : '/api/posts?limit=100';
+          ? '/api/posts?featured=true&limit=24'
+          : '/api/posts?limit=24';
         const response = await apiFetch(url);
         if (response.ok) {
           const data = await safeJson(response, { url, method: 'GET' });

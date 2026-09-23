@@ -8,7 +8,8 @@ export async function GET() {
     const { data: polls, error } = await supabaseAdmin
       .from('polls')
       .select('*, poll_options(*)')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(30);
 
     if (error) {
       console.error('[api/polls GET] Error:', error);

@@ -7,6 +7,10 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+/** 60s in-memory cache to avoid N+1 DB reads during signed-URL / config storms. */
+const configCache = new Map<string, { value: string | null; at: number }>();
+const CONFIG_TTL_MS = 60_000;
+
 /**
  * Get a config value from admin_settings if exists, else from process.env.
  * Returns empty string if neither exists.
@@ -22,7 +26,12 @@ export async function getConfig(key: string): Promise<string | null> {
   if (key === 'ADMIN_OPS_TOKEN' && process.env.ADMIN_OPS_TOKEN) {
     return process.env.ADMIN_OPS_TOKEN;
   }
-  
+
+  const cached = configCache.get(key);
+  if (cached && Date.now() - cached.at < CONFIG_TTL_MS) {
+    return cached.value;
+  }
+
   // 1. FIRST: Try database (allows live updates without redeploy)
   try {
     const { data, error } = await supabaseAdmin
@@ -30,28 +39,26 @@ export async function getConfig(key: string): Promise<string | null> {
       .select('value')
       .eq('key', key)
       .maybeSingle(); // Use maybeSingle to avoid error if not found
-    
+
     if (!error && data?.value) {
       // Database has this key and it's not empty - use it!
-      const preview = data.value.length > 20 ? data.value.substring(0, 20) + '...' : data.value;
-      console.log(`[getConfig] Using DB value for ${key}: ${preview} (${data.value.length} chars)`);
+      configCache.set(key, { value: data.value, at: Date.now() });
       return data.value;
     }
   } catch (error) {
     console.error(`[getConfig] DB read error for ${key}:`, error);
     // Continue to fallback
   }
-  
+
   // 2. FALLBACK: Try environment variable
   const envValue = process.env[key];
   if (envValue) {
-    const preview = envValue.length > 20 ? envValue.substring(0, 20) + '...' : envValue;
-    console.log(`[getConfig] Using ENV fallback for ${key}: ${preview} (${envValue.length} chars)`);
+    configCache.set(key, { value: envValue, at: Date.now() });
     return envValue;
   }
-  
+
   // 3. Not found anywhere
-  console.log(`[getConfig] No value found for ${key}`);
+  configCache.set(key, { value: null, at: Date.now() });
   return null;
 }
 

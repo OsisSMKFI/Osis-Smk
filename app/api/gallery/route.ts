@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { convertToSignedUrl } from '@/lib/signedUrls';
+import { toPublicStorageUrl } from '@/lib/signedUrls';
 import { CURRENT_SUPABASE_PROJECT, DEPRECATED_PROJECTS } from '@/lib/supabase/storage';
 
 // Supabase storage base URL - CURRENT PROJECT
@@ -56,69 +56,37 @@ function fixIncompleteUrl(url: string | null | undefined, folder: string = 'gene
 
 export async function GET() {
   try {
-    // Ensure gallery bucket is public
-    try { await supabaseAdmin.storage.updateBucket('gallery', { public: true }); } catch (_) {}
-
     const { data: gallery, error } = await supabaseAdmin
       .from('gallery')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) {
       console.error('Error fetching gallery:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Convert all media URLs to signed URLs
-    const galleryWithSignedUrls = await Promise.all(
-      (gallery || []).map(async (item: any) => {
-        const updatedItem = { ...item };
-        
-        // Determine folder based on category or default to 'general'
-        const folder = item.category || item.folder || 'general';
-        
-        // Fix and convert image_url if present
-        if (item.image_url) {
-          const fixedUrl = fixIncompleteUrl(item.image_url, folder);
-          const signedUrl = await convertToSignedUrl(fixedUrl);
-          if (signedUrl) {
-            updatedItem.image_url = signedUrl.url;
-            updatedItem.image_expires_at = signedUrl.expiresAt;
-          } else if (fixedUrl) {
-            // Fallback to fixed URL without signing
-            updatedItem.image_url = fixedUrl;
-          }
-        }
-        
-        // Fix and convert video_url if present
-        if (item.video_url) {
-          const fixedUrl = fixIncompleteUrl(item.video_url, folder);
-          const signedUrl = await convertToSignedUrl(fixedUrl);
-          if (signedUrl) {
-            updatedItem.video_url = signedUrl.url;
-            updatedItem.video_expires_at = signedUrl.expiresAt;
-          } else if (fixedUrl) {
-            updatedItem.video_url = fixedUrl;
-          }
-        }
-        
-        // Fix and convert url field if present (generic)
-        if (item.url && !item.image_url && !item.video_url) {
-          const fixedUrl = fixIncompleteUrl(item.url, folder);
-          const signedUrl = await convertToSignedUrl(fixedUrl);
-          if (signedUrl) {
-            updatedItem.url = signedUrl.url;
-            updatedItem.url_expires_at = signedUrl.expiresAt;
-          } else if (fixedUrl) {
-            updatedItem.url = fixedUrl;
-          }
-        }
-        
-        return updatedItem;
-      })
-    );
+    // Public URLs only (no per-item signed URL round trips)
+    const galleryWithUrls = (gallery || []).map((item: any) => {
+      const updatedItem = { ...item };
+      const folder = item.category || item.folder || 'general';
 
-    return NextResponse.json({ gallery: galleryWithSignedUrls });
+      if (item.image_url) {
+        updatedItem.image_url = toPublicStorageUrl(fixIncompleteUrl(item.image_url, folder)) || fixIncompleteUrl(item.image_url, folder);
+      }
+      if (item.video_url) {
+        updatedItem.video_url = toPublicStorageUrl(fixIncompleteUrl(item.video_url, folder)) || fixIncompleteUrl(item.video_url, folder);
+      }
+      if (item.url && !item.image_url && !item.video_url) {
+        updatedItem.url = toPublicStorageUrl(fixIncompleteUrl(item.url, folder)) || fixIncompleteUrl(item.url, folder);
+      }
+      return updatedItem;
+    });
+
+    const res = NextResponse.json({ gallery: galleryWithUrls });
+    res.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
+    return res;
   } catch (error: any) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
