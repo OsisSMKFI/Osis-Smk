@@ -4,14 +4,8 @@ import '@/lib/fontawesome';
 
 import type { Metadata } from 'next';
 import { DM_Sans } from 'next/font/google';
-import { headers } from 'next/headers';
 
 import LocationServiceProvider from '@/components/LocationServiceProvider';
-import {
-  getAdminSettings,
-  parseGlobalBackground,
-} from '@/lib/adminSettings';
-import { auth } from '@/lib/auth';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -74,62 +68,13 @@ export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),
 };
 
-// Make layout dynamic so background changes apply immediately without rebuild
-export const dynamic = 'force-dynamic';
+// Layout is static/ISR by default for fast navigation.
+// Background is applied client-side by BackgroundSync; role is read client-side in ClientRole.
 
-export default async function RootLayout({
+export default function RootLayout({
     children,
 }: Readonly<{ children: React.ReactNode }>) {
-    // Get session server-side to determine role for chat widget
-    const session = await auth();
-    const role = (session?.user as any)?.role as ('super_admin' | 'member' | 'guest' | undefined);
     const chatDisabled = process.env.NEXT_PUBLIC_DISABLE_CHAT === '1';
-
-    // Load global background settings (server-side)
-    const settings = await getAdminSettings('GLOBAL_BG_');
-    const bg = parseGlobalBackground(settings);
-
-    // Determine current pathname (Edge-safe)
-    const headersList = await headers();
-    const pathname = headersList.get('x-pathname') || headersList.get('referer') || '/';
-    
-    // Debug logging (remove in production)
-    if (process.env.NODE_ENV === 'development') {
-        console.log('[Layout] Background settings:', { 
-            mode: bg.mode, 
-            scope: bg.scope, 
-            selectedPages: bg.selectedPages,
-            hasColor: !!bg.color,
-            hasGradient: !!bg.gradient,
-            hasImage: !!bg.imageUrl,
-            pathname 
-        });
-    }
-
-    // Decide if body background should be applied for this path
-    const matchSelected = (path: string, sel: string) => {
-        if (sel === '/') return path === '/' || path === '';
-        return path === sel || path.startsWith(sel + '/');
-    };
-    
-    // Determine if we should apply custom admin background to body
-    // NOTE: Image backgrounds are handled by individual components (e.g. DynamicHero) not body
-    const shouldApplyCustomBackground = (() => {
-        // Never apply on admin pages
-        if (pathname.startsWith('/admin')) return false;
-        // NEVER apply image mode to body - images are handled by components like DynamicHero
-        if (bg.mode === 'image') return false;
-        // Only apply if admin has set custom color/gradient background (mode is NOT 'none')
-        if (bg.mode === 'none') return false;
-        
-        // Check scope for color/gradient modes
-        if (bg.scope === 'all-pages') return true;
-        if (bg.scope === 'homepage-only') return pathname === '/' || pathname === '';
-        if (bg.scope === 'selected-pages' && Array.isArray(bg.selectedPages)) {
-            return bg.selectedPages.some(sel => matchSelected(pathname, sel));
-        }
-        return false;
-    })();
 
     const appContent = (
         <LocationServiceProvider>
@@ -140,7 +85,7 @@ export default async function RootLayout({
             <DynamicStyles />
             <GlobalDesignLoader />
             {children}
-            {!chatDisabled && <ClientRole role={role as any} />}
+            {!chatDisabled && <ClientRole />}
             <SpeedInsights />
             <Analytics />
         </Providers>
@@ -152,13 +97,19 @@ export default async function RootLayout({
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <meta name="theme-color" content="#ffffff" />
-                {/* Font Awesome CDN for icon classes */}
-                <link 
-                    rel="stylesheet" 
-                    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" 
+                {/* Font Awesome - non-blocking load (used on sekbid pages) */}
+                <link
+                    rel="stylesheet"
+                    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
                     integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
                     crossOrigin="anonymous"
                     referrerPolicy="no-referrer"
+                    media="print"
+                />
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `document.querySelectorAll('link[href*="font-awesome"]').forEach(function(l){l.media='all';});`
+                    }}
                 />
                 <script
                     dangerouslySetInnerHTML={{

@@ -7,39 +7,53 @@ let contentCache: Record<string, string> | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 60 * 1000; // 1 minute
 
+// In-flight promise dedup - prevents parallel identical queries
+let inFlightPromise: Promise<Record<string, string>> | null = null;
+
 /**
- * Fetch all page_content from DB (with caching)
+ * Fetch all page_content from DB (with caching + in-flight dedup)
  */
 async function fetchAllContent(): Promise<Record<string, string>> {
   if (contentCache && Date.now() - cacheTimestamp < CACHE_TTL) {
     return contentCache;
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('page_content')
-      .select('page_key, content')
-      .eq('published', true);
-
-    if (error || !data) {
-      console.warn('[pageContent] Fetch error:', error?.message);
-      return contentCache || {};
-    }
-
-    const map: Record<string, string> = {};
-    data.forEach((row: any) => {
-      if (row.page_key && row.content) {
-        map[row.page_key] = row.content;
-      }
-    });
-
-    contentCache = map;
-    cacheTimestamp = Date.now();
-    return map;
-  } catch (err) {
-    console.warn('[pageContent] Exception:', err);
-    return contentCache || {};
+  // Dedup concurrent calls
+  if (inFlightPromise) {
+    return inFlightPromise;
   }
+
+  inFlightPromise = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('page_content')
+        .select('page_key, content')
+        .eq('published', true);
+
+      if (error || !data) {
+        console.warn('[pageContent] Fetch error:', error?.message);
+        return contentCache || {};
+      }
+
+      const map: Record<string, string> = {};
+      data.forEach((row: any) => {
+        if (row.page_key && row.content) {
+          map[row.page_key] = row.content;
+        }
+      });
+
+      contentCache = map;
+      cacheTimestamp = Date.now();
+      return map;
+    } catch (err) {
+      console.warn('[pageContent] Exception:', err);
+      return contentCache || {};
+    } finally {
+      inFlightPromise = null;
+    }
+  })();
+
+  return inFlightPromise;
 }
 
 /**

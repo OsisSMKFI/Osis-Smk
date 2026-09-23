@@ -25,33 +25,10 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
     setPortalRoot(document.body);
   }, []);
 
-  // Scroll listener for scroll-to-top button - more robust detection
+  // Scroll listener for scroll-to-top button (event-driven only - no rAF polling)
   useEffect(() => {
     if (!mounted) return;
-    
-    let rafId: number;
-    let lastScrollY = 0;
-    
-    const updateScrollState = () => {
-      const scrollY = Math.max(
-        window.scrollY || 0,
-        window.pageYOffset || 0,
-        document.documentElement.scrollTop || 0,
-        document.body.scrollTop || 0
-      );
-      
-      if (scrollY !== lastScrollY) {
-        lastScrollY = scrollY;
-        setShowScrollTop(scrollY > 200);
-      }
-      
-      rafId = requestAnimationFrame(updateScrollState);
-    };
 
-    // Start polling scroll position
-    rafId = requestAnimationFrame(updateScrollState);
-    
-    // Also listen to scroll events as backup
     const handleScroll = () => {
       const scrollY = Math.max(
         window.scrollY || 0,
@@ -67,9 +44,8 @@ export default function GlobalFloatingControls({ showChat = true }: GlobalFloati
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
-    
+
     return () => {
-      cancelAnimationFrame(rafId);
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('scroll', handleScroll, { capture: true } as EventListenerOptions);
     };

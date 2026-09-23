@@ -36,15 +36,15 @@ export default function GlobalDesignLoader() {
 
         loadAllDesigns();
 
-        // Listen for design update events
+        // Listen for design update events (immediate reload)
         const handleDesignUpdate = () => {
             loadAllDesigns();
         };
 
         window.addEventListener('design-updated', handleDesignUpdate);
-        
-        // Poll for updates every 30 seconds (for real-time AI changes)
-        const interval = setInterval(loadAllDesigns, 30000);
+
+        // Poll for updates every 5 minutes (admin/AI can trigger immediate reload via event)
+        const interval = setInterval(loadAllDesigns, 300000);
 
         return () => {
             window.removeEventListener('design-updated', handleDesignUpdate);

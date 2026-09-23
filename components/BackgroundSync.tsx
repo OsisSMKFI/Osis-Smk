@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchGlobalBackground } from '@/lib/adminSettings.client';
+import { usePathname } from 'next/navigation';
+import { fetchGlobalBackground, shouldApplyBackgroundForPath } from '@/lib/adminSettings.client';
 
 /**
  * Sync CSS variables with admin background settings
- * Only applies inline styles if admin has set custom background
+ * Applies scope logic (homepage-only / selected-pages) client-side.
  */
 export default function BackgroundSync() {
+  const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -23,54 +25,38 @@ export default function BackgroundSync() {
         const root = document.documentElement;
         const body = document.body;
         const isDarkMode = root.classList.contains('dark');
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[BackgroundSync] Syncing...', {
-            mode: bg.mode,
-            isDarkMode,
-            hasColor: !!bg.color,
-            hasGradient: !!bg.gradient,
-          });
+
+        // Scope check - same logic as old root layout
+        if (!shouldApplyBackgroundForPath(bg, pathname)) {
+          body.style.removeProperty('background');
+          root.style.removeProperty('--gradient-bg');
+          void root.offsetHeight;
+          return;
         }
-        
+
         // Apply custom background from admin OR use CSS defaults
         if (bg.mode === 'color' && bg.color) {
-          // Custom solid color
           body.style.background = bg.color;
           root.style.removeProperty('--gradient-bg');
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[BackgroundSync] ✅ Applied custom color:', bg.color);
-          }
         } else if (bg.mode === 'gradient' && bg.gradient) {
-          // Custom gradient
           body.style.background = bg.gradient;
           root.style.removeProperty('--gradient-bg');
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[BackgroundSync] ✅ Applied custom gradient');
-          }
         } else if (bg.mode === 'image' && bg.imageUrl) {
           // Image mode - remove body background, let components handle it
           body.style.removeProperty('background');
           root.style.removeProperty('--gradient-bg');
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[BackgroundSync] ✅ Image mode - components handle background');
-          }
         } else {
           // Use CSS defaults (mode is 'none') - remove all inline styles
           body.style.removeProperty('background');
           root.style.removeProperty('--gradient-bg');
-          // Force repaint to ensure CSS media query/class selector takes effect
           void root.offsetHeight;
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[BackgroundSync] ✅ Using CSS defaults (dark:', isDarkMode, ')');
-          }
         }
       } catch (error) {
-        console.error('[BackgroundSync] ❌ Error:', error);
+        console.error('[BackgroundSync] Error:', error);
       }
     };
 
-    // Sync on mount
+    // Sync on mount and pathname change
     syncBackground();
 
     // Sync when theme changes
@@ -81,10 +67,10 @@ export default function BackgroundSync() {
         }
       });
     });
-    
-    observer.observe(document.documentElement, { 
-      attributes: true, 
-      attributeFilter: ['class'] 
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
     });
 
     // Listen for storage events (theme changed in another tab)
@@ -97,7 +83,7 @@ export default function BackgroundSync() {
       observer.disconnect();
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [isClient]);
+  }, [isClient, pathname]);
 
   return null;
 }

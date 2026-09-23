@@ -3,14 +3,8 @@
 import { useEffect, useState, useRef, memo } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
-import { getPageContent } from '@/lib/supabase/client';
+import { getPageContentBatch } from '@/lib/pageContent';
 import { fetchGlobalBackground, type GlobalBackgroundConfig } from '@/lib/adminSettings.client';
-
-interface PageContentData {
-  page_key: string;
-  content_value: string;
-  content_type: string;
-}
 
 function DynamicHeroInternal() {
   const { t, language } = useTranslation();
@@ -26,23 +20,20 @@ function DynamicHeroInternal() {
     async function loadContent() {
       try {
         const [pageData, bgData] = await Promise.all([
-          getPageContent('home'),
+          getPageContentBatch([
+            'home_hero_title',
+            'home_hero_subtitle',
+            'home_hero_description',
+          ]),
           fetchGlobalBackground()
         ]);
 
-        const contentMap: Record<string, string> = {};
-
-        pageData.forEach((item: PageContentData) => {
-          if (item.page_key === 'home_hero_title') {
-            contentMap.title = item.content_value;
-          } else if (item.page_key === 'home_hero_subtitle') {
-            contentMap.subtitle = item.content_value;
-          } else if (item.page_key === 'home_hero_description') {
-            contentMap.description = item.content_value;
-          }
-        });
-
-        setContent(prev => ({ ...prev, ...contentMap }));
+        setContent(prev => ({
+          ...prev,
+          title: pageData.home_hero_title || prev.title,
+          subtitle: pageData.home_hero_subtitle || prev.subtitle,
+          description: pageData.home_hero_description || prev.description,
+        }));
         if (bgData && bgData.mode) {
           setBg(bgData);
         }

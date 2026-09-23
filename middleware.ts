@@ -3,17 +3,14 @@ import { NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
 
+// Only run middleware on admin/dashboard routes (auth gate).
+// x-pathname is no longer needed - root layout is static and BackgroundSync uses usePathname.
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/admin/:path*', '/dashboard/:path*'],
 };
 
 const applicationMiddleware = async (request: NextRequest) => {
   const pathname = request.nextUrl.pathname;
-
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-pathname', pathname);
 
   // Public auth pages
   if (
@@ -25,7 +22,7 @@ const applicationMiddleware = async (request: NextRequest) => {
     pathname === '/waiting-approval' ||
     pathname === '/waiting-verification'
   ) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next();
   }
 
   // Admin gate
@@ -38,7 +35,7 @@ const applicationMiddleware = async (request: NextRequest) => {
     }
 
     if (pathname === '/admin/profile') {
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return NextResponse.next();
     }
 
     const userRole = (session.user.role || '').trim().toLowerCase();
@@ -50,7 +47,7 @@ const applicationMiddleware = async (request: NextRequest) => {
       return NextResponse.redirect(url);
     }
 
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next();
   }
 
   // Dashboard gate
@@ -61,10 +58,10 @@ const applicationMiddleware = async (request: NextRequest) => {
       url.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(url);
     }
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next();
   }
 
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  return NextResponse.next();
 };
 
 export default applicationMiddleware;

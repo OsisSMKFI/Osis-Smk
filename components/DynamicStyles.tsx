@@ -39,8 +39,8 @@ export default function DynamicStyles() {
 
     loadDesigns();
 
-    // Refresh designs every 30 seconds for realtime updates
-    const interval = setInterval(loadDesigns, 30000);
+    // Refresh designs every 5 minutes (admin can trigger immediate reload via design-updated event)
+    const interval = setInterval(loadDesigns, 300000);
     return () => clearInterval(interval);
   }, []);
 

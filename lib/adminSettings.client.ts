@@ -85,36 +85,88 @@ export function parseGlobalBackground(settings: Record<string,string>): GlobalBa
   };
 }
 
-// Client-side helper to fetch and parse background
+// Module cache for background settings (60s TTL)
+let bgCache: GlobalBackgroundConfig | null = null;
+let bgCacheTimestamp = 0;
+const BG_CACHE_TTL = 60 * 1000;
+let bgInFlight: Promise<GlobalBackgroundConfig> | null = null;
+
+// Client-side helper to fetch and parse background (with module cache)
 export async function fetchGlobalBackground(): Promise<GlobalBackgroundConfig> {
-  try {
-    // Use public background endpoint (no auth required)
-    const res = await fetch('/api/public/background', { cache: 'no-store' });
-    if (!res.ok) {
-      console.warn('Background settings fetch failed:', res.status);
-      // Return empty settings so parseGlobalBackground applies CSS variable defaults
-      return parseGlobalBackground({});
-    }
-    // Guard against HTML response (e.g., error overlay or proxy page)
-    const text = await res.text();
-    if (text.trim().startsWith('<')) {
-      console.warn('Background settings returned HTML, falling back to CSS defaults');
-      return parseGlobalBackground({});
-    }
-    const json = JSON.parse(text);
-    const settings = json.settings || json.values || {};
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[fetchGlobalBackground] Raw public settings:', settings);
-    }
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[fetchGlobalBackground] Fetched settings:', settings);
-    }
-    
-    return parseGlobalBackground(settings);
-  } catch (error) {
-    console.error('Failed to fetch background settings:', error);
-    // Return empty settings so parseGlobalBackground applies CSS variable defaults
-    return parseGlobalBackground({});
+  // Return cached if fresh
+  if (bgCache && Date.now() - bgCacheTimestamp < BG_CACHE_TTL) {
+    return bgCache;
   }
+
+  // Dedup concurrent calls
+  if (bgInFlight) {
+    return bgInFlight;
+  }
+
+  bgInFlight = (async () => {
+    try {
+      // Use public background endpoint (no auth required) - default browser cache OK
+      const res = await fetch('/api/public/background');
+      if (!res.ok) {
+        console.warn('Background settings fetch failed:', res.status);
+        const fallback = parseGlobalBackground({});
+        bgCache = fallback;
+        bgCacheTimestamp = Date.now();
+        return fallback;
+      }
+      // Guard against HTML response (e.g., error overlay or proxy page)
+      const text = await res.text();
+      if (text.trim().startsWith('<')) {
+        console.warn('Background settings returned HTML, falling back to CSS defaults');
+        const fallback = parseGlobalBackground({});
+        bgCache = fallback;
+        bgCacheTimestamp = Date.now();
+        return fallback;
+      }
+      const json = JSON.parse(text);
+      const settings = json.settings || json.values || {};
+
+      const result = parseGlobalBackground(settings);
+      bgCache = result;
+      bgCacheTimestamp = Date.now();
+      return result;
+    } catch (error) {
+      console.error('Failed to fetch background settings:', error);
+      const fallback = parseGlobalBackground({});
+      bgCache = fallback;
+      bgCacheTimestamp = Date.now();
+      return fallback;
+    } finally {
+      bgInFlight = null;
+    }
+  })();
+
+  return bgInFlight;
+}
+
+/**
+ * Check if background should apply for a given pathname (scope logic from old root layout).
+ */
+export function shouldApplyBackgroundForPath(
+  bg: GlobalBackgroundConfig,
+  pathname: string
+): boolean {
+  // Never apply on admin pages
+  if (pathname.startsWith('/admin')) return false;
+  // NEVER apply image mode to body - images are handled by components like DynamicHero
+  if (bg.mode === 'image') return false;
+  // Only apply if admin has set custom color/gradient background
+  if (bg.mode === 'none') return false;
+
+  const matchSelected = (path: string, sel: string) => {
+    if (sel === '/') return path === '/' || path === '';
+    return path === sel || path.startsWith(sel + '/');
+  };
+
+  if (bg.scope === 'all-pages') return true;
+  if (bg.scope === 'homepage-only') return pathname === '/' || pathname === '';
+  if (bg.scope === 'selected-pages' && Array.isArray(bg.selectedPages)) {
+    return bg.selectedPages.some(sel => matchSelected(pathname, sel));
+  }
+  return false;
 }
