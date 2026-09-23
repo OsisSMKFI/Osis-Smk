@@ -371,7 +371,9 @@ export default function AboutPageClient() {
       'about_value3_icon', 'about_value3_name', 'about_value3_desc', 'about_value3_color',
       'about_value4_icon', 'about_value4_name', 'about_value4_desc', 'about_value4_color',
       'about_cta_title', 'about_cta_title_hl', 'about_cta_desc', 'about_cta_button', 'about_cta_button2',
-      'about_logo_title', 'about_logo_subtitle',
+      'about_logo_title', 'about_logo_subtitle', 'about_logo_alt',
+      'about_core_title1', 'about_core_title2', 'about_core_subtitle',
+      'about_sekbid_title1', 'about_sekbid_title2', 'about_sekbid_subtitle',
     ]).then(setDb);
   }, []);
 

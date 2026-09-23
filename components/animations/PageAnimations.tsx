@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 
 interface PageOpeningProps {
   children: React.ReactNode;
@@ -168,37 +168,47 @@ export function Interactive3DCard({
   borderGlow = true,
   onClick
 }: Interactive3DCardProps) {
-  const [rotateX, setRotateX] = useState(0);
-  const [rotateY, setRotateY] = useState(0);
-  const [glarePosition, setGlarePosition] = useState({ x: 50, y: 50 });
+  const rotateX = useMotionValue(0);
+  const rotateY = useMotionValue(0);
+  const glareX = useMotionValue(50);
+  const glareY = useMotionValue(50);
+  const rotateXSpring = useSpring(rotateX, { stiffness: 300, damping: 30 });
+  const rotateYSpring = useSpring(rotateY, { stiffness: 300, damping: 30 });
+  const cardRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const mouseX = e.clientX - centerX;
-    const mouseY = e.clientY - centerY;
-    
-    const rotateXValue = (mouseY / (rect.height / 2)) * -intensity;
-    const rotateYValue = (mouseX / (rect.width / 2)) * intensity;
-    
-    setRotateX(rotateXValue);
-    setRotateY(rotateYValue);
-    
-    // Glare position
-    const glareX = ((e.clientX - rect.left) / rect.width) * 100;
-    const glareY = ((e.clientY - rect.top) / rect.height) * 100;
-    setGlarePosition({ x: glareX, y: glareY });
-  };
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const el = cardRef.current;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const mouseX = e.clientX - centerX;
+      const mouseY = e.clientY - centerY;
+      rotateX.set((mouseY / (rect.height / 2)) * -intensity);
+      rotateY.set((mouseX / (rect.width / 2)) * intensity);
+      glareX.set(((e.clientX - rect.left) / rect.width) * 100);
+      glareY.set(((e.clientY - rect.top) / rect.height) * 100);
+    });
+  }, [intensity, rotateX, rotateY, glareX, glareY]);
 
-  const handleMouseLeave = () => {
-    setRotateX(0);
-    setRotateY(0);
-    setGlarePosition({ x: 50, y: 50 });
-  };
+  const handleMouseLeave = useCallback(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rotateX.set(0);
+    rotateY.set(0);
+    glareX.set(50);
+    glareY.set(50);
+  }, [rotateX, rotateY, glareX, glareY]);
+
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return (
     <motion.div
+      ref={cardRef}
       className={`relative cursor-pointer ${className}`}
       style={{ perspective: '1000px' }}
       onMouseMove={handleMouseMove}
@@ -209,8 +219,8 @@ export function Interactive3DCard({
     >
       <motion.div
         style={{
-          rotateX,
-          rotateY,
+          rotateX: rotateXSpring,
+          rotateY: rotateYSpring,
           transformStyle: 'preserve-3d',
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
@@ -218,10 +228,10 @@ export function Interactive3DCard({
       >
         {/* Border glow effect */}
         {borderGlow && (
-          <motion.div
+          <div
             className="absolute -inset-[2px] rounded-[inherit] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             style={{
-              background: `linear-gradient(${rotateY + 45}deg, rgba(250,204,21,0.5), rgba(59,130,246,0.5), rgba(168,85,247,0.5))`,
+              background: `linear-gradient(45deg, rgba(250,204,21,0.5), rgba(59,130,246,0.5), rgba(168,85,247,0.5))`,
               filter: 'blur(8px)',
             }}
           />
@@ -232,12 +242,12 @@ export function Interactive3DCard({
           {children}
         </div>
         
-        {/* Glare overlay */}
+        {/* Glare overlay - static subtle highlight */}
         {glare && (
           <div
             className="absolute inset-0 pointer-events-none rounded-[inherit] overflow-hidden"
             style={{
-              background: `radial-gradient(circle at ${glarePosition.x}% ${glarePosition.y}%, rgba(255,255,255,0.3) 0%, transparent 60%)`,
+              background: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 60%)`,
             }}
           />
         )}
@@ -294,30 +304,43 @@ export function MagneticElement({
   strength = 0.3,
   className = ''
 }: MagneticElementProps) {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const xSpring = useSpring(x, { stiffness: 350, damping: 15 });
+  const ySpring = useSpring(y, { stiffness: 350, damping: 15 });
+  const ref = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    const x = (e.clientX - centerX) * strength;
-    const y = (e.clientY - centerY) * strength;
-    
-    setPosition({ x, y });
+    if (!ref.current) return;
+    const el = ref.current;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      x.set((e.clientX - centerX) * strength);
+      y.set((e.clientY - centerY) * strength);
+    });
   };
 
   const handleMouseLeave = () => {
-    setPosition({ x: 0, y: 0 });
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    x.set(0);
+    y.set(0);
   };
+
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return (
     <motion.div
+      ref={ref}
       className={className}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      animate={{ x: position.x, y: position.y }}
-      transition={{ type: 'spring', stiffness: 350, damping: 15 }}
+      style={{ x: xSpring, y: ySpring }}
     >
       {children}
     </motion.div>

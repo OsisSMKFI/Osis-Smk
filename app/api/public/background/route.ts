@@ -1,11 +1,43 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { BackgroundResponseSchema, buildError, buildSuccess } from '@/lib/validation';
 import crypto from 'crypto';
 
-// Public read-only endpoint: returns only GLOBAL_BG_* settings (non-secret)
-export async function GET() {
+// Public read-only endpoint: GLOBAL_BG_* settings, or single page_content key via ?key=
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const key = searchParams.get('key');
+
+    if (key) {
+      const { data, error } = await supabaseAdmin
+        .from('page_content')
+        .select('page_key, content, category, content_type, published')
+        .eq('page_key', key)
+        .maybeSingle();
+
+      if (error) {
+        return NextResponse.json(buildError('CONTENT_FETCH_ERROR', error.message), { status: 500 });
+      }
+
+      if (!data) {
+        return NextResponse.json(buildError('CONTENT_NOT_FOUND', `No content for key: ${key}`), { status: 404 });
+      }
+
+      const res = NextResponse.json(
+        buildSuccess('OK', {
+          page_key: data.page_key,
+          content: data.content || '',
+          content_value: data.content || '',
+          category: data.category || 'general',
+          content_type: data.content_type || 'text',
+          published: data.published !== false,
+        })
+      );
+      res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+      return res;
+    }
+
     const { data, error } = await supabaseAdmin
       .from('admin_settings')
       .select('key,value,is_secret')

@@ -15,10 +15,7 @@ export default function GlobalDesignLoader() {
             try {
                 // Fetch all design overrides from database
                 const response = await fetch('/api/design/load-all', {
-                    cache: 'no-store',
-                    headers: {
-                        'Cache-Control': 'no-cache'
-                    }
+                    next: { revalidate: 60 },
                 });
                 
                 if (response.ok) {

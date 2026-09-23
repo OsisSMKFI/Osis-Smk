@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { motion, useScroll, useTransform, useSpring, useInView, MotionValue, type Variants } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring, useInView, useMotionValue, MotionValue, type Variants } from 'framer-motion';
 
 // Custom easing as tuple for TypeScript
 const customEase: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
@@ -251,24 +251,34 @@ interface MagneticButtonProps {
 
 export function MagneticButton({ children, className = '', strength = 0.3 }: MagneticButtonProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const xSpring = useSpring(x, { stiffness: 150, damping: 15 });
+  const ySpring = useSpring(y, { stiffness: 150, damping: 15 });
+  const rafRef = useRef<number>(0);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;
-    
-    const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    const deltaX = (e.clientX - centerX) * strength;
-    const deltaY = (e.clientY - centerY) * strength;
-    
-    setPosition({ x: deltaX, y: deltaY });
+    const el = ref.current;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      x.set((e.clientX - centerX) * strength);
+      y.set((e.clientY - centerY) * strength);
+    });
   };
 
   const handleMouseLeave = () => {
-    setPosition({ x: 0, y: 0 });
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    x.set(0);
+    y.set(0);
   };
+
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return (
     <motion.div
@@ -276,8 +286,7 @@ export function MagneticButton({ children, className = '', strength = 0.3 }: Mag
       className={className}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      animate={{ x: position.x, y: position.y }}
-      transition={{ type: 'spring', stiffness: 150, damping: 15 }}
+      style={{ x: xSpring, y: ySpring }}
     >
       {children}
     </motion.div>
@@ -495,27 +504,36 @@ interface FloatingElementProps {
 
 export function FloatingElement({ children, className = '', intensity = 20 }: FloatingElementProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [rotateX, setRotateX] = useState(0);
-  const [rotateY, setRotateY] = useState(0);
+  const rotateX = useMotionValue(0);
+  const rotateY = useMotionValue(0);
+  const rotateXSpring = useSpring(rotateX, { stiffness: 100, damping: 15 });
+  const rotateYSpring = useSpring(rotateY, { stiffness: 100, damping: 15 });
+  const rafRef = useRef<number>(0);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;
-
-    const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    const percentX = (e.clientX - centerX) / (rect.width / 2);
-    const percentY = (e.clientY - centerY) / (rect.height / 2);
-
-    setRotateX(-percentY * intensity);
-    setRotateY(percentX * intensity);
+    const el = ref.current;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const percentX = (e.clientX - centerX) / (rect.width / 2);
+      const percentY = (e.clientY - centerY) / (rect.height / 2);
+      rotateX.set(-percentY * intensity);
+      rotateY.set(percentX * intensity);
+    });
   };
 
   const handleMouseLeave = () => {
-    setRotateX(0);
-    setRotateY(0);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rotateX.set(0);
+    rotateY.set(0);
   };
+
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return (
     <motion.div
@@ -523,9 +541,12 @@ export function FloatingElement({ children, className = '', intensity = 20 }: Fl
       className={className}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      animate={{ rotateX, rotateY }}
-      transition={{ type: 'spring', stiffness: 100, damping: 15 }}
-      style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
+      style={{
+        rotateX: rotateXSpring,
+        rotateY: rotateYSpring,
+        transformStyle: 'preserve-3d',
+        perspective: '1000px',
+      }}
     >
       {children}
     </motion.div>

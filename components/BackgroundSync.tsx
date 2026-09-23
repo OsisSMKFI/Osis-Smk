@@ -7,7 +7,33 @@ import { fetchGlobalBackground, shouldApplyBackgroundForPath } from '@/lib/admin
 /**
  * Sync CSS variables with admin background settings
  * Applies scope logic (homepage-only / selected-pages) client-side.
+ * Re-apply is sync-only on pathname change (cached fetch, no observer churn).
  */
+function applyBackground(bg: Awaited<ReturnType<typeof fetchGlobalBackground>>, pathname: string) {
+  const root = document.documentElement;
+  const body = document.body;
+
+  if (!shouldApplyBackgroundForPath(bg, pathname)) {
+    body.style.removeProperty('background');
+    root.style.removeProperty('--gradient-bg');
+    return;
+  }
+
+  if (bg.mode === 'color' && bg.color) {
+    body.style.background = bg.color;
+    root.style.removeProperty('--gradient-bg');
+  } else if (bg.mode === 'gradient' && bg.gradient) {
+    body.style.background = bg.gradient;
+    root.style.removeProperty('--gradient-bg');
+  } else if (bg.mode === 'image' && bg.imageUrl) {
+    body.style.removeProperty('background');
+    root.style.removeProperty('--gradient-bg');
+  } else {
+    body.style.removeProperty('background');
+    root.style.removeProperty('--gradient-bg');
+  }
+}
+
 export default function BackgroundSync() {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
@@ -16,66 +42,51 @@ export default function BackgroundSync() {
     setIsClient(true);
   }, []);
 
+  // Scope re-apply on nav — uses cached settings, no network after first load
+  useEffect(() => {
+    if (!isClient) return;
+    let cancelled = false;
+    fetchGlobalBackground()
+      .then((bg) => {
+        if (!cancelled) applyBackground(bg, pathname);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isClient, pathname]);
+
+  // Fetch + watch theme/storage once per session
   useEffect(() => {
     if (!isClient) return;
 
-    const syncBackground = async () => {
+    const sync = async () => {
       try {
         const bg = await fetchGlobalBackground();
-        const root = document.documentElement;
-        const body = document.body;
-        const isDarkMode = root.classList.contains('dark');
-
-        // Scope check - same logic as old root layout
-        if (!shouldApplyBackgroundForPath(bg, pathname)) {
-          body.style.removeProperty('background');
-          root.style.removeProperty('--gradient-bg');
-          void root.offsetHeight;
-          return;
-        }
-
-        // Apply custom background from admin OR use CSS defaults
-        if (bg.mode === 'color' && bg.color) {
-          body.style.background = bg.color;
-          root.style.removeProperty('--gradient-bg');
-        } else if (bg.mode === 'gradient' && bg.gradient) {
-          body.style.background = bg.gradient;
-          root.style.removeProperty('--gradient-bg');
-        } else if (bg.mode === 'image' && bg.imageUrl) {
-          // Image mode - remove body background, let components handle it
-          body.style.removeProperty('background');
-          root.style.removeProperty('--gradient-bg');
-        } else {
-          // Use CSS defaults (mode is 'none') - remove all inline styles
-          body.style.removeProperty('background');
-          root.style.removeProperty('--gradient-bg');
-          void root.offsetHeight;
-        }
+        applyBackground(bg, window.location.pathname);
       } catch (error) {
         console.error('[BackgroundSync] Error:', error);
       }
     };
 
-    // Sync on mount and pathname change
-    syncBackground();
+    sync();
 
-    // Sync when theme changes
     const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
+      for (const mutation of mutations) {
         if (mutation.attributeName === 'class') {
-          syncBackground();
+          sync();
+          break;
         }
-      });
+      }
     });
 
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class']
+      attributeFilter: ['class'],
     });
 
-    // Listen for storage events (theme changed in another tab)
     const handleStorageChange = () => {
-      syncBackground();
+      sync();
     };
     window.addEventListener('storage', handleStorageChange);
 
@@ -83,7 +94,7 @@ export default function BackgroundSync() {
       observer.disconnect();
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [isClient, pathname]);
+  }, [isClient]);
 
   return null;
 }

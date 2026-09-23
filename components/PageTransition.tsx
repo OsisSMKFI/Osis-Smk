@@ -43,21 +43,6 @@ const CurtainOverlay: React.FC<{ isVisible: boolean }> = ({ isVisible }) => {
   );
 };
 
-const pageVariants = {
-  initial: {
-    opacity: 0,
-    y: 12,
-  },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.25,
-      ease: [0.25, 0.1, 0.25, 1] as const,
-    },
-  },
-};
-
 const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
   const pathname = usePathname();
   const [showCurtain, setShowCurtain] = useState(true);
@@ -84,22 +69,19 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     return <>{children}</>;
   }
 
+  // No AnimatePresence mode="wait" — it delayed paint on every nav.
+  // Plain keyed div: instant swap, tiny CSS enter only.
   return (
     <div className="relative min-h-screen" suppressHydrationWarning>
       <CurtainOverlay isVisible={showCurtain && mounted} />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={pathname}
-          variants={pageVariants}
-          initial="initial"
-          animate="animate"
-          className={showCurtain ? 'opacity-0' : undefined}
-          suppressHydrationWarning
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
+      <div
+        key={pathname}
+        className={`${showCurtain ? 'opacity-0 ' : ''}page-enter`}
+        suppressHydrationWarning
+      >
+        {children}
+      </div>
     </div>
   );
 };

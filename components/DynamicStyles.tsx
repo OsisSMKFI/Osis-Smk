@@ -25,7 +25,9 @@ export default function DynamicStyles() {
   useEffect(() => {
     const loadDesigns = async () => {
       try {
-        const res = await fetch('/api/admin/design/apply');
+        const res = await fetch('/api/admin/design/apply', {
+          cache: 'force-cache',
+        });
         if (res.ok) {
           const data = await res.json();
           setDesigns(data.designs || []);
@@ -40,8 +42,13 @@ export default function DynamicStyles() {
     loadDesigns();
 
     // Refresh designs every 5 minutes (admin can trigger immediate reload via design-updated event)
+    const onDesignUpdate = () => loadDesigns();
+    window.addEventListener('design-updated', onDesignUpdate);
     const interval = setInterval(loadDesigns, 300000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('design-updated', onDesignUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading || designs.length === 0) {
@@ -54,20 +61,29 @@ export default function DynamicStyles() {
     .map(d => `/* Design override for: ${d.component} (${d.preset}) */\n${d.css_code}`)
     .join('\n\n');
 
+  const cssVars = designs
+    .map(d => {
+      if (d.styles?.primaryColor) {
+        return `--dynamic-${d.component}-primary: ${d.styles.primaryColor};`;
+      }
+      return '';
+    })
+    .join('\n        ');
+
   return (
-    <style jsx global>{`
+    <style
+      id="dynamic-design-overrides"
+      dangerouslySetInnerHTML={{
+        __html: `
       ${combinedCSS}
-      
+
       /* Dynamic design system variables */
       :root {
-        ${designs.map(d => {
-          if (d.styles?.primaryColor) {
-            return `--dynamic-${d.component}-primary: ${d.styles.primaryColor};`;
-          }
-          return '';
-        }).join('\n        ')}
+        ${cssVars}
       }
-    `}</style>
+    `,
+      }}
+    />
   );
 }
 
@@ -79,7 +95,9 @@ export function useDesignOverride(component: string) {
   useEffect(() => {
     const loadOverride = async () => {
       try {
-        const res = await fetch(`/api/admin/design/apply?component=${component}`);
+        const res = await fetch(`/api/admin/design/apply?component=${component}`, {
+          cache: 'force-cache',
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.designs && data.designs.length > 0) {

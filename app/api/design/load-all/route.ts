@@ -1,11 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 /**
  * API to load ALL design overrides from database
@@ -13,7 +8,8 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
  */
 export async function GET() {
     try {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const { supabaseAdmin } = await import('@/lib/supabase/server');
+        const supabase = supabaseAdmin;
         
         // Fetch all design overrides from page_content table
         // Using correct column names: page_key, content, category
@@ -26,11 +22,17 @@ export async function GET() {
 
         if (error) {
             console.error('Failed to load designs:', error);
-            return NextResponse.json({ css: '', components: [], error: error.message });
+            return NextResponse.json(
+                { css: '', components: [], error: error.message },
+                { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } }
+            );
         }
 
         if (!designs || designs.length === 0) {
-            return NextResponse.json({ css: '', components: [], count: 0 });
+            return NextResponse.json(
+                { css: '', components: [], count: 0 },
+                { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } }
+            );
         }
 
         // Combine all CSS with component comments
@@ -47,18 +49,24 @@ ${d.content}
 
         const componentNames = designs.map(d => d.page_key.replace('design_override_', ''));
 
-        return NextResponse.json({
-            css: allCSS,
-            components: componentNames,
-            count: designs.length,
-            updatedAt: new Date().toISOString(),
-        });
+        return NextResponse.json(
+            {
+                css: allCSS,
+                components: componentNames,
+                count: designs.length,
+                updatedAt: new Date().toISOString(),
+            },
+            { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } }
+        );
     } catch (error) {
         console.error('Error in load-all designs:', error);
-        return NextResponse.json({ 
-            css: '', 
-            components: [], 
-            error: 'Failed to load designs: ' + (error as Error).message 
-        });
+        return NextResponse.json(
+            {
+                css: '',
+                components: [],
+                error: 'Failed to load designs: ' + (error as Error).message,
+            },
+            { headers: { 'Cache-Control': 'public, max-age=30' } }
+        );
     }
 }

@@ -44,9 +44,11 @@ const SECTIONS: SectionConfig[] = [
     description: 'Teks visi yang ditampilkan di homepage',
     icon: '👁️',
     fields: [
-      { key: 'site_vision_text', label: 'Teks Visi', type: 'textarea' },
+      { key: 'site_vision_text', label: 'Teks Visi (awal)', type: 'textarea' },
       { key: 'site_vision_hl1', label: 'Highlight 1', type: 'text' },
+      { key: 'site_vision_part2', label: 'Teks Visi (tengah)', type: 'text' },
       { key: 'site_vision_hl2', label: 'Highlight 2', type: 'text' },
+      { key: 'site_vision_part3', label: 'Teks Visi (akhir)', type: 'text' },
       { key: 'site_vision_hl3', label: 'Highlight 3', type: 'text' },
     ],
   },
@@ -165,6 +167,17 @@ const SECTIONS: SectionConfig[] = [
     ],
   },
   {
+    id: 'about_achievements',
+    title: 'Pencapaian (About)',
+    description: 'Judul section pencapaian di halaman Tentang',
+    icon: '🏆',
+    fields: [
+      { key: 'about_achievements_label', label: 'Label Section', type: 'text' },
+      { key: 'about_achievements_title', label: 'Judul Section', type: 'text' },
+      { key: 'about_achievements_title_hl', label: 'Judul Highlight', type: 'text' },
+    ],
+  },
+  {
     id: 'about_logo',
     title: 'Filosofi Logo (About)',
     description: 'Judul dan subtitle section filosofi logo',
@@ -172,6 +185,7 @@ const SECTIONS: SectionConfig[] = [
     fields: [
       { key: 'about_logo_title', label: 'Judul Section', type: 'text' },
       { key: 'about_logo_subtitle', label: 'Subtitle Section', type: 'text' },
+      { key: 'about_logo_alt', label: 'Alt Logo', type: 'text' },
     ],
   },
   {
@@ -202,6 +216,61 @@ const SECTIONS: SectionConfig[] = [
     ],
   },
 ];
+
+const DEFAULT_CONTENT: Record<string, string> = {
+  home_hero_title: 'OSIS SMK Informatika',
+  home_hero_subtitle: 'Raveka Sena 2025-2026',
+  home_hero_description: 'Bersama Raveka Sena, kita menjadi pasukan sinar terang yang membawa perubahan positif dan inovasi untuk masa depan gemilang.',
+  site_vision_text: 'Menjadi organisasi yang',
+  site_vision_hl1: 'membersamai terbentuknya',
+  site_vision_part2: 'karakter siswa yang',
+  site_vision_hl2: 'KAMIL dan Inovatif',
+  site_vision_part3: '',
+  site_vision_hl3: '',
+  about_hero_title1: 'Tentang',
+  about_hero_title2: 'RAVEKA SENA 2025-2026',
+  about_hero_subtitle1: 'Mengenal lebih dekat',
+  about_hero_subtitle2: 'OSIS SMK Informatika - Raveka Sena',
+  about_hero_scroll: 'Scroll untuk menjelajahi',
+  about_story_title1: 'Cerita',
+  about_story_title2: 'Dirgantara',
+  about_philosophy_title: 'Filosofi Nama',
+  about_philosophy_hl: 'Dirgantara',
+  about_philosophy_part1: 'Nama',
+  about_philosophy_name_hl: '"Dirgantara"',
+  about_philosophy_part2: 'diambil dari kata dalam bahasa Indonesia yang berarti',
+  about_philosophy_sky_hl: '"angkasa" atau "langit"',
+  about_philosophy_part3: '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.',
+  about_visimisi_label: 'Visi & Misi',
+  about_visimisi_title: 'Arah',
+  about_visimisi_title_hl: 'Langkah Kami',
+  about_vision_label: 'Visi',
+  about_mission_label: 'Misi',
+  about_values_label: 'Nilai-Nilai Kami',
+  about_values_title: 'Prinsip',
+  about_values_title_hl: 'yang Kami Pegang',
+  about_cta_title: 'Bergabung',
+  about_cta_title_hl: 'Bersama Kami',
+  about_cta_button: 'Daftar Sekarang',
+  about_cta_button2: 'Lihat Info Terkini',
+  about_achievements_label: 'Perjalanan Kami',
+  about_achievements_title: 'Pencapaian',
+  about_achievements_title_hl: 'Raveka Sena',
+  about_logo_title: 'FILOSOFI LOGO OSIS',
+  about_logo_subtitle: 'OSIS SMK INFORMATIKA FITHRAH INSANI - Setiap elemen dalam logo memiliki filosofi dan makna yang mendalam',
+  about_logo_alt: 'Logo OSIS SMK Informatika Fithrah Insani',
+  about_core_title1: 'Pengurus',
+  about_core_title2: 'Inti',
+  about_core_subtitle: 'Para pemimpin yang menggerakkan roda organisasi',
+  about_sekbid_title1: 'Koordinator',
+  about_sekbid_title2: 'Sekbid',
+  about_sekbid_subtitle: 'Para koordinator yang memimpin setiap seksi bidang',
+  site_school_name: 'SMK Informatika Fithrah Insani',
+  site_address: 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
+  site_phone: '(022) 87805564',
+  site_email: 'osissmkinformatika2.fi@gmail.com',
+  site_copyright: 'OSIS SMK Fithrah Insani - Raveka Sena',
+};
 
 export default function AdminContentPage() {
   const { data: session, status } = useSession();
@@ -251,7 +320,7 @@ export default function AdminContentPage() {
     const values: Record<string, string> = {};
     section.fields.forEach(f => {
       const item = contentMap.get(f.key);
-      values[f.key] = item?.content || '';
+      values[f.key] = item?.content || DEFAULT_CONTENT[f.key] || '';
     });
     setEditValues(values);
     setEditingSection(section.id);
@@ -267,16 +336,17 @@ export default function AdminContentPage() {
     try {
       const saves = section.fields.map(async (field) => {
         const existing = contentMap.get(field.key);
-        const value = editValues[field.key] || '';
+        const raw = editValues[field.key];
+        const value = raw !== undefined ? raw : (existing?.content || DEFAULT_CONTENT[field.key] || '');
 
         if (existing) {
-          if (existing.content === value) return;
+          if ((existing.content || '') === value) return;
           return apiFetch('/api/admin/content', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: existing.id, content: value }),
           });
-        } else if (value) {
+        } else if (value !== '') {
           return apiFetch('/api/admin/content', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -312,7 +382,7 @@ export default function AdminContentPage() {
 
   const filledCounts = SECTIONS.map(s => ({
     id: s.id,
-    filled: s.fields.filter(f => contentMap.has(f.key)).length,
+    filled: s.fields.filter(f => contentMap.has(f.key) && (contentMap.get(f.key)?.content || '') !== '').length,
     total: s.fields.length,
   }));
 
@@ -458,7 +528,9 @@ export default function AdminContentPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                       {section.fields.map(field => {
                         const existing = contentMap.get(field.key);
-                        const value = isEditing ? (editValues[field.key] || '') : (existing?.content || '');
+                        const value = isEditing
+                          ? (editValues[field.key] ?? '')
+                          : (existing?.content || DEFAULT_CONTENT[field.key] || '');
 
                         return (
                           <div key={field.key} className="space-y-1">

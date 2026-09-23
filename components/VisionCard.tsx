@@ -11,11 +11,13 @@ const VisionCard: React.FC = () => {
 
   useEffect(() => {
     getPageContentBatch(
-      ['site_vision_text', 'site_vision_hl1', 'site_vision_hl2', 'site_vision_hl3'],
+      ['site_vision_text', 'site_vision_hl1', 'site_vision_part2', 'site_vision_hl2', 'site_vision_part3', 'site_vision_hl3'],
       {
         site_vision_text: t('vision.visionPart1'),
         site_vision_hl1: t('vision.visionHighlight1'),
+        site_vision_part2: t('vision.visionPart2'),
         site_vision_hl2: t('vision.visionHighlight2'),
+        site_vision_part3: t('vision.visionPart3'),
         site_vision_hl3: t('vision.visionHighlight3'),
       }
     ).then(setContent);
@@ -23,9 +25,9 @@ const VisionCard: React.FC = () => {
 
   const p1 = content.site_vision_text || t('vision.visionPart1');
   const hl1 = content.site_vision_hl1 || t('vision.visionHighlight1');
-  const p2 = t('vision.visionPart2');
+  const p2 = content.site_vision_part2 || t('vision.visionPart2');
   const hl2 = content.site_vision_hl2 || t('vision.visionHighlight2');
-  const p3 = t('vision.visionPart3');
+  const p3 = content.site_vision_part3 || t('vision.visionPart3');
   const hl3 = content.site_vision_hl3 || t('vision.visionHighlight3');
 
   return (

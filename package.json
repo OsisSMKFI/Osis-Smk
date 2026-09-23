@@ -15,6 +15,7 @@
     "clean": "rimraf .next",
     "configure": "node ./scripts/configure-admin-settings.js",
     "configure:api-keys": "node ./scripts/configure-admin-settings.js --with-api-keys",
+    "seed:content": "node ./scripts/seed-page-content.js",
     "deploy:check": "npm run build",
     "production:setup": "npm run configure && npm run build"
   },

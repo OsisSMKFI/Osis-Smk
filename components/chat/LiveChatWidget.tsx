@@ -214,46 +214,51 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
     }
   }, []);
 
-  // Fetch available AI providers on mount
+  // Fetch available AI providers on mount (idle-friendly: only once)
   React.useEffect(() => {
-    fetch('/api/ai/status')
-      .then(r => r.json())
-      .then(data => {
-        if (data.providers) {
-          setProviderStatus(data.providers);
-          console.log('[LiveChat] Providers:', data.providers);
-        }
-      })
-      .catch(() => {});
+    let cancelled = false;
+    const load = () => {
+      fetch('/api/ai/status')
+        .then(r => r.json())
+        .then(data => {
+          if (!cancelled && data.providers) {
+            setProviderStatus(data.providers);
+          }
+        })
+        .catch(() => {});
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(load, { timeout: 3000 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(handle);
+      };
+    }
+    const t = window.setTimeout(load, 500);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, []);
 
   // 🎨 Load custom design CSS from database on mount
   React.useEffect(() => {
     const loadCustomDesign = async () => {
       try {
-        const response = await fetch('/api/ai/execute-action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'get_status',
-            params: { taskSessionId: 'design_chat_input' },
-          }),
+        const designRes = await fetch('/api/public/background?key=design_override_chat_input', {
+          cache: 'force-cache',
         });
-        
-        // Also try to get design from page_content
-        const designRes = await fetch('/api/public/background?key=design_override_chat_input');
         if (designRes.ok) {
           const data = await designRes.json();
-          if (data.content_value) {
-            setCustomDesignCSS(data.content_value);
-            console.log('[LiveChat] ✅ Custom design loaded from database');
+          if (data.content) {
+            setCustomDesignCSS(data.content);
           }
         }
       } catch (e) {
         console.warn('[LiveChat] Failed to load custom design:', e);
       }
     };
-    
+
     if (mounted) {
       loadCustomDesign();
     }
@@ -482,35 +487,42 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   // ═══════════════════════════════════════════════════════════════════════════
   // 📨 POLL FOR ADMIN REPLIES - Check if admin has replied to forwarded message
   // ═══════════════════════════════════════════════════════════════════════════
+  // 📨 POLL FOR ADMIN REPLY - only when chat open OR waiting on a forwarded message
+  const lastReplyRef = React.useRef<string | null>(null);
+  const hasPendingForward = messages.some(m => m.isForward);
+
   React.useEffect(() => {
-    if (!sessionId || mode === 'admin') return; // Only for public users
+    lastReplyRef.current = lastReplyCheck;
+  }, [lastReplyCheck]);
+
+  React.useEffect(() => {
+    if (!sessionId || mode === 'admin') return;
+    if (!open && !hasPendingForward) return;
 
     const checkForReplies = async () => {
       try {
         const response = await fetch(`/api/admin/notifications/reply?sessionId=${sessionId}`);
         if (!response.ok) return;
-        
+
         const data = await response.json();
         if (data.replies && data.replies.length > 0) {
-          // Find new replies we haven't shown yet
           data.replies.forEach((reply: any) => {
             const replyId = reply.id || reply.created_at;
-            if (lastReplyCheck !== replyId) {
-              // Add reply as assistant message
+            if (lastReplyRef.current !== replyId) {
               setMessages(prev => {
-                // Check if we already have this reply
-                const alreadyHave = prev.some(m => 
-                  m.content.includes(reply.message) && 
+                const alreadyHave = prev.some(m =>
+                  m.content.includes(reply.message) &&
                   m.content.includes('Admin')
                 );
                 if (alreadyHave) return prev;
-                
+
                 return [...prev, {
                   role: 'assistant' as const,
                   content: `📨 **Balasan dari ${reply.sender_name || 'Admin'}:**\n\n${reply.message}`
                 }];
               });
               setLastReplyCheck(replyId);
+              lastReplyRef.current = replyId;
             }
           });
         }
@@ -519,11 +531,25 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
       }
     };
 
-    // Check immediately and then every 15 seconds
-    checkForReplies();
-    const interval = setInterval(checkForReplies, 15000);
-    return () => clearInterval(interval);
-  }, [sessionId, mode, lastReplyCheck]);
+    // Skip while hidden to avoid background network
+    const checkForRepliesVisible = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      checkForReplies();
+    };
+
+    checkForRepliesVisible();
+    const interval = setInterval(checkForRepliesVisible, 30000);
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        checkForReplies();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [sessionId, mode, open, hasPendingForward]);
 
   // Drag handlers (desktop only)
   React.useEffect(() => {

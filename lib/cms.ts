@@ -4,11 +4,9 @@ export interface PageContent {
   id: number;
   page_key: string;
   content_type: 'text' | 'richtext' | 'image' | 'video';
-  content_value: string;
-  content_value_id?: string;
-  metadata?: Record<string, unknown>;
+  content: string;
   category?: string;
-  editable_by: string[];
+  editable_by?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -80,7 +78,7 @@ export async function updatePageContent(
 ): Promise<boolean> {
   const { error } = await supabaseAdmin
     .from('page_content')
-    .update({ content_value: contentValue, updated_at: new Date().toISOString() })
+    .update({ content: contentValue, updated_at: new Date().toISOString() })
     .eq('page_key', pageKey);
 
   if (!error) {

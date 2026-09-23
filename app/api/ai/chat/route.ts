@@ -812,13 +812,13 @@ async function retrieveContext(query: string) {
     {
       const { data } = await supabaseAdmin
         .from('page_content')
-        .select('page_key,content_type,content_value,category')
-        .or(`page_key.ilike.${q},content_value.ilike.${q},category.ilike.${q}`)
+        .select('page_key,content,content_type,category')
+        .or(`page_key.ilike.${q},content.ilike.${q},category.ilike.${q}`)
         .limit(12);
       if (data?.length) {
         ctx.push('Page Content:');
         for (const c of data) {
-          ctx.push(`- ${c.page_key} [${c.category || 'general'}|${c.content_type}]: ${(c.content_value || '').slice(0, 300)}`);
+          ctx.push(`- ${c.page_key} [${c.category || 'general'}|${c.content_type}]: ${(c.content || '').slice(0, 300)}`);
         }
       }
     }

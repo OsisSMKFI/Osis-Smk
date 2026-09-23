@@ -4,9 +4,10 @@ import { requirePermission } from '@/lib/apiAuth';
 
 // API endpoint for managing page content
 export async function GET(request: NextRequest) {
+  const authError = await requirePermission('content:read');
+  if (authError) return authError;
+  
   try {
-    console.log('[/api/admin/content] Fetching page content...');
-    
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     
@@ -16,6 +17,8 @@ export async function GET(request: NextRequest) {
     
     if (category) {
       query = query.eq('category', category);
+    } else {
+      query = query.or('category.neq.design,category.is.null');
     }
     
     const { data, error } = await query
@@ -27,9 +30,6 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    console.log('[/api/admin/content] Fetched items:', data?.length || 0);
-
-    // Transform data to match frontend expectations
     const formattedData = data?.map((item: any) => ({
       id: item.id,
       key: item.page_key,

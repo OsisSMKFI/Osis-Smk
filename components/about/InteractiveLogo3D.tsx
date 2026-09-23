@@ -205,22 +205,26 @@ function ElementCard({
   onHover: (active: boolean) => void;
   onClick: () => void;
 }) {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const rotateX = useMotionValue(0);
+  const rotateY = useMotionValue(0);
+  const rotateXSpring = useSpring(rotateX, { stiffness: 300, damping: 20 });
+  const rotateYSpring = useSpring(rotateY, { stiffness: 300, damping: 20 });
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Handle mouse movement for 3D tilt effect
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setMousePosition({ x, y });
-  }, []);
+    rotateY.set(x * 15);
+    rotateX.set(y * -15);
+  }, [rotateX, rotateY]);
 
   const handleMouseLeave = useCallback(() => {
-    setMousePosition({ x: 0, y: 0 });
+    rotateY.set(0);
+    rotateX.set(0);
     onHover(false);
-  }, [onHover]);
+  }, [onHover, rotateX, rotateY]);
 
   return (
     <ScrollRevealCard index={index} className="h-full">
@@ -238,6 +242,8 @@ function ElementCard({
         style={{
           perspective: '1000px',
           transformStyle: 'preserve-3d',
+          rotateX: isActive ? rotateXSpring : 0,
+          rotateY: isActive ? rotateYSpring : 0,
         }}
         onMouseEnter={() => {
           onHover(true);
@@ -250,23 +256,19 @@ function ElementCard({
           onClick();
         }}
         animate={{
-          rotateX: isActive ? mousePosition.y * -15 : 0,
-          rotateY: isActive ? mousePosition.x * 15 : 0,
           scale: isActive ? 1.03 : 1,
           y: isActive ? -8 : 0,
         }}
         whileTap={{ scale: 0.97 }}
         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       >
-        {/* 3D Glow effect */}
-        <motion.div 
-          className="absolute inset-0 pointer-events-none"
-          animate={{
-            background: isActive 
-              ? `radial-gradient(600px circle at ${(mousePosition.x + 0.5) * 100}% ${(mousePosition.y + 0.5) * 100}%, ${element.color}20, transparent 40%)`
-              : 'none',
+        {/* Soft glow when active - no per-move re-render */}
+        <div
+          className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+          style={{
+            opacity: isActive ? 1 : 0,
+            background: `radial-gradient(600px circle at 50% 50%, ${element.color}20, transparent 40%)`,
           }}
-          transition={{ duration: 0.2 }}
         />
         
         {/* Gradient overlay */}

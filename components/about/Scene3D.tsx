@@ -2,10 +2,10 @@
 
 import React, { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { 
-  Float, 
-  Stars, 
-  Sphere, 
+import {
+  Float,
+  Stars,
+  Sphere,
   MeshDistortMaterial,
   Text3D,
   Center,
@@ -196,14 +196,14 @@ export default function Scene3D({ className = '', variant = 'hero' }: Scene3DPro
           <MouseLight />
 
           {/* Stars Background */}
-          <Stars 
-            radius={100} 
-            depth={50} 
-            count={variant === 'hero' ? 5000 : 2000} 
-            factor={4} 
-            saturation={0} 
-            fade 
-            speed={1} 
+          <Stars
+            radius={100}
+            depth={50}
+            count={variant === 'hero' ? 1500 : 600}
+            factor={4}
+            saturation={0}
+            fade
+            speed={1}
           />
 
           {/* Main Content based on variant */}

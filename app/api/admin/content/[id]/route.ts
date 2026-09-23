@@ -20,7 +20,7 @@ export async function PUT(
     const { data, error } = await supabaseAdmin
       .from('page_content')
       .update({ 
-        content_value: content,
+        content: content,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)

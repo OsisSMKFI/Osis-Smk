@@ -156,19 +156,25 @@ export async function GET(request: NextRequest) {
     if (error) {
       // Graceful degradation if table doesn't exist
       if (error.code === '42P01') {
-        return NextResponse.json({
-          designs: [],
-          message: 'Design system belum disetup'
-        });
+        return NextResponse.json(
+          {
+            designs: [],
+            message: 'Design system belum disetup'
+          },
+          { headers: { 'Cache-Control': 'public, max-age=60' } }
+        );
       }
       throw error;
     }
 
-    return NextResponse.json({
-      success: true,
-      designs: data || [],
-      count: data?.length || 0,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        designs: data || [],
+        count: data?.length || 0,
+      },
+      { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } }
+    );
 
   } catch (error: any) {
     console.error('Get designs error:', error);

@@ -611,6 +611,25 @@ html.dark {
   }
 }
 
+.page-enter {
+  animation: page-enter 0.15s ease-out;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    UTILITY ANIMATIONS
    ═══════════════════════════════════════════════════════════════════════════ */

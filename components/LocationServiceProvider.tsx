@@ -1,11 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useRef, useState } from 'react';
 
 type LocationData = {
   latitude: number;
   longitude: number;
-  accuracy: number; // meters
+  accuracy: number;
   timestamp: number;
 };
 
@@ -28,8 +28,7 @@ export function useLiveLocation() {
 export default function LocationServiceProvider({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [permission, setPermission] = useState<LocationContextValue["permission"]>("unknown");
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const backoffRef = useRef<number>(30000); // 30s default
+  const pendingRef = useRef(false);
 
   const logLocation = async (loc: LocationData) => {
     try {
@@ -45,18 +44,20 @@ export default function LocationServiceProvider({ children }: { children: React.
         }),
       });
     } catch (e) {
-      // Non-blocking
       console.warn("[LocationService] Log failed", (e as any)?.message);
     }
   };
 
-  const getOnce = () => {
-    if (!navigator.geolocation) {
+  const refresh = () => {
+    if (pendingRef.current) return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
       setPermission("denied");
       return;
     }
+    pendingRef.current = true;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        pendingRef.current = false;
         setPermission("granted");
         const loc = {
           latitude: pos.coords.latitude,
@@ -66,50 +67,20 @@ export default function LocationServiceProvider({ children }: { children: React.
         };
         setLocation(loc);
         logLocation(loc);
-        // reduce backoff when we have a good lock
-        backoffRef.current = loc.accuracy <= 20 ? 30000 : 60000; // 30s if good, 60s otherwise
       },
       (err) => {
+        pendingRef.current = false;
         console.warn("[LocationService]", err.code, err.message);
         if (err.code === err.PERMISSION_DENIED) setPermission("denied");
         else setPermission("prompt");
-        // increase backoff on errors to avoid spamming
-        backoffRef.current = Math.min(120000, backoffRef.current + 15000); // cap at 120s
       },
       {
-        enableHighAccuracy: true,
-        timeout: 30000,
-        maximumAge: 0,
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 300000,
       }
     );
   };
-
-  const refresh = () => {
-    getOnce();
-  };
-
-  useEffect(() => {
-    if (permission === 'denied') return;
-    getOnce();
-    const onFocus = () => {
-      refresh();
-    };
-    window.addEventListener("focus", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [permission]);
-
-  useEffect(() => {
-    if (permission === 'denied') return;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      getOnce();
-    }, backoffRef.current);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [location, permission]);
 
   return (
     <LocationContext.Provider value={{ location, permission, refresh }}>

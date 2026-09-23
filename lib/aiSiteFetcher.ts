@@ -111,7 +111,7 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
   // Fetch CMS-managed page content (visi/misi/about and other editable texts)
   const { data: pageContent } = await supabaseAdmin
     .from('page_content')
-    .select('page_key, content_value, content_type, category')
+    .select('page_key, content, content_type, category')
     .limit(200);
 
   // Fetch program kerja / proker if table exists (try common names)
@@ -138,7 +138,7 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
     ketua: null,
     page_content: (pageContent || []).reduce((acc: any, p: any) => {
       try {
-        acc[p.page_key] = String(p.content_value || '');
+        acc[p.page_key] = String(p.content || '');
       } catch (e) {
         // ignore
       }
