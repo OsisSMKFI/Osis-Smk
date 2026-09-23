@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import TeamMemberModal from '@/components/TeamMemberModal';
 import { useTranslation } from '@/hooks/useTranslation';
+import { getPageContentBatch } from '@/lib/pageContent';
 import type { TeamMember } from '@/components/about/types';
 
-// Dynamic imports for 3D components (prevent SSR issues)
 const HeroSection3D = dynamic(
   () => import('@/components/about/AboutSections').then(mod => mod.HeroSection3D),
   { ssr: false, loading: () => <HeroFallback /> }
@@ -16,11 +16,6 @@ const HeroSection3D = dynamic(
 
 const StorySection = dynamic(
   () => import('@/components/about/AboutSections').then(mod => mod.StorySection),
-  { ssr: false, loading: () => <SectionFallback /> }
-);
-
-const SymbolSection = dynamic(
-  () => import('@/components/about/AboutSections').then(mod => mod.SymbolSection),
   { ssr: false, loading: () => <SectionFallback /> }
 );
 
@@ -39,12 +34,6 @@ const SoundProvider = dynamic(
   { ssr: false }
 );
 
-const SoundToggle = dynamic(
-  () => import('@/components/about/SoundEffects').then(mod => mod.SoundToggle),
-  { ssr: false }
-);
-
-// Fallback components
 function HeroFallback() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black flex items-center justify-center">
@@ -67,14 +56,21 @@ function SectionFallback() {
   );
 }
 
-// Vision & Mission Section
-function VisionMissionSection() {
+function VisionMissionSection({ db }: { db: Record<string, string> }) {
   const { t } = useTranslation();
-  
+
+  const visionContent = db['about_vision_content'] || t('about.visionContent') || 'Menjadi organisasi siswa yang unggul, inovatif, dan berkarakter islami dalam membentuk generasi pemimpin masa depan yang berwawasan teknologi dan berjiwa kepemimpinan.';
+  const missionItems = [
+    db['about_mission_1'] || t('about.mission1') || 'Mengembangkan potensi kepemimpinan siswa melalui berbagai kegiatan organisasi',
+    db['about_mission_2'] || t('about.mission2') || 'Menumbuhkan kreativitas dan inovasi dalam setiap program kerja',
+    db['about_mission_3'] || t('about.mission3') || 'Menanamkan nilai-nilai keislaman dalam setiap aktivitas',
+    db['about_mission_4'] || t('about.mission4') || 'Membangun kerjasama yang solid antar anggota dan stakeholder',
+  ].filter(Boolean);
+
   return (
     <section className="relative py-32 overflow-hidden bg-gray-50 dark:bg-gray-900">
       <div className="relative z-10 max-w-7xl mx-auto px-4">
-        <motion.div 
+        <motion.div
           className="mb-16"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -83,17 +79,16 @@ function VisionMissionSection() {
         >
           <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm font-medium tracking-widest uppercase mb-4">
             <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
-            {t('about.visionMissionLabel') || 'Visi & Misi'}
+            {db['about_visimisi_label'] || t('about.visionMissionLabel') || 'Visi & Misi'}
             <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
           </span>
           <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4">
-            {t('about.visionTitle') || 'Arah'}{' '}
-            <span className="text-yellow-500 dark:text-yellow-400">{t('about.visionTitleHighlight') || 'Langkah Kami'}</span>
+            {db['about_visimisi_title'] || t('about.visionTitle') || 'Arah'}{' '}
+            <span className="text-yellow-500 dark:text-yellow-400">{db['about_visimisi_title_hl'] || t('about.visionTitleHighlight') || 'Langkah Kami'}</span>
           </h2>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Vision Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -102,20 +97,15 @@ function VisionMissionSection() {
           >
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 md:p-10 border border-gray-200 dark:border-gray-700 h-full">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center text-white font-bold text-lg">
-                  V
-                </div>
+                <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center text-white font-bold text-lg">V</div>
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                  {t('about.visionLabel') || 'Visi'}
+                  {db['about_vision_label'] || t('about.visionLabel') || 'Visi'}
                 </h3>
               </div>
-              <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
-                {t('about.visionContent') || 'Menjadi organisasi siswa yang unggul, inovatif, dan berkarakter islami dalam membentuk generasi pemimpin masa depan yang berwawasan teknologi dan berjiwa kepemimpinan.'}
-              </p>
+              <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">{visionContent}</p>
             </div>
           </motion.div>
 
-          {/* Mission Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -124,24 +114,14 @@ function VisionMissionSection() {
           >
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 md:p-10 border border-gray-200 dark:border-gray-700 h-full">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">
-                  M
-                </div>
+                <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">M</div>
                 <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-                  {t('about.missionLabel') || 'Misi'}
+                  {db['about_mission_label'] || t('about.missionLabel') || 'Misi'}
                 </h3>
               </div>
               <ul className="space-y-4">
-                {[
-                  t('about.mission1') || 'Mengembangkan potensi kepemimpinan siswa melalui berbagai kegiatan organisasi',
-                  t('about.mission2') || 'Menumbuhkan kreativitas dan inovasi dalam setiap program kerja',
-                  t('about.mission3') || 'Menanamkan nilai-nilai keislaman dalam setiap aktivitas',
-                  t('about.mission4') || 'Membangun kerjasama yang solid antar anggota dan stakeholder'
-                ].map((mission, index) => (
-                  <li 
-                    key={index}
-                    className="flex items-start gap-3 text-gray-600 dark:text-gray-300"
-                  >
+                {missionItems.map((mission, index) => (
+                  <li key={index} className="flex items-start gap-3 text-gray-600 dark:text-gray-300">
                     <span className="flex-shrink-0 w-6 h-6 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center text-yellow-700 dark:text-yellow-400 text-xs font-bold mt-0.5">
                       {index + 1}
                     </span>
@@ -157,41 +137,10 @@ function VisionMissionSection() {
   );
 }
 
-// Achievement item type
-interface AchievementItem {
-  year: string;
-  title: string;
-  description: string;
-  icon: string;
-}
-
-// Achievements Section - replaces duplicate stats
-function AchievementsSection() {
+function AchievementsSection({ db }: { db: Record<string, string> }) {
   const { t } = useTranslation();
-  const [achievements, setAchievements] = useState<AchievementItem[]>([]);
+  const [achievements, setAchievements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Default achievements from translations
-  const defaultAchievements: AchievementItem[] = [
-    {
-      year: '2024',
-      title: t('about.achieve1Title'),
-      description: t('about.achieve1Desc'),
-      icon: '1',
-    },
-    {
-      year: '2024',
-      title: t('about.achieve2Title'),
-      description: t('about.achieve2Desc'),
-      icon: '2',
-    },
-    {
-      year: '2025',
-      title: t('about.achieve3Title'),
-      description: t('about.achieve3Desc'),
-      icon: '3',
-    },
-  ];
 
   useEffect(() => {
     async function fetchAchievements() {
@@ -201,28 +150,25 @@ function AchievementsSection() {
           const data = await res.json();
           if (data.achievements && data.achievements.length > 0 && data.source === 'database') {
             setAchievements(data.achievements);
-          } else {
-            setAchievements(defaultAchievements);
           }
-        } else {
-          setAchievements(defaultAchievements);
         }
-      } catch {
-        setAchievements(defaultAchievements);
-      } finally {
-        setLoading(false);
-      }
+      } catch {}
+      setLoading(false);
     }
     fetchAchievements();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Show default while loading
-  const displayAchievements = loading ? defaultAchievements : achievements;
+  const fallback = [
+    { year: '2024', title: t('about.achieve1Title'), description: t('about.achieve1Desc'), icon: '1' },
+    { year: '2024', title: t('about.achieve2Title'), description: t('about.achieve2Desc'), icon: '2' },
+    { year: '2025', title: t('about.achieve3Title'), description: t('about.achieve3Desc'), icon: '3' },
+  ];
+
+  const displayAchievements = loading ? fallback : (achievements.length > 0 ? achievements : fallback);
 
   return (
     <section className="relative py-20 md:py-28 overflow-hidden bg-white dark:bg-gray-900">
       <div className="relative z-10 max-w-5xl mx-auto px-4">
-        {/* Section Header */}
         <motion.div
           className="text-center mb-12 md:mb-16"
           initial={{ opacity: 0, y: 20 }}
@@ -231,19 +177,17 @@ function AchievementsSection() {
         >
           <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-xs tracking-widest uppercase mb-4">
             <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
-            {t('about.achievementsLabel')}
+            {db['about_achievements_label'] || t('about.achievementsLabel')}
             <span className="w-8 h-px bg-yellow-500 dark:bg-yellow-400" />
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white">
-            {t('about.achievementsTitle')} <span className="text-yellow-500 dark:text-yellow-400">{t('about.achievementsTitleHighlight')}</span>
+            {db['about_achievements_title'] || t('about.achievementsTitle')}{' '}
+            <span className="text-yellow-500 dark:text-yellow-400">{db['about_achievements_title_hl'] || t('about.achievementsTitleHighlight')}</span>
           </h2>
         </motion.div>
 
-        {/* Timeline */}
         <div className="relative">
-          {/* Vertical line */}
           <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-yellow-500 via-amber-500 to-transparent dark:from-yellow-400 dark:via-amber-500" />
-          
           {displayAchievements.map((item, index) => (
             <motion.div
               key={index}
@@ -253,10 +197,7 @@ function AchievementsSection() {
               viewport={{ once: true }}
               transition={{ delay: index * 0.15 }}
             >
-              {/* Dot */}
               <div className="absolute left-4 md:left-1/2 -translate-x-1/2 w-4 h-4 bg-yellow-500 dark:bg-yellow-400 rounded-full border-4 border-gray-100 dark:border-gray-900 z-10" />
-              
-              {/* Content */}
               <div className={`ml-12 md:ml-0 md:w-[45%] ${index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12'}`}>
                 <span className="inline-block px-3 py-1 bg-yellow-500/10 dark:bg-yellow-400/10 text-yellow-600 dark:text-yellow-400 text-xs font-bold rounded-full mb-2">
                   {item.year}
@@ -265,9 +206,7 @@ function AchievementsSection() {
                   <span className="text-2xl">{item.icon}</span>
                   {item.title}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base leading-relaxed">
-                  {item.description}
-                </p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base leading-relaxed">{item.description}</p>
               </div>
             </motion.div>
           ))}
@@ -277,35 +216,34 @@ function AchievementsSection() {
   );
 }
 
-// Values Section
-function ValuesSection() {
+function ValuesSection({ db }: { db: Record<string, string> }) {
   const { t } = useTranslation();
-  
+
   const values = [
     {
-      icon: '💡',
-      title: t('about.valueInnovation') || 'Inovasi',
-      description: t('about.valueInnovationDesc') || 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
-      color: 'from-yellow-400 to-orange-500'
+      icon: db['about_value1_icon'] || '💡',
+      title: db['about_value1_name'] || t('about.valueInnovation') || 'Inovasi',
+      description: db['about_value1_desc'] || t('about.valueInnovationDesc') || 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
+      color: db['about_value1_color'] || 'from-yellow-400 to-orange-500',
     },
     {
-      icon: '🤝',
-      title: t('about.valueIntegrity') || 'Integritas',
-      description: t('about.valueIntegrityDesc') || 'Menjunjung tinggi kejujuran dan tanggung jawab',
-      color: 'from-blue-400 to-indigo-500'
+      icon: db['about_value2_icon'] || '🤝',
+      title: db['about_value2_name'] || t('about.valueIntegrity') || 'Integritas',
+      description: db['about_value2_desc'] || t('about.valueIntegrityDesc') || 'Menjunjung tinggi kejujuran dan tanggung jawab',
+      color: db['about_value2_color'] || 'from-blue-400 to-indigo-500',
     },
     {
-      icon: '🌟',
-      title: t('about.valueExcellence') || 'Keunggulan',
-      description: t('about.valueExcellenceDesc') || 'Berusaha memberikan yang terbaik dalam setiap aspek',
-      color: 'from-purple-400 to-pink-500'
+      icon: db['about_value3_icon'] || '🌟',
+      title: db['about_value3_name'] || t('about.valueExcellence') || 'Keunggulan',
+      description: db['about_value3_desc'] || t('about.valueExcellenceDesc') || 'Berusaha memberikan yang terbaik dalam setiap aspek',
+      color: db['about_value3_color'] || 'from-purple-400 to-pink-500',
     },
     {
-      icon: '🕌',
-      title: t('about.valueIslamic') || 'Islami',
-      description: t('about.valueIslamicDesc') || 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
-      color: 'from-green-400 to-emerald-500'
-    }
+      icon: db['about_value4_icon'] || '🕌',
+      title: db['about_value4_name'] || t('about.valueIslamic') || 'Islami',
+      description: db['about_value4_desc'] || t('about.valueIslamicDesc') || 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
+      color: db['about_value4_color'] || 'from-green-400 to-emerald-500',
+    },
   ];
 
   return (
@@ -318,11 +256,11 @@ function ValuesSection() {
           viewport={{ once: true }}
         >
           <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm font-medium tracking-widest uppercase mb-4">
-            ✨ {t('about.valuesLabel') || 'Nilai-Nilai Kami'}
+            ✨ {db['about_values_label'] || t('about.valuesLabel') || 'Nilai-Nilai Kami'}
           </span>
           <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white">
-            {t('about.valuesTitle') || 'Prinsip'}{' '}
-            <span className="text-yellow-500">{t('about.valuesTitleHighlight') || 'yang Kami Pegang'}</span>
+            {db['about_values_title'] || t('about.valuesTitle') || 'Prinsip'}{' '}
+            <span className="text-yellow-500">{db['about_values_title_hl'] || t('about.valuesTitleHighlight') || 'yang Kami Pegang'}</span>
           </h2>
         </motion.div>
 
@@ -341,12 +279,8 @@ function ValuesSection() {
                 <div className={`w-14 h-14 bg-gradient-to-r ${value.color} rounded-xl flex items-center justify-center text-2xl mb-4 shadow-lg`}>
                   {value.icon}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {value.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                  {value.description}
-                </p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{value.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{value.description}</p>
               </div>
             </motion.div>
           ))}
@@ -356,16 +290,13 @@ function ValuesSection() {
   );
 }
 
-// Footer CTA Section
-function FooterCTASection() {
+function FooterCTASection({ db }: { db: Record<string, string> }) {
   const { t } = useTranslation();
 
   return (
     <section className="relative py-32 overflow-hidden bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Gradient orbs */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-400/30 dark:bg-yellow-500/20 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-400/30 dark:bg-amber-500/20 rounded-full blur-3xl" />
-
       <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -373,11 +304,11 @@ function FooterCTASection() {
           viewport={{ once: true }}
         >
           <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            {t('about.ctaTitle') || 'Bergabung'}{' '}
-            <span className="text-yellow-600 dark:text-yellow-400">{t('about.ctaTitleHighlight') || 'Bersama Kami'}</span>
+            {db['about_cta_title'] || t('about.ctaTitle') || 'Bergabung'}{' '}
+            <span className="text-yellow-600 dark:text-yellow-400">{db['about_cta_title_hl'] || t('about.ctaTitleHighlight') || 'Bersama Kami'}</span>
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
-            {t('about.ctaDescription') || 'Mari bersama-sama membangun organisasi yang lebih baik dan menciptakan dampak positif bagi sekolah dan masyarakat.'}
+            {db['about_cta_desc'] || t('about.ctaDescription') || 'Mari bersama-sama membangun organisasi yang lebih baik.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <motion.a
@@ -386,7 +317,7 @@ function FooterCTASection() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <span className="relative z-10">{t('about.ctaButton') || 'Daftar Sekarang'}</span>
+              <span className="relative z-10">{db['about_cta_button'] || t('about.ctaButton') || 'Daftar Sekarang'}</span>
               <span className="ml-2">→</span>
             </motion.a>
             <motion.a
@@ -395,7 +326,7 @@ function FooterCTASection() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {t('about.ctaSecondaryButton') || 'Lihat Info Terkini'}
+              {db['about_cta_button2'] || t('about.ctaSecondaryButton') || 'Lihat Info Terkini'}
             </motion.a>
           </div>
         </motion.div>
@@ -406,62 +337,44 @@ function FooterCTASection() {
 
 export default function AboutPageClient() {
   const { t } = useTranslation();
-
+  const [db, setDb] = useState<Record<string, string>>({});
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [coreTeam, setCoreTeam] = useState<TeamMember[] | null>(null);
   const [koordinatorSekbid, setKoordinatorSekbid] = useState<TeamMember[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  
-  // Filosofi logo elements - loaded from API or defaults
+
   const [logoElements, setLogoElements] = useState([
-    { 
-      icon: '🏫', 
-      imageSrc: '/images/Fitrah Insani.svg',
-      title: 'Fithrah Insani', 
-      description: 'Identitas OSIS yaitu SMK Informatika Fithrah Insani. Nama ini mencerminkan nilai-nilai fitrah manusia yang suci dan islami sebagai landasan pendidikan.', 
-      color: '#22c55e',
-      gradient: 'bg-gradient-to-r from-green-500 to-emerald-600' 
-    },
-    { 
-      icon: '⚡', 
-      imageSrc: '/images/Garis dan Titik.svg',
-      title: 'Titik & Garis', 
-      description: 'Persatuan dalam perbedaan masing-masing anggota. Seperti titik dan garis yang membentuk kesatuan, setiap anggota OSIS memiliki keunikan yang saling melengkapi.', 
-      color: '#3b82f6',
-      gradient: 'bg-gradient-to-r from-blue-500 to-indigo-600' 
-    },
-    { 
-      icon: '🛡️', 
-      imageSrc: '/images/Perisai.svg',
-      title: 'Perisai', 
-      description: 'Pelindung untuk melindungi seluruh anggotanya. Simbol perlindungan dan keamanan bagi seluruh warga sekolah dalam menjalankan aktivitas organisasi.', 
-      color: '#f59e0b',
-      gradient: 'bg-gradient-to-r from-amber-500 to-yellow-600' 
-    },
-    { 
-      icon: '✏️', 
-      imageSrc: '/images/Pensil dan pulpen.svg',
-      title: 'Pensil & Pulpen', 
-      description: 'Anggota adalah seorang pelajar. Melambangkan semangat belajar dan menulis ilmu yang tidak pernah padam sebagai identitas utama siswa.', 
-      color: '#ef4444',
-      gradient: 'bg-gradient-to-r from-red-500 to-rose-600' 
-    },
-    { 
-      icon: '📸', 
-      imageSrc: '/images/kamera.svg',
-      title: 'Kamera', 
-      description: 'Menegaskan pelajar yaitu pelajar multimedia. Simbol kreativitas dalam bidang multimedia, fotografi, dan videografi sebagai keahlian utama jurusan.', 
-      color: '#a855f7',
-      gradient: 'bg-gradient-to-r from-purple-500 to-violet-600' 
-    },
+    { icon: '🏫', imageSrc: '/images/Fitrah Insani.svg', title: 'Fithrah Insani', description: 'Identitas OSIS yaitu SMK Informatika Fithrah Insani.', color: '#22c55e', gradient: 'bg-gradient-to-r from-green-500 to-emerald-600' },
+    { icon: '⚡', imageSrc: '/images/Garis dan Titik.svg', title: 'Titik & Garis', description: 'Persatuan dalam perbedaan masing-masing anggota.', color: '#3b82f6', gradient: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
+    { icon: '🛡️', imageSrc: '/images/Perisai.svg', title: 'Perisai', description: 'Pelindung untuk melindungi seluruh anggotanya.', color: '#f59e0b', gradient: 'bg-gradient-to-r from-amber-500 to-yellow-600' },
+    { icon: '✏️', imageSrc: '/images/Pensil dan pulpen.svg', title: 'Pensil & Pulpen', description: 'Anggota adalah seorang pelajar.', color: '#ef4444', gradient: 'bg-gradient-to-r from-red-500 to-rose-600' },
+    { icon: '📸', imageSrc: '/images/kamera.svg', title: 'Kamera', description: 'Menegaskan pelajar yaitu pelajar multimedia.', color: '#a855f7', gradient: 'bg-gradient-to-r from-purple-500 to-violet-600' },
   ]);
 
   useEffect(() => {
     setIsClient(true);
+    getPageContentBatch([
+      'about_hero_title1', 'about_hero_title2', 'about_hero_subtitle1', 'about_hero_subtitle2', 'about_hero_scroll',
+      'about_visimisi_label', 'about_visimisi_title', 'about_visimisi_title_hl',
+      'about_vision_label', 'about_vision_content',
+      'about_mission_label', 'about_mission_1', 'about_mission_2', 'about_mission_3', 'about_mission_4',
+      'about_achievements_label', 'about_achievements_title', 'about_achievements_title_hl',
+      'about_story_title1', 'about_story_title2',
+      'about_philosophy_title', 'about_philosophy_hl',
+      'about_philosophy_part1', 'about_philosophy_name_hl', 'about_philosophy_part2',
+      'about_philosophy_sky_hl', 'about_philosophy_part3',
+      'about_philosophy_desc1', 'about_philosophy_desc2',
+      'about_values_label', 'about_values_title', 'about_values_title_hl',
+      'about_value1_icon', 'about_value1_name', 'about_value1_desc', 'about_value1_color',
+      'about_value2_icon', 'about_value2_name', 'about_value2_desc', 'about_value2_color',
+      'about_value3_icon', 'about_value3_name', 'about_value3_desc', 'about_value3_color',
+      'about_value4_icon', 'about_value4_name', 'about_value4_desc', 'about_value4_color',
+      'about_cta_title', 'about_cta_title_hl', 'about_cta_desc', 'about_cta_button', 'about_cta_button2',
+      'about_logo_title', 'about_logo_subtitle',
+    ]).then(setDb);
   }, []);
 
-  // Fetch filosofi logo from API
   useEffect(() => {
     (async () => {
       try {
@@ -472,13 +385,10 @@ export default function AboutPageClient() {
             setLogoElements(data.elements);
           }
         }
-      } catch {
-        // Keep defaults on error
-      }
+      } catch {}
     })();
   }, []);
 
-  // Fetch team members
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -487,31 +397,27 @@ export default function AboutPageClient() {
         if (!res.ok) throw new Error('Failed to fetch');
         const json = await safeJson(res, { url: '/api/members?active=true', method: 'GET' });
         const data = json.members || [];
-        
+
         const mapped = (data || []).map((m: any) => ({
           id: String(m.id),
           name: m.name || m.nama || 'Unknown',
           position: m.role || m.jabatan || 'Anggota',
           image: m.photo_url || m.foto_url || '/images/placeholder.svg',
-          description: m.quote || m.quotes || t('about.coreDataPending') || 'Data sedang diperbarui',
+          description: m.quote || m.quotes || 'Data sedang diperbarui',
           ttl: m.ttl || '-',
           alamat: m.alamat || '-',
           motto: m.motto || '-',
           sekbidId: m.sekbid_id,
         }));
 
-        // Tim Inti: Filter berdasarkan posisi exact match
         const core = mapped.filter((m: any) => {
           const pos = (m.position || '').toLowerCase();
-          // Hanya posisi Tim Inti yang spesifik
           return ['ketua osis', 'wakil ketua', 'sekretaris', 'bendahara'].includes(pos);
         });
 
-        // Koordinator Sekbid: anggota dengan sekbid_id valid yang rolenya adalah koordinator
         const koordinator = mapped.filter((m: any) => {
           const pos = (m.position || '').trim().toLowerCase();
           const hasSekbid = m.sekbidId !== null && typeof m.sekbidId === 'number' && m.sekbidId > 0;
-          // Hanya yang memiliki role koordinator/kepala sekbid
           return hasSekbid && (pos.includes('koordinator') || pos.includes('kepala') || pos.includes('ketua sekbid'));
         });
 
@@ -524,7 +430,7 @@ export default function AboutPageClient() {
       }
     })();
     return () => { mounted = false; };
-  }, [t]);
+  }, []);
 
   const openModal = (member: TeamMember) => setSelectedMember(member);
   const closeModal = () => setSelectedMember(null);
@@ -532,63 +438,55 @@ export default function AboutPageClient() {
   return (
     <SoundProvider>
       <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden scroll-smooth">
-        {/* Hero Section with 3D */}
         {isClient && (
           <HeroSection3D
-            title={`${t('about.heroTitle1') || 'Tentang'} ${t('about.heroTitle2') || 'DIRGANTARA 2025'}`}
-            subtitle={`${t('about.heroSubtitle1') || 'Mengenal lebih dekat'} ${t('about.heroSubtitle2') || 'OSIS SMK Informatika - Dirgantara'}`}
-            scrollText={t('about.scrollText') || 'Scroll untuk menjelajahi'}
+            title={`${db['about_hero_title1'] || t('about.heroTitle1') || 'Tentang'} ${db['about_hero_title2'] || t('about.heroTitle2') || 'DIRGANTARA 2025'}`}
+            subtitle={`${db['about_hero_subtitle1'] || t('about.heroSubtitle1') || 'Mengenal lebih dekat'} ${db['about_hero_subtitle2'] || t('about.heroSubtitle2') || 'OSIS SMK Informatika - Dirgantara'}`}
+            scrollText={db['about_hero_scroll'] || t('about.scrollText') || 'Scroll untuk menjelajahi'}
           />
         )}
 
-        {/* Achievements Section */}
-        <AchievementsSection />
+        <AchievementsSection db={db} />
 
-        {/* Story Section - Cerita Dirgantara */}
         {isClient && (
           <StorySection
-            title={t('about.storyTitle1') || 'Cerita'}
-            highlightTitle={t('about.storyTitle2') || 'Dirgantara'}
-            philosophyTitle={t('about.philosophyTitle') || 'Filosofi Nama'}
-            philosophyHighlight={t('about.philosophyHighlight') || 'Dirgantara'}
+            title={db['about_story_title1'] || t('about.storyTitle1') || 'Cerita'}
+            highlightTitle={db['about_story_title2'] || t('about.storyTitle2') || 'Dirgantara'}
+            philosophyTitle={db['about_philosophy_title'] || t('about.philosophyTitle') || 'Filosofi Nama'}
+            philosophyHighlight={db['about_philosophy_hl'] || t('about.philosophyHighlight') || 'Dirgantara'}
             philosophyContent={{
-              part1: t('about.philosophyPart1') || 'Nama',
-              nameHighlight: t('about.philosophyNameHighlight') || '"Dirgantara"',
-              part2: t('about.philosophyPart2') || 'diambil dari kata dalam bahasa Indonesia yang berarti',
-              skyHighlight: t('about.philosophySkyHighlight') || '"angkasa" atau "langit"',
-              part3: t('about.philosophyPart3') || '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.'
+              part1: db['about_philosophy_part1'] || t('about.philosophyPart1') || 'Nama',
+              nameHighlight: db['about_philosophy_name_hl'] || t('about.philosophyNameHighlight') || '"Dirgantara"',
+              part2: db['about_philosophy_part2'] || t('about.philosophyPart2') || 'diambil dari kata dalam bahasa Indonesia yang berarti',
+              skyHighlight: db['about_philosophy_sky_hl'] || t('about.philosophySkyHighlight') || '"angkasa" atau "langit"',
+              part3: db['about_philosophy_part3'] || t('about.philosophyPart3') || '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.'
             }}
             descriptions={[
-              t('about.philosophyDesc1') || 'Sebagai organisasi siswa, kami berkomitmen untuk mengembangkan kepemimpinan, kreativitas, dan nilai-nilai keislaman dalam setiap kegiatan.',
-              t('about.philosophyDesc2') || 'Dengan semangat yang membara seperti matahari, kami terus bergerak maju menuju masa depan yang lebih cerah.'
+              db['about_philosophy_desc1'] || t('about.philosophyDesc1') || 'Sebagai organisasi siswa, kami berkomitmen untuk mengembangkan kepemimpinan, kreativitas, dan nilai-nilai keislaman.',
+              db['about_philosophy_desc2'] || t('about.philosophyDesc2') || 'Dengan semangat yang membara seperti matahari, kami terus bergerak maju menuju masa depan yang lebih cerah.'
             ]}
           />
         )}
 
-        {/* Vision & Mission Section */}
-        <VisionMissionSection />
+        <VisionMissionSection db={db} />
+        <ValuesSection db={db} />
 
-        {/* Values Section */}
-        <ValuesSection />
-
-        {/* Logo Reveal 3D Section - Interactive like igloo.inc */}
         {isClient && (
           <InteractiveLogo3D
             logoSrc="/images/logo-2.png"
-            logoAlt={t('navbar.logoAlt') || 'Logo OSIS SMK Informatika Fithrah Insani'}
-            sectionTitle="FILOSOFI LOGO OSIS"
-            sectionSubtitle="OSIS SMK INFORMATIKA FITHRAH INSANI - Setiap elemen dalam logo memiliki filosofi dan makna yang mendalam"
+            logoAlt={db['about_logo_alt'] || t('navbar.logoAlt') || 'Logo OSIS SMK Informatika Fithrah Insani'}
+            sectionTitle={db['about_logo_title'] || 'FILOSOFI LOGO OSIS'}
+            sectionSubtitle={db['about_logo_subtitle'] || 'OSIS SMK INFORMATIKA FITHRAH INSANI - Setiap elemen dalam logo memiliki filosofi dan makna yang mendalam'}
             elements={logoElements}
           />
         )}
 
-        {/* Core Team Section */}
         {isClient && (
           <TeamSection
-            title={t('about.coreTeamTitle1') || 'Pengurus'}
-            highlightTitle={t('about.coreTeamTitle2') || 'Inti'}
-            subtitle={t('about.coreTeamSubtitle') || 'Para pemimpin yang menggerakkan roda organisasi dengan dedikasi tinggi'}
-            warningText={t('about.coreTeamWarning') || '✅ Data telah terverifikasi dan dimuat dari database'}
+            title={db['about_core_title1'] || t('about.coreTeamTitle1') || 'Pengurus'}
+            highlightTitle={db['about_core_title2'] || t('about.coreTeamTitle2') || 'Inti'}
+            subtitle={db['about_core_subtitle'] || t('about.coreTeamSubtitle') || 'Para pemimpin yang menggerakkan roda organisasi'}
+            warningText="✅ Data dimuat dari database"
             warningColor="green"
             members={coreTeam || []}
             onMemberClick={openModal}
@@ -596,13 +494,12 @@ export default function AboutPageClient() {
           />
         )}
 
-        {/* Koordinator Sekbid Section */}
         {isClient && koordinatorSekbid && koordinatorSekbid.length > 0 && (
           <TeamSection
-            title={t('about.deptHeadsTitle1') || 'Koordinator'}
-            highlightTitle={t('about.deptHeadsTitle2') || 'Sekbid'}
-            subtitle={t('about.deptHeadsSubtitle') || 'Para koordinator yang memimpin setiap seksi bidang'}
-            warningText={t('about.deptHeadsWarning') || '✅ Data telah terverifikasi dan dimuat dari database'}
+            title={db['about_sekbid_title1'] || t('about.deptHeadsTitle1') || 'Koordinator'}
+            highlightTitle={db['about_sekbid_title2'] || t('about.deptHeadsTitle2') || 'Sekbid'}
+            subtitle={db['about_sekbid_subtitle'] || t('about.deptHeadsSubtitle') || 'Para koordinator yang memimpin setiap seksi bidang'}
+            warningText="✅ Data dimuat dari database"
             warningColor="green"
             members={koordinatorSekbid}
             onMemberClick={openModal}
@@ -611,10 +508,8 @@ export default function AboutPageClient() {
           />
         )}
 
-        {/* Footer CTA Section */}
-        <FooterCTASection />
+        <FooterCTASection db={db} />
 
-        {/* Error State */}
         {fetchError && (
           <div className="fixed bottom-4 right-4 z-50">
             <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg">
@@ -623,13 +518,8 @@ export default function AboutPageClient() {
           </div>
         )}
 
-        {/* Team Member Modal */}
         {selectedMember && (
-          <TeamMemberModal 
-            member={selectedMember} 
-            isOpen={!!selectedMember} 
-            onClose={closeModal} 
-          />
+          <TeamMemberModal member={selectedMember} isOpen={!!selectedMember} onClose={closeModal} />
         )}
       </div>
     </SoundProvider>

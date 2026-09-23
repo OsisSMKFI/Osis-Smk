@@ -1,48 +1,11 @@
 'use client';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import AdminPageShell from '@/components/admin/AdminPageShell';
-import { FaEdit, FaSave, FaTimes, FaPlus, FaTrash, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTimes, FaSearch, FaEye, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 
 interface ContentItem {
   id: string;
@@ -55,144 +18,209 @@ interface ContentItem {
   updated_at: string;
 }
 
-// Predefined content categories with descriptions
-const CONTENT_CATEGORIES = [
-  { key: 'about', label: 'Halaman About', description: 'Konten untuk halaman tentang OSIS' },
-  { key: 'home', label: 'Halaman Home', description: 'Konten untuk halaman utama' },
-  { key: 'home_goals', label: 'Tujuan Home', description: 'Section tujuan/goals di homepage' },
-  { key: 'about_achievements', label: 'Pencapaian', description: 'Daftar pencapaian OSIS' },
-  { key: 'about_principles', label: 'Prinsip', description: 'Prinsip-prinsip OSIS' },
-  { key: 'about_story', label: 'Cerita OSIS', description: 'Sejarah dan cerita OSIS' },
-  { key: 'about_filosofi_logo', label: 'Filosofi Logo', description: 'Elemen-elemen filosofi logo OSIS' },
-  { key: 'site_info', label: 'Info Situs', description: 'Nama sekolah, alamat, kontak, copyright' },
-  { key: 'about_visi_misi', label: 'Visi & Misi About', description: 'Visi dan misi di halaman About' },
-  { key: 'about_values', label: 'Nilai-Nilai', description: 'Nilai-nilai OSIS (Inovasi, Integritas, dll)' },
-  { key: 'general', label: 'Umum', description: 'Konten umum lainnya' },
-];
+interface SectionConfig {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  fields: { key: string; label: string; type?: 'text' | 'textarea' | 'emoji' | 'color' }[];
+}
 
-// Predefined content keys for important data
-const IMPORTANT_CONTENT_KEYS = [
-  { key: 'about_founding_year', category: 'about', title: 'Tahun Berdiri', description: 'Tahun didirikannya OSIS (contoh: 2024)' },
-  { key: 'about_story_title', category: 'about_story', title: 'Judul Cerita', description: 'Judul bagian cerita/sejarah OSIS' },
-  { key: 'about_story_content', category: 'about_story', title: 'Isi Cerita', description: 'Konten cerita/sejarah OSIS' },
-  { key: 'about_philosophy_title', category: 'about', title: 'Judul Filosofi', description: 'Judul bagian filosofi OSIS' },
-  { key: 'about_philosophy_content', category: 'about', title: 'Isi Filosofi', description: 'Konten filosofi OSIS' },
-  // Filosofi Logo Elements
-  { key: 'filosofi_logo_1_title', category: 'about_filosofi_logo', title: 'Elemen 1 - Judul', description: 'Judul elemen filosofi logo pertama (contoh: Fithrah Insani)' },
-  { key: 'filosofi_logo_1_description', category: 'about_filosofi_logo', title: 'Elemen 1 - Deskripsi', description: 'Deskripsi elemen filosofi logo pertama' },
-  { key: 'filosofi_logo_1_icon', category: 'about_filosofi_logo', title: 'Elemen 1 - Icon', description: 'Emoji icon untuk elemen pertama (contoh: 🏫)' },
-  { key: 'filosofi_logo_1_image', category: 'about_filosofi_logo', title: 'Elemen 1 - Gambar SVG', description: 'Path gambar SVG (contoh: /images/Fitrah Insani.svg)' },
-  { key: 'filosofi_logo_1_color', category: 'about_filosofi_logo', title: 'Elemen 1 - Warna', description: 'Warna hex (contoh: #22c55e)' },
-  { key: 'filosofi_logo_2_title', category: 'about_filosofi_logo', title: 'Elemen 2 - Judul', description: 'Judul elemen filosofi logo kedua (contoh: Titik & Garis)' },
-  { key: 'filosofi_logo_2_description', category: 'about_filosofi_logo', title: 'Elemen 2 - Deskripsi', description: 'Deskripsi elemen filosofi logo kedua' },
-  { key: 'filosofi_logo_2_icon', category: 'about_filosofi_logo', title: 'Elemen 2 - Icon', description: 'Emoji icon untuk elemen kedua' },
-  { key: 'filosofi_logo_2_image', category: 'about_filosofi_logo', title: 'Elemen 2 - Gambar SVG', description: 'Path gambar SVG' },
-  { key: 'filosofi_logo_2_color', category: 'about_filosofi_logo', title: 'Elemen 2 - Warna', description: 'Warna hex' },
-  { key: 'filosofi_logo_3_title', category: 'about_filosofi_logo', title: 'Elemen 3 - Judul', description: 'Judul elemen filosofi logo ketiga (contoh: Perisai)' },
-  { key: 'filosofi_logo_3_description', category: 'about_filosofi_logo', title: 'Elemen 3 - Deskripsi', description: 'Deskripsi elemen filosofi logo ketiga' },
-  { key: 'filosofi_logo_3_icon', category: 'about_filosofi_logo', title: 'Elemen 3 - Icon', description: 'Emoji icon untuk elemen ketiga' },
-  { key: 'filosofi_logo_3_image', category: 'about_filosofi_logo', title: 'Elemen 3 - Gambar SVG', description: 'Path gambar SVG' },
-  { key: 'filosofi_logo_3_color', category: 'about_filosofi_logo', title: 'Elemen 3 - Warna', description: 'Warna hex' },
-  { key: 'filosofi_logo_4_title', category: 'about_filosofi_logo', title: 'Elemen 4 - Judul', description: 'Judul elemen filosofi logo keempat (contoh: Pensil & Pulpen)' },
-  { key: 'filosofi_logo_4_description', category: 'about_filosofi_logo', title: 'Elemen 4 - Deskripsi', description: 'Deskripsi elemen filosofi logo keempat' },
-  { key: 'filosofi_logo_4_icon', category: 'about_filosofi_logo', title: 'Elemen 4 - Icon', description: 'Emoji icon untuk elemen keempat' },
-  { key: 'filosofi_logo_4_image', category: 'about_filosofi_logo', title: 'Elemen 4 - Gambar SVG', description: 'Path gambar SVG' },
-  { key: 'filosofi_logo_4_color', category: 'about_filosofi_logo', title: 'Elemen 4 - Warna', description: 'Warna hex' },
-  { key: 'filosofi_logo_5_title', category: 'about_filosofi_logo', title: 'Elemen 5 - Judul', description: 'Judul elemen filosofi logo kelima (contoh: Kamera)' },
-  { key: 'filosofi_logo_5_description', category: 'about_filosofi_logo', title: 'Elemen 5 - Deskripsi', description: 'Deskripsi elemen filosofi logo kelima' },
-  { key: 'filosofi_logo_5_icon', category: 'about_filosofi_logo', title: 'Elemen 5 - Icon', description: 'Emoji icon untuk elemen kelima' },
-  { key: 'filosofi_logo_5_image', category: 'about_filosofi_logo', title: 'Elemen 5 - Gambar SVG', description: 'Path gambar SVG' },
-  { key: 'filosofi_logo_5_color', category: 'about_filosofi_logo', title: 'Elemen 5 - Warna', description: 'Warna hex' },
-  // Achievements
-  { key: 'achievement_1_title', category: 'about_achievements', title: 'Pencapaian 1 - Judul', description: 'Judul pencapaian pertama' },
-  { key: 'achievement_1_description', category: 'about_achievements', title: 'Pencapaian 1 - Deskripsi', description: 'Deskripsi pencapaian pertama' },
-  { key: 'achievement_1_year', category: 'about_achievements', title: 'Pencapaian 1 - Tahun', description: 'Tahun pencapaian pertama' },
-  { key: 'achievement_2_title', category: 'about_achievements', title: 'Pencapaian 2 - Judul', description: 'Judul pencapaian kedua' },
-  { key: 'achievement_2_description', category: 'about_achievements', title: 'Pencapaian 2 - Deskripsi', description: 'Deskripsi pencapaian kedua' },
-  { key: 'achievement_2_year', category: 'about_achievements', title: 'Pencapaian 2 - Tahun', description: 'Tahun pencapaian kedua' },
-  { key: 'principle_1_title', category: 'about_principles', title: 'Prinsip 1 - Judul', description: 'Judul prinsip pertama' },
-  { key: 'principle_1_description', category: 'about_principles', title: 'Prinsip 1 - Deskripsi', description: 'Deskripsi prinsip pertama' },
-  { key: 'principle_2_title', category: 'about_principles', title: 'Prinsip 2 - Judul', description: 'Judul prinsip kedua' },
-  { key: 'principle_2_description', category: 'about_principles', title: 'Prinsip 2 - Deskripsi', description: 'Deskripsi prinsip kedua' },
-  { key: 'principle_3_title', category: 'about_principles', title: 'Prinsip 3 - Judul', description: 'Judul prinsip ketiga' },
-  { key: 'principle_3_description', category: 'about_principles', title: 'Prinsip 3 - Deskripsi', description: 'Deskripsi prinsip ketiga' },
-  { key: 'home_hero_title', category: 'home', title: 'Hero Title', description: 'Judul utama di homepage' },
-  { key: 'home_hero_subtitle', category: 'home', title: 'Hero Subtitle', description: 'Subtitle di homepage' },
-  { key: 'home_hero_description', category: 'home', title: 'Hero Description', description: 'Deskripsi di homepage' },
-  { key: 'site_visi', category: 'home', title: 'Visi OSIS', description: 'Visi organisasi OSIS' },
-  { key: 'site_misi', category: 'home', title: 'Misi OSIS', description: 'Misi organisasi OSIS' },
-  // Vision Card (homepage)
-  { key: 'site_vision_text', category: 'home', title: 'Visi - Teks Awal', description: 'Teks sebelum highlight visi di homepage' },
-  { key: 'site_vision_hl1', category: 'home', title: 'Visi - Highlight 1', description: 'Kata highlight pertama dalam visi' },
-  { key: 'site_vision_hl2', category: 'home', title: 'Visi - Highlight 2', description: 'Kata highlight kedua dalam visi' },
-  { key: 'site_vision_hl3', category: 'home', title: 'Visi - Highlight 3', description: 'Kata highlight ketiga dalam visi' },
-  // Goals Section (homepage)
-  { key: 'home_goals_title', category: 'home_goals', title: 'Goals - Judul Forum', description: 'Judul section tujuan' },
-  { key: 'home_goals_desc', category: 'home_goals', title: 'Goals - Deskripsi Forum', description: 'Deskripsi section tujuan' },
-  { key: 'home_goal1_title', category: 'home_goals', title: 'Goal 1 - Judul', description: 'Judul tujuan pertama' },
-  { key: 'home_goal1_desc', category: 'home_goals', title: 'Goal 1 - Deskripsi', description: 'Deskripsi tujuan pertama' },
-  { key: 'home_goal2_title', category: 'home_goals', title: 'Goal 2 - Judul', description: 'Judul tujuan kedua' },
-  { key: 'home_goal2_desc', category: 'home_goals', title: 'Goal 2 - Deskripsi', description: 'Deskripsi tujuan kedua' },
-  { key: 'home_goal3_title', category: 'home_goals', title: 'Goal 3 - Judul', description: 'Judul tujuan ketiga' },
-  { key: 'home_goal3_desc', category: 'home_goals', title: 'Goal 3 - Deskripsi', description: 'Deskripsi tujuan ketiga' },
-  { key: 'home_goal4_title', category: 'home_goals', title: 'Goal 4 - Judul', description: 'Judul tujuan keempat' },
-  { key: 'home_goal4_desc', category: 'home_goals', title: 'Goal 4 - Deskripsi', description: 'Deskripsi tujuan keempat' },
-  { key: 'home_goal5_title', category: 'home_goals', title: 'Goal 5 - Judul', description: 'Judul tujuan kelima' },
-  { key: 'home_goal5_desc', category: 'home_goals', title: 'Goal 5 - Deskripsi', description: 'Deskripsi tujuan kelima' },
-  { key: 'home_goal6_title', category: 'home_goals', title: 'Goal 6 - Judul', description: 'Judul tujuan keenam' },
-  { key: 'home_goal6_desc', category: 'home_goals', title: 'Goal 6 - Deskripsi', description: 'Deskripsi tujuan keenam' },
-  { key: 'home_goals_cta_title', category: 'home_goals', title: 'CTA - Judul', description: 'Judul call to action di goals' },
-  { key: 'home_goals_cta_desc', category: 'home_goals', title: 'CTA - Deskripsi', description: 'Deskripsi call to action di goals' },
-  // Site Info (footer, contact)
-  { key: 'site_school_name', category: 'site_info', title: 'Nama Sekolah', description: 'Nama sekolah di footer dan metadata' },
-  { key: 'site_address', category: 'site_info', title: 'Alamat', description: 'Alamat sekolah di footer' },
-  { key: 'site_phone', category: 'site_info', title: 'Telepon', description: 'Nomor telepon sekolah' },
-  { key: 'site_email', category: 'site_info', title: 'Email', description: 'Email sekolah' },
-  { key: 'site_copyright', category: 'site_info', title: 'Copyright', description: 'Teks copyright di footer' },
-  // About - Visi Misi
-  { key: 'about_visi_title', category: 'about_visi_misi', title: 'Judul Visi', description: 'Judul section visi di halaman About' },
-  { key: 'about_visi_content', category: 'about_visi_misi', title: 'Isi Visi', description: 'Teks visi di halaman About' },
-  { key: 'about_misi_title', category: 'about_visi_misi', title: 'Judul Misi', description: 'Judul section misi di halaman About' },
-  { key: 'about_misi_1', category: 'about_visi_misi', title: 'Misi 1', description: 'Misi pertama' },
-  { key: 'about_misi_2', category: 'about_visi_misi', title: 'Misi 2', description: 'Misi kedua' },
-  { key: 'about_misi_3', category: 'about_visi_misi', title: 'Misi 3', description: 'Misi ketiga' },
-  { key: 'about_misi_4', category: 'about_visi_misi', title: 'Misi 4', description: 'Misi keempat' },
-  // About - Values
-  { key: 'about_value1_name', category: 'about_values', title: 'Nilai 1 - Nama', description: 'Nama nilai pertama (contoh: Inovasi)' },
-  { key: 'about_value1_desc', category: 'about_values', title: 'Nilai 1 - Deskripsi', description: 'Deskripsi nilai pertama' },
-  { key: 'about_value2_name', category: 'about_values', title: 'Nilai 2 - Nama', description: 'Nama nilai kedua (contoh: Integritas)' },
-  { key: 'about_value2_desc', category: 'about_values', title: 'Nilai 2 - Deskripsi', description: 'Deskripsi nilai kedua' },
-  { key: 'about_value3_name', category: 'about_values', title: 'Nilai 3 - Nama', description: 'Nama nilai ketiga (contoh: Excelence)' },
-  { key: 'about_value3_desc', category: 'about_values', title: 'Nilai 3 - Deskripsi', description: 'Deskripsi nilai ketiga' },
-  { key: 'about_value4_name', category: 'about_values', title: 'Nilai 4 - Nama', description: 'Nama nilai keempat (contoh: Islamic)' },
-  { key: 'about_value4_desc', category: 'about_values', title: 'Nilai 4 - Deskripsi', description: 'Deskripsi nilai keempat' },
+const SECTIONS: SectionConfig[] = [
+  {
+    id: 'hero',
+    title: 'Hero Homepage',
+    description: 'Judul, subtitle, deskripsi di halaman utama',
+    icon: '🏠',
+    fields: [
+      { key: 'home_hero_title', label: 'Judul Hero', type: 'text' },
+      { key: 'home_hero_subtitle', label: 'Subtitle Hero', type: 'text' },
+      { key: 'home_hero_description', label: 'Deskripsi Hero', type: 'textarea' },
+    ],
+  },
+  {
+    id: 'vision',
+    title: 'Vision Card (Homepage)',
+    description: 'Teks visi yang ditampilkan di homepage',
+    icon: '👁️',
+    fields: [
+      { key: 'site_vision_text', label: 'Teks Visi', type: 'textarea' },
+      { key: 'site_vision_hl1', label: 'Highlight 1', type: 'text' },
+      { key: 'site_vision_hl2', label: 'Highlight 2', type: 'text' },
+      { key: 'site_vision_hl3', label: 'Highlight 3', type: 'text' },
+    ],
+  },
+  {
+    id: 'goals',
+    title: 'Goals Section (Homepage)',
+    description: '6 tujuan OSIS yang ditampilkan di homepage',
+    icon: '🎯',
+    fields: [
+      { key: 'home_goals_title', label: 'Judul Section', type: 'text' },
+      { key: 'home_goals_desc', label: 'Deskripsi Section', type: 'textarea' },
+      { key: 'home_goal1_title', label: 'Goal 1 - Judul', type: 'text' },
+      { key: 'home_goal1_desc', label: 'Goal 1 - Deskripsi', type: 'textarea' },
+      { key: 'home_goal2_title', label: 'Goal 2 - Judul', type: 'text' },
+      { key: 'home_goal2_desc', label: 'Goal 2 - Deskripsi', type: 'textarea' },
+      { key: 'home_goal3_title', label: 'Goal 3 - Judul', type: 'text' },
+      { key: 'home_goal3_desc', label: 'Goal 3 - Deskripsi', type: 'textarea' },
+      { key: 'home_goal4_title', label: 'Goal 4 - Judul', type: 'text' },
+      { key: 'home_goal4_desc', label: 'Goal 4 - Deskripsi', type: 'textarea' },
+      { key: 'home_goal5_title', label: 'Goal 5 - Judul', type: 'text' },
+      { key: 'home_goal5_desc', label: 'Goal 5 - Deskripsi', type: 'textarea' },
+      { key: 'home_goal6_title', label: 'Goal 6 - Judul', type: 'text' },
+      { key: 'home_goal6_desc', label: 'Goal 6 - Deskripsi', type: 'textarea' },
+      { key: 'home_goals_cta_title', label: 'CTA - Judul', type: 'text' },
+      { key: 'home_goals_cta_desc', label: 'CTA - Deskripsi', type: 'textarea' },
+    ],
+  },
+  {
+    id: 'about_hero',
+    title: 'Hero Halaman About',
+    description: 'Judul dan subtitle di halaman Tentang',
+    icon: '📖',
+    fields: [
+      { key: 'about_hero_title1', label: 'Judul 1', type: 'text' },
+      { key: 'about_hero_title2', label: 'Judul 2 (Highlight)', type: 'text' },
+      { key: 'about_hero_subtitle1', label: 'Subtitle 1', type: 'text' },
+      { key: 'about_hero_subtitle2', label: 'Subtitle 2', type: 'text' },
+      { key: 'about_hero_scroll', label: 'Teks Scroll', type: 'text' },
+    ],
+  },
+  {
+    id: 'about_story',
+    title: 'Cerita & Filosofi',
+    description: 'Cerita sejarah dan filosofi nama OSIS',
+    icon: '📜',
+    fields: [
+      { key: 'about_story_title1', label: 'Judul Cerita', type: 'text' },
+      { key: 'about_story_title2', label: 'Judul Cerita (Highlight)', type: 'text' },
+      { key: 'about_philosophy_title', label: 'Judul Filosofi', type: 'text' },
+      { key: 'about_philosophy_hl', label: 'Filosofi Highlight', type: 'text' },
+      { key: 'about_philosophy_part1', label: 'Filosofi - Kalimat 1', type: 'text' },
+      { key: 'about_philosophy_name_hl', label: 'Filosofi - Nama Highlight', type: 'text' },
+      { key: 'about_philosophy_part2', label: 'Filosofi - Kalimat 2', type: 'text' },
+      { key: 'about_philosophy_sky_hl', label: 'Filosofi - Highlight Langit', type: 'text' },
+      { key: 'about_philosophy_part3', label: 'Filosofi - Kalimat 3', type: 'textarea' },
+      { key: 'about_philosophy_desc1', label: 'Deskripsi Filosofi 1', type: 'textarea' },
+      { key: 'about_philosophy_desc2', label: 'Deskripsi Filosofi 2', type: 'textarea' },
+    ],
+  },
+  {
+    id: 'about_visimisi',
+    title: 'Visi & Misi (About)',
+    description: 'Visi dan misi di halaman Tentang',
+    icon: '🌟',
+    fields: [
+      { key: 'about_visimisi_label', label: 'Label Section', type: 'text' },
+      { key: 'about_visimisi_title', label: 'Judul Section', type: 'text' },
+      { key: 'about_visimisi_title_hl', label: 'Judul Highlight', type: 'text' },
+      { key: 'about_vision_label', label: 'Label Visi', type: 'text' },
+      { key: 'about_vision_content', label: 'Isi Visi', type: 'textarea' },
+      { key: 'about_mission_label', label: 'Label Misi', type: 'text' },
+      { key: 'about_mission_1', label: 'Misi 1', type: 'textarea' },
+      { key: 'about_mission_2', label: 'Misi 2', type: 'textarea' },
+      { key: 'about_mission_3', label: 'Misi 3', type: 'textarea' },
+      { key: 'about_mission_4', label: 'Misi 4', type: 'textarea' },
+    ],
+  },
+  {
+    id: 'about_values',
+    title: 'Nilai-Nilai (About)',
+    description: '4 nilai utama OSIS di halaman Tentang',
+    icon: '💎',
+    fields: [
+      { key: 'about_values_label', label: 'Label Section', type: 'text' },
+      { key: 'about_values_title', label: 'Judul Section', type: 'text' },
+      { key: 'about_values_title_hl', label: 'Judul Highlight', type: 'text' },
+      { key: 'about_value1_icon', label: 'Nilai 1 - Icon', type: 'emoji' },
+      { key: 'about_value1_name', label: 'Nilai 1 - Nama', type: 'text' },
+      { key: 'about_value1_desc', label: 'Nilai 1 - Deskripsi', type: 'textarea' },
+      { key: 'about_value1_color', label: 'Nilai 1 - Warna', type: 'color' },
+      { key: 'about_value2_icon', label: 'Nilai 2 - Icon', type: 'emoji' },
+      { key: 'about_value2_name', label: 'Nilai 2 - Nama', type: 'text' },
+      { key: 'about_value2_desc', label: 'Nilai 2 - Deskripsi', type: 'textarea' },
+      { key: 'about_value2_color', label: 'Nilai 2 - Warna', type: 'color' },
+      { key: 'about_value3_icon', label: 'Nilai 3 - Icon', type: 'emoji' },
+      { key: 'about_value3_name', label: 'Nilai 3 - Nama', type: 'text' },
+      { key: 'about_value3_desc', label: 'Nilai 3 - Deskripsi', type: 'textarea' },
+      { key: 'about_value3_color', label: 'Nilai 3 - Warna', type: 'color' },
+      { key: 'about_value4_icon', label: 'Nilai 4 - Icon', type: 'emoji' },
+      { key: 'about_value4_name', label: 'Nilai 4 - Nama', type: 'text' },
+      { key: 'about_value4_desc', label: 'Nilai 4 - Deskripsi', type: 'textarea' },
+      { key: 'about_value4_color', label: 'Nilai 4 - Warna', type: 'color' },
+    ],
+  },
+  {
+    id: 'about_cta',
+    title: 'CTA Section (About)',
+    description: 'Call to action di akhir halaman Tentang',
+    icon: '📢',
+    fields: [
+      { key: 'about_cta_title', label: 'Judul CTA', type: 'text' },
+      { key: 'about_cta_title_hl', label: 'Judul CTA (Highlight)', type: 'text' },
+      { key: 'about_cta_desc', label: 'Deskripsi CTA', type: 'textarea' },
+      { key: 'about_cta_button', label: 'Tombol Utama', type: 'text' },
+      { key: 'about_cta_button2', label: 'Tombol Kedua', type: 'text' },
+    ],
+  },
+  {
+    id: 'about_logo',
+    title: 'Filosofi Logo (About)',
+    description: 'Judul dan subtitle section filosofi logo',
+    icon: '🎨',
+    fields: [
+      { key: 'about_logo_title', label: 'Judul Section', type: 'text' },
+      { key: 'about_logo_subtitle', label: 'Subtitle Section', type: 'text' },
+    ],
+  },
+  {
+    id: 'about_team',
+    title: 'Tim (About)',
+    description: 'Judul section tim inti dan koordinator',
+    icon: '👥',
+    fields: [
+      { key: 'about_core_title1', label: 'Judul Tim Inti', type: 'text' },
+      { key: 'about_core_title2', label: 'Judul Tim Inti (Highlight)', type: 'text' },
+      { key: 'about_core_subtitle', label: 'Subtitle Tim Inti', type: 'text' },
+      { key: 'about_sekbid_title1', label: 'Judul Sekbid', type: 'text' },
+      { key: 'about_sekbid_title2', label: 'Judul Sekbid (Highlight)', type: 'text' },
+      { key: 'about_sekbid_subtitle', label: 'Subtitle Sekbid', type: 'text' },
+    ],
+  },
+  {
+    id: 'footer',
+    title: 'Info Kontak (Footer)',
+    description: 'Nama sekolah, alamat, telepon, email, copyright',
+    icon: '📍',
+    fields: [
+      { key: 'site_school_name', label: 'Nama Sekolah', type: 'text' },
+      { key: 'site_address', label: 'Alamat', type: 'textarea' },
+      { key: 'site_phone', label: 'Telepon', type: 'text' },
+      { key: 'site_email', label: 'Email', type: 'text' },
+      { key: 'site_copyright', label: 'Copyright', type: 'text' },
+    ],
+  },
 ];
 
 export default function AdminContentPage() {
   const { data: session, status } = useSession();
   const role = ((session?.user as any)?.role || '').toLowerCase();
-  // Allow super_admin, admin, and osis to access content management
-  const canAccessAdminPanel = ['super_admin', 'admin', 'osis'].includes(role);
+  const canAccess = ['super_admin', 'admin', 'osis'].includes(role);
 
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<ContentItem>>({});
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newContent, setNewContent] = useState({ key: '', title: '', content: '', category: 'general' });
+  const [filterStatus, setFilterStatus] = useState<'all' | 'filled' | 'empty'>('all');
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      redirect('/admin/login');
-      return;
-    }
-    if (status === 'authenticated') {
-      fetchContents();
-    }
+    if (status === 'unauthenticated') redirect('/admin/login');
+    if (status === 'authenticated') fetchContents();
   }, [status]);
 
   const fetchContents = async () => {
@@ -203,143 +231,105 @@ export default function AdminContentPage() {
         const data = await safeJson(res, { url: '/api/admin/content', method: 'GET' });
         setContents(Array.isArray(data) ? data : []);
       }
-    } catch (error) {
-      console.error('Failed to fetch contents:', error);
+    } catch {
       setMessage({ type: 'error', text: 'Gagal memuat konten' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (item: ContentItem) => {
-    setEditingId(item.id);
-    setEditForm({ ...item });
+  const contentMap = new Map(contents.map(c => [c.key || c.page_key, c]));
+
+  const toggleSection = (id: string) => {
+    const next = new Set(expandedSections);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setExpandedSections(next);
   };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditForm({});
-  };
-
-  const handleSave = async () => {
-    if (!editForm.id) return;
-    
-    try {
-      setSaving(true);
-      const res = await apiFetch('/api/admin/content', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
-      
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Konten berhasil disimpan!' });
-        setEditingId(null);
-        setEditForm({});
-        fetchContents();
-      } else {
-        const err = await res.json();
-        setMessage({ type: 'error', text: err.error || 'Gagal menyimpan' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Terjadi kesalahan' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAddContent = async () => {
-    if (!newContent.key || !newContent.title) {
-      setMessage({ type: 'error', text: 'Key dan Title wajib diisi' });
-      return;
-    }
-    
-    try {
-      setSaving(true);
-      const res = await apiFetch('/api/admin/content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          page_key: newContent.key,
-          title: newContent.title,
-          content: newContent.content,
-          category: newContent.category,
-        }),
-      });
-      
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Konten berhasil ditambahkan!' });
-        setShowAddForm(false);
-        setNewContent({ key: '', title: '', content: '', category: 'general' });
-        fetchContents();
-      } else {
-        const err = await res.json();
-        setMessage({ type: 'error', text: err.error || 'Gagal menambah konten' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Terjadi kesalahan' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Hapus konten ini?')) return;
-    
-    try {
-      const res = await apiFetch(`/api/admin/content?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setMessage({ type: 'success', text: 'Konten berhasil dihapus' });
-        fetchContents();
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Gagal menghapus' });
-    }
-  };
-
-  const handleAddPredefined = async (predefined: typeof IMPORTANT_CONTENT_KEYS[0]) => {
-    // Check if already exists
-    if (contents.find(c => c.key === predefined.key || c.page_key === predefined.key)) {
-      setMessage({ type: 'error', text: 'Konten sudah ada' });
-      return;
-    }
-    
-    setNewContent({
-      key: predefined.key,
-      title: predefined.title,
-      content: '',
-      category: predefined.category,
+  const startEdit = (section: SectionConfig) => {
+    const values: Record<string, string> = {};
+    section.fields.forEach(f => {
+      const item = contentMap.get(f.key);
+      values[f.key] = item?.content || '';
     });
-    setShowAddForm(true);
+    setEditValues(values);
+    setEditingSection(section.id);
   };
 
-  // Filter contents
-  const filteredContents = contents.filter(item => {
-    const matchesSearch = !searchTerm || 
-      item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.key?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.content?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
-    
-    return matchesSearch && matchesCategory;
+  const cancelEdit = () => {
+    setEditingSection(null);
+    setEditValues({});
+  };
+
+  const saveSection = async (section: SectionConfig) => {
+    setSaving(true);
+    try {
+      const saves = section.fields.map(async (field) => {
+        const existing = contentMap.get(field.key);
+        const value = editValues[field.key] || '';
+
+        if (existing) {
+          if (existing.content === value) return;
+          return apiFetch('/api/admin/content', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: existing.id, content: value }),
+          });
+        } else if (value) {
+          return apiFetch('/api/admin/content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              page_key: field.key,
+              title: field.label,
+              content: value,
+              category: section.id,
+            }),
+          });
+        }
+      });
+
+      await Promise.all(saves.filter(Boolean));
+      setMessage({ type: 'success', text: `${section.title} berhasil disimpan!` });
+      setEditingSection(null);
+      setEditValues({});
+      fetchContents();
+    } catch {
+      setMessage({ type: 'error', text: 'Gagal menyimpan' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredSections = SECTIONS.filter(s => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return s.title.toLowerCase().includes(q) ||
+      s.description.toLowerCase().includes(q) ||
+      s.fields.some(f => f.label.toLowerCase().includes(q) || f.key.toLowerCase().includes(q));
   });
 
-  // Get missing important content keys
-  const existingKeys = new Set(contents.map(c => c.key || c.page_key));
-  const missingImportantKeys = IMPORTANT_CONTENT_KEYS.filter(k => !existingKeys.has(k.key));
+  const filledCounts = SECTIONS.map(s => ({
+    id: s.id,
+    filled: s.fields.filter(f => contentMap.has(f.key)).length,
+    total: s.fields.length,
+  }));
+
+  const totalFields = SECTIONS.reduce((a, s) => a + s.fields.length, 0);
+  const totalFilled = filledCounts.reduce((a, c) => a + c.filled, 0);
 
   if (status === 'loading' || loading) {
     return (
       <AdminPageShell title="Content Management">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full" />
         </div>
       </AdminPageShell>
     );
   }
 
-  if (!canAccessAdminPanel) {
+  if (!canAccess) {
     return (
       <AdminPageShell title="Content Management">
         <div className="text-center py-12">
@@ -356,272 +346,192 @@ export default function AdminContentPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Kelola Konten Halaman</h2>
-            <p className="text-gray-600 dark:text-gray-400">Edit konten seperti Tahun Berdiri, Pencapaian, Prinsip, dll.</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              Klik bagian untuk mengedit. {totalFilled}/{totalFields} kolom sudah terisi.
+            </p>
           </div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
-          >
-            <FaPlus /> Tambah Konten
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg">
+              {totalFilled}/{totalFields} kolom terisi
+            </div>
+          </div>
         </div>
 
         {/* Message */}
         {message && (
-          <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {message.text}
-            <button onClick={() => setMessage(null)} className="float-right">&times;</button>
-          </div>
-        )}
-
-        {/* Missing Important Keys */}
-        {missingImportantKeys.length > 0 && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <h3 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">⚠️ Konten Penting yang Belum Dibuat:</h3>
-            <div className="flex flex-wrap gap-2">
-              {missingImportantKeys.slice(0, 10).map(item => (
-                <button
-                  key={item.key}
-                  onClick={() => handleAddPredefined(item)}
-                  className="px-3 py-1 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-800 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 rounded-full text-sm transition"
-                  title={item.description}
-                >
-                  + {item.title}
-                </button>
-              ))}
-              {missingImportantKeys.length > 10 && (
-                <span className="text-yellow-600 text-sm">+{missingImportantKeys.length - 10} lainnya</span>
-              )}
-            </div>
+          <div className={`p-4 rounded-lg flex items-center justify-between ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            <span>{message.text}</span>
+            <button onClick={() => setMessage(null)} className="text-lg leading-none">&times;</button>
           </div>
         )}
 
         {/* Search & Filter */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
             <input
               type="text"
-              placeholder="Cari konten..."
+              placeholder="Cari bagian..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
             />
           </div>
-          <div className="relative">
-            <FaFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            >
-              <option value="all">Semua Kategori</option>
-              {CONTENT_CATEGORIES.map(cat => (
-                <option key={cat.key} value={cat.key}>{cat.label}</option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+          >
+            <option value="all">Semua Bagian</option>
+            <option value="empty">Belum Diisi</option>
+            <option value="filled">Sudah Diisi</option>
+          </select>
         </div>
 
-        {/* Add Form Modal */}
-        {showAddForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-800 dark:text-white">Tambah Konten Baru</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Key (unik)</label>
-                  <input
-                    type="text"
-                    value={newContent.key}
-                    onChange={(e) => setNewContent({ ...newContent, key: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="contoh: about_founding_year"
-                  />
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {SECTIONS.slice(0, 8).map(s => {
+            const fc = filledCounts.find(f => f.id === s.id)!;
+            const pct = Math.round((fc.filled / fc.total) * 100);
+            return (
+              <button
+                key={s.id}
+                onClick={() => {
+                  toggleSection(s.id);
+                  if (editingSection !== s.id) startEdit(s);
+                }}
+                className={`p-3 rounded-xl border text-left transition-all ${
+                  pct === 100
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : pct > 0
+                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                } hover:shadow-md`}
+              >
+                <div className="text-lg mb-1">{s.icon}</div>
+                <div className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{s.title}</div>
+                <div className="mt-1.5 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${pct}%` }} />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Judul</label>
-                  <input
-                    type="text"
-                    value={newContent.title}
-                    onChange={(e) => setNewContent({ ...newContent, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Tahun Berdiri"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kategori</label>
-                  <select
-                    value={newContent.category}
-                    onChange={(e) => setNewContent({ ...newContent, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    {CONTENT_CATEGORIES.map(cat => (
-                      <option key={cat.key} value={cat.key}>{cat.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Konten</label>
-                  <textarea
-                    value={newContent.content}
-                    onChange={(e) => setNewContent({ ...newContent, content: e.target.value })}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Isi konten..."
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-6">
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sections */}
+        <div className="space-y-3">
+          {filteredSections.map(section => {
+            const fc = filledCounts.find(f => f.id === section.id)!;
+            const isExpanded = expandedSections.has(section.id);
+            const isEditing = editingSection === section.id;
+            const pct = Math.round((fc.filled / fc.total) * 100);
+
+            if (filterStatus === 'empty' && pct === 100) return null;
+            if (filterStatus === 'filled' && pct === 0) return null;
+
+            return (
+              <div key={section.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                {/* Section Header */}
                 <button
                   onClick={() => {
-                    setShowAddForm(false);
-                    setNewContent({ key: '', title: '', content: '', category: 'general' });
+                    toggleSection(section.id);
+                    if (!isEditing) startEdit(section);
                   }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400"
+                  className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
                 >
-                  Batal
+                  <span className="text-xl">{section.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900 dark:text-white text-sm">{section.title}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{section.description}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${pct === 100 ? 'bg-green-100 text-green-700' : pct > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {fc.filled}/{fc.total}
+                    </span>
+                    {isExpanded ? <FaChevronDown className="text-gray-400 text-xs" /> : <FaChevronRight className="text-gray-400 text-xs" />}
+                  </div>
                 </button>
-                <button
-                  onClick={handleAddContent}
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50"
-                >
-                  {saving ? 'Menyimpan...' : 'Simpan'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Content List */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Key</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Judul</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Konten</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Kategori</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredContents.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                      {searchTerm || filterCategory !== 'all' ? 'Tidak ada konten yang cocok' : 'Belum ada konten. Tambahkan konten baru!'}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredContents.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      {editingId === item.id ? (
-                        // Edit mode
-                        <>
-                          <td className="px-4 py-3">
-                            <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                              {item.key || item.page_key}
-                            </code>
-                          </td>
-                          <td className="px-4 py-3">
-                            <input
-                              type="text"
-                              value={editForm.title || ''}
-                              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                              className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                            />
-                          </td>
-                          <td className="px-4 py-3">
-                            <textarea
-                              value={editForm.content || ''}
-                              onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
-                              rows={2}
-                              className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                            />
-                          </td>
-                          <td className="px-4 py-3">
-                            <select
-                              value={editForm.category || 'general'}
-                              onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                            >
-                              {CONTENT_CATEGORIES.map(cat => (
-                                <option key={cat.key} value={cat.key}>{cat.label}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex justify-end gap-2">
-                              <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
-                                title="Simpan"
-                              >
-                                <FaSave />
-                              </button>
-                              <button
-                                onClick={handleCancelEdit}
-                                className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                                title="Batal"
-                              >
-                                <FaTimes />
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      ) : (
-                        // View mode
-                        <>
-                          <td className="px-4 py-3">
-                            <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                              {item.key || item.page_key}
-                            </code>
-                          </td>
-                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                            {item.title}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs truncate">
-                            {item.content || <span className="italic text-gray-400">Kosong</span>}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                              {CONTENT_CATEGORIES.find(c => c.key === item.category)?.label || item.category}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex justify-end gap-2">
-                              <button
-                                onClick={() => handleEdit(item)}
-                                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                                title="Edit"
-                              >
-                                <FaEdit />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(item.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                title="Hapus"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  ))
+                {/* Section Content */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                      {section.fields.map(field => {
+                        const existing = contentMap.get(field.key);
+                        const value = isEditing ? (editValues[field.key] || '') : (existing?.content || '');
+
+                        return (
+                          <div key={field.key} className="space-y-1">
+                            <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                              {field.label}
+                              {field.type === 'emoji' && <span className="text-gray-400">(emoji)</span>}
+                              {field.type === 'color' && <span className="text-gray-400">(hex)</span>}
+                              {existing && <span className="text-green-500 text-[10px]">✓</span>}
+                            </label>
+                            {isEditing ? (
+                              field.type === 'textarea' ? (
+                                <textarea
+                                  value={value}
+                                  onChange={(e) => setEditValues({ ...editValues, [field.key]: e.target.value })}
+                                  rows={2}
+                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                                />
+                              ) : field.type === 'color' ? (
+                                <div className="flex gap-2 items-center">
+                                  <input
+                                    type="color"
+                                    value={value || '#facc15'}
+                                    onChange={(e) => setEditValues({ ...editValues, [field.key]: e.target.value })}
+                                    className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={value}
+                                    onChange={(e) => setEditValues({ ...editValues, [field.key]: e.target.value })}
+                                    className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono"
+                                    placeholder="#facc15"
+                                  />
+                                </div>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={value}
+                                  onChange={(e) => setEditValues({ ...editValues, [field.key]: e.target.value })}
+                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                                />
+                              )
+                            ) : (
+                              <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm text-gray-700 dark:text-gray-300 min-h-[30px]">
+                                {value || <span className="italic text-gray-400">Belum diisi</span>}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {isEditing && (
+                      <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <button
+                          onClick={cancelEdit}
+                          className="px-4 py-1.5 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1"
+                        >
+                          <FaTimes /> Batal
+                        </button>
+                        <button
+                          onClick={() => saveSection(section)}
+                          disabled={saving}
+                          className="px-4 py-1.5 text-sm bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg disabled:opacity-50 flex items-center gap-1 font-medium"
+                        >
+                          <FaSave /> {saving ? 'Menyimpan...' : 'Simpan'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Total: {contents.length} konten | Ditampilkan: {filteredContents.length}
+              </div>
+            );
+          })}
         </div>
       </div>
     </AdminPageShell>
