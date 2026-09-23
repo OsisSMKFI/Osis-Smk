@@ -3,11 +3,9 @@ export const runtime = 'nodejs';
 import { auth } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { generateSignedUrl } from '@/lib/signedUrls';
-import { uploadFile } from '@/lib/vercel/blob';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const hasVercelBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
 
 const UPLOAD_ALLOWED_ROLES = ['super_admin', 'admin', 'osis', 'moderator', 'editor'];
 
@@ -58,7 +56,6 @@ export async function POST(request: NextRequest) {
     console.log('[Upload] Config check:', {
       hasSupabaseUrl: !!supabaseUrl,
       hasServiceKey: !!supabaseServiceKey,
-      hasVercelBlobToken: hasVercelBlob,
     });
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -89,33 +86,7 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const fileBuffer = Buffer.from(arrayBuffer);
 
-    // For videos, always try Vercel Blob first (Supabase buckets often reject video MIME types)
-    // For images, also try Vercel Blob if Supabase fails
-    if (hasVercelBlob) {
-      try {
-        console.log('[Upload] Trying Vercel Blob:', { filePath, type: file.type, size: file.size });
-        const blobResult = await uploadFile(filePath, fileBuffer, {
-          access: 'public',
-          contentType: file.type || 'application/octet-stream',
-        });
-        console.log('[Upload] Vercel Blob SUCCESS:', blobResult.url);
-        return NextResponse.json({
-          success: true,
-          url: blobResult.url,
-          publicUrl: blobResult.url,
-          signedUrl: blobResult.url,
-          path: blobResult.pathname,
-          storage: 'vercel-blob',
-          data: { path: blobResult.pathname, publicUrl: blobResult.url, signedUrl: blobResult.url, url: blobResult.url },
-        });
-      } catch (blobError: any) {
-        console.error('[Upload] Vercel Blob FAILED:', blobError?.message || blobError);
-      }
-    } else {
-      console.log('[Upload] Vercel Blob skipped: BLOB_READ_WRITE_TOKEN not set');
-    }
-
-    // For videos without Vercel Blob, try Supabase media bucket
+    // Upload to Supabase — ensure bucket supports the file's MIME type
     const targetBuckets = isVideo ? ['media', bucket] : [bucket];
 
     let uploadError: any = null;
@@ -126,8 +97,15 @@ export async function POST(request: NextRequest) {
       await ensureMediaBucket(supabase);
     }
 
-    // Ensure target bucket is public so images load correctly
-    await ensureBucketPublic(supabase, bucket);
+    // Ensure target bucket is public AND supports video MIME types
+    try {
+      await supabase.storage.updateBucket(bucket, {
+        public: true,
+        allowedMimeTypes: isVideo
+          ? ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'image/*', 'application/octet-stream']
+          : undefined,
+      });
+    } catch (_) {}
 
     for (const tryBucket of targetBuckets) {
       const result = await supabase.storage.from(tryBucket).upload(filePath, fileBuffer, {
@@ -151,14 +129,6 @@ export async function POST(request: NextRequest) {
 
     // If all Supabase attempts failed
     if (uploadError) {
-      // Helpful error for video uploads without Vercel Blob
-      if (isVideo && !hasVercelBlob) {
-        console.error('[Upload] Video upload failed: BLOB_READ_WRITE_TOKEN not set');
-        return NextResponse.json({
-          error: 'Video upload gagal. Vercel Blob belum dikonfigurasi.',
-          help: 'Buka Vercel Dashboard → Project → Settings → Environment Variables → tambah BLOB_READ_WRITE_TOKEN dari Blob store. Lalu redeploy.',
-        }, { status: 500 });
-      }
       const errMsg = uploadError?.message || 'Upload failed';
       console.error('[Upload] Supabase upload error:', errMsg);
       return NextResponse.json({ error: errMsg }, { status: 500 });

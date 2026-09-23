@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
           icon
         )
       `)
-      .order('start_date', { ascending: false });
+      .order('created_at', { ascending: false });
 
     // Filter by sekbid if provided
     if (sekbidId) {

@@ -157,8 +157,8 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
     try {
       const { data: maybe } = await supabaseAdmin
         .from('members')
-        .select('id, name, role, position, nama, jabatan')
-        .or("role.ilike.%ketua%,jabatan.ilike.%ketua%")
+        .select('id, name, role, nama')
+        .or("role.ilike.%ketua%")
         .limit(1);
       const found = maybe && maybe.length ? maybe[0] : null;
       if (found) {

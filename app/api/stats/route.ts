@@ -33,7 +33,7 @@ export async function GET() {
       // Get ALL active members (no filtering here - filter in JS for consistency)
       supabaseAdmin
         .from('members')
-        .select('id, name, role, jabatan, sekbid_id, is_active')
+        .select('id, name, role, sekbid_id, is_active')
         .eq('is_active', true),
       // Get sekbid count
       supabaseAdmin.from('sekbid').select('id, name'),

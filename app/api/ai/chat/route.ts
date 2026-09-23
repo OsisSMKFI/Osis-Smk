@@ -741,8 +741,8 @@ async function retrieveContext(query: string) {
     {
       const { data } = await supabaseAdmin
         .from('members')
-        .select('id,name,nama,role,sekbid_id,instagram,class,quote,is_active,display_order,jabatan')
-        .or(`name.ilike.${q},role.ilike.${q},quote.ilike.${q},class.ilike.${q},instagram.ilike.${q},jabatan.ilike.${q},nama.ilike.${q}`)
+        .select('id,name,nama,role,sekbid_id,instagram,class,quote,is_active,display_order')
+        .or(`name.ilike.${q},role.ilike.${q},quote.ilike.${q},class.ilike.${q},instagram.ilike.${q},nama.ilike.${q}`)
         .limit(50); // Increased limit for better coverage
       if (data?.length) {
         // Fetch all sekbid names for resolution
@@ -758,7 +758,7 @@ async function retrieveContext(query: string) {
         ctx.push('Members (active OSIS members with sekbid mapping):');
         for (const m of data) {
           const displayName = m.name || m.nama || 'Unknown';
-          const roleInfo = m.role || m.jabatan || '-';
+          const roleInfo = m.role || '-';
           const sekbidName = m.sekbid_id ? (sekbidMap[m.sekbid_id] || `ID ${m.sekbid_id}`) : 'Tidak ada sekbid';
           ctx.push(`- ${displayName} | Jabatan: ${roleInfo} | Sekbid: ${sekbidName} | Aktif: ${m.is_active} | Kelas: ${m.class || '-'} | IG: ${m.instagram || '-'}`);
           if (m.quote) ctx.push(`  Quote: ${m.quote.slice(0, 200)}`);
@@ -783,15 +783,14 @@ async function retrieveContext(query: string) {
     {
       const { data } = await supabaseAdmin
         .from('program_kerja')
-        .select('id,sekbid_id,title,description,start_date,end_date,status')
-        .or(`title.ilike.${q},description.ilike.${q},status.ilike.${q}`)
+        .select('id,sekbid_id,nama,waktu,status,progress')
+        .or(`nama.ilike.${q},waktu.ilike.${q},status.ilike.${q}`)
         .limit(12);
       if (data?.length) {
         ctx.push('Program Kerja:');
         for (const p of data) {
-          const startInfo = p.start_date || '';
-          ctx.push(`- ${p.title} [${p.status}] ${startInfo}..${p.end_date || ''} sekbid:${p.sekbid_id ?? '-'}`);
-          if (p.description) ctx.push(`  deskripsi: ${p.description.slice(0, 200)}`);
+          const startInfo = p.waktu || '';
+          ctx.push(`- ${p.nama} [${p.status}] ${startInfo} sekbid:${p.sekbid_id ?? '-'}`);
         }
       }
     }
@@ -846,7 +845,7 @@ async function retrieveContext(query: string) {
         // Fetch all members with sekbid_id
         const { data: allMembers } = await supabaseAdmin
           .from('members')
-          .select('id,name,nama,role,jabatan,sekbid_id,class,is_active')
+          .select('id,name,nama,role,sekbid_id,class,is_active')
           .eq('is_active', true)
           .order('display_order', { ascending: true })
           .limit(200);
@@ -861,7 +860,7 @@ async function retrieveContext(query: string) {
           
           allMembers.forEach((m, i) => {
             const name = m.name || m.nama || 'Unknown';
-            const role = m.role || m.jabatan || '-';
+            const role = m.role || '-';
             const sekbid = m.sekbid_id ? (sekbidMap[m.sekbid_id] || `Sekbid ID ${m.sekbid_id}`) : 'Belum ada sekbid';
             ctx.push(`  ${i+1}. ${name} | ${role} | Sekbid: ${sekbid} | Kelas: ${m.class || '-'}`);
           });
