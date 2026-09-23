@@ -68,13 +68,15 @@ export async function POST(request: NextRequest) {
     const fileBuffer = Buffer.from(arrayBuffer);
 
     // For videos, always try Vercel Blob first (Supabase buckets often reject video MIME types)
-    // For images, use Supabase directly
-    if (isVideo && hasVercelBlob) {
+    // For images, also try Vercel Blob if Supabase fails
+    if (hasVercelBlob) {
       try {
+        console.log('[Upload] Trying Vercel Blob for:', filePath, 'type:', file.type);
         const blobResult = await uploadFile(filePath, fileBuffer, {
           access: 'public',
-          contentType: file.type || 'video/mp4',
+          contentType: file.type || 'application/octet-stream',
         });
+        console.log('[Upload] Vercel Blob success:', blobResult.url);
         return NextResponse.json({
           success: true,
           url: blobResult.url,
@@ -85,7 +87,8 @@ export async function POST(request: NextRequest) {
           data: { path: blobResult.pathname, publicUrl: blobResult.url, signedUrl: blobResult.url, url: blobResult.url },
         });
       } catch (blobError: any) {
-        console.error('[Upload] Vercel Blob video upload failed:', blobError.message);
+        console.error('[Upload] Vercel Blob failed:', blobError.message);
+        // Continue to Supabase fallback
       }
     }
 
@@ -120,28 +123,9 @@ export async function POST(request: NextRequest) {
       break;
     }
 
-    // If all Supabase attempts failed → Vercel Blob fallback
+    // If all Supabase attempts failed
     if (uploadError) {
-      if (hasVercelBlob) {
-        try {
-          const blobResult = await uploadFile(filePath, fileBuffer, {
-            access: 'public',
-            contentType: file.type,
-          });
-          return NextResponse.json({
-            success: true,
-            url: blobResult.url,
-            publicUrl: blobResult.url,
-            signedUrl: blobResult.url,
-            path: blobResult.pathname,
-            storage: 'vercel-blob',
-            data: { path: blobResult.pathname, publicUrl: blobResult.url, signedUrl: blobResult.url, url: blobResult.url },
-          });
-        } catch (blobError: any) {
-          // Blob also failed
-        }
-      }
-      // Helpful error for video uploads
+      // Helpful error for video uploads without Vercel Blob
       if (isVideo && !hasVercelBlob) {
         return NextResponse.json({ error: 'Video upload requires Vercel Blob storage. Please set BLOB_READ_WRITE_TOKEN environment variable.' }, { status: 500 });
       }
