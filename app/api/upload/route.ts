@@ -55,8 +55,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden', role: userRole }, { status: 403 });
     }
 
+    console.log('[Upload] Config check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      hasVercelBlobToken: hasVercelBlob,
+    });
+
     if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+      return NextResponse.json({ error: 'Server configuration error: missing Supabase keys' }, { status: 500 });
     }
 
     const formData = await request.formData();
@@ -87,12 +93,12 @@ export async function POST(request: NextRequest) {
     // For images, also try Vercel Blob if Supabase fails
     if (hasVercelBlob) {
       try {
-        console.log('[Upload] Trying Vercel Blob for:', filePath, 'type:', file.type);
+        console.log('[Upload] Trying Vercel Blob:', { filePath, type: file.type, size: file.size });
         const blobResult = await uploadFile(filePath, fileBuffer, {
           access: 'public',
           contentType: file.type || 'application/octet-stream',
         });
-        console.log('[Upload] Vercel Blob success:', blobResult.url);
+        console.log('[Upload] Vercel Blob SUCCESS:', blobResult.url);
         return NextResponse.json({
           success: true,
           url: blobResult.url,
@@ -103,9 +109,10 @@ export async function POST(request: NextRequest) {
           data: { path: blobResult.pathname, publicUrl: blobResult.url, signedUrl: blobResult.url, url: blobResult.url },
         });
       } catch (blobError: any) {
-        console.error('[Upload] Vercel Blob failed:', blobError.message);
-        // Continue to Supabase fallback
+        console.error('[Upload] Vercel Blob FAILED:', blobError?.message || blobError);
       }
+    } else {
+      console.log('[Upload] Vercel Blob skipped: BLOB_READ_WRITE_TOKEN not set');
     }
 
     // For videos without Vercel Blob, try Supabase media bucket
