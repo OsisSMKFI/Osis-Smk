@@ -52,15 +52,13 @@ export async function GET(request: NextRequest) {
         
         // Convert featured_image if present
         if (post.featured_image) {
-          // If already a full HTTP URL, use as-is (don't re-sign)
+          // If already a full HTTP URL, use as-is
           if (post.featured_image.startsWith('http')) {
             updatedPost.featured_image = post.featured_image;
           } else {
-            const signedUrl = await convertToSignedUrl(post.featured_image);
-            if (signedUrl) {
-              updatedPost.featured_image = signedUrl.url;
-              updatedPost.featured_image_expires_at = signedUrl.expiresAt;
-            }
+            // Relative path — convert to public URL directly
+            const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vyorjqbrugjjeioayscg.supabase.co'}/storage/v1/object/public/${post.featured_image}`;
+            updatedPost.featured_image = publicUrl;
           }
         }
         
@@ -69,14 +67,11 @@ export async function GET(request: NextRequest) {
           if (post.author.photo_url.startsWith('http')) {
             // Keep as-is
           } else {
-            const signedUrl = await convertToSignedUrl(post.author.photo_url);
-            if (signedUrl) {
-              updatedPost.author = {
-                ...post.author,
-                photo_url: signedUrl.url,
-                photo_url_expires_at: signedUrl.expiresAt
-              };
-            }
+            const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vyorjqbrugjjeioayscg.supabase.co'}/storage/v1/object/public/${post.author.photo_url}`;
+            updatedPost.author = {
+              ...post.author,
+              photo_url: publicUrl,
+            };
           }
         }
         

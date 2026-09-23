@@ -36,9 +36,7 @@ interface PostCardProps {
 
 export function PostCard({ post, index = 0 }: PostCardProps) {
   const fallbackImage = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" fill="%23e5e7eb"><rect width="800" height="450"/><text x="400" y="225" font-family="sans-serif" font-size="20" fill="%239ca3af" text-anchor="middle" dominant-baseline="middle">No Image</text></svg>');
-  const imageUrl = post.featured_image?.startsWith('http')
-    ? post.featured_image
-    : (toPublicStorageUrl(post.featured_image) || fallbackImage);
+  const imageUrl = toPublicStorageUrl(post.featured_image) || fallbackImage;
   const cardRef = useRef<HTMLDivElement>(null);
 
   const rotateX = useMotionValue(0);

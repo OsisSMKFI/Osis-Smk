@@ -21,9 +21,17 @@ async function ensureMediaBucket(supabase: any) {
         fileSizeLimit: 104857600,
         allowedMimeTypes: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'application/octet-stream'],
       });
+      console.log('[Upload] Created media bucket with video MIME types');
+    } else {
+      // Update existing bucket to ensure video MIME types are allowed
+      await supabase.storage.updateBucket('media', {
+        public: true,
+        fileSizeLimit: 104857600,
+        allowedMimeTypes: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'application/octet-stream'],
+      });
     }
-  } catch (e) {
-    // Bucket may already exist or we lack permission — ignore
+  } catch (e: any) {
+    console.warn('[Upload] ensureMediaBucket warning:', e?.message);
   }
 }
 
@@ -140,11 +148,12 @@ export async function POST(request: NextRequest) {
       if (isVideo && !hasVercelBlob) {
         console.error('[Upload] Video upload failed: BLOB_READ_WRITE_TOKEN not set');
         return NextResponse.json({
-          error: 'Video upload gagal: BLOB_READ_WRITE_TOKEN belum dikonfigurasi di Vercel.',
-          help: 'Buka Vercel Dashboard → Project → Settings → Environment Variables → tambah BLOB_READ_WRITE_TOKEN dari Blob store settings.',
+          error: 'Video upload gagal. Vercel Blob belum dikonfigurasi.',
+          help: 'Buka Vercel Dashboard → Project → Settings → Environment Variables → tambah BLOB_READ_WRITE_TOKEN dari Blob store. Lalu redeploy.',
         }, { status: 500 });
       }
       const errMsg = uploadError?.message || 'Upload failed';
+      console.error('[Upload] Supabase upload error:', errMsg);
       return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
