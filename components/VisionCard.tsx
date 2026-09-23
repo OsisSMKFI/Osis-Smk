@@ -1,11 +1,32 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
+import { getPageContentBatch } from '@/lib/pageContent';
 
 const VisionCard: React.FC = () => {
   const { t } = useTranslation();
+  const [content, setContent] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    getPageContentBatch(
+      ['site_vision_text', 'site_vision_hl1', 'site_vision_hl2', 'site_vision_hl3'],
+      {
+        site_vision_text: t('vision.visionPart1'),
+        site_vision_hl1: t('vision.visionHighlight1'),
+        site_vision_hl2: t('vision.visionHighlight2'),
+        site_vision_hl3: t('vision.visionHighlight3'),
+      }
+    ).then(setContent);
+  }, [t]);
+
+  const p1 = content.site_vision_text || t('vision.visionPart1');
+  const hl1 = content.site_vision_hl1 || t('vision.visionHighlight1');
+  const p2 = t('vision.visionPart2');
+  const hl2 = content.site_vision_hl2 || t('vision.visionHighlight2');
+  const p3 = t('vision.visionPart3');
+  const hl3 = content.site_vision_hl3 || t('vision.visionHighlight3');
 
   return (
     <motion.div
@@ -30,17 +51,17 @@ const VisionCard: React.FC = () => {
         <blockquote className="text-center relative z-10">
           <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-medium text-gray-800 dark:text-gray-100 leading-relaxed mb-6 sm:mb-8">
             <span className="text-yellow-600 dark:text-yellow-400 font-bold text-3xl sm:text-4xl md:text-5xl">&ldquo;</span>
-            <span className="text-gray-800 dark:text-gray-100">{t('vision.visionPart1')}</span>
+            <span className="text-gray-800 dark:text-gray-100">{p1}</span>
             {' '}
-            <span className="text-yellow-600 dark:text-yellow-400 font-bold">{t('vision.visionHighlight1')}</span>
+            <span className="text-yellow-600 dark:text-yellow-400 font-bold">{hl1}</span>
             {' '}
-            <span className="text-gray-800 dark:text-gray-100">{t('vision.visionPart2')}</span>
+            <span className="text-gray-800 dark:text-gray-100">{p2}</span>
             {' '}
-            <span className="text-yellow-600 dark:text-yellow-400 font-bold">{t('vision.visionHighlight2')}</span>
+            <span className="text-yellow-600 dark:text-yellow-400 font-bold">{hl2}</span>
             {' '}
-            <span className="text-gray-800 dark:text-gray-100">{t('vision.visionPart3')}</span>
+            <span className="text-gray-800 dark:text-gray-100">{p3}</span>
             {' '}
-            <span className="text-yellow-600 dark:text-yellow-400 font-bold">{t('vision.visionHighlight3')}</span>
+            <span className="text-yellow-600 dark:text-yellow-400 font-bold">{hl3}</span>
             <span className="text-yellow-600 dark:text-yellow-400 font-bold text-3xl sm:text-4xl md:text-5xl">&rdquo;</span>
           </p>
         </blockquote>

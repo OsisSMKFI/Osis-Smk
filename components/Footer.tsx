@@ -7,6 +7,7 @@ import { InstagramIcon, SpotifyIcon, TiktokIcon, YoutubeIcon } from './icons/Soc
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/contexts/ToastContext';
 import { SOCIAL_MEDIA_CONFIG } from '@/lib/socialMediaConfig';
+import { getPageContentBatch } from '@/lib/pageContent';
 import OptimizedLogo from './OptimizedLogo';
 import QRCode from 'qrcode';
 
@@ -16,6 +17,21 @@ const Footer: React.FC = () => {
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showQR, setShowQR] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
+  const [siteContent, setSiteContent] = useState<Record<string, string>>({});
+
+  // Fetch editable content from DB
+  useEffect(() => {
+    getPageContentBatch(
+      ['site_school_name', 'site_address', 'site_phone', 'site_email', 'site_copyright'],
+      {
+        site_school_name: 'SMK Informatika Fithrah Insani',
+        site_address: 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
+        site_phone: '(022) 87805564',
+        site_email: 'osissmkinformatika2.fi@gmail.com',
+        site_copyright: 'OSIS SMK Fithrah Insani - Raveka Sena',
+      }
+    ).then(setSiteContent);
+  }, []);
 
   // Generate QR Code
   useEffect(() => {
@@ -211,18 +227,17 @@ const Footer: React.FC = () => {
                 <li className="flex items-start">
                   <FaMapMarkerAlt className="mr-3 text-yellow-400 mt-1 flex-shrink-0" />
                   <span className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    SMK Informatika Fithrah Insani<br />
-                    Jl. H. Gofur No. 10 Tanimulya<br />
-                    Ngamprah, Kab. Bandung Barat
+                    {(siteContent.site_school_name || 'SMK Informatika Fithrah Insani').replace(/\n/g, '<br/>')}<br />
+                    {(siteContent.site_address || 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat').replace(/\n/g, ', ')}
                   </span>
                 </li>
                 <li className="flex items-center">
                   <FaPhone className="mr-3 text-yellow-400" />
-                  <span className="text-gray-600 dark:text-gray-400">(022) 87805564</span>
+                  <span className="text-gray-600 dark:text-gray-400">{siteContent.site_phone || '(022) 87805564'}</span>
                 </li>
                 <li className="flex items-center">
                   <FaEnvelope className="mr-3 text-yellow-400" />
-                  <span className="text-gray-600 dark:text-gray-400">osissmkinformatika2.fi@gmail.com</span>
+                  <span className="text-gray-600 dark:text-gray-400">{siteContent.site_email || 'osissmkinformatika2.fi@gmail.com'}</span>
                 </li>
               </ul>
             </div>
@@ -287,7 +302,7 @@ const Footer: React.FC = () => {
           <div className="border-t border-gray-300 dark:border-gray-700/50 pt-6 mt-8">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 gap-4">
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex flex-col sm:flex-row items-center text-center sm:text-left">
-                <span>&copy; {new Date().getFullYear()} OSIS SMK Fithrah Insani - Raveka Sena.</span>
+                <span>&copy; {new Date().getFullYear()} {siteContent.site_copyright || 'OSIS SMK Fithrah Insani - Raveka Sena'}.</span>
                 <span className="flex items-center mt-1 sm:mt-0 sm:ml-2">
                   {t('footer.madeWith')} <FaHeart className="text-red-400 mx-1" /> {t('footer.forEducation')}
                 </span>

@@ -59,10 +59,14 @@ interface ContentItem {
 const CONTENT_CATEGORIES = [
   { key: 'about', label: 'Halaman About', description: 'Konten untuk halaman tentang OSIS' },
   { key: 'home', label: 'Halaman Home', description: 'Konten untuk halaman utama' },
+  { key: 'home_goals', label: 'Tujuan Home', description: 'Section tujuan/goals di homepage' },
   { key: 'about_achievements', label: 'Pencapaian', description: 'Daftar pencapaian OSIS' },
   { key: 'about_principles', label: 'Prinsip', description: 'Prinsip-prinsip OSIS' },
   { key: 'about_story', label: 'Cerita OSIS', description: 'Sejarah dan cerita OSIS' },
   { key: 'about_filosofi_logo', label: 'Filosofi Logo', description: 'Elemen-elemen filosofi logo OSIS' },
+  { key: 'site_info', label: 'Info Situs', description: 'Nama sekolah, alamat, kontak, copyright' },
+  { key: 'about_visi_misi', label: 'Visi & Misi About', description: 'Visi dan misi di halaman About' },
+  { key: 'about_values', label: 'Nilai-Nilai', description: 'Nilai-nilai OSIS (Inovasi, Integritas, dll)' },
   { key: 'general', label: 'Umum', description: 'Konten umum lainnya' },
 ];
 
@@ -117,6 +121,51 @@ const IMPORTANT_CONTENT_KEYS = [
   { key: 'home_hero_description', category: 'home', title: 'Hero Description', description: 'Deskripsi di homepage' },
   { key: 'site_visi', category: 'home', title: 'Visi OSIS', description: 'Visi organisasi OSIS' },
   { key: 'site_misi', category: 'home', title: 'Misi OSIS', description: 'Misi organisasi OSIS' },
+  // Vision Card (homepage)
+  { key: 'site_vision_text', category: 'home', title: 'Visi - Teks Awal', description: 'Teks sebelum highlight visi di homepage' },
+  { key: 'site_vision_hl1', category: 'home', title: 'Visi - Highlight 1', description: 'Kata highlight pertama dalam visi' },
+  { key: 'site_vision_hl2', category: 'home', title: 'Visi - Highlight 2', description: 'Kata highlight kedua dalam visi' },
+  { key: 'site_vision_hl3', category: 'home', title: 'Visi - Highlight 3', description: 'Kata highlight ketiga dalam visi' },
+  // Goals Section (homepage)
+  { key: 'home_goals_title', category: 'home_goals', title: 'Goals - Judul Forum', description: 'Judul section tujuan' },
+  { key: 'home_goals_desc', category: 'home_goals', title: 'Goals - Deskripsi Forum', description: 'Deskripsi section tujuan' },
+  { key: 'home_goal1_title', category: 'home_goals', title: 'Goal 1 - Judul', description: 'Judul tujuan pertama' },
+  { key: 'home_goal1_desc', category: 'home_goals', title: 'Goal 1 - Deskripsi', description: 'Deskripsi tujuan pertama' },
+  { key: 'home_goal2_title', category: 'home_goals', title: 'Goal 2 - Judul', description: 'Judul tujuan kedua' },
+  { key: 'home_goal2_desc', category: 'home_goals', title: 'Goal 2 - Deskripsi', description: 'Deskripsi tujuan kedua' },
+  { key: 'home_goal3_title', category: 'home_goals', title: 'Goal 3 - Judul', description: 'Judul tujuan ketiga' },
+  { key: 'home_goal3_desc', category: 'home_goals', title: 'Goal 3 - Deskripsi', description: 'Deskripsi tujuan ketiga' },
+  { key: 'home_goal4_title', category: 'home_goals', title: 'Goal 4 - Judul', description: 'Judul tujuan keempat' },
+  { key: 'home_goal4_desc', category: 'home_goals', title: 'Goal 4 - Deskripsi', description: 'Deskripsi tujuan keempat' },
+  { key: 'home_goal5_title', category: 'home_goals', title: 'Goal 5 - Judul', description: 'Judul tujuan kelima' },
+  { key: 'home_goal5_desc', category: 'home_goals', title: 'Goal 5 - Deskripsi', description: 'Deskripsi tujuan kelima' },
+  { key: 'home_goal6_title', category: 'home_goals', title: 'Goal 6 - Judul', description: 'Judul tujuan keenam' },
+  { key: 'home_goal6_desc', category: 'home_goals', title: 'Goal 6 - Deskripsi', description: 'Deskripsi tujuan keenam' },
+  { key: 'home_goals_cta_title', category: 'home_goals', title: 'CTA - Judul', description: 'Judul call to action di goals' },
+  { key: 'home_goals_cta_desc', category: 'home_goals', title: 'CTA - Deskripsi', description: 'Deskripsi call to action di goals' },
+  // Site Info (footer, contact)
+  { key: 'site_school_name', category: 'site_info', title: 'Nama Sekolah', description: 'Nama sekolah di footer dan metadata' },
+  { key: 'site_address', category: 'site_info', title: 'Alamat', description: 'Alamat sekolah di footer' },
+  { key: 'site_phone', category: 'site_info', title: 'Telepon', description: 'Nomor telepon sekolah' },
+  { key: 'site_email', category: 'site_info', title: 'Email', description: 'Email sekolah' },
+  { key: 'site_copyright', category: 'site_info', title: 'Copyright', description: 'Teks copyright di footer' },
+  // About - Visi Misi
+  { key: 'about_visi_title', category: 'about_visi_misi', title: 'Judul Visi', description: 'Judul section visi di halaman About' },
+  { key: 'about_visi_content', category: 'about_visi_misi', title: 'Isi Visi', description: 'Teks visi di halaman About' },
+  { key: 'about_misi_title', category: 'about_visi_misi', title: 'Judul Misi', description: 'Judul section misi di halaman About' },
+  { key: 'about_misi_1', category: 'about_visi_misi', title: 'Misi 1', description: 'Misi pertama' },
+  { key: 'about_misi_2', category: 'about_visi_misi', title: 'Misi 2', description: 'Misi kedua' },
+  { key: 'about_misi_3', category: 'about_visi_misi', title: 'Misi 3', description: 'Misi ketiga' },
+  { key: 'about_misi_4', category: 'about_visi_misi', title: 'Misi 4', description: 'Misi keempat' },
+  // About - Values
+  { key: 'about_value1_name', category: 'about_values', title: 'Nilai 1 - Nama', description: 'Nama nilai pertama (contoh: Inovasi)' },
+  { key: 'about_value1_desc', category: 'about_values', title: 'Nilai 1 - Deskripsi', description: 'Deskripsi nilai pertama' },
+  { key: 'about_value2_name', category: 'about_values', title: 'Nilai 2 - Nama', description: 'Nama nilai kedua (contoh: Integritas)' },
+  { key: 'about_value2_desc', category: 'about_values', title: 'Nilai 2 - Deskripsi', description: 'Deskripsi nilai kedua' },
+  { key: 'about_value3_name', category: 'about_values', title: 'Nilai 3 - Nama', description: 'Nama nilai ketiga (contoh: Excelence)' },
+  { key: 'about_value3_desc', category: 'about_values', title: 'Nilai 3 - Deskripsi', description: 'Deskripsi nilai ketiga' },
+  { key: 'about_value4_name', category: 'about_values', title: 'Nilai 4 - Nama', description: 'Nama nilai keempat (contoh: Islamic)' },
+  { key: 'about_value4_desc', category: 'about_values', title: 'Nilai 4 - Deskripsi', description: 'Deskripsi nilai keempat' },
 ];
 
 export default function AdminContentPage() {
