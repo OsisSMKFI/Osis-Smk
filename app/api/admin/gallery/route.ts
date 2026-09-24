@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
       await supabaseAdmin.storage.updateBucket('gallery', { public: true });
     } catch (_) {}
 
-    // Convert image URLs to public URLs (skip videos)
+    // Convert image/video URLs to public URLs (expired signed URLs included)
     const itemsWithUrls = normalized.map((g: any) => {
-      if (g._isVideo || !g.image_url) return g;
+      if (!g.image_url) return g;
       const publicUrl = toPublicStorageUrl(g.image_url);
       if (publicUrl) return { ...g, image_url: publicUrl };
       return g;

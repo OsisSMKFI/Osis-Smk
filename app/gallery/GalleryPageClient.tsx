@@ -13,6 +13,7 @@ import {
   FaCompress,
   FaPause,
   FaPlay,
+  FaInfoCircle,
 } from 'react-icons/fa';
 import { FaWhatsapp, FaFacebookF, FaTwitter, FaLink } from 'react-icons/fa';
 import PageHero from '@/components/animations/PageHero';
@@ -68,6 +69,7 @@ export default function GalleryPageClient({
   const [events, setEvents] = useState<EventItem[]>(initialEvents);
   const [sekbids, setSekbids] = useState<SekbidItem[]>(initialSekbids);
   const [showShare, setShowShare] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoPaused, setVideoPaused] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -94,6 +96,7 @@ export default function GalleryPageClient({
   const closeLightbox = useCallback(() => {
     setSelectedImage(null);
     setShowShare(false);
+    setShowInfo(false);
     setIsFullscreen(false);
     setVideoPaused(false);
     setCopied(false);
@@ -109,6 +112,7 @@ export default function GalleryPageClient({
         : 0
     );
     setShowShare(false);
+    setShowInfo(false);
     setVideoPaused(false);
   }, [filteredGallery.length]);
 
@@ -119,6 +123,7 @@ export default function GalleryPageClient({
         : 0
     );
     setShowShare(false);
+    setShowInfo(false);
     setVideoPaused(false);
   }, [filteredGallery.length]);
 
@@ -128,6 +133,7 @@ export default function GalleryPageClient({
       if (e.key === 'Escape') {
         e.preventDefault();
         if (showShare) setShowShare(false);
+        else if (showInfo) setShowInfo(false);
         else closeLightbox();
       }
       if (e.key === 'ArrowLeft') prevImage();
@@ -136,7 +142,7 @@ export default function GalleryPageClient({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImage, showShare, closeLightbox, nextImage, prevImage]);
+  }, [selectedImage, showShare, showInfo, closeLightbox, nextImage, prevImage]);
 
   // Lock body scroll while lightbox open
   useEffect(() => {
@@ -198,6 +204,7 @@ export default function GalleryPageClient({
   const openLightbox = (index: number) => {
     setSelectedImage(index);
     setShowShare(false);
+    setShowInfo(false);
     setVideoPaused(false);
     setCopied(false);
   };
@@ -466,6 +473,7 @@ export default function GalleryPageClient({
                     autoPlay
                     loop
                     muted
+                    preload="auto"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white">
@@ -487,7 +495,7 @@ export default function GalleryPageClient({
         {selectedImage !== null && current && (
           <motion.div
             ref={lightboxRef}
-            className="fixed inset-0 z-50 bg-black/95 flex flex-col"
+            className="fixed inset-0 z-[9999] bg-black/95 flex flex-col"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -496,7 +504,7 @@ export default function GalleryPageClient({
             }}
           >
             {/* Top toolbar */}
-            <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-3 gap-2">
+            <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 pt-3 sm:pt-4 pb-3 gap-2">
               <span className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm font-medium">
                 {selectedImage + 1} / {filteredGallery.length}
               </span>
@@ -519,9 +527,27 @@ export default function GalleryPageClient({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    setShowShare(false);
+                    setShowInfo(v => !v);
+                  }}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all hover:scale-105 ${
+                    showInfo ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/20 hover:bg-white/30'
+                  }`}
+                  aria-label="Keterangan"
+                  title="Keterangan"
+                >
+                  <FaInfoCircle />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowInfo(false);
                     setShowShare(v => !v);
                   }}
-                  className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-all hover:scale-105"
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all hover:scale-105 ${
+                    showShare ? 'bg-amber-500 hover:bg-amber-600' : 'bg-white/20 hover:bg-white/30'
+                  }`}
                   aria-label="Bagikan"
                   title="Bagikan"
                 >
@@ -551,6 +577,40 @@ export default function GalleryPageClient({
               </div>
             </div>
 
+            {/* Info / keterangan popover */}
+            {showInfo && (
+              <div
+                className="absolute top-16 right-3 sm:right-4 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-4 w-72 max-h-[60vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">
+                  Keterangan
+                </p>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                  {current.title}
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {current.description || 'Tidak ada keterangan untuk media ini.'}
+                </p>
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p>
+                    Ditambahkan:{' '}
+                    {new Date(current.created_at).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
+                  {current.event_id && (
+                    <p>Event: {events.find((ev) => ev.id === current.event_id)?.title || '—'}</p>
+                  )}
+                  {current.sekbid_id != null && (
+                    <p>Sekbid: {sekbids.find((sb) => sb.id === current.sekbid_id)?.name || '—'}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Share popover */}
             {showShare && (
               <div
@@ -559,8 +619,7 @@ export default function GalleryPageClient({
               >
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 px-1">
                   Bagikan galeri
-                </p>
-                <div className="space-y-1">
+                </p>                <div className="space-y-1">
                   {typeof navigator !== 'undefined' && 'share' in navigator && (
                     <button
                       type="button"
@@ -643,6 +702,7 @@ export default function GalleryPageClient({
                   controlsForVideo={currentIsVideo}
                   loading="eager"
                   objectFit="contain"
+                  preload="auto"
                 />
               </div>
             </div>
@@ -653,13 +713,13 @@ export default function GalleryPageClient({
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-white text-lg sm:text-xl font-bold">{current.title}</h3>
-              {current.description && (
+              {showInfo && current.description && (
                 <p className="mt-1 text-gray-300 text-sm sm:text-base line-clamp-2">
                   {current.description}
                 </p>
               )}
               <p className="mt-1 text-xs text-gray-400 hidden sm:block">
-                ← → navigasi · Esc tutup · klik fullscreen bila perlu
+                ← → navigasi · Esc tutup · klik <FaInfoCircle className="inline -mt-0.5 mx-0.5" /> untuk keterangan
               </p>
             </div>
           </motion.div>

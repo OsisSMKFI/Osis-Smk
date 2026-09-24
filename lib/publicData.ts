@@ -89,10 +89,13 @@ export async function getPublicGallery() {
     const fixedUrl = item.url
       ? toPublicUrl(fixGalleryUrl(item.url, folder)) || fixGalleryUrl(item.url, folder)
       : null;
+    const resolvedImage = fixedImage || fixedVideo || fixedUrl;
     return {
       ...item,
       id,
-      image_url: fixedImage || fixedVideo || fixedUrl || item.image_url || null,
+      // Never fall back to the raw stored URL: if fixGalleryUrl nulled it
+      // (deprecated project domain) the raw value is a dead link anyway.
+      image_url: resolvedImage,
       video_url: fixedVideo,
       url: fixedUrl,
     };

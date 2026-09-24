@@ -12,6 +12,7 @@ interface MediaRendererProps {
   retryCount?: number; // Number of retries (default: 2)
   loading?: 'lazy' | 'eager'; // image loading (default lazy; use eager in lightbox)
   objectFit?: 'cover' | 'contain'; // fit mode for media (default cover)
+  preload?: 'metadata' | 'auto'; // video preload (default metadata; use auto in lightbox so first frame shows)
 }
 
 const VIDEO_EXT_REGEX = /\.(mp4|webm|ogg|mov|m4v|avi|mkv|3gp|flv)(\?.*)?$/i;
@@ -81,6 +82,7 @@ export default function MediaRenderer({
   retryCount = 2,
   loading = 'lazy',
   objectFit = 'cover',
+  preload = 'metadata',
 }: MediaRendererProps) {
   const [currentSrc, setCurrentSrc] = useState(src);
   const [errorCount, setErrorCount] = useState(0);
@@ -147,7 +149,7 @@ export default function MediaRenderer({
         webkit-playsinline="true"
         controls={controlsForVideo}
         controlsList="nodownload"
-        preload="metadata"
+        preload={preload}
         autoPlay={autoPlay}
         loop={loop}
         muted={muted}

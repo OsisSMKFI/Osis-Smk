@@ -333,12 +333,12 @@ export default function GalleryPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Deskripsi</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Keterangan</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all resize-none"
-                  placeholder="Masukkan deskripsi (opsional)"
+                  placeholder="Keterangan foto/video — tampil di lightbox galeri saat tombol ⓘ ditekan (opsional)"
                   rows={3}
                 />
               </div>
