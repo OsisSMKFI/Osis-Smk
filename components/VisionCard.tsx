@@ -5,11 +5,15 @@ import { motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getPageContentBatch } from '@/lib/pageContent';
 
-const VisionCard: React.FC = () => {
+const VisionCard: React.FC<{ initialContent?: Record<string, string> }> = ({
+  initialContent,
+}) => {
   const { t } = useTranslation();
-  const [content, setContent] = useState<Record<string, string>>({});
+  const [content, setContent] = useState<Record<string, string>>(initialContent || {});
+  const hasInitial = Boolean(initialContent && Object.keys(initialContent).length > 0);
 
   useEffect(() => {
+    if (hasInitial) return;
     getPageContentBatch(
       ['site_vision_text', 'site_vision_hl1', 'site_vision_part2', 'site_vision_hl2', 'site_vision_part3', 'site_vision_hl3'],
       {
@@ -21,7 +25,7 @@ const VisionCard: React.FC = () => {
         site_vision_hl3: t('vision.visionHighlight3'),
       }
     ).then(setContent);
-  }, [t]);
+  }, [t, hasInitial]);
 
   const p1 = content.site_vision_text || t('vision.visionPart1');
   const hl1 = content.site_vision_hl1 || t('vision.visionHighlight1');

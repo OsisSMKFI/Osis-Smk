@@ -11,9 +11,15 @@ interface HomePageContextType extends HomePageData {
 
 const HomePageContext = createContext<HomePageContextType | null>(null);
 
-export function HomePageDataProvider({ children }: { children: ReactNode }) {
-  const data = useHomePageData();
-  
+export function HomePageDataProvider({
+  children,
+  initial,
+}: {
+  children: ReactNode;
+  initial?: HomePageData;
+}) {
+  const data = useHomePageData(initial);
+
   return (
     <HomePageContext.Provider value={data}>
       {children}

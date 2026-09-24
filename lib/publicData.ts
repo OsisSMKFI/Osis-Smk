@@ -190,3 +190,23 @@ export async function getPublicPolls(limit = 30) {
   const now = Date.now();
   return rows.filter((poll) => !poll.expires_at || new Date(poll.expires_at).getTime() > now);
 }
+
+/** All published page_content keys as a flat map (one server query). */
+export async function getPublicPageContent(keys?: string[]): Promise<Record<string, string>> {
+  const rows = await safeRows<any>(
+    supabaseAdmin
+      .from('page_content')
+      .select('page_key, content')
+      .eq('published', true)
+  );
+  const map: Record<string, string> = {};
+  for (const row of rows) {
+    if (row.page_key && row.content) map[row.page_key] = row.content;
+  }
+  if (!keys) return map;
+  const out: Record<string, string> = {};
+  for (const key of keys) {
+    if (map[key]) out[key] = map[key];
+  }
+  return out;
+}

@@ -13,7 +13,6 @@ import ClientRole from '../components/ClientRole';
 import DeferredMount from '../components/DeferredMount';
 import DesignThemeLoader from '../components/DesignThemeLoader';
 import Providers from '../components/Providers';
-import RouteWarmup from '../components/RouteWarmup';
 import ScrollToTop from '../components/ScrollToTop';
 
 const dmSans = DM_Sans({ 
@@ -84,7 +83,6 @@ export default function RootLayout({
               <DesignThemeLoader />
               {!chatDisabled && <ClientRole />}
             </DeferredMount>
-            <RouteWarmup />
             {children}
             <SpeedInsights />
             <Analytics />

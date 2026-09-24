@@ -56,11 +56,15 @@ const GoalCard: React.FC<GoalCardProps> = ({ icon, title, description, accentCol
   );
 };
 
-const GoalsSection: React.FC = () => {
+const GoalsSection: React.FC<{ initialContent?: Record<string, string> }> = ({
+  initialContent,
+}) => {
   const { t } = useTranslation();
-  const [content, setContent] = useState<Record<string, string>>({});
+  const [content, setContent] = useState<Record<string, string>>(initialContent || {});
+  const hasInitial = Boolean(initialContent && Object.keys(initialContent).length > 0);
 
   useEffect(() => {
+    if (hasInitial) return;
     const keys = [
       'home_goals_title', 'home_goals_desc',
       'home_goal1_title', 'home_goal1_desc',
@@ -90,7 +94,7 @@ const GoalsSection: React.FC = () => {
       home_goals_cta_desc: t('goals.joinUsDesc'),
     };
     getPageContentBatch(keys, fallbacks).then(setContent);
-  }, [t]);
+  }, [t, hasInitial]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

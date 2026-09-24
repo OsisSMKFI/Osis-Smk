@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { generatePageMetadata } from '@/lib/metadata-helper';
+import { getPublicPageContent } from '@/lib/publicData';
 import AboutPageClient from './AboutPageClient';
 
 export const metadata: Metadata = generatePageMetadata({
@@ -10,6 +11,14 @@ export const metadata: Metadata = generatePageMetadata({
     image: '/images/logo.png',
 });
 
-export default function AboutPage() {
-    return <AboutPageClient />;
+export const revalidate = 60;
+
+export default async function AboutPage() {
+    let initialDb: Record<string, string> = {};
+    try {
+        initialDb = await getPublicPageContent();
+    } catch {
+        // soft-fail → client fallbacks
+    }
+    return <AboutPageClient initialDb={initialDb} />;
 }

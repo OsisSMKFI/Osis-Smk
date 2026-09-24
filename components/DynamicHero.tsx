@@ -6,46 +6,41 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { getPageContentBatch } from '@/lib/pageContent';
 import { fetchGlobalBackground, type GlobalBackgroundConfig } from '@/lib/adminSettings.client';
 
-function DynamicHeroInternal() {
+function DynamicHeroInternal({ initialContent }: { initialContent?: Record<string, string> }) {
   const { t, language } = useTranslation();
   const [content, setContent] = useState<Record<string, string>>({
-    title: '',
-    subtitle: '',
-    description: '',
+    title: initialContent?.home_hero_title || '',
+    subtitle: initialContent?.home_hero_subtitle || '',
+    description: initialContent?.home_hero_description || '',
   });
-  const [loading, setLoading] = useState(true);
   const [bg, setBg] = useState<GlobalBackgroundConfig>({ mode: 'gradient' });
+  const hasInitial = Boolean(initialContent?.home_hero_title);
 
   useEffect(() => {
-    async function loadContent() {
-      try {
-        const [pageData, bgData] = await Promise.all([
-          getPageContentBatch([
-            'home_hero_title',
-            'home_hero_subtitle',
-            'home_hero_description',
-          ]),
-          fetchGlobalBackground()
-        ]);
+    // Background only — never blocks hero paint
+    fetchGlobalBackground()
+      .then((bgData) => {
+        if (bgData && bgData.mode) setBg(bgData);
+      })
+      .catch(() => {});
 
-        setContent(prev => ({
+    if (hasInitial) return;
+
+    getPageContentBatch([
+      'home_hero_title',
+      'home_hero_subtitle',
+      'home_hero_description',
+    ])
+      .then((pageData) => {
+        setContent((prev) => ({
           ...prev,
           title: pageData.home_hero_title || prev.title,
           subtitle: pageData.home_hero_subtitle || prev.subtitle,
           description: pageData.home_hero_description || prev.description,
         }));
-        if (bgData && bgData.mode) {
-          setBg(bgData);
-        }
-      } catch {
-        // Silent fail for background loading
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadContent();
-  }, []);
+      })
+      .catch(() => {});
+  }, [hasInitial]);
 
   const backgroundStyle = (() => {
     if (bg.imageUrl) return undefined;
@@ -53,21 +48,6 @@ function DynamicHeroInternal() {
     if (bg.mode === 'gradient' && bg.gradient) return { background: bg.gradient };
     return { background: 'var(--gradient-bg)' };
   })();
-
-  if (loading) {
-    return (
-      <section
-        className="hero-section relative min-h-screen flex items-center justify-center overflow-hidden pt-16 md:pt-20"
-        style={{ background: 'var(--gradient-bg)' }}
-      >
-        <div className="space-y-6 text-center z-10 px-6 w-full max-w-3xl">
-          <div className="h-10 bg-white/10 rounded-full mx-auto w-2/3 animate-pulse" />
-          <div className="h-6 bg-white/10 rounded-full mx-auto w-1/2 animate-pulse" />
-          <div className="h-20 bg-white/5 rounded-xl mx-auto w-full animate-pulse" />
-        </div>
-      </section>
-    );
-  }
 
   const displayTitle = language === 'id' ? (content.title || t('home.osisName')) : t('home.osisName');
   const displaySubtitle = language === 'id' ? (content.subtitle || t('home.subtitle')) : t('home.subtitle');

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     
     let query = supabaseAdmin
       .from('page_content')
-      .select('*');
+      .select('id, page_key, title, content, category, content_type, published, updated_at, created_at');
     
     if (category) {
       query = query.eq('category', category);

@@ -209,22 +209,25 @@ export async function fetchAllHomePageData(): Promise<HomePageData> {
 // REACT HOOK
 // ============================================
 
-export function useHomePageData() {
-  const [data, setData] = useState<HomePageData>({
-    posts: [],
-    announcements: [],
-    polls: [],
-  });
-  const [loading, setLoading] = useState(true);
+export function useHomePageData(initial?: HomePageData) {
+  const [data, setData] = useState<HomePageData>(
+    initial ?? {
+      posts: [],
+      announcements: [],
+      polls: [],
+    }
+  );
+  const [loading, setLoading] = useState(!initial);
   const [error, setError] = useState<string | null>(null);
   const fetchedRef = useRef(false);
+  const hasInitial = useRef(Boolean(initial));
 
   const refresh = useCallback(async () => {
     // Clear cache on refresh
     delete cache.posts;
     delete cache.announcements;
     delete cache.polls;
-    
+
     setLoading(true);
     try {
       const result = await fetchAllHomePageData();
@@ -238,6 +241,8 @@ export function useHomePageData() {
   }, []);
 
   useEffect(() => {
+    // Server already provided data — skip the client waterfall
+    if (hasInitial.current) return;
     // Prevent double fetch in React StrictMode
     if (fetchedRef.current) return;
     fetchedRef.current = true;

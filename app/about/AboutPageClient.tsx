@@ -333,14 +333,15 @@ function FooterCTASection({ db }: { db: Record<string, string> }) {
   );
 }
 
-export default function AboutPageClient() {
+export default function AboutPageClient({ initialDb }: { initialDb?: Record<string, string> }) {
   const { t } = useTranslation();
-  const [db, setDb] = useState<Record<string, string>>({});
+  const [db, setDb] = useState<Record<string, string>>(initialDb || {});
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [coreTeam, setCoreTeam] = useState<TeamMember[] | null>(null);
   const [koordinatorSekbid, setKoordinatorSekbid] = useState<TeamMember[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const hasInitialDb = Boolean(initialDb && Object.keys(initialDb).length > 0);
 
   const [logoElements, setLogoElements] = useState([
     { icon: '🏫', imageSrc: '/images/Fitrah Insani.svg', title: 'Fithrah Insani', description: 'Identitas OSIS yaitu SMK Informatika Fithrah Insani.', color: '#22c55e', gradient: 'bg-gradient-to-r from-green-500 to-emerald-600' },
@@ -352,6 +353,7 @@ export default function AboutPageClient() {
 
   useEffect(() => {
     setIsClient(true);
+    if (hasInitialDb) return;
     getPageContentBatch([
       'about_hero_title1', 'about_hero_title2', 'about_hero_subtitle1', 'about_hero_subtitle2', 'about_hero_scroll',
       'about_visimisi_label', 'about_visimisi_title', 'about_visimisi_title_hl',
@@ -373,7 +375,7 @@ export default function AboutPageClient() {
       'about_core_title1', 'about_core_title2', 'about_core_subtitle',
       'about_sekbid_title1', 'about_sekbid_title2', 'about_sekbid_subtitle',
     ]).then(setDb);
-  }, []);
+  }, [hasInitialDb]);
 
   useEffect(() => {
     (async () => {

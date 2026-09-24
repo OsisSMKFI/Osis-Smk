@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaHeart, FaQrcode, FaShareAlt } from 'react-icons/fa';
 import { InstagramIcon, SpotifyIcon, TiktokIcon, YoutubeIcon } from './icons/SocialIcons';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -14,32 +13,42 @@ import OptimizedLogo from './OptimizedLogo';
 const Footer: React.FC = () => {
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const router = useRouter();
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showQR, setShowQR] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
   const [siteContent, setSiteContent] = useState<Record<string, string>>({});
 
-  const warm = (href: string) => {
-    try {
-      router.prefetch(href);
-    } catch {
-      // ignore
-    }
-  };
-
-  // Fetch editable content from DB
+  // Fetch editable content from DB (idle — never block first paint)
   useEffect(() => {
-    getPageContentBatch(
-      ['site_school_name', 'site_address', 'site_phone', 'site_email', 'site_copyright'],
-      {
-        site_school_name: 'SMK Informatika Fithrah Insani',
-        site_address: 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
-        site_phone: '(022) 87805564',
-        site_email: 'osissmkinformatika2.fi@gmail.com',
-        site_copyright: 'OSIS SMK Fithrah Insani - Raveka Sena',
-      }
-    ).then(setSiteContent);
+    let cancelled = false;
+    const load = () => {
+      if (cancelled) return;
+      getPageContentBatch(
+        ['site_school_name', 'site_address', 'site_phone', 'site_email', 'site_copyright'],
+        {
+          site_school_name: 'SMK Informatika Fithrah Insani',
+          site_address: 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
+          site_phone: '(022) 87805564',
+          site_email: 'osissmkinformatika2.fi@gmail.com',
+          site_copyright: 'OSIS SMK Fithrah Insani - Raveka Sena',
+        }
+      ).then((data) => {
+        if (!cancelled) setSiteContent(data);
+      });
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(load, { timeout: 4000 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(handle);
+      };
+    }
+    const timer = window.setTimeout(load, 800);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, []);
 
   // Generate QR Code
@@ -215,7 +224,6 @@ const Footer: React.FC = () => {
                       <Link 
                         href={link.href} 
                         prefetch
-                        onMouseEnter={() => warm(link.href)}
                         className="text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-300 flex items-center group"
                       >
                         <span className="w-2 h-2 bg-yellow-400 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

@@ -28,7 +28,8 @@ async function fetchAllContent(): Promise<Record<string, string>> {
       const { data, error } = await supabase
         .from('page_content')
         .select('page_key, content')
-        .eq('published', true);
+        .eq('published', true)
+        .abortSignal(AbortSignal.timeout(5000));
 
       if (error || !data) {
         console.warn('[pageContent] Fetch error:', error?.message);
