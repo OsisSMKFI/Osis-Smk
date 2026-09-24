@@ -439,8 +439,8 @@ export default function AboutPageClient({ initialDb }: { initialDb?: Record<stri
       <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden scroll-smooth">
         {isClient && (
           <HeroSection3D
-            title={`${db['about_hero_title1'] || t('about.heroTitle1') || 'Tentang'} ${db['about_hero_title2'] || t('about.heroTitle2') || 'DIRGANTARA 2025'}`}
-            subtitle={`${db['about_hero_subtitle1'] || t('about.heroSubtitle1') || 'Mengenal lebih dekat'} ${db['about_hero_subtitle2'] || t('about.heroSubtitle2') || 'OSIS SMK Informatika - Dirgantara'}`}
+            title={`${db['about_hero_title1'] || t('about.heroTitle1') || 'Tentang'} ${db['about_hero_title2'] || t('about.heroTitle2') || 'RAVEKA SENA 2025-2026'}`}
+            subtitle={`${db['about_hero_subtitle1'] || t('about.heroSubtitle1') || 'Mengenal lebih dekat'} ${db['about_hero_subtitle2'] || t('about.heroSubtitle2') || 'OSIS SMK Informatika - Raveka Sena'}`}
             scrollText={db['about_hero_scroll'] || t('about.scrollText') || 'Scroll untuk menjelajahi'}
           />
         )}
@@ -450,19 +450,19 @@ export default function AboutPageClient({ initialDb }: { initialDb?: Record<stri
         {isClient && (
           <StorySection
             title={db['about_story_title1'] || t('about.storyTitle1') || 'Cerita'}
-            highlightTitle={db['about_story_title2'] || t('about.storyTitle2') || 'Dirgantara'}
-            philosophyTitle={db['about_philosophy_title'] || t('about.philosophyTitle') || 'Filosofi Nama'}
-            philosophyHighlight={db['about_philosophy_hl'] || t('about.philosophyHighlight') || 'Dirgantara'}
+            highlightTitle={db['about_story_title2'] || t('about.storyTitle2') || 'Raveka Sena'}
+            philosophyTitle={db['about_philosophy_title'] || t('about.philosophyTitle') || 'Filosofi Nama OSIS'}
+            philosophyHighlight={db['about_philosophy_hl'] || t('about.philosophyHighlight') || 'Raveka Sena'}
             philosophyContent={{
               part1: db['about_philosophy_part1'] || t('about.philosophyPart1') || 'Nama',
-              nameHighlight: db['about_philosophy_name_hl'] || t('about.philosophyNameHighlight') || '"Dirgantara"',
-              part2: db['about_philosophy_part2'] || t('about.philosophyPart2') || 'diambil dari kata dalam bahasa Indonesia yang berarti',
-              skyHighlight: db['about_philosophy_sky_hl'] || t('about.philosophySkyHighlight') || '"angkasa" atau "langit"',
-              part3: db['about_philosophy_part3'] || t('about.philosophyPart3') || '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.'
+              nameHighlight: db['about_philosophy_name_hl'] || t('about.philosophyNameHighlight') || 'RAVEKA SENA',
+              part2: db['about_philosophy_part2'] || t('about.philosophyPart2') || 'terdiri dari dua kata:',
+              skyHighlight: db['about_philosophy_sky_hl'] || t('about.philosophySkyHighlight') || '"Raveka" (sinar terang) dan "Sena" (pasukan)',
+              part3: db['about_philosophy_part3'] || t('about.philosophyPart3') || ', yang berarti "pasukan yang menjadi sinar terang".'
             }}
             descriptions={[
-              db['about_philosophy_desc1'] || t('about.philosophyDesc1') || 'Sebagai organisasi siswa, kami berkomitmen untuk mengembangkan kepemimpinan, kreativitas, dan nilai-nilai keislaman.',
-              db['about_philosophy_desc2'] || t('about.philosophyDesc2') || 'Dengan semangat yang membara seperti matahari, kami terus bergerak maju menuju masa depan yang lebih cerah.'
+              db['about_philosophy_desc1'] || t('about.philosophyDesc1') || 'Filosofi ini mencerminkan semangat OSIS untuk menjadi pasukan yang membawa cahaya perubahan, inovasi, dan inspirasi bagi seluruh siswa SMK Informatika Fithrah Insani.',
+              db['about_philosophy_desc2'] || t('about.philosophyDesc2') || 'untuk seluruh warga sekolah.'
             ]}
           />
         )}

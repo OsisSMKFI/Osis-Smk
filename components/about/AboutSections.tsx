@@ -192,7 +192,7 @@ export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menj
   );
 }
 
-// Story Section - "Cerita Dirgantara"
+// Story Section - "Cerita Raveka Sena"
 interface StorySectionProps {
   title: string;
   highlightTitle: string;

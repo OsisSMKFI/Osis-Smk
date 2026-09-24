@@ -72,25 +72,25 @@ const DEFAULTS = {
   about_hero_subtitle2: { content: 'OSIS SMK Informatika - Raveka Sena', category: 'about_hero' },
   about_hero_scroll: { content: 'Scroll untuk menjelajahi', category: 'about_hero' },
 
-  // About story & philosophy (match AboutPageClient fallbacks that are currently shown)
+  // About story & philosophy (match current Raveka Sena translations)
   about_story_title1: { content: 'Cerita', category: 'about_story' },
-  about_story_title2: { content: 'Dirgantara', category: 'about_story' },
-  about_philosophy_title: { content: 'Filosofi Nama', category: 'about_story' },
-  about_philosophy_hl: { content: 'Dirgantara', category: 'about_story' },
+  about_story_title2: { content: 'Raveka Sena', category: 'about_story' },
+  about_philosophy_title: { content: 'Filosofi Nama OSIS', category: 'about_story' },
+  about_philosophy_hl: { content: 'Raveka Sena', category: 'about_story' },
   about_philosophy_part1: { content: 'Nama', category: 'about_story' },
-  about_philosophy_name_hl: { content: '"Dirgantara"', category: 'about_story' },
-  about_philosophy_part2: { content: 'diambil dari kata dalam bahasa Indonesia yang berarti', category: 'about_story' },
-  about_philosophy_sky_hl: { content: '"angkasa" atau "langit"', category: 'about_story' },
+  about_philosophy_name_hl: { content: 'RAVEKA SENA', category: 'about_story' },
+  about_philosophy_part2: { content: 'terdiri dari dua kata:', category: 'about_story' },
+  about_philosophy_sky_hl: { content: '"Raveka" (sinar terang) dan "Sena" (pasukan)', category: 'about_story' },
   about_philosophy_part3: {
-    content: '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.',
+    content: ', yang berarti "pasukan yang menjadi sinar terang".',
     category: 'about_story',
   },
   about_philosophy_desc1: {
-    content: 'Sebagai organisasi siswa, kami berkomitmen untuk mengembangkan kepemimpinan, kreativitas, dan nilai-nilai keislaman.',
+    content: 'Filosofi ini mencerminkan semangat OSIS untuk menjadi pasukan yang membawa cahaya perubahan, inovasi, dan inspirasi bagi seluruh siswa SMK Informatika Fithrah Insani. Nama ini juga mencerminkan semangat',
     category: 'about_story',
   },
   about_philosophy_desc2: {
-    content: 'Dengan semangat yang membara seperti matahari, kami terus bergerak maju menuju masa depan yang lebih cerah.',
+    content: 'untuk seluruh warga sekolah.',
     category: 'about_story',
   },
 
@@ -157,13 +157,13 @@ const DEFAULTS = {
   about_core_title1: { content: 'Pengurus', category: 'about_team' },
   about_core_title2: { content: 'Inti', category: 'about_team' },
   about_core_subtitle: {
-    content: 'Para pemimpin yang menggerakkan roda organisasi',
+    content: 'Para siswa berdedikasi yang memimpin dan menginspirasi OSIS SMK Informatika',
     category: 'about_team',
   },
-  about_sekbid_title1: { content: 'Koordinator', category: 'about_team' },
-  about_sekbid_title2: { content: 'Sekbid', category: 'about_team' },
+  about_sekbid_title1: { content: 'Ketua', category: 'about_team' },
+  about_sekbid_title2: { content: 'Koordinator', category: 'about_team' },
   about_sekbid_subtitle: {
-    content: 'Para koordinator yang memimpin setiap seksi bidang',
+    content: 'Pemimpin bidang yang menggerakkan program kerja OSIS',
     category: 'about_team',
   },
 
@@ -179,9 +179,9 @@ const DEFAULTS = {
 
   // Timeline achievements (used by /api/public/achievements)
   achievement_1_year: { content: '2024', category: 'about_achievements', content_type: 'text' },
-  achievement_1_title: { content: 'Terbentuknya OSIS Dirgantara', category: 'about_achievements' },
+  achievement_1_title: { content: 'Terbentuknya OSIS Raveka Sena', category: 'about_achievements' },
   achievement_1_desc: {
-    content: 'OSIS SMK Informatika resmi terbentuk dengan nama Dirgantara, membawa semangat baru dalam organisasi siswa.',
+    content: 'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.',
     category: 'about_achievements',
   },
   achievement_1_icon: { content: '🚀', category: 'about_achievements' },

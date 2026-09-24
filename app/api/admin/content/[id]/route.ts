@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { requirePermission } from '@/lib/apiAuth';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requirePermission('content:update');
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -43,6 +47,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requirePermission('content:delete');
+  if (authError) return authError;
+
   try {
     const { id } = await params;
 

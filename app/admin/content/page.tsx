@@ -5,7 +5,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import AdminPageShell from '@/components/admin/AdminPageShell';
-import { FaEdit, FaSave, FaTimes, FaSearch, FaEye, FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { invalidatePageContentCache } from '@/lib/pageContent';
+import { FaSave, FaTimes, FaSearch, FaChevronDown, FaChevronRight, FaBroom } from 'react-icons/fa';
 
 interface ContentItem {
   id: string;
@@ -138,19 +139,19 @@ const SECTIONS: SectionConfig[] = [
       { key: 'about_value1_icon', label: 'Nilai 1 - Icon', type: 'emoji' },
       { key: 'about_value1_name', label: 'Nilai 1 - Nama', type: 'text' },
       { key: 'about_value1_desc', label: 'Nilai 1 - Deskripsi', type: 'textarea' },
-      { key: 'about_value1_color', label: 'Nilai 1 - Warna', type: 'color' },
+      { key: 'about_value1_color', label: 'Nilai 1 - Gradient (CSS)', type: 'text' },
       { key: 'about_value2_icon', label: 'Nilai 2 - Icon', type: 'emoji' },
       { key: 'about_value2_name', label: 'Nilai 2 - Nama', type: 'text' },
       { key: 'about_value2_desc', label: 'Nilai 2 - Deskripsi', type: 'textarea' },
-      { key: 'about_value2_color', label: 'Nilai 2 - Warna', type: 'color' },
+      { key: 'about_value2_color', label: 'Nilai 2 - Gradient (CSS)', type: 'text' },
       { key: 'about_value3_icon', label: 'Nilai 3 - Icon', type: 'emoji' },
       { key: 'about_value3_name', label: 'Nilai 3 - Nama', type: 'text' },
       { key: 'about_value3_desc', label: 'Nilai 3 - Deskripsi', type: 'textarea' },
-      { key: 'about_value3_color', label: 'Nilai 3 - Warna', type: 'color' },
+      { key: 'about_value3_color', label: 'Nilai 3 - Gradient (CSS)', type: 'text' },
       { key: 'about_value4_icon', label: 'Nilai 4 - Icon', type: 'emoji' },
       { key: 'about_value4_name', label: 'Nilai 4 - Nama', type: 'text' },
       { key: 'about_value4_desc', label: 'Nilai 4 - Deskripsi', type: 'textarea' },
-      { key: 'about_value4_color', label: 'Nilai 4 - Warna', type: 'color' },
+      { key: 'about_value4_color', label: 'Nilai 4 - Gradient (CSS)', type: 'text' },
     ],
   },
   {
@@ -217,6 +218,7 @@ const SECTIONS: SectionConfig[] = [
   },
 ];
 
+/** Preview only — mirrors current site translations (id). NEVER auto-saved unless the admin edits the field. */
 const DEFAULT_CONTENT: Record<string, string> = {
   home_hero_title: 'OSIS SMK Informatika',
   home_hero_subtitle: 'Raveka Sena 2025-2026',
@@ -227,30 +229,70 @@ const DEFAULT_CONTENT: Record<string, string> = {
   site_vision_hl2: 'KAMIL dan Inovatif',
   site_vision_part3: '',
   site_vision_hl3: '',
+  home_goals_title: 'Forum OSIS Kabupaten Bandung Barat',
+  home_goals_desc: 'Kami berkomitmen untuk membentuk generasi yang berakhlak mulia, cerdas, dan mandiri. Melalui kegiatan pendidikan dan pembinaan karakter, kami ingin menciptakan lingkungan belajar yang inspiratif dan produktif bagi seluruh siswa.',
+  home_goal1_title: 'Prestasi Akademik',
+  home_goal1_desc: 'Meningkatkan prestasi akademik siswa melalui program bimbingan dan kompetisi',
+  home_goal2_title: 'Karakter Islami',
+  home_goal2_desc: 'Membentuk karakter siswa yang berakhlak mulia berdasarkan nilai-nilai Islam',
+  home_goal3_title: 'Kepemimpinan',
+  home_goal3_desc: 'Mengembangkan jiwa kepemimpinan dan kerjasama dalam organisasi',
+  home_goal4_title: 'Inovasi & Kreativitas',
+  home_goal4_desc: 'Mendorong inovasi dan kreativitas dalam setiap kegiatan dan program',
+  home_goal5_title: 'Keunggulan Sekolah',
+  home_goal5_desc: 'Menjadikan SMK Informatika Fithrah Insani sebagai sekolah unggulan di Kabupaten Bandung Barat',
+  home_goal6_title: 'Visi 2030',
+  home_goal6_desc: 'Mewujudkan visi sekolah menjadi lembaga pendidikan Islam terdepan',
+  home_goals_cta_title: 'Mari Bergabung Bersama Kami',
+  home_goals_cta_desc: 'Wujudkan impian dan cita-cita bersama OSIS SMK Informatika Fithrah Insani',
   about_hero_title1: 'Tentang',
   about_hero_title2: 'RAVEKA SENA 2025-2026',
   about_hero_subtitle1: 'Mengenal lebih dekat',
   about_hero_subtitle2: 'OSIS SMK Informatika - Raveka Sena',
   about_hero_scroll: 'Scroll untuk menjelajahi',
   about_story_title1: 'Cerita',
-  about_story_title2: 'Dirgantara',
-  about_philosophy_title: 'Filosofi Nama',
-  about_philosophy_hl: 'Dirgantara',
+  about_story_title2: 'Raveka Sena',
+  about_philosophy_title: 'Filosofi Nama OSIS',
+  about_philosophy_hl: 'Raveka Sena',
   about_philosophy_part1: 'Nama',
-  about_philosophy_name_hl: '"Dirgantara"',
-  about_philosophy_part2: 'diambil dari kata dalam bahasa Indonesia yang berarti',
-  about_philosophy_sky_hl: '"angkasa" atau "langit"',
-  about_philosophy_part3: '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.',
+  about_philosophy_name_hl: 'RAVEKA SENA',
+  about_philosophy_part2: 'terdiri dari dua kata:',
+  about_philosophy_sky_hl: '"Raveka" (sinar terang) dan "Sena" (pasukan)',
+  about_philosophy_part3: ', yang berarti "pasukan yang menjadi sinar terang".',
+  about_philosophy_desc1: 'Filosofi ini mencerminkan semangat OSIS untuk menjadi pasukan yang membawa cahaya perubahan, inovasi, dan inspirasi bagi seluruh siswa SMK Informatika Fithrah Insani. Nama ini juga mencerminkan semangat',
+  about_philosophy_desc2: 'untuk seluruh warga sekolah.',
   about_visimisi_label: 'Visi & Misi',
   about_visimisi_title: 'Arah',
   about_visimisi_title_hl: 'Langkah Kami',
   about_vision_label: 'Visi',
+  about_vision_content: 'Menjadi organisasi siswa yang unggul, inovatif, dan berkarakter islami dalam membentuk generasi pemimpin masa depan yang berwawasan teknologi dan berjiwa kepemimpinan.',
   about_mission_label: 'Misi',
+  about_mission_1: 'Mengembangkan potensi kepemimpinan siswa melalui berbagai kegiatan organisasi',
+  about_mission_2: 'Menumbuhkan kreativitas dan inovasi dalam setiap program kerja',
+  about_mission_3: 'Menanamkan nilai-nilai keislaman dalam setiap aktivitas',
+  about_mission_4: 'Membangun kerjasama yang solid antar anggota dan stakeholder',
   about_values_label: 'Nilai-Nilai Kami',
   about_values_title: 'Prinsip',
   about_values_title_hl: 'yang Kami Pegang',
+  about_value1_icon: '💡',
+  about_value1_name: 'Inovasi',
+  about_value1_desc: 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
+  about_value1_color: 'from-yellow-400 to-orange-500',
+  about_value2_icon: '🤝',
+  about_value2_name: 'Integritas',
+  about_value2_desc: 'Menjunjung tinggi kejujuran dan tanggung jawab',
+  about_value2_color: 'from-blue-400 to-indigo-500',
+  about_value3_icon: '🌟',
+  about_value3_name: 'Keunggulan',
+  about_value3_desc: 'Berusaha memberikan yang terbaik dalam setiap aspek',
+  about_value3_color: 'from-purple-400 to-pink-500',
+  about_value4_icon: '🕌',
+  about_value4_name: 'Islami',
+  about_value4_desc: 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
+  about_value4_color: 'from-green-400 to-emerald-500',
   about_cta_title: 'Bergabung',
   about_cta_title_hl: 'Bersama Kami',
+  about_cta_desc: 'Mari bersama-sama membangun organisasi yang lebih baik dan menciptakan dampak positif bagi sekolah dan masyarakat.',
   about_cta_button: 'Daftar Sekarang',
   about_cta_button2: 'Lihat Info Terkini',
   about_achievements_label: 'Perjalanan Kami',
@@ -261,16 +303,30 @@ const DEFAULT_CONTENT: Record<string, string> = {
   about_logo_alt: 'Logo OSIS SMK Informatika Fithrah Insani',
   about_core_title1: 'Pengurus',
   about_core_title2: 'Inti',
-  about_core_subtitle: 'Para pemimpin yang menggerakkan roda organisasi',
-  about_sekbid_title1: 'Koordinator',
-  about_sekbid_title2: 'Sekbid',
-  about_sekbid_subtitle: 'Para koordinator yang memimpin setiap seksi bidang',
+  about_core_subtitle: 'Para siswa berdedikasi yang memimpin dan menginspirasi OSIS SMK Informatika',
+  about_sekbid_title1: 'Ketua',
+  about_sekbid_title2: 'Koordinator',
+  about_sekbid_subtitle: 'Pemimpin bidang yang menggerakkan program kerja OSIS',
   site_school_name: 'SMK Informatika Fithrah Insani',
   site_address: 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
   site_phone: '(022) 87805564',
   site_email: 'osissmkinformatika2.fi@gmail.com',
   site_copyright: 'OSIS SMK Fithrah Insani - Raveka Sena',
 };
+
+/** Exact old hardcode that must not override current Raveka Sena copy. */
+const STALE_CONTENT: Record<string, string[]> = {
+  about_story_title2: ['Dirgantara', 'DIRGANTARA', 'DIRGANTARA 2025'],
+  about_philosophy_hl: ['Dirgantara', 'DIRGANTARA'],
+  about_philosophy_name_hl: ['"Dirgantara"', 'Dirgantara'],
+  about_philosophy_part2: ['diambil dari kata dalam bahasa Indonesia yang berarti'],
+  about_philosophy_sky_hl: ['"angkasa" atau "langit"'],
+  about_philosophy_part3: ['. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.'],
+  about_hero_title2: ['DIRGANTARA 2025', 'Dirgantara 2025'],
+  about_hero_subtitle2: ['OSIS SMK Informatika - Dirgantara'],
+};
+
+const SECTION_KEYS = new Set(SECTIONS.flatMap(s => s.fields.map(f => f.key)));
 
 export default function AdminContentPage() {
   const { data: session, status } = useSession();
@@ -284,9 +340,11 @@ export default function AdminContentPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(() => new Set());
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'filled' | 'empty'>('all');
+  const [repairing, setRepairing] = useState(false);
   const msgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showMessage = useCallback((type: 'success' | 'error', text: string) => {
@@ -306,7 +364,15 @@ export default function AdminContentPage() {
       const res = await apiFetch('/api/admin/content');
       if (res.ok) {
         const data = await safeJson(res, { url: '/api/admin/content', method: 'GET' });
-        setContents(Array.isArray(data) ? data : []);
+        const rows: ContentItem[] = (Array.isArray(data) ? data : []).filter((c: ContentItem) => {
+          const key = c.key || c.page_key || '';
+          const cat = c.category || '';
+          if (!SECTION_KEYS.has(key)) return false;
+          if (cat === 'design' || cat === 'ai_progress' || cat === 'ai_logs') return false;
+          if (key.startsWith('ai_') || key.startsWith('design_override_')) return false;
+          return true;
+        });
+        setContents(rows);
       }
     } catch {
       showMessage('error', 'Gagal memuat konten');
@@ -341,19 +407,27 @@ export default function AdminContentPage() {
     const values: Record<string, string> = {};
     section.fields.forEach(f => {
       const item = contentMap.get(f.key);
-      values[f.key] = item?.content || DEFAULT_CONTENT[f.key] || '';
+      // DB first (empty string stays empty); preview default only when row missing
+      values[f.key] = item ? (item.content ?? '') : (DEFAULT_CONTENT[f.key] ?? '');
     });
     setEditValues(values);
+    setDirtyKeys(new Set());
     setEditingSection(section.id);
   };
 
   const cancelEdit = () => {
     setEditingSection(null);
     setEditValues({});
+    setDirtyKeys(new Set());
   };
 
   const setFieldValue = useCallback((key: string, value: string) => {
     setEditValues(prev => ({ ...prev, [key]: value }));
+    setDirtyKeys(prev => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
   }, []);
 
   const saveSection = async (section: SectionConfig) => {
@@ -362,9 +436,10 @@ export default function AdminContentPage() {
       const items: Array<{ id?: string; page_key: string; title?: string; content: string; category?: string }> = [];
 
       for (const field of section.fields) {
+        // Only persist fields the admin actually touched — never seed DEFAULT_CONTENT
+        if (!dirtyKeys.has(field.key)) continue;
         const existing = contentMap.get(field.key);
-        const raw = editValues[field.key];
-        const value = raw !== undefined ? raw : (existing?.content || DEFAULT_CONTENT[field.key] || '');
+        const value = editValues[field.key] ?? '';
 
         if (existing) {
           if ((existing.content || '') === value) continue;
@@ -383,6 +458,7 @@ export default function AdminContentPage() {
         showMessage('success', 'Tidak ada perubahan untuk disimpan.');
         setEditingSection(null);
         setEditValues({});
+        setDirtyKeys(new Set());
         setSaving(false);
         return;
       }
@@ -403,15 +479,75 @@ export default function AdminContentPage() {
         throw new Error(detail || `HTTP ${res.status}`);
       }
 
+      invalidatePageContentCache();
       showMessage('success', `${section.title} berhasil disimpan!`);
       setEditingSection(null);
       setEditValues({});
+      setDirtyKeys(new Set());
       // Silent refresh — does NOT flip full-page loading spinner
       fetchContents();
     } catch (e: any) {
       showMessage('error', e?.message || 'Gagal menyimpan');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /** Replace exact stale "Dirgantara" hardcode still stored in DB with current Raveka Sena copy. */
+  const repairStale = async () => {
+    setRepairing(true);
+    try {
+      const items: Array<{ id: string; page_key: string; content: string }> = [];
+      for (const [key, staleList] of Object.entries(STALE_CONTENT)) {
+        const row = contentMap.get(key);
+        if (!row) continue;
+        const current = row.content || '';
+        if (!staleList.includes(current)) continue;
+        const fixed = DEFAULT_CONTENT[key];
+        if (fixed === undefined || fixed === current) continue;
+        items.push({ id: row.id, page_key: key, content: fixed });
+      }
+
+      // Also fix achievement_* rows still using old Dirgantara copy
+      try {
+        const res = await apiFetch('/api/admin/content');
+        if (res.ok) {
+          const all = await safeJson(res, { url: '/api/admin/content', method: 'GET' });
+          if (Array.isArray(all)) {
+            for (const row of all) {
+              const key = row.key || row.page_key || '';
+              const content = row.content || '';
+              if (!key.startsWith('achievement_')) continue;
+              if (content.includes('Dirgantara') || content.includes('DIRGANTARA')) {
+                const fixed = content
+                  .replace(/Dirgantara/g, 'Raveka Sena')
+                  .replace(/DIRGANTARA/g, 'RAVEKA SENA');
+                if (fixed !== content && row.id) {
+                  items.push({ id: row.id, page_key: key, content: fixed });
+                }
+              }
+            }
+          }
+        }
+      } catch { /* section-only repair still applies */ }
+
+      if (items.length === 0) {
+        showMessage('success', 'Tidak ada data hardcode lama yang perlu diperbaiki.');
+        return;
+      }
+      const res = await apiFetch('/api/admin/content', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      });
+      if (!res.ok) throw new Error('Gagal memperbaiki data lama');
+      invalidatePageContentCache();
+      showMessage('success', `${items.length} field hardcode lama diganti dengan data Raveka Sena.`);
+      await fetchContents();
+    } catch (e: any) {
+      showMessage('error', e?.message || 'Gagal memperbaiki data lama');
+    } finally {
+      setRepairing(false);
     }
   };
 
@@ -465,10 +601,20 @@ export default function AdminContentPage() {
               Klik bagian untuk mengedit. {totalFilled}/{totalFields} kolom sudah terisi.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <div className="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg">
-              {totalFilled}/{totalFields} kolom terisi
+              {totalFilled}/{totalFields} kolom di database
             </div>
+            <button
+              type="button"
+              onClick={repairStale}
+              disabled={repairing}
+              className="text-sm px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 disabled:opacity-50 flex items-center gap-1.5"
+              title="Ganti data hardcode lama (Dirgantara) dengan Raveka Sena"
+            >
+              <FaBroom />
+              {repairing ? 'Memperbaiki...' : 'Perbaiki data lama'}
+            </button>
           </div>
         </div>
 
@@ -573,17 +719,22 @@ export default function AdminContentPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                       {section.fields.map(field => {
                         const existing = contentMap.get(field.key);
+                        const fromDb = existing ? (existing.content ?? '') : null;
                         const value = isEditing
                           ? (editValues[field.key] ?? '')
-                          : (existing?.content || DEFAULT_CONTENT[field.key] || '');
+                          : (fromDb ?? DEFAULT_CONTENT[field.key] ?? '');
+                        const isDefaultPreview = !existing && !isEditing;
 
                         return (
                           <div key={field.key} className="space-y-1">
                             <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                               {field.label}
                               {field.type === 'emoji' && <span className="text-gray-400">(emoji)</span>}
-                              {field.type === 'color' && <span className="text-gray-400">(hex)</span>}
-                              {existing && <span className="text-green-500 text-[10px]">✓</span>}
+                              {existing ? (
+                                <span className="text-green-500 text-[10px]" title="Tersimpan di database">✓ DB</span>
+                              ) : isDefaultPreview ? (
+                                <span className="text-gray-400 text-[10px]" title="Contoh default situs — belum disimpan">default</span>
+                              ) : null}
                             </label>
                             {isEditing ? (
                               field.type === 'textarea' ? (
@@ -593,22 +744,6 @@ export default function AdminContentPage() {
                                   rows={2}
                                   className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                                 />
-                              ) : field.type === 'color' ? (
-                                <div className="flex gap-2 items-center">
-                                  <input
-                                    type="color"
-                                    value={value || '#facc15'}
-                                    onChange={(e) => setFieldValue(field.key, e.target.value)}
-                                    className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
-                                  />
-                                  <input
-                                    type="text"
-                                    value={value}
-                                    onChange={(e) => setFieldValue(field.key, e.target.value)}
-                                    className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono"
-                                    placeholder="#facc15"
-                                  />
-                                </div>
                               ) : (
                                 <input
                                   type="text"
@@ -618,7 +753,7 @@ export default function AdminContentPage() {
                                 />
                               )
                             ) : (
-                              <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm text-gray-700 dark:text-gray-300 min-h-[30px]">
+                              <div className={`px-3 py-1.5 rounded-lg text-sm min-h-[30px] ${isDefaultPreview ? 'bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 italic' : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
                                 {value || <span className="italic text-gray-400">Belum diisi</span>}
                               </div>
                             )}

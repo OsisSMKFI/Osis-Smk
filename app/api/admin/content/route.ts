@@ -30,19 +30,27 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    const formattedData = data?.map((item: any) => ({
-      id: item.id,
-      key: item.page_key,
-      page_key: item.page_key,
-      title: item.title || item.page_key.split('_').map((word: string) => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' '),
-      content: item.content || '',
-      category: item.category || 'general',
-      content_type: item.content_type || 'text',
-      published: item.published !== false,
-      updated_at: item.updated_at || item.created_at
-    })) || [];
+    const formattedData = (data || [])
+      .filter((item: any) => {
+        const key = item.page_key || '';
+        const cat = item.category || '';
+        if (cat === 'design' || cat === 'ai_progress' || cat === 'ai_logs') return false;
+        if (key.startsWith('design_override_') || key.startsWith('ai_task_') || key.startsWith('ai_action_log_')) return false;
+        return true;
+      })
+      .map((item: any) => ({
+        id: item.id,
+        key: item.page_key,
+        page_key: item.page_key,
+        title: item.title || item.page_key.split('_').map((word: string) =>
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' '),
+        content: item.content || '',
+        category: item.category || 'general',
+        content_type: item.content_type || 'text',
+        published: item.published !== false,
+        updated_at: item.updated_at || item.created_at
+      }));
 
     return NextResponse.json(formattedData);
   } catch (error: any) {

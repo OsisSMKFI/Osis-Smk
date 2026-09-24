@@ -10,6 +10,12 @@ const CACHE_TTL = 60 * 1000; // 1 minute
 // In-flight promise dedup - prevents parallel identical queries
 let inFlightPromise: Promise<Record<string, string>> | null = null;
 
+/** Drop client cache after admin saves so the next fetch is fresh. */
+export function invalidatePageContentCache() {
+  contentCache = null;
+  cacheTimestamp = 0;
+}
+
 /**
  * Fetch all page_content from DB (with caching + in-flight dedup)
  */

@@ -53,8 +53,8 @@ export async function GET() {
       achievements: [
         {
           year: '2024',
-          title: 'Terbentuknya OSIS Dirgantara',
-          description: 'OSIS SMK Informatika resmi terbentuk dengan nama Dirgantara, membawa semangat baru dalam organisasi siswa.',
+          title: 'Terbentuknya OSIS Raveka Sena',
+          description: 'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.',
           icon: '🚀',
         },
         {
@@ -79,8 +79,8 @@ export async function GET() {
       achievements: [
         {
           year: '2024',
-          title: 'Terbentuknya OSIS Dirgantara',
-          description: 'OSIS SMK Informatika resmi terbentuk dengan nama Dirgantara.',
+          title: 'Terbentuknya OSIS Raveka Sena',
+          description: 'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena.',
           icon: '🚀',
         },
         {

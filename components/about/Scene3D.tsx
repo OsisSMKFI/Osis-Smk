@@ -15,7 +15,7 @@ import {
 } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Floating Orb Component - Represents "Dirgantara" (Sky/Space)
+// Floating Orb Component - Represents "Raveka" (bright light / space)
 function FloatingOrb({ position, color, size = 1, speed = 1 }: { 
   position: [number, number, number]; 
   color: string; 
