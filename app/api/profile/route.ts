@@ -128,12 +128,15 @@ export async function PUT(request: NextRequest) {
       nisn: data.nisn,
       nik: data.nik,
       unit: data.unit_sekolah,
-      kelas: '', // Column doesn't exist in database
+      kelas: data.kelas ?? '',
       instagram_username: data.instagram_username,
       role: data.role,
       is_active: !!data.approved,
+      approved: !!data.approved,
       profile_image: data.photo_url ?? null,
+      photo_url: data.photo_url ?? null,
       created_at: data.created_at,
+      updated_at: data.updated_at,
       email_verified: !!data.email_verified,
     };
 
