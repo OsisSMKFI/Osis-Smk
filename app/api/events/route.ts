@@ -1,19 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { DEPRECATED_PROJECTS } from '@/lib/supabase/storage';
-
-// Filter out deprecated Supabase URLs
-function filterDeprecatedUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  
-  for (const deprecated of DEPRECATED_PROJECTS) {
-    if (url.includes(deprecated)) {
-      console.warn(`[Events API] Filtering deprecated URL from project: ${deprecated}`);
-      return null;
-    }
-  }
-  return url;
-}
+import { resolveStorageUrl } from '@/lib/mediaUrls';
 
 export async function GET() {
   try {
@@ -34,10 +21,10 @@ export async function GET() {
       return NextResponse.json({ error: evtError.message }, { status: 500 });
     }
 
-    // Filter out events with deprecated storage URLs
+    // Resolve media URLs (signed → public, relative → full, dead → null)
     const safeEvents = (events || []).map(event => ({
       ...event,
-      image_url: filterDeprecatedUrl(event.image_url)
+      image_url: resolveStorageUrl(event.image_url, 'events')
     }));
 
     console.log(`[api/events GET] Found ${safeEvents.length} events`);

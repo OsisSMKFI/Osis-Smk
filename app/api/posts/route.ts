@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { resolveStorageUrl } from '@/lib/mediaUrls';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,39 +42,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: message || 'Failed to fetch posts' }, { status: 500 });
     }
 
-    // Convert media URLs to signed URLs
-    const postsWithSignedUrls = await Promise.all(
-      (data || []).map(async (post: any) => {
-        const updatedPost = { ...post };
-        
-        // Convert featured_image if present
-        if (post.featured_image) {
-          // If already a full HTTP URL, use as-is
-          if (post.featured_image.startsWith('http')) {
-            updatedPost.featured_image = post.featured_image;
-          } else {
-            // Relative path — convert to public URL directly
-            const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vyorjqbrugjjeioayscg.supabase.co'}/storage/v1/object/public/${post.featured_image}`;
-            updatedPost.featured_image = publicUrl;
-          }
-        }
-        
-        // Convert author photo_url if present
-        if (post.author?.photo_url) {
-          if (post.author.photo_url.startsWith('http')) {
-            // Keep as-is
-          } else {
-            const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vyorjqbrugjjeioayscg.supabase.co'}/storage/v1/object/public/${post.author.photo_url}`;
-            updatedPost.author = {
-              ...post.author,
-              photo_url: publicUrl,
-            };
-          }
-        }
-        
-        return updatedPost;
-      })
-    );
+    // Resolve media URLs (signed → public, relative → full, dead → null)
+    const postsWithSignedUrls = (data || []).map((post: any) => {
+      const updatedPost = { ...post };
+      updatedPost.featured_image = resolveStorageUrl(post.featured_image, 'posts');
+      if (post.author) {
+        updatedPost.author = {
+          ...post.author,
+          photo_url: resolveStorageUrl(post.author.photo_url, 'profiles'),
+        };
+      }
+      return updatedPost;
+    });
 
     const res = NextResponse.json({ posts: postsWithSignedUrls });
     res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');

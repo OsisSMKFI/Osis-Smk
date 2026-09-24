@@ -1,33 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { mapProkerList } from '@/lib/proker';
-
-const DEPRECATED_MARKERS = [
-  'sfo.supabase.co',
-  'nrt.supabase.co',
-  'fra.supabase.co',
-];
-
-function filterDeprecatedUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  for (const marker of DEPRECATED_MARKERS) {
-    if (url.includes(marker)) return null;
-  }
-  return url;
-}
-
-function fixGalleryUrl(url: string | null | undefined, folder = 'general'): string | null {
-  if (!url) return null;
-  const filtered = filterDeprecatedUrl(url);
-  if (!filtered) return null;
-  if (filtered.startsWith('http')) return filtered;
-
-  const base =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    `https://${process.env.SUPABASE_URL?.replace('https://', '') || 'vyorjqbrugjjeioayscg'}.supabase.co`;
-  const storage = `${base}/storage/v1/object/public/gallery`;
-  if (filtered.startsWith('/')) return `${storage}${filtered}`;
-  return `${storage}/${folder}/${filtered}`;
-}
+import { resolveStorageUrl, dedupeByMedia } from '@/lib/mediaUrls';
 
 async function safeRows<T>(
   query: PromiseLike<{ data: T[] | null; error: unknown }>
@@ -41,31 +14,6 @@ async function safeRows<T>(
   }
 }
 
-function toPublicUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith('http')) {
-    if (url.includes('/storage/v1/object/sign/')) {
-      try {
-        const u = new URL(url);
-        const path = u.pathname.replace('/storage/v1/object/sign/', '');
-        const rel = path.split('/').slice(1).join('/');
-        if (rel) {
-          const base =
-            process.env.NEXT_PUBLIC_SUPABASE_URL ||
-            'https://vyorjqbrugjjeioayscg.supabase.co';
-          return `${base}/storage/v1/object/public/${rel}`;
-        }
-      } catch {
-        return url;
-      }
-    }
-    return url;
-  }
-  const base =
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vyorjqbrugjjeioayscg.supabase.co';
-  return `${base}/storage/v1/object/public/${url}`;
-}
-
 export async function getPublicGallery() {
   const rows = await safeRows<any>(
     supabaseAdmin
@@ -74,32 +22,25 @@ export async function getPublicGallery() {
       .order('created_at', { ascending: false })
       .limit(100)
   );
-  return rows.map((item, i) => {
-    const folder = item.category || item.folder || 'general';
-    let id = item.id;
-    if (id === null || id === undefined || id === '') {
-      id = `gal-${i}-${item.image_url || item.video_url || item.url || item.title || 'item'}`;
-    }
-    const fixedImage = item.image_url
-      ? toPublicUrl(fixGalleryUrl(item.image_url, folder)) || fixGalleryUrl(item.image_url, folder)
-      : null;
-    const fixedVideo = item.video_url
-      ? toPublicUrl(fixGalleryUrl(item.video_url, folder)) || fixGalleryUrl(item.video_url, folder)
-      : null;
-    const fixedUrl = item.url
-      ? toPublicUrl(fixGalleryUrl(item.url, folder)) || fixGalleryUrl(item.url, folder)
-      : null;
-    const resolvedImage = fixedImage || fixedVideo || fixedUrl;
-    return {
-      ...item,
-      id,
-      // Never fall back to the raw stored URL: if fixGalleryUrl nulled it
-      // (deprecated project domain) the raw value is a dead link anyway.
-      image_url: resolvedImage,
-      video_url: fixedVideo,
-      url: fixedUrl,
-    };
-  });
+  return dedupeByMedia(
+    rows.map((item, i) => {
+      const folder = item.category || item.folder || 'general';
+      let id = item.id;
+      if (id === null || id === undefined || id === '') {
+        id = `gal-${i}-${item.image_url || item.video_url || item.url || item.title || 'item'}`;
+      }
+      const fixedImage = resolveStorageUrl(item.image_url, folder);
+      const fixedVideo = resolveStorageUrl(item.video_url, folder);
+      const fixedUrl = resolveStorageUrl(item.url, folder);
+      return {
+        ...item,
+        id,
+        image_url: fixedImage || fixedVideo || fixedUrl,
+        video_url: fixedVideo,
+        url: fixedUrl,
+      };
+    })
+  );
 }
 
 export async function getPublicPosts(limit = 24, featuredOnly = false) {
@@ -114,17 +55,14 @@ export async function getPublicPosts(limit = 24, featuredOnly = false) {
   if (featuredOnly) query = query.eq('is_featured', true);
 
   const rows = await safeRows<any>(query);
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vyorjqbrugjjeioayscg.supabase.co';
 
   return rows.map((post) => {
     const next = { ...post };
-    if (post.featured_image && !post.featured_image.startsWith('http')) {
-      next.featured_image = `${base}/storage/v1/object/public/${post.featured_image}`;
-    }
-    if (post.author?.photo_url && !post.author.photo_url.startsWith('http')) {
+    next.featured_image = resolveStorageUrl(post.featured_image, 'posts');
+    if (post.author) {
       next.author = {
         ...post.author,
-        photo_url: `${base}/storage/v1/object/public/${post.author.photo_url}`,
+        photo_url: resolveStorageUrl(post.author.photo_url, 'profiles'),
       };
     }
     return next;
@@ -168,7 +106,7 @@ export async function getPublicEvents(limit = 50) {
   );
   return rows.map((event) => ({
     ...event,
-    image_url: filterDeprecatedUrl(event.image_url),
+    image_url: resolveStorageUrl(event.image_url, 'events'),
   }));
 }
 

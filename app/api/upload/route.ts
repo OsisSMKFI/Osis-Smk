@@ -127,10 +127,38 @@ export async function POST(request: NextRequest) {
       break;
     }
 
-    // If all Supabase attempts failed
+    // If all Supabase attempts failed → Vercel Blob fallback (smart save policy:
+    // Supabase = primary, Blob = automatic fallback so the upload never fails
+    // silently and the public page still gets a live URL)
     if (uploadError) {
       const errMsg = uploadError?.message || 'Upload failed';
       console.error('[Upload] Supabase upload error:', errMsg);
+      if (process.env.BLOB_READ_WRITE_TOKEN) {
+        try {
+          const { uploadFile } = await import('@/lib/vercel/blob');
+          const blobResult = await uploadFile(filePath, fileBuffer, {
+            access: 'public',
+            contentType: file.type || 'application/octet-stream',
+          });
+          console.log('[Upload] Fell back to Vercel Blob:', blobResult.url);
+          return NextResponse.json({
+            success: true,
+            url: blobResult.url,
+            publicUrl: blobResult.url,
+            signedUrl: blobResult.url,
+            path: blobResult.pathname,
+            storage: 'vercel-blob',
+            data: {
+              path: blobResult.pathname,
+              publicUrl: blobResult.url,
+              signedUrl: blobResult.url,
+              url: blobResult.url,
+            },
+          });
+        } catch (blobError: any) {
+          console.error('[Upload] Vercel Blob fallback failed:', blobError?.message);
+        }
+      }
       return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 

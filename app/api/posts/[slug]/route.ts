@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
+import { resolveStorageUrl } from '@/lib/mediaUrls';
 
 export async function GET(
   request: NextRequest,
@@ -41,6 +42,13 @@ export async function GET(
       success: true,
       post: {
         ...post,
+        featured_image: resolveStorageUrl(post.featured_image, 'posts'),
+        author: post.author
+          ? {
+              ...post.author,
+              photo_url: resolveStorageUrl(post.author.photo_url, 'profiles'),
+            }
+          : post.author,
         id: String(post.id),
         views: (post.views || 0) + 1,
       },

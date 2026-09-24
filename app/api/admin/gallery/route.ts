@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { convertToSignedUrl, toPublicStorageUrl } from '@/lib/signedUrls';
+import { resolveStorageUrl } from '@/lib/mediaUrls';
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,10 +43,11 @@ export async function GET(request: NextRequest) {
       await supabaseAdmin.storage.updateBucket('gallery', { public: true });
     } catch (_) {}
 
-    // Convert image/video URLs to public URLs (expired signed URLs included)
+    // Resolve image/video URLs to live public URLs (blob, supabase, signed, relative)
     const itemsWithUrls = normalized.map((g: any) => {
       if (!g.image_url) return g;
-      const publicUrl = toPublicStorageUrl(g.image_url);
+      const folder = g.category || g.folder || 'general';
+      const publicUrl = resolveStorageUrl(g.image_url, folder);
       if (publicUrl) return { ...g, image_url: publicUrl };
       return g;
     });
@@ -71,6 +72,26 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { title, description, image_url, event_id, sekbid_id } = body;
+
+    // Anti-duplikat: URL media + judul yang sama sudah pernah tersimpan
+    // (mis. double-click tombol Simpan) → kembalikan record lama, jangan insert lagi.
+    if (image_url && title) {
+      const { data: existing } = await supabaseAdmin
+        .from('gallery')
+        .select('*')
+        .eq('image_url', image_url)
+        .eq('title', title.trim())
+        .limit(1);
+      if (existing && existing.length > 0) {
+        console.warn('[admin/gallery POST] Duplicate skipped, existing id:', existing[0].id);
+        return NextResponse.json({
+          success: true,
+          duplicate: true,
+          data: existing[0],
+          message: 'Item dengan judul dan media yang sama sudah ada',
+        });
+      }
+    }
 
     // Rely on existing table primary key (likely BIGINT/serial). Do not manually set id.
     const insertPayload = {

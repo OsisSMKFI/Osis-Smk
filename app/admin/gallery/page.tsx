@@ -50,6 +50,7 @@ export default function GalleryPage() {
   });
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -125,12 +126,15 @@ export default function GalleryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (saving || uploading) return;
+
     if (!formData.image_url) {
       alert('Silakan upload gambar terlebih dahulu');
       return;
     }
 
+    setSaving(true);
     try {
       const url = editingId 
         ? `/api/admin/gallery/${editingId}` 
@@ -159,6 +163,10 @@ export default function GalleryPage() {
         return;
       }
 
+      if (result.duplicate) {
+        alert('Item ini sudah ada di galeri (judul + media sama) — tidak disimpan ulang.');
+      }
+
       await fetchData();
       setShowForm(false);
       setEditingId(null);
@@ -166,6 +174,8 @@ export default function GalleryPage() {
     } catch (error) {
       console.error('Error saving gallery item:', error);
       alert('Gagal menyimpan gambar');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -384,9 +394,10 @@ export default function GalleryPage() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-amber-400 text-slate-900 px-6 py-3 rounded-xl font-semibold hover:bg-amber-500 transition-colors shadow-md"
+                  disabled={saving || uploading}
+                  className="flex-1 bg-amber-400 text-slate-900 px-6 py-3 rounded-xl font-semibold hover:bg-amber-500 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {editingId ? 'Update Gambar' : 'Simpan Gambar'}
+                  {saving ? 'Menyimpan...' : uploading ? 'Mengupload...' : (editingId ? 'Update Gambar' : 'Simpan Gambar')}
                 </button>
                 <button
                   type="button"
