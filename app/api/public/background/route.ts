@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
         .maybeSingle();
 
       if (error) {
-        return NextResponse.json(buildError('CONTENT_FETCH_ERROR', error.message), { status: 500 });
+        // Optional design key / missing table — treat as not found, not 500
+        return NextResponse.json(buildError('CONTENT_NOT_FOUND', error.message), { status: 404 });
       }
 
       if (!data) {

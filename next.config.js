@@ -2,6 +2,15 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Legacy sekbid slugs → dynamic admin-driven route /sekbid/{id}
+  async redirects() {
+    return [
+      { source: '/sekbid/sekbid-:id', destination: '/sekbid/:id', permanent: true },
+      { source: '/sekbid/sekbid/:id', destination: '/sekbid/:id', permanent: true },
+      { source: '/sekbid/sekbid', destination: '/sekbid', permanent: true },
+    ];
+  },
+
   // Exclude dev-server from Next.js compilation
   webpack: (config, { isServer }) => {
     config.watchOptions = {

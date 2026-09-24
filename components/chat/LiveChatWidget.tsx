@@ -52,18 +52,8 @@ const QUICK_LINKS: QuickLinkConfig[] = [
   { keywords: ['filosofi', 'visi', 'misi', 'nilai', 'makna logo', 'sejarah osis', 'tentang osis', 'apa itu osis'], path: '/about', label: 'Tentang OSIS', icon: <FaInfoCircle size={12} />, description: 'Filosofi, visi, misi, dan nilai OSIS' },
   // Members & People
   { keywords: ['anggota', 'pengurus', 'ketua', 'wakil', 'sekretaris', 'bendahara', 'struktur organisasi', 'kepengurusan'], path: '/people', label: 'Pengurus OSIS', icon: <FaUsers size={12} />, description: 'Lihat semua pengurus dan anggota' },
-  // Sekbid
-  { keywords: ['sekbid', 'seksi bidang', 'bidang'], path: '/sekbid', label: 'Seksi Bidang', icon: <FaBriefcase size={12} />, description: 'Eksplorasi semua seksi bidang' },
-  { keywords: ['sekbid 1', 'keimanan', 'ketakwaan', 'imtaq', 'rohis'], path: '/sekbid/sekbid-1', label: 'Sekbid 1 - IMTAQ', icon: <FaHeart size={12} />, description: 'Keimanan & Ketakwaan' },
-  { keywords: ['sekbid 2', 'budi pekerti', 'karakter', 'akhlak'], path: '/sekbid/sekbid-2', label: 'Sekbid 2 - Budi Pekerti', icon: <FaHeart size={12} />, description: 'Pembinaan Budi Pekerti' },
-  { keywords: ['sekbid 3', 'kepribadian', 'wawasan kebangsaan'], path: '/sekbid/sekbid-3', label: 'Sekbid 3 - Kepribadian', icon: <FaHeart size={12} />, description: 'Kepribadian & Kebangsaan' },
-  { keywords: ['sekbid 4', 'kepemimpinan', 'leadership'], path: '/sekbid/sekbid-4', label: 'Sekbid 4 - Kepemimpinan', icon: <FaHeart size={12} />, description: 'Kepemimpinan' },
-  { keywords: ['sekbid 5', 'keterampilan', 'kewirausahaan'], path: '/sekbid/sekbid-5', label: 'Sekbid 5 - Keterampilan', icon: <FaHeart size={12} />, description: 'Keterampilan & Kewirausahaan' },
-  { keywords: ['sekbid 6', 'kesegaran jasmani', 'olahraga', 'sehat'], path: '/sekbid/sekbid-6', label: 'Sekbid 6 - Jasmani', icon: <FaHeart size={12} />, description: 'Kesegaran Jasmani' },
-  { keywords: ['sekbid 7', 'persepsi', 'apresiasi', 'seni', 'kreasi'], path: '/sekbid/sekbid-7', label: 'Sekbid 7 - Seni', icon: <FaHeart size={12} />, description: 'Persepsi, Apresiasi & Kreasi Seni' },
-  { keywords: ['sekbid 8', 'demokrasi', 'ham', 'hak asasi'], path: '/sekbid/sekbid-8', label: 'Sekbid 8 - Demokrasi', icon: <FaHeart size={12} />, description: 'Demokrasi & HAM' },
-  { keywords: ['sekbid 9', 'sastra', 'budaya', 'bahasa'], path: '/sekbid/sekbid-9', label: 'Sekbid 9 - Sastra Budaya', icon: <FaHeart size={12} />, description: 'Sastra & Budaya' },
-  { keywords: ['sekbid 10', 'ict', 'teknologi', 'informatika', 'komputer'], path: '/sekbid/sekbid-10', label: 'Sekbid 10 - ICT', icon: <FaHeart size={12} />, description: 'ICT & Komunikasi' },
+  // Sekbid — single entry; IDs come from admin DB via /sekbid (no hardcoded ids)
+  { keywords: ['sekbid', 'seksi bidang', 'bidang', 'sekbid 1', 'sekbid 2', 'sekbid 3', 'sekbid 4', 'sekbid 5', 'sekbid 6', 'keimanan', 'kaderisasi', 'akademik', 'olahraga', 'kominfo'], path: '/sekbid', label: 'Seksi Bidang', icon: <FaBriefcase size={12} />, description: 'Eksplorasi semua seksi bidang' },
   // Events & Activities
   { keywords: ['event', 'kegiatan', 'acara', 'agenda', 'jadwal', 'kalender'], path: '/info', label: 'Event & Info', icon: <FaCalendarAlt size={12} />, description: 'Event dan kegiatan terbaru' },
   // Gallery

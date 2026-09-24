@@ -189,7 +189,9 @@ export default function ProkerSection({ initialProker }: ProkerSectionProps = {}
                         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                           {isGeneral
                             ? group.sekbid_name
-                            : `Sekbid ${group.sekbid_id}: ${group.sekbid_name}`}
+                            : (group.sekbid_name || '').toLowerCase().startsWith('sekbid')
+                              ? group.sekbid_name
+                              : `Sekbid ${group.sekbid_id} — ${group.sekbid_name}`}
                         </h2>
                         <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                           {group.count} Program Kerja

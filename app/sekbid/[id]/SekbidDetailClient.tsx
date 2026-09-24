@@ -28,6 +28,7 @@ export default function SekbidDetailClient({ sekbidId }: SekbidDetailClientProps
   const { t } = useTranslation();
   const [prokerList, setProkerList] = useState<Proker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sekbidMeta, setSekbidMeta] = useState<{ name: string; description: string | null; color: string | null; icon: string | null } | null>(null);
 
   const STATUS_CONFIG = {
     planned: { label: t('proker.statusPlanned'), icon: FaClock, color: 'text-gray-700', bg: 'bg-gray-100', ring: 'ring-gray-300' },
@@ -38,11 +39,32 @@ export default function SekbidDetailClient({ sekbidId }: SekbidDetailClientProps
 
   const sekbidInfo = getSekbidIcon(sekbidId);
   const Icon = sekbidInfo?.icon;
+  const displayName = (sekbidMeta?.name || '').trim() || sekbidInfo?.name || `Sekbid ${sekbidId}`;
+  const displayDescription = (sekbidMeta?.description || '').trim() || sekbidInfo?.description || '';
 
-  useEffect(() => { 
-    if (sekbidId) {
-      fetchProker();
-    }
+  useEffect(() => {
+    if (!sekbidId) return;
+    let cancelled = false;
+    fetchProker();
+    (async () => {
+      try {
+        const { cachedGetJson } = await import('@/lib/clientCache');
+        const data = await cachedGetJson<any>('/api/sekbid');
+        if (cancelled) return;
+        const row = (data.sekbid || []).find((s: { id: number }) => s.id === sekbidId);
+        if (row) {
+          setSekbidMeta({
+            name: row.name || '',
+            description: row.description || null,
+            color: row.color || null,
+            icon: row.icon || null,
+          });
+        }
+      } catch {
+        // fallback to hardcoded icon map only
+      }
+    })();
+    return () => { cancelled = true; };
   }, [sekbidId]);
 
   const fetchProker = async () => {
@@ -100,11 +122,13 @@ export default function SekbidDetailClient({ sekbidId }: SekbidDetailClientProps
                 )}
                 <div>
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
-                    Sekbid {sekbidId}: {sekbidInfo?.name}
+                    {displayName}
                   </h1>
-                  <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300">
-                    {sekbidInfo?.description}
-                  </p>
+                  {displayDescription && (
+                    <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300">
+                      {displayDescription}
+                    </p>
+                  )}
                 </div>
               </div>
 

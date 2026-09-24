@@ -21,21 +21,33 @@ export async function GET(request: Request): Promise<Response> {
     const result: YouTubeApiResponse = await fetchYouTubeData(forceRefresh);
     
     if (!result.success) {
+      // Missing API key / quota — degrade to empty payload so public pages don't 500
+      const msg = result.error || '';
+      if (/not configured|YOUTUBE_API_KEY/i.test(msg)) {
+        const res = NextResponse.json({
+          success: true,
+          data: null,
+          empty: true,
+          error: 'YOUTUBE_API_KEY is not configured',
+          timestamp: new Date().toISOString(),
+        });
+        res.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return res;
+      }
       return NextResponse.json(
-        { 
-          success: false, 
-          error: result.error || 'Failed to fetch YouTube data' 
-        },
+        { success: false, error: msg || 'Failed to fetch YouTube data' },
         { status: 500 }
       );
     }
-    
-    return NextResponse.json({
+
+    const res = NextResponse.json({
       success: true,
       data: result.data,
       cached: result.cached,
       timestamp: new Date().toISOString(),
     });
+    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    return res;
     
   } catch (error) {
     console.error('[API /youtube] Error:', error);

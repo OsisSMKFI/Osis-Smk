@@ -85,9 +85,18 @@ export const ALTERNATIVE_ICONS = {
   humas: [FaCamera, FaBullhorn],
 };
 
-// Get icon for specific sekbid
-export function getSekbidIcon(sekbidId: number): SekbidIcon | null {
-  return SEKBID_ICONS[sekbidId] || null;
+// Get icon for specific sekbid — cycles fallback palette for any DB id (not only 1-6)
+const FALLBACK_ICONS: Omit<SekbidIcon, 'id'>[] = Object.values(SEKBID_ICONS).map(({ id, ...rest }) => rest);
+
+export function getSekbidIcon(sekbidId: number): SekbidIcon {
+  const known = SEKBID_ICONS[sekbidId];
+  if (known) return known;
+  const fallback = FALLBACK_ICONS[Math.abs(sekbidId) % FALLBACK_ICONS.length] || FALLBACK_ICONS[0];
+  return {
+    id: sekbidId,
+    ...fallback,
+    name: `Sekbid ${sekbidId}`,
+  };
 }
 
 // Get all icons
@@ -97,6 +106,5 @@ export function getAllSekbidIcons(): SekbidIcon[] {
 
 // Get icon component
 export function getSekbidIconComponent(sekbidId: number): IconType {
-  const sekbid = SEKBID_ICONS[sekbidId];
-  return sekbid?.icon || FaUsers; // Default fallback
+  return getSekbidIcon(sekbidId).icon;
 }

@@ -16,60 +16,18 @@ interface SekbidData {
   icon: string;
 }
 
-// Color mapping based on sekbid id
-const getColorClasses = (id: number) => {
-  const colorMap: Record<number, { gradient: string; bg: string; border: string }> = {
-    1: { 
-      gradient: 'from-green-400 to-emerald-500', 
-      bg: 'bg-green-50 dark:bg-green-900/20', 
-      border: 'border-green-200 dark:border-green-700' 
-    },
-    2: { 
-      gradient: 'from-blue-400 to-indigo-500', 
-      bg: 'bg-blue-50 dark:bg-blue-900/20', 
-      border: 'border-blue-200 dark:border-blue-700' 
-    },
-    3: { 
-      gradient: 'from-purple-400 to-pink-500', 
-      bg: 'bg-purple-50 dark:bg-purple-900/20', 
-      border: 'border-purple-200 dark:border-purple-700' 
-    },
-    4: { 
-      gradient: 'from-yellow-400 to-orange-500', 
-      bg: 'bg-yellow-50 dark:bg-yellow-900/20', 
-      border: 'border-yellow-200 dark:border-yellow-700' 
-    },
-    5: { 
-      gradient: 'from-green-400 to-teal-500', 
-      bg: 'bg-teal-50 dark:bg-teal-900/20', 
-      border: 'border-teal-200 dark:border-teal-700' 
-    },
-    6: { 
-      gradient: 'from-cyan-400 to-blue-500', 
-      bg: 'bg-cyan-50 dark:bg-cyan-900/20', 
-      border: 'border-cyan-200 dark:border-cyan-700' 
-    },
-  };
-  return colorMap[id] || colorMap[1];
-};
+// Palette cycled by index — works for any DB id (not just 1-6)
+const COLOR_PALETTE = [
+  { gradient: 'from-green-400 to-emerald-500', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-700' },
+  { gradient: 'from-blue-400 to-indigo-500', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-700' },
+  { gradient: 'from-purple-400 to-pink-500', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-700' },
+  { gradient: 'from-yellow-400 to-orange-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-700' },
+  { gradient: 'from-teal-400 to-green-500', bg: 'bg-teal-50 dark:bg-teal-900/20', border: 'border-teal-200 dark:border-teal-700' },
+  { gradient: 'from-cyan-400 to-blue-500', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-700' },
+];
 
-// Fallback sekbid names if database doesn't have proper names yet
-const sekbidDisplayNames: Record<number, string> = {
-  1: 'Sekbid 1 - Keagamaan',
-  2: 'Sekbid 2 - Kaderisasi',
-  3: 'Sekbid 3 - Akademik',
-  4: 'Sekbid 4 - Ekonomi Kreatif',
-  5: 'Sekbid 5 - Kesehatan',
-  6: 'Sekbid 6 - Kominfo',
-};
-
-const sekbidDescriptions: Record<number, string> = {
-  1: 'Membina keimanan dan ketakwaan siswa melalui berbagai kegiatan keagamaan',
-  2: 'Meningkatkan kedisiplinan, tanggung jawab, dan keteladanan bagi seluruh siswa',
-  3: 'Mengembangkan prestasi akademik dan non-akademik siswa',
-  4: 'Meningkatkan keterampilan dan jiwa wirausaha siswa',
-  5: 'Menjaga kesehatan dan kelestarian lingkungan sekolah',
-  6: 'Mengelola komunikasi dan teknologi informasi OSIS',
+const getColorClasses = (id: number, index: number) => {
+  return COLOR_PALETTE[Math.abs(id || index) % COLOR_PALETTE.length];
 };
 
 interface SekbidPageClientProps {
@@ -130,7 +88,7 @@ export default function SekbidPageClient({
         <section className="py-16">
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-              {[1,2,3,4,5,6].map(i => (
+              {Array.from({ length: Math.max(sekbidData.length, 3) }).map((_, i) => (
                 <div key={i} className="h-64 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
               ))}
             </div>
@@ -170,13 +128,13 @@ export default function SekbidPageClient({
                 visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
               }}
             >
-              {sekbidData.map((sekbid) => {
-                const colors = getColorClasses(sekbid.id);
+              {sekbidData.map((sekbid, index) => {
+                const colors = getColorClasses(sekbid.id, index);
                 const prokerCount = prokerCounts[sekbid.id] || 0;
                 const iconPath = sekbid.icon || `/icons/sekbid-${sekbid.id}.svg`;
-                // Use database name if it contains proper format, otherwise use fallback
-                const displayName = sekbid.name?.includes(' - ') ? sekbid.name : sekbidDisplayNames[sekbid.id] || sekbid.name;
-                const description = sekbid.description || sekbidDescriptions[sekbid.id] || 'Seksi bidang OSIS SMK Informatika';
+                // Always prefer admin/DB values; only generic fallback when empty
+                const displayName = (sekbid.name || '').trim() || `Sekbid ${sekbid.id}`;
+                const description = (sekbid.description || '').trim() || 'Seksi bidang OSIS SMK Informatika';
                 
                 return (
                   <motion.div
@@ -188,7 +146,7 @@ export default function SekbidPageClient({
                     transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
                   >
                     <Link 
-                      href={`/sekbid/sekbid-${sekbid.id}`}
+                      href={`/sekbid/${sekbid.id}`}
                       className="group block h-full"
                     >
                       <motion.div 

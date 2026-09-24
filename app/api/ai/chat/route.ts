@@ -942,17 +942,19 @@ function factCheckMemberSekbid(knowledge: string, answer: string): string {
       const claimedSekbid = answer.match(/Sekbid\s*(\d+)/i);
       if (claimedSekbid && foundMember.sekbidId) {
         const claimedNum = parseInt(claimedSekbid[1]);
-        const allowedSekbid = new Set([1,2,3,4,5,6]);
-        if (claimedNum !== foundMember.sekbidId || !allowedSekbid.has(claimedNum)) {
-          const replacement = allowedSekbid.has(foundMember.sekbidId) ? `Sekbid ${foundMember.sekbidId}` : 'Sekbid tidak valid';
+        const memberSekbidId = foundMember.sekbidId;
+        // Only correct mismatch with member's real DB sekbid — any positive id is valid
+        if (claimedNum !== memberSekbidId) {
+          const replacement = memberSekbidId > 0
+            ? `Sekbid ${memberSekbidId}`
+            : 'Sekbid tidak valid';
           console.warn(`[Fact-Check] ⚠️ KOREKSI: ${foundMember.name} klaim sekbid ${claimedNum} → ${replacement}`);
           corrected = corrected.replace(/Sekbid\s*\d+/gi, replacement);
           modified = true;
         }
         // Collapse multi-sekbid hallucinations like "Sekbid 5 dan 23"
-        corrected = corrected.replace(/Sekbid\s*(\d+)\s*(dan|&|,|\/)+\s*\d+/gi, (full, first) => {
-          const num = parseInt(first);
-          return allowedSekbid.has(num) ? `Sekbid ${num}` : 'Sekbid tidak valid';
+        corrected = corrected.replace(/Sekbid\s*(\d+)\s*(dan|&|,|\/)+\s*\d+/gi, () => {
+          return memberSekbidId > 0 ? `Sekbid ${memberSekbidId}` : 'Sekbid';
         });
       }
       

@@ -1384,7 +1384,7 @@ Untuk pertanyaan yang butuh jawaban CEPAT! ⚡
 
 🚀 QUICK ANSWER TRIGGERS:
 Q: "Ketua siapa?" → "Ketua OSIS: [Nama] 👑"
-Q: "Ada berapa sekbid?" → "Ada 10 Sekbid! 🎯"
+Q: "Ada berapa sekbid?" → "Cek /sekbid untuk daftar terbaru dari database! 🎯"
 Q: "Event kapan?" → "[Nama Event] pada [Tanggal] 📅"
 Q: "IG OSIS apa?" → "Follow @[handle]! 📱"
 
@@ -1453,7 +1453,7 @@ Gunakan referensi ini untuk mengarahkan user:
 📍 MAPPING HALAMAN WEBSITE:
 • /about → Tentang OSIS, filosofi, visi, misi, nilai-nilai
 • /people → Daftar pengurus dan anggota OSIS
-• /sekbid → Semua seksi bidang (sekbid-1 sampai sekbid-10)
+• /sekbid → Semua seksi bidang (tautan /sekbid/{id} sesuai database)
 • /info → Event, kegiatan, pengumuman
 • /gallery → Galeri foto dan dokumentasi
 • /posts → Berita dan artikel terbaru

@@ -77,8 +77,8 @@ export async function GET(
     const { id } = await params
     const sekbidId = parseInt(id)
 
-    // 1. Validate sekbid ID
-    if (isNaN(sekbidId) || sekbidId < 1 || sekbidId > 6) {
+    // 1. Validate sekbid ID (any positive id from admin DB — not limited to 1-6)
+    if (isNaN(sekbidId) || sekbidId < 1) {
       return serveFallback()
     }
 

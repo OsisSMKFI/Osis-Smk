@@ -125,8 +125,6 @@ export async function POST(req: NextRequest) {
 
     const sekbidMap: Record<number, any> = {};
     sekbid?.forEach(s => { sekbidMap[s.id] = s; });
-    // Allowed active sekbid IDs (can be expanded later via admin panel)
-    const allowedSekbid = new Set([1,2,3,4,5,6]);
 
     // Build COMPLETE database context
     let knowledgeBase = '';
@@ -136,10 +134,9 @@ export async function POST(req: NextRequest) {
     if (members && members.length > 0) {
       members.forEach(m => {
         const memberName = m.name || m.nama;
-        let memberSekbid = m.sekbid_id ? sekbidMap[m.sekbid_id]?.name : 'Belum ada sekbid';
-        if (m.sekbid_id && !allowedSekbid.has(m.sekbid_id)) {
-          memberSekbid = `Sekbid ID ${m.sekbid_id} (NON-AKTIF / DI LUAR 1-6)`;
-        }
+        let memberSekbid = m.sekbid_id
+          ? (sekbidMap[m.sekbid_id]?.name || `Sekbid ID ${m.sekbid_id}`)
+          : 'Belum ada sekbid';
         // Clean role: extract "Anggota" from "Anggota Sekbid X"
         let memberRole = m.role || m.jabatan || 'Anggota';
         if (/Anggota Sekbid \d+/.test(memberRole)) {
@@ -162,15 +159,11 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    // 2. SEKBID DATA (only active 1-6 shown, extras flagged)
-    knowledgeBase += '\n\n📂 SEKSI BIDANG (SEKBID) AKTIF (1-6):\n';
-    sekbid?.filter(s => allowedSekbid.has(s.id)).forEach(s => {
+    // 2. SEKBID DATA (all rows from admin DB)
+    knowledgeBase += '\n\n📂 SEKSI BIDANG (SEKBID) DARI DATABASE:\n';
+    sekbid?.forEach(s => {
       knowledgeBase += `• [${s.id}] ${s.name}: ${s.description || 'Tidak ada deskripsi'}\n`;
     });
-    const inactiveSekbid = sekbid?.filter(s => !allowedSekbid.has(s.id));
-    if (inactiveSekbid && inactiveSekbid.length) {
-      knowledgeBase += '\n⚠️ Sekbid non-aktif / arsip (disembunyikan dari identifikasi): ' + inactiveSekbid.map(s => s.id).join(', ') + '\n';
-    }
     
     // 3. RECENT POSTS
     knowledgeBase += '\n\n📰 BERITA TERBARU:\n';

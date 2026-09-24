@@ -128,16 +128,12 @@ export default function PeopleSectionsClient({ members }: Props) {
     if (!groupMeta.has(key)) groupMeta.set(key, { order: orderNum, label: dept || `Sekbid ${m.departmentId ?? ''}` });
   });
 
-  // Compute ordering keys and prepared JSX groups (move heavy logic out of JSX)
+  // Compute ordering keys — all numeric sekbid ids sorted ascending (any DB id, not just 1-6)
   const orderedKeys: string[] = [];
-  for (let n = 1; n <= 6; n++) {
-    const k = `num-${n}`;
-    if (groups.has(k)) orderedKeys.push(k);
-  }
-  const otherNumKeys = Array.from(groups.keys())
-    .filter(k => k.startsWith('num-') && !orderedKeys.includes(k))
+  const allNumKeys = Array.from(groups.keys())
+    .filter(k => k.startsWith('num-'))
     .sort((a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1]));
-  orderedKeys.push(...otherNumKeys);
+  orderedKeys.push(...allNumKeys);
 
   const otherKeys = Array.from(groups.keys()).filter(k => !k.startsWith('num-'));
   otherKeys.sort((a, b) => {
