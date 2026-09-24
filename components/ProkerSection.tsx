@@ -54,13 +54,52 @@ function prokerDates(p: Proker): { start_date: string | null; end_date: string |
   return { start_date: null, end_date: null };
 }
 
-export default function ProkerSection() {
-  const [groupedData, setGroupedData] = useState<SekbidGroup[]>([]);
-  const [loading, setLoading] = useState(true);
+interface ProkerSectionProps {
+  initialProker?: Proker[];
+}
+
+function groupProker(proker: Proker[]): SekbidGroup[] {
+  const grouped: Record<number, SekbidGroup> = {};
+  proker.forEach((p) => {
+    const hasSekbid =
+      typeof p.sekbid_id === 'number' && Number.isFinite(p.sekbid_id) && p.sekbid_id > 0;
+    const key = hasSekbid ? (p.sekbid_id as number) : GENERAL_GROUP_ID;
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        sekbid_id: key,
+        sekbid_name: hasSekbid
+          ? p.sekbid?.name || `Sekbid ${key}`
+          : 'Umum',
+        programs: [],
+        count: 0,
+      };
+    }
+    grouped[key].programs.push(p);
+    grouped[key].count++;
+  });
+
+  return Object.values(grouped).sort((a, b) => {
+    if (a.sekbid_id === GENERAL_GROUP_ID) return -1;
+    if (b.sekbid_id === GENERAL_GROUP_ID) return 1;
+    return a.sekbid_id - b.sekbid_id;
+  });
+}
+
+export default function ProkerSection({ initialProker }: ProkerSectionProps = {}) {
+  const [groupedData, setGroupedData] = useState<SekbidGroup[]>(() =>
+    initialProker ? groupProker(initialProker) : []
+  );
+  const [loading, setLoading] = useState(!initialProker);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialProker) {
+      setLoading(false);
+      return;
+    }
     fetchProker();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProker = async () => {
@@ -69,33 +108,7 @@ export default function ProkerSection() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await safeJson(response, { url: '/api/proker', method: 'GET' });
       const proker: Proker[] = data.proker || [];
-
-      const grouped: Record<number, SekbidGroup> = {};
-      proker.forEach((p) => {
-        const hasSekbid =
-          typeof p.sekbid_id === 'number' && Number.isFinite(p.sekbid_id) && p.sekbid_id > 0;
-        const key = hasSekbid ? (p.sekbid_id as number) : GENERAL_GROUP_ID;
-
-        if (!grouped[key]) {
-          grouped[key] = {
-            sekbid_id: key,
-            sekbid_name: hasSekbid
-              ? p.sekbid?.name || `Sekbid ${key}`
-              : 'Umum',
-            programs: [],
-            count: 0,
-          };
-        }
-        grouped[key].programs.push(p);
-        grouped[key].count++;
-      });
-
-      const groups = Object.values(grouped).sort((a, b) => {
-        if (a.sekbid_id === GENERAL_GROUP_ID) return -1;
-        if (b.sekbid_id === GENERAL_GROUP_ID) return 1;
-        return a.sekbid_id - b.sekbid_id;
-      });
-      setGroupedData(groups);
+      setGroupedData(groupProker(proker));
       setError(null);
     } catch (err: any) {
       console.error('Error fetching proker:', err);

@@ -22,13 +22,21 @@ interface Post {
   views: number;
 }
 
-export default function PostsPageClient() {
+interface PostsPageClientProps {
+  initialPosts?: Post[];
+}
+
+export default function PostsPageClient({ initialPosts = [] }: PostsPageClientProps = {}) {
   const { t } = useTranslation();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [loading, setLoading] = useState(initialPosts.length === 0);
   const [filter, setFilter] = useState<'all' | 'featured'>('all');
 
   useEffect(() => {
+    if (initialPosts.length > 0 && filter === 'all') {
+      setLoading(false);
+      return;
+    }
     const fetchPosts = async () => {
       try {
         const url = filter === 'featured' 
@@ -47,7 +55,7 @@ export default function PostsPageClient() {
     };
 
     fetchPosts();
-  }, [filter]);
+  }, [filter, initialPosts.length]);
 
   if (loading) {
     return (

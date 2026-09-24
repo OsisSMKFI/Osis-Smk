@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { generatePageMetadata } from '@/lib/metadata-helper';
+import { getPublicGallery, getPublicEvents, getPublicSekbid } from '@/lib/publicData';
 import GalleryPageClient from './GalleryPageClient';
 
 export const metadata: Metadata = generatePageMetadata({
@@ -10,6 +11,19 @@ export const metadata: Metadata = generatePageMetadata({
     image: '/images/logo.png',
 });
 
-export default function GalleryPage() {
-    return <GalleryPageClient />;
+export const revalidate = 60;
+
+export default async function GalleryPage() {
+    const [gallery, events, sekbids] = await Promise.all([
+        getPublicGallery(),
+        getPublicEvents(),
+        getPublicSekbid(),
+    ]);
+    return (
+        <GalleryPageClient
+            initialGallery={gallery}
+            initialEvents={events.map((e) => ({ id: e.id, title: e.title, event_date: e.event_date }))}
+            initialSekbids={sekbids.map((s) => ({ id: s.id, name: s.name }))}
+        />
+    );
 }

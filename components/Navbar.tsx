@@ -48,15 +48,6 @@ const Navbar: React.FC = () => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       document.body.style.paddingRight = `${window.innerWidth - document.documentElement.clientWidth}px`;
-      // Warm every public menu target while the drawer is open
-      const routes = ['/', '/about', '/info', '/bidang', '/gallery', '/our-social-media', '/people', '/posts', '/activity', '/sekbid'];
-      for (const href of routes) {
-        try {
-          router.prefetch(href);
-        } catch {
-          // ignore
-        }
-      }
     } else {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
@@ -65,7 +56,7 @@ const Navbar: React.FC = () => {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
     };
-  }, [isOpen, router]);
+  }, [isOpen]);
 
   // ESC key to close mobile menu
   useEffect(() => {

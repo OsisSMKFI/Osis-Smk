@@ -102,13 +102,30 @@ interface Post {
   created_at: string;
 }
 
-export default function InfoPageClient() {
+interface InfoPageClientProps {
+  initialAnnouncements?: Announcement[];
+  initialEvents?: Event[];
+  initialPolls?: Poll[];
+  initialPosts?: Post[];
+}
+
+export default function InfoPageClient({
+  initialAnnouncements = [],
+  initialEvents = [],
+  initialPolls = [],
+  initialPosts = [],
+}: InfoPageClientProps = {}) {
   const { t } = useTranslation();
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [polls, setPolls] = useState<Poll[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements);
+  const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [polls, setPolls] = useState<Poll[]>(initialPolls);
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [loading, setLoading] = useState(
+    initialAnnouncements.length === 0 &&
+      initialEvents.length === 0 &&
+      initialPolls.length === 0 &&
+      initialPosts.length === 0
+  );
   const [votedPolls, setVotedPolls] = useState<Set<string>>(new Set());
   const [votingPoll, setVotingPoll] = useState<string | null>(null);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
@@ -175,6 +192,22 @@ export default function InfoPageClient() {
   };
 
   useEffect(() => {
+    // Load voted polls from localStorage
+    const stored = localStorage.getItem('votedPolls');
+    if (stored) {
+      setVotedPolls(new Set(JSON.parse(stored)));
+    }
+
+    // Skip client fetch when server already provided data (first paint ready)
+    const hasInitial =
+      initialAnnouncements.length > 0 ||
+      initialEvents.length > 0 ||
+      initialPolls.length > 0 ||
+      initialPosts.length > 0;
+    if (hasInitial) {
+      setLoading(false);
+      return;
+    }
     const fetchData = async () => {
       try {
         const [annRes, evtRes, pollRes, postsRes] = await Promise.all([
@@ -226,12 +259,6 @@ export default function InfoPageClient() {
     };
 
     fetchData();
-    
-    // Load voted polls from localStorage
-    const stored = localStorage.getItem('votedPolls');
-    if (stored) {
-      setVotedPolls(new Set(JSON.parse(stored)));
-    }
   }, []);
 
   const handleVote = async (pollId: string, optionId: string) => {

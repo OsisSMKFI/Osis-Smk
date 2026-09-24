@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { generatePageMetadata } from '@/lib/metadata-helper';
+import { getPublicSekbid, getPublicProker } from '@/lib/publicData';
 import SekbidPageClient from './SekbidPageClient';
 
 export const metadata: Metadata = generatePageMetadata({
@@ -10,6 +11,13 @@ export const metadata: Metadata = generatePageMetadata({
     image: '/images/logo.png',
 });
 
-export default function SekbidPage() {
-    return <SekbidPageClient />;
+export const revalidate = 60;
+
+export default async function SekbidPage() {
+    const [sekbid, programs] = await Promise.all([getPublicSekbid(), getPublicProker()]);
+    const counts: Record<number, number> = {};
+    for (const p of programs) {
+        if (p.sekbid_id) counts[p.sekbid_id] = (counts[p.sekbid_id] || 0) + 1;
+    }
+    return <SekbidPageClient initialSekbid={sekbid} initialProkerCounts={counts} />;
 }

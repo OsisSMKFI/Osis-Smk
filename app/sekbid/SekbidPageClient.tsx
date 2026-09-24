@@ -72,13 +72,25 @@ const sekbidDescriptions: Record<number, string> = {
   6: 'Mengelola komunikasi dan teknologi informasi OSIS',
 };
 
-export default function SekbidPageClient() {
+interface SekbidPageClientProps {
+  initialSekbid?: SekbidData[];
+  initialProkerCounts?: Record<number, number>;
+}
+
+export default function SekbidPageClient({
+  initialSekbid = [],
+  initialProkerCounts = {},
+}: SekbidPageClientProps = {}) {
   const { t } = useTranslation();
-  const [sekbidData, setSekbidData] = useState<SekbidData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [prokerCounts, setProkerCounts] = useState<Record<number, number>>({});
+  const [sekbidData, setSekbidData] = useState<SekbidData[]>(initialSekbid);
+  const [loading, setLoading] = useState(initialSekbid.length === 0);
+  const [prokerCounts, setProkerCounts] = useState<Record<number, number>>(initialProkerCounts);
 
   useEffect(() => {
+    if (initialSekbid.length > 0) {
+      setLoading(false);
+      return;
+    }
     async function fetchData() {
       try {
         const { cachedGetJson } = await import('@/lib/clientCache');
@@ -101,6 +113,7 @@ export default function SekbidPageClient() {
       }
     }
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Loading skeleton

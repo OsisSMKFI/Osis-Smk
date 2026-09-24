@@ -31,21 +31,49 @@ interface HeroSection3DProps {
 export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menjelajahi' }: HeroSection3DProps) {
   // Enable 3D if browser supports WebGL
   const [isWebGLSupported, setIsWebGLSupported] = useState(false);
+  // Defer three.js mount off the critical path — keep design, load after idle
+  const [sceneReady, setSceneReady] = useState(false);
   const [stats, setStats] = useState({ year: 2024, activeMembers: 50, departments: 6 });
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
   const scale = useTransform(scrollY, [0, 400], [1, 0.95]);
   const y = useTransform(scrollY, [0, 400], [0, 50]);
 
-  // Check WebGL support on mount
+  // Check WebGL support on mount, then mount Scene3D when browser is free
   useEffect(() => {
+    let glOk = false;
     try {
       const canvas = document.createElement('canvas');
       const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      setIsWebGLSupported(!!gl);
-    } catch (e) {
+      glOk = !!gl;
+      setIsWebGLSupported(glOk);
+    } catch {
+      glOk = false;
       setIsWebGLSupported(false);
     }
+    if (!glOk) return;
+
+    const reduceMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+
+    let cancelled = false;
+    const mount = () => {
+      if (!cancelled) setSceneReady(true);
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(mount, { timeout: 2000 });
+    } else {
+      const t = window.setTimeout(mount, 800);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(t);
+      };
+    }
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Fetch real stats from API
@@ -69,13 +97,13 @@ export function HeroSection3D({ title, subtitle, scrollText = 'Scroll untuk menj
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* 3D Background */}
-      {isWebGLSupported ? (
+      {/* 3D Background — show gradient first, mount three.js after idle */}
+      {isWebGLSupported && sceneReady ? (
         <Suspense fallback={<div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-black" />}>
           <Scene3D variant="hero" className="z-0" />
         </Suspense>
       ) : (
-        // Fallback for non-WebGL browsers
+        // Gradient + stars until WebGL scene is ready (design preserved)
         <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-800 to-black">
           <div className="absolute inset-0 bg-[url('/images/stars-bg.png')] opacity-50" />
         </div>

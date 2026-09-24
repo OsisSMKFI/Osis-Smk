@@ -1,12 +1,16 @@
 'use client';
 
 import ProkerSection from '@/components/ProkerSection';
-import { AnimatedSection, StaggerContainer, StaggerItem } from '@/components/animations/AnimatedSection';
+import { AnimatedSection } from '@/components/animations/AnimatedSection';
 import PageHero from '@/components/animations/PageHero';
 import { FaTasks } from 'react-icons/fa';
 import { useTranslation } from '@/hooks/useTranslation';
 
-export default function BidangPageClient() {
+interface BidangPageClientProps {
+  initialProker?: any[];
+}
+
+export default function BidangPageClient({ initialProker }: BidangPageClientProps = {}) {
   const { t } = useTranslation();
   
   return (
@@ -21,7 +25,7 @@ export default function BidangPageClient() {
         />
         
         <AnimatedSection variant="fadeUp" delay={0.2}>
-          <ProkerSection />
+          <ProkerSection initialProker={initialProker} />
         </AnimatedSection>
       </main>
     </>

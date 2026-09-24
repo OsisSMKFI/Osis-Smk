@@ -1,5 +1,11 @@
 import { Metadata } from 'next';
 import { generatePageMetadata } from '@/lib/metadata-helper';
+import {
+    getPublicAnnouncements,
+    getPublicEvents,
+    getPublicPolls,
+    getPublicPosts,
+} from '@/lib/publicData';
 import InfoPageClient from './InfoPageClient';
 
 export const metadata: Metadata = generatePageMetadata({
@@ -10,6 +16,21 @@ export const metadata: Metadata = generatePageMetadata({
     image: '/images/logo.png',
 });
 
-export default function InfoPage() {
-    return <InfoPageClient />;
+export const revalidate = 60;
+
+export default async function InfoPage() {
+    const [announcements, events, polls, posts] = await Promise.all([
+        getPublicAnnouncements(),
+        getPublicEvents(),
+        getPublicPolls(),
+        getPublicPosts(6),
+    ]);
+    return (
+        <InfoPageClient
+            initialAnnouncements={announcements}
+            initialEvents={events}
+            initialPolls={polls}
+            initialPosts={posts}
+        />
+    );
 }

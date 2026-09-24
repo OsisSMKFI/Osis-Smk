@@ -31,20 +31,35 @@ interface SekbidItem {
   name: string;
 }
 
-export default function GalleryPageClient() {
+interface GalleryPageClientProps {
+  initialGallery?: GalleryItem[];
+  initialEvents?: EventItem[];
+  initialSekbids?: SekbidItem[];
+}
+
+export default function GalleryPageClient({
+  initialGallery = [],
+  initialEvents = [],
+  initialSekbids = [],
+}: GalleryPageClientProps = {}) {
   const { t } = useTranslation();
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [gallery, setGallery] = useState<GalleryItem[]>(initialGallery);
+  const [loading, setLoading] = useState(initialGallery.length === 0);
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [sekbidFilter, setSekbidFilter] = useState<'all' | number>('all');
   const [eventFilter, setEventFilter] = useState<'all' | string>('all');
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [sekbids, setSekbids] = useState<SekbidItem[]>([]);
+  const [events, setEvents] = useState<EventItem[]>(initialEvents);
+  const [sekbids, setSekbids] = useState<SekbidItem[]>(initialSekbids);
 
   useEffect(() => {
+    if (initialGallery.length > 0) {
+      setLoading(false);
+      return;
+    }
     fetchGallery();
-    fetchEvents();
-    fetchSekbids();
+    if (initialEvents.length === 0) fetchEvents();
+    if (initialSekbids.length === 0) fetchSekbids();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
