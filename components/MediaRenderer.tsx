@@ -10,9 +10,15 @@ interface MediaRendererProps {
   muted?: boolean; // for video previews
   fallbackSrc?: string; // Optional fallback image
   retryCount?: number; // Number of retries (default: 2)
+  loading?: 'lazy' | 'eager'; // image loading (default lazy; use eager in lightbox)
+  objectFit?: 'cover' | 'contain'; // fit mode for media (default cover)
 }
 
-const VIDEO_EXT_REGEX = /\.(mp4|webm|ogg)(\?.*)?$/i;
+const VIDEO_EXT_REGEX = /\.(mp4|webm|ogg|mov|m4v|avi|mkv|3gp|flv)(\?.*)?$/i;
+
+export function isVideoSrc(src: string | null | undefined): boolean {
+  return !!src && VIDEO_EXT_REGEX.test(src);
+}
 
 // NO longer use logo as default - use proper placeholder instead
 // const DEFAULT_FALLBACK = '/images/logo-2.png';
@@ -73,6 +79,8 @@ export default function MediaRenderer({
   muted,
   fallbackSrc,
   retryCount = 2,
+  loading = 'lazy',
+  objectFit = 'cover',
 }: MediaRendererProps) {
   const [currentSrc, setCurrentSrc] = useState(src);
   const [errorCount, setErrorCount] = useState(0);
@@ -128,12 +136,13 @@ export default function MediaRenderer({
   }
 
   const isVideo = VIDEO_EXT_REGEX.test(src);
+  const fitClass = objectFit === 'contain' ? 'object-contain' : 'object-cover';
 
   if (isVideo) {
     return (
       <video
         src={currentSrc}
-        className={className}
+        className={`${className} ${fitClass}`}
         playsInline
         webkit-playsinline="true"
         controls={controlsForVideo}
@@ -142,7 +151,7 @@ export default function MediaRenderer({
         autoPlay={autoPlay}
         loop={loop}
         muted={muted}
-        style={{ maxWidth: '100%', height: 'auto' }}
+        style={objectFit === 'contain' ? { maxWidth: '100%', maxHeight: '100%' } : { maxWidth: '100%', height: 'auto' }}
         onError={handleError}
         onLoadedData={handleLoad}
       />
@@ -153,8 +162,8 @@ export default function MediaRenderer({
     <img 
       src={currentSrc} 
       alt={alt} 
-      className={className} 
-      loading="lazy" 
+      className={`${className} ${fitClass}`} 
+      loading={loading} 
       onError={handleError}
       onLoad={handleLoad}
     />

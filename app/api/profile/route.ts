@@ -49,9 +49,13 @@ export async function GET() {
       instagram_username: data.instagram_username,
       role: data.role,
       is_active: !!data.approved,
+      approved: !!data.approved,
       profile_image: data.photo_url ?? null,
+      photo_url: data.photo_url ?? null,
       created_at: data.created_at,
+      updated_at: data.updated_at,
       email_verified: !!data.email_verified,
+      requested_role: data.requested_role,
     };
 
     console.log('[profile GET] User ID:', session.user.id);
@@ -108,7 +112,7 @@ export async function PUT(request: NextRequest) {
       .from('users')
       .update(update)
       .eq('id', session.user.id)
-      .select('id, email, name, nickname, nisn, nik, unit_sekolah, instagram_username, role, photo_url, approved, email_verified, created_at')
+      .select('id, email, name, nickname, nisn, nik, unit_sekolah, kelas, instagram_username, role, photo_url, approved, email_verified, created_at, updated_at')
       .single();
 
     if (error) {

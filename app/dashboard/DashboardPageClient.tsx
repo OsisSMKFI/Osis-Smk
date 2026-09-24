@@ -100,7 +100,7 @@ export default function DashboardPageClient() {
           photo_url: data.data.profile_image || data.data.photo_url || '',
           created_at: data.data.created_at || '',
           email_verified: data.data.email_verified || false,
-          approved: data.data.approved || false,
+          approved: data.data.approved ?? data.data.is_active ?? false,
           updated_at: data.data.updated_at || '',
           sekbid_id: data.data.sekbid_id || null,
         };

@@ -78,8 +78,15 @@ export async function GET() {
       if (item.video_url) {
         updatedItem.video_url = toPublicStorageUrl(fixIncompleteUrl(item.video_url, folder)) || fixIncompleteUrl(item.video_url, folder);
       }
-      if (item.url && !item.image_url && !item.video_url) {
+      if (item.url) {
         updatedItem.url = toPublicStorageUrl(fixIncompleteUrl(item.url, folder)) || fixIncompleteUrl(item.url, folder);
+      }
+      // Fallback: some rows only fill url or video_url while image_url is empty —
+      // expose a single resolved media field so clients don't render a broken placeholder.
+      if (!updatedItem.image_url && updatedItem.video_url) {
+        updatedItem.image_url = updatedItem.video_url;
+      } else if (!updatedItem.image_url && updatedItem.url) {
+        updatedItem.image_url = updatedItem.url;
       }
       return updatedItem;
     });

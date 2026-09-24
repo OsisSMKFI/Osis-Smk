@@ -78,21 +78,23 @@ export async function getPublicGallery() {
     const folder = item.category || item.folder || 'general';
     let id = item.id;
     if (id === null || id === undefined || id === '') {
-      id = `gal-${i}-${item.image_url || item.title || 'item'}`;
+      id = `gal-${i}-${item.image_url || item.video_url || item.url || item.title || 'item'}`;
     }
+    const fixedImage = item.image_url
+      ? toPublicUrl(fixGalleryUrl(item.image_url, folder)) || fixGalleryUrl(item.image_url, folder)
+      : null;
+    const fixedVideo = item.video_url
+      ? toPublicUrl(fixGalleryUrl(item.video_url, folder)) || fixGalleryUrl(item.video_url, folder)
+      : null;
+    const fixedUrl = item.url
+      ? toPublicUrl(fixGalleryUrl(item.url, folder)) || fixGalleryUrl(item.url, folder)
+      : null;
     return {
       ...item,
       id,
-      image_url: item.image_url
-        ? toPublicUrl(fixGalleryUrl(item.image_url, folder)) || fixGalleryUrl(item.image_url, folder)
-        : item.image_url,
-      video_url: item.video_url
-        ? toPublicUrl(fixGalleryUrl(item.video_url, folder)) || fixGalleryUrl(item.video_url, folder)
-        : item.video_url,
-      url:
-        item.url && !item.image_url && !item.video_url
-          ? toPublicUrl(fixGalleryUrl(item.url, folder)) || fixGalleryUrl(item.url, folder)
-          : item.url,
+      image_url: fixedImage || fixedVideo || fixedUrl || item.image_url || null,
+      video_url: fixedVideo,
+      url: fixedUrl,
     };
   });
 }
