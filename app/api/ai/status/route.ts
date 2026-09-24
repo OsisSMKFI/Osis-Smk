@@ -27,15 +27,18 @@ export async function GET(_req: NextRequest) {
       { id: 'anthropic', name: 'Anthropic (Claude)', available: hasAnthropic },
     ];
 
-    return NextResponse.json({
-      providers,
-      features: {
-        webSearch: hasTavily,
-        vision: hasGemini || hasOpenAI,
-        gateway: gatewayStatus.anyAvailable,
+    return NextResponse.json(
+      {
+        providers,
+        features: {
+          webSearch: hasTavily,
+          vision: hasGemini || hasOpenAI,
+          gateway: gatewayStatus.anyAvailable,
+        },
+        anyAvailable: hasGemini || hasOpenAI || hasAnthropic || gatewayStatus.anyAvailable,
       },
-      anyAvailable: hasGemini || hasOpenAI || hasAnthropic || gatewayStatus.anyAvailable,
-    });
+      { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=60' } }
+    );
   } catch (error) {
     console.error('[AI Status] Error:', error);
     return NextResponse.json({

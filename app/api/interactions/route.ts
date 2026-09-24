@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       isLiked = !!userLike;
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       success: true,
       stats: {
         likes: likesCount || 0,
@@ -69,6 +69,14 @@ export async function GET(request: NextRequest) {
         isLiked
       }
     });
+    // 60s edge cache for anonymous; private short cache for logged-in like state
+    res.headers.set(
+      'Cache-Control',
+      userId
+        ? 'private, max-age=30, stale-while-revalidate=30'
+        : 'public, max-age=60, stale-while-revalidate=60'
+    );
+    return res;
   } catch (error) {
     console.error('[Interactions API] GET Error:', error);
     return NextResponse.json({ 

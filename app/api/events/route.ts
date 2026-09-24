@@ -41,7 +41,9 @@ export async function GET() {
     }));
 
     console.log(`[api/events GET] Found ${safeEvents.length} events`);
-    return NextResponse.json({ events: safeEvents });
+    const res = NextResponse.json({ events: safeEvents });
+    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');
+    return res;
   } catch (error: any) {
     console.error('[api/events GET] Exception:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

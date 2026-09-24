@@ -209,6 +209,7 @@ export default function PostsPageClient({ initialPosts = [] }: PostsPageClientPr
                       initialLikes={0}
                       initialComments={0}
                       isLiked={false}
+                      mode="list"
                     />
                   </div>
                 </div>

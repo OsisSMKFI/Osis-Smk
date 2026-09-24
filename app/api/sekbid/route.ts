@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ sekbid: sekbid || [] });
+    const res = NextResponse.json({ sekbid: sekbid || [] });
+    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');
+    return res;
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

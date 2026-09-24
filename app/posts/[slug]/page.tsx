@@ -3,6 +3,9 @@ import { generatePageMetadata } from '@/lib/metadata-helper';
 import PostDetailClient from './PostDetailClient';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 
+// ISR: serve cached post for 60s to avoid DB hit on every request
+export const revalidate = 60;
+
 interface Post {
   id: string;
   title: string;

@@ -428,6 +428,7 @@ export default function InfoPageClient({
                         initialLikes={0}
                         initialComments={0}
                         isLiked={false}
+                        mode="list"
                       />
                     </div>
                   </div>
@@ -575,6 +576,7 @@ export default function InfoPageClient({
                           initialLikes={0}
                           initialComments={0}
                           isLiked={false}
+                          mode="list"
                         />
                       </div>
                     </div>
@@ -686,6 +688,7 @@ export default function InfoPageClient({
                               initialLikes={0}
                               initialComments={0}
                               isLiked={false}
+                              mode="list"
                             />
                           </div>
                         </div>
@@ -766,6 +769,7 @@ export default function InfoPageClient({
                                   initialComments={0}
                                   isLiked={false}
                                   className="scale-90"
+                                  mode="list"
                                 />
                               </div>
                             </div>

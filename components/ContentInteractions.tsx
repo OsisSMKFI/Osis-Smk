@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaHeart, FaComment, FaShare, FaQrcode, FaLink, FaWhatsapp, FaFacebook, FaTwitter, FaTimes, FaEye } from 'react-icons/fa';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useToast } from '@/contexts/ToastContext';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
+import { cachedGetJson } from '@/lib/clientCache';
 
 const CommentSectionEnhanced = dynamic(() => import('./CommentSectionEnhanced'), { ssr: false });
 
@@ -43,6 +44,23 @@ interface ContentInteractionsProps {
   onLike?: () => void;
   onComment?: () => void;
   className?: string;
+  /** list = skip stats/view fetch (card lists); detail = full tracking (default) */
+  mode?: 'list' | 'detail';
+}
+
+const VIEW_COOLDOWN_MS = 60_000;
+const STATS_TTL_MS = 60_000;
+
+function canTrackView(contentId: string): boolean {
+  try {
+    const key = `osis:viewed:${contentId}`;
+    const last = Number(sessionStorage.getItem(key) || 0);
+    if (Date.now() - last < VIEW_COOLDOWN_MS) return false;
+    sessionStorage.setItem(key, String(Date.now()));
+    return true;
+  } catch {
+    return true;
+  }
 }
 
 export default function ContentInteractions({
@@ -55,7 +73,8 @@ export default function ContentInteractions({
   isLiked = false,
   onLike,
   onComment,
-  className = ''
+  className = '',
+  mode = 'detail'
 }: ContentInteractionsProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -69,7 +88,7 @@ export default function ContentInteractions({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [fullUrl, setFullUrl] = useState('');
-  const [statsLoaded, setStatsLoaded] = useState(false);
+  const [statsLoaded, setStatsLoaded] = useState(mode === 'list');
   const [liking, setLiking] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const commentSectionRef = useRef<HTMLDivElement>(null);
@@ -77,10 +96,11 @@ export default function ContentInteractions({
   sessionRef.current = session;
   const viewTracked = useRef(false);
 
-  // Defer stats/view off the critical path (idle) to avoid request storms on list pages
+  // Detail only: fetch stats (cached 60s) + track view (60s cooldown) off critical path
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setFullUrl(window.location.origin + contentUrl);
+    if (mode === 'list') return;
 
     let cancelled = false;
     const run = async () => {
@@ -88,21 +108,24 @@ export default function ContentInteractions({
       viewTracked.current = true;
       try {
         const userId = (sessionRef.current?.user as any)?.id || '';
-        const res = await fetch(`/api/interactions?contentId=${contentId}&contentType=${contentType}&userId=${userId}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.stats && !cancelled) {
-            setLikes(data.stats.likes);
-            setViews(data.stats.views);
-            setComments(data.stats.comments);
-            setLiked(data.stats.isLiked);
-          }
+        const data = await cachedGetJson<{
+          stats?: { likes: number; views: number; comments: number; isLiked: boolean };
+        }>(`/api/interactions?contentId=${contentId}&contentType=${contentType}&userId=${userId}`, {
+          ttlMs: STATS_TTL_MS,
+          persist: false
+        });
+        if (data.stats && !cancelled) {
+          setLikes(data.stats.likes);
+          setViews(data.stats.views);
+          setComments(data.stats.comments);
+          setLiked(data.stats.isLiked);
         }
       } catch (error) {
         console.error('[ContentInteractions] Failed to fetch stats:', error);
       } finally {
         if (!cancelled) setStatsLoaded(true);
       }
+      if (!canTrackView(contentId)) return;
       try {
         const fingerprint = getFingerprint();
         const userId = (sessionRef.current?.user as any)?.id || null;
@@ -123,13 +146,13 @@ export default function ContentInteractions({
     };
 
     const idle = (cb: () => void) => {
-      if (typeof requestIdleCallback === 'function') requestIdleCallback(cb, { timeout: 3000 });
-      else setTimeout(cb, 800);
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(cb, { timeout: 4000 });
+      else setTimeout(cb, 1200);
     };
     idle(() => { void run(); });
 
     return () => { cancelled = true; };
-  }, [contentUrl, contentId, contentType]);
+  }, [contentUrl, contentId, contentType, mode]);
 
   // Generate QR Code when modal opens (lazy-load qrcode lib)
   useEffect(() => {
@@ -284,13 +307,15 @@ export default function ContentInteractions({
     <>
       {/* Interaction Buttons */}
       <div className={`flex items-center gap-4 sm:gap-6 ${className}`}>
-        {/* Views Counter */}
-        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-          <FaEye className="text-lg sm:text-xl" />
-          <span className="text-sm sm:text-base">
-            {statsLoaded ? views : '...'}
-          </span>
-        </div>
+        {/* Views Counter — detail only (list skips stats fetch) */}
+        {mode === 'detail' && (
+          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+            <FaEye className="text-lg sm:text-xl" />
+            <span className="text-sm sm:text-base">
+              {statsLoaded ? views : '...'}
+            </span>
+          </div>
+        )}
 
         {/* Like Button */}
         <button

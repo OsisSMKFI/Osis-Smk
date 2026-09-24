@@ -2,18 +2,13 @@
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { t as translate } from '@/lib/translations';
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 export const useTranslation = () => {
   const { language } = useLanguage();
-  const [currentLang, setCurrentLang] = useState(language);
 
-  // Force update when language changes
-  useEffect(() => {
-    setCurrentLang(language);
-  }, [language]);
+  // Stable identity per language — prevents infinite effect loops in consumers
+  const t = useCallback((key: string) => translate(key, language), [language]);
 
-  const t = (key: string) => translate(key, currentLang);
-
-  return { t, language: currentLang };
+  return { t, language };
 };

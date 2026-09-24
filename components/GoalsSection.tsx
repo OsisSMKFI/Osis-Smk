@@ -93,8 +93,13 @@ const GoalsSection: React.FC<{ initialContent?: Record<string, string> }> = ({
       home_goals_cta_title: t('goals.joinUs'),
       home_goals_cta_desc: t('goals.joinUsDesc'),
     };
-    getPageContentBatch(keys, fallbacks).then(setContent);
-  }, [t, hasInitial]);
+    let cancelled = false;
+    getPageContentBatch(keys, fallbacks).then((next) => {
+      if (!cancelled) setContent(next);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount; language fallbacks are only initial values
+  }, [hasInitial]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

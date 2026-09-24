@@ -22,7 +22,9 @@ export async function GET() {
     }
 
     console.log(`[api/announcements GET] Found ${announcements?.length || 0} announcements`);
-    return NextResponse.json({ announcements: announcements || [] });
+    const res = NextResponse.json({ announcements: announcements || [] });
+    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');
+    return res;
   } catch (error: any) {
     console.error('[api/announcements GET] Exception:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

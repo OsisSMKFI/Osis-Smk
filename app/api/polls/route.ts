@@ -27,7 +27,9 @@ export async function GET() {
     });
 
     console.log(`[api/polls GET] Found ${polls?.length || 0} total polls, ${activePolls.length} active`);
-    return NextResponse.json({ polls: activePolls });
+    const res = NextResponse.json({ polls: activePolls });
+    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');
+    return res;
   } catch (error: any) {
     console.error('[api/polls GET] Exception:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

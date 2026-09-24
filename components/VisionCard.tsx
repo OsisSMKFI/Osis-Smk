@@ -14,6 +14,7 @@ const VisionCard: React.FC<{ initialContent?: Record<string, string> }> = ({
 
   useEffect(() => {
     if (hasInitial) return;
+    let cancelled = false;
     getPageContentBatch(
       ['site_vision_text', 'site_vision_hl1', 'site_vision_part2', 'site_vision_hl2', 'site_vision_part3', 'site_vision_hl3'],
       {
@@ -24,8 +25,12 @@ const VisionCard: React.FC<{ initialContent?: Record<string, string> }> = ({
         site_vision_part3: t('vision.visionPart3'),
         site_vision_hl3: t('vision.visionHighlight3'),
       }
-    ).then(setContent);
-  }, [t, hasInitial]);
+    ).then((next) => {
+      if (!cancelled) setContent(next);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount; language fallbacks are only initial values
+  }, [hasInitial]);
 
   const p1 = content.site_vision_text || t('vision.visionPart1');
   const hl1 = content.site_vision_hl1 || t('vision.visionHighlight1');

@@ -75,7 +75,9 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({ posts: postsWithSignedUrls });
+    const res = NextResponse.json({ posts: postsWithSignedUrls });
+    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');
+    return res;
   } catch (error) {
     console.error('Error in posts API:', error);
     return NextResponse.json(

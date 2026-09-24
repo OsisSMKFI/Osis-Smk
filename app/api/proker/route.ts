@@ -60,7 +60,9 @@ export async function GET(request: NextRequest) {
       data = retried.data;
     }
 
-    return NextResponse.json({ proker: mapProkerList(data) });
+    const res = NextResponse.json({ proker: mapProkerList(data) });
+    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');
+    return res;
   } catch (error: any) {
     console.error('[api/proker] exception:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
