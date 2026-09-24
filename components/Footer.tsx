@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FaMapMarkerAlt, FaPhone, FaEnvelope, FaHeart, FaQrcode, FaShareAlt } from 'react-icons/fa';
 import { InstagramIcon, SpotifyIcon, TiktokIcon, YoutubeIcon } from './icons/SocialIcons';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -13,10 +14,19 @@ import OptimizedLogo from './OptimizedLogo';
 const Footer: React.FC = () => {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const router = useRouter();
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showQR, setShowQR] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
   const [siteContent, setSiteContent] = useState<Record<string, string>>({});
+
+  const warm = (href: string) => {
+    try {
+      router.prefetch(href);
+    } catch {
+      // ignore
+    }
+  };
 
   // Fetch editable content from DB
   useEffect(() => {
@@ -204,6 +214,8 @@ const Footer: React.FC = () => {
                     {link.available ? (
                       <Link 
                         href={link.href} 
+                        prefetch
+                        onMouseEnter={() => warm(link.href)}
                         className="text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-300 flex items-center group"
                       >
                         <span className="w-2 h-2 bg-yellow-400 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

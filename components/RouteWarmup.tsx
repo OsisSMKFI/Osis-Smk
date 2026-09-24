@@ -2,9 +2,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { cachedGetJson } from '@/lib/clientCache';
 
-/** Public routes worth warming (JS + RSC) after first paint. */
+/** All public routes worth having ready before the user clicks. */
 const PUBLIC_ROUTES = [
   '/',
   '/about',
@@ -16,33 +15,17 @@ const PUBLIC_ROUTES = [
   '/our-social-media',
   '/sekbid',
   '/activity',
+  '/sekbid/sekbid-1',
+  '/sekbid/sekbid-2',
+  '/sekbid/sekbid-3',
+  '/sekbid/sekbid-4',
+  '/sekbid/sekbid-5',
+  '/sekbid/sekbid-6',
 ];
-
-/** Public GETs used by client pages on mount — keep small so we never fight first paint. */
-const WARM_APIS = [
-  '/api/proker',
-  '/api/sekbid',
-  '/api/announcements',
-  '/api/events',
-  '/api/polls',
-  '/api/posts?limit=6',
-  '/api/stats',
-];
-
-const ROUTE_FLAG = 'osis:routes-warmed';
-const API_FLAG = 'osis:apis-warmed';
-
-function runIdle(fn: () => void, timeout = 8000) {
-  if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(() => fn(), { timeout });
-    return;
-  }
-  window.setTimeout(fn, 2500);
-}
 
 /**
- * After the visitor lands, warm route chunks + public API cache in the background
- * so the first click on each menu is already "visited" (matches user-reported lag).
+ * Prefetch public route RSC + JS chunks ASAP after first paint.
+ * This is the fix for "first click on each menu freezes, later clicks are fine".
  */
 export default function RouteWarmup() {
   const router = useRouter();
@@ -50,74 +33,47 @@ export default function RouteWarmup() {
   useEffect(() => {
     let cancelled = false;
 
-    const warmRoutes = () => {
+    const prefetchAll = () => {
       if (cancelled) return;
-      try {
-        if (sessionStorage.getItem(ROUTE_FLAG)) return;
-      } catch {
-        // still try
-      }
-      PUBLIC_ROUTES.forEach((href, i) => {
-        window.setTimeout(() => {
-          if (!cancelled) {
-            try {
-              router.prefetch(href);
-            } catch {
-              // ignore
-            }
-          }
-        }, i * 250);
-      });
-      try {
-        sessionStorage.setItem(ROUTE_FLAG, '1');
-      } catch {
-        // ignore
-      }
-    };
-
-    const warmApis = async () => {
-      if (cancelled) return;
-      try {
-        if (sessionStorage.getItem(API_FLAG)) return;
-      } catch {
-        // still try
-      }
-      // sequential-ish to avoid burst on slow mobile
-      for (const url of WARM_APIS) {
+      // Parallel — chunks are small; stagger only caused late readiness
+      for (const href of PUBLIC_ROUTES) {
         if (cancelled) return;
         try {
-          await cachedGetJson(url, { ttlMs: 120_000 });
-        } catch {
-          // warm is best-effort
-        }
-        await new Promise((r) => setTimeout(r, 120));
-      }
-      if (!cancelled) {
-        try {
-          sessionStorage.setItem(API_FLAG, '1');
+          router.prefetch(href);
         } catch {
           // ignore
         }
       }
     };
 
-    // Wait for first paint + user interaction settle before warming
-    const startWarm = () => {
-      runIdle(() => {
-        warmRoutes();
-        window.setTimeout(() => {
-          runIdle(() => {
-            void warmApis();
-          }, 12000);
-        }, 2000);
-      }, 8000);
-    };
+    // Start as soon as the browser can breathe (not 3.5s later)
+    let idleId: number | undefined;
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(prefetchAll, { timeout: 600 });
+    } else {
+      idleId = window.setTimeout(prefetchAll, 200) as unknown as number;
+    }
 
-    const startTimer = window.setTimeout(startWarm, 3500);
+    // Re-run once on first pointer interaction (user is about to click)
+    const onIntent = () => {
+      prefetchAll();
+      window.removeEventListener('pointerdown', onIntent);
+      window.removeEventListener('keydown', onIntent);
+    };
+    window.addEventListener('pointerdown', onIntent, { once: true });
+    window.addEventListener('keydown', onIntent, { once: true });
 
     return () => {
       cancelled = true;
-      window.clearTimeout(startTimer);
+      if (idleId !== undefined) {
+        if (typeof window.cancelIdleCallback === 'function' && typeof idleId === 'number') {
+          window.cancelIdleCallback(idleId);
+        } else {
+          window.clearTimeout(idleId as unknown as number);
+        }
+      }
+      window.removeEventListener('pointerdown', onIntent);
+      window.removeEventListener('keydown', onIntent);
     };
   }, [router]);
 

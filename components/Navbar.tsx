@@ -34,11 +34,29 @@ const Navbar: React.FC = () => {
   const router = useRouter();
   const { data: session } = useSession();
 
+  // Prefetch public routes as soon as the user points at them
+  const warm = (href: string) => {
+    try {
+      router.prefetch(href);
+    } catch {
+      // ignore
+    }
+  };
+
   // Lock body scroll when mobile menu is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       document.body.style.paddingRight = `${window.innerWidth - document.documentElement.clientWidth}px`;
+      // Warm every public menu target while the drawer is open
+      const routes = ['/', '/about', '/info', '/bidang', '/gallery', '/our-social-media', '/people', '/posts', '/activity', '/sekbid'];
+      for (const href of routes) {
+        try {
+          router.prefetch(href);
+        } catch {
+          // ignore
+        }
+      }
     } else {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
@@ -47,7 +65,7 @@ const Navbar: React.FC = () => {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
     };
-  }, [isOpen]);
+  }, [isOpen, router]);
 
   // ESC key to close mobile menu
   useEffect(() => {
@@ -175,13 +193,13 @@ const Navbar: React.FC = () => {
 
         {/* Desktop Menu */}
         <div className="navbar-nav hidden lg:flex items-center space-x-2 xl:space-x-4 relative z-20">
-          <Link href="/" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Home">{t('navbar.home')}</Link>
-          <Link href="/about" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="About">{t('navbar.about')}</Link>
-          <Link href="/info" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Info">📰 Info</Link>
-          <Link href="/bidang" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Program Kerja">{t('navbar.programKerja')}</Link>
-          <Link href="/gallery" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Gallery">{t('navbar.gallery')}</Link>
-          <Link href="/our-social-media" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Social Media">{t('navbar.socialMedia')}</Link>
-          <Link href="/people" className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Members">{t('navbar.members')}</Link>
+          <Link href="/" prefetch onMouseEnter={() => warm('/')} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Home">{t('navbar.home')}</Link>
+          <Link href="/about" prefetch onMouseEnter={() => warm('/about')} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="About">{t('navbar.about')}</Link>
+          <Link href="/info" prefetch onMouseEnter={() => warm('/info')} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Info">📰 Info</Link>
+          <Link href="/bidang" prefetch onMouseEnter={() => warm('/bidang')} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Program Kerja">{t('navbar.programKerja')}</Link>
+          <Link href="/gallery" prefetch onMouseEnter={() => warm('/gallery')} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Gallery">{t('navbar.gallery')}</Link>
+          <Link href="/our-social-media" prefetch onMouseEnter={() => warm('/our-social-media')} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Social Media">{t('navbar.socialMedia')}</Link>
+          <Link href="/people" prefetch onMouseEnter={() => warm('/people')} className="nav-link px-3 py-2 rounded-lg text-sm xl:text-base font-medium text-gray-700 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200" aria-label="Members">{t('navbar.members')}</Link>
 
           {/* Language Toggle */}
           <div className="ml-4">
