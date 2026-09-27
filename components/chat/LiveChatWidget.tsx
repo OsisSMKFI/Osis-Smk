@@ -1187,11 +1187,11 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl shadow-sm ${
+                  className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl shadow-sm leading-relaxed ${
                     m.role === 'user' 
                       ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-br-md' 
                       : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 rounded-bl-md'
-                  } ${isMobile ? 'text-[13px] px-3.5 py-2.5' : 'text-sm px-4 py-3'}`}
+                  } ${isMobile ? 'text-[13px] px-3.5 py-3' : 'text-sm px-4 py-3'}`}
                   style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                 >
                   {m.image && (

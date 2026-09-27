@@ -135,7 +135,7 @@ const ChatWidget: React.FC = () => {
             {messages.filter(m => m.role !== 'system').map((m, idx) => (
               <div key={idx} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                 <div className={
-                  'max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ' +
+                  'max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words leading-relaxed ' +
                   (m.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100')

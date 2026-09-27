@@ -1534,6 +1534,8 @@ Gunakan struktur yang KONSISTEN untuk setiap respons:
 • Emoji berlebihan (max 3-4 per pesan)
 • Raw HTML/CSS/kode
 • Respons terlalu panjang (max 300 kata)
+• Tabel markdown (|a|b| dan |---|) — tampil BERANTAKAN di layar HP; format daftar jadi bullet "• Label: nilai"
+• Teks padat berdesakan — pisahkan tiap bagian dengan 1 baris kosong
 
 ✅ CONTOH FORMAT BAIK:
 "Hai! 👋

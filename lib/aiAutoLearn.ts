@@ -37,6 +37,7 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { fetchSiteSnapshot } from '@/lib/aiSiteFetcher';
 import { DEFAULT_FILOSOFI } from '@/lib/filosofiLogo';
+import { PUBLIC_CONTENT_DEFAULTS, buildDefaultPhilosophyKalimat } from '@/lib/publicContentDefaults';
 
 // In-memory knowledge base (auto-refreshed every 60 seconds for fresher data)
 let knowledgeBase: string | null = null;
@@ -613,7 +614,7 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push(`👑 Ketua OSIS: ${snap.ketua || '-'}`);
     if (snap.page_content) {
       const pc = snap.page_content;
-      // Visi: admin_settings site_visi > isi CMS halaman About > rangkaian teks home
+      // Visi: admin_settings site_visi > isi CMS halaman About > rangkaian teks home > default halaman
       if (pc.site_visi) {
         kb.push(`\n🌟 VISI:\n${pc.site_visi}`);
       } else if (pc.about_vision_content) {
@@ -621,18 +622,19 @@ async function buildKnowledgeBase(): Promise<string> {
       } else {
         const visiHome = [pc.site_vision_text, pc.site_vision_hl1, pc.site_vision_part2, pc.site_vision_hl2, pc.site_vision_part3, pc.site_vision_hl3]
           .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-        if (visiHome) kb.push(`\n🌟 VISI:\n${visiHome}`);
+        kb.push(`\n🌟 VISI:\n${visiHome || PUBLIC_CONTENT_DEFAULTS.vision}`);
       }
-      // Misi: admin_settings site_misi > daftar misi CMS halaman About
+      // Misi: admin_settings site_misi > daftar misi CMS halaman About > default halaman
       if (pc.site_misi) {
         kb.push(`\n🎯 MISI:\n${pc.site_misi}`);
       } else {
         const misi = [pc.about_mission_1, pc.about_mission_2, pc.about_mission_3, pc.about_mission_4].filter(Boolean);
-        if (misi.length) kb.push(`\n🎯 MISI:\n${misi.map((m: string, i: number) => `${i + 1}. ${m}`).join('\n')}`);
+        const misiList = misi.length ? misi : PUBLIC_CONTENT_DEFAULTS.missions;
+        kb.push(`\n🎯 MISI:\n${misiList.map((m: string, i: number) => `${i + 1}. ${m}`).join('\n')}`);
       }
       if (pc.site_about) kb.push(`\nℹ️ TENTANG:\n${pc.site_about}`);
 
-      // Filosofi nama OSIS (rangkai kalimat utama dari potongan CMS)
+      // Filosofi nama OSIS (rangkai kalimat utama dari potongan CMS > default halaman)
       const filosofiKalimat = [pc.about_philosophy_part1, pc.about_philosophy_name_hl, pc.about_philosophy_part2, pc.about_philosophy_sky_hl, pc.about_philosophy_part3]
         .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
       if (filosofiKalimat || pc.about_philosophy_desc1) {
@@ -640,6 +642,12 @@ async function buildKnowledgeBase(): Promise<string> {
         if (filosofiKalimat) kb.push(filosofiKalimat);
         if (pc.about_philosophy_desc1) kb.push(pc.about_philosophy_desc1);
         if (pc.about_philosophy_desc2) kb.push(pc.about_philosophy_desc2);
+      } else {
+        const d = PUBLIC_CONTENT_DEFAULTS.philosophy;
+        kb.push(`\n✨ ${d.title} (${d.highlight}):`);
+        kb.push(buildDefaultPhilosophyKalimat());
+        kb.push(d.desc1);
+        kb.push(d.desc2);
       }
 
       // Filosofi logo (5 elemen) — dari CMS, fallback default yang sama dgn halaman /about
@@ -655,23 +663,26 @@ async function buildKnowledgeBase(): Promise<string> {
       kb.push(`\n🎨 ${pc.about_logo_title || 'FILOSOFI LOGO OSIS'}${pc.about_logo_subtitle ? ` (${pc.about_logo_subtitle})` : ''}:`);
       logoList.forEach((row) => kb.push(`  ${row}`));
 
-      // Nilai-nilai organisasi
+      // Nilai-nilai organisasi (CMS > default halaman)
       const values = [1, 2, 3, 4]
         .map((i) => ({ name: pc[`about_value${i}_name`], desc: pc[`about_value${i}_desc`] }))
         .filter((v) => v.name);
-      if (values.length) {
-        kb.push(`\n💎 NILAI-NILAI OSIS:`);
-        values.forEach((v, i) => kb.push(`  ${i + 1}. ${v.name}${v.desc ? ` — ${v.desc}` : ''}`));
-      }
+      const valueList = values.length ? values : PUBLIC_CONTENT_DEFAULTS.values;
+      kb.push(`\n💎 NILAI-NILAI OSIS:`);
+      valueList.forEach((v, i) => kb.push(`  ${i + 1}. ${v.name}${v.desc ? ` — ${v.desc}` : ''}`));
 
-      // Profil sekolah (footer CMS)
-      if (pc.site_school_name || pc.site_address || pc.site_phone || pc.site_email) {
-        kb.push(`\n🏫 PROFIL SEKOLAH:`);
-        if (pc.site_school_name) kb.push(`  Nama: ${pc.site_school_name}`);
-        if (pc.site_address) kb.push(`  Alamat: ${pc.site_address}`);
-        if (pc.site_phone) kb.push(`  Telp: ${pc.site_phone}`);
-        if (pc.site_email) kb.push(`  Email: ${pc.site_email}`);
-      }
+      // Profil sekolah (footer CMS > default halaman)
+      const school = {
+        name: pc.site_school_name || PUBLIC_CONTENT_DEFAULTS.school.name,
+        address: pc.site_address || PUBLIC_CONTENT_DEFAULTS.school.address,
+        phone: pc.site_phone || PUBLIC_CONTENT_DEFAULTS.school.phone,
+        email: pc.site_email || PUBLIC_CONTENT_DEFAULTS.school.email,
+      };
+      kb.push(`\n🏫 PROFIL SEKOLAH:`);
+      kb.push(`  Nama: ${school.name}`);
+      kb.push(`  Alamat: ${school.address}`);
+      kb.push(`  Telp: ${school.phone}`);
+      kb.push(`  Email: ${school.email}`);
     }
     kb.push('');
 
@@ -1039,6 +1050,9 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push('• Bullet points untuk list');
     kb.push('• Bold untuk emphasis (jika bisa)');
     kb.push('• Struktur yang mudah di-scan');
+    kb.push('• ❌ JANGAN pakai tabel markdown (|a|b|) — tampilan chat HP jadi berantakan');
+    kb.push('  → format data sebagai bullet: "• Label: nilai" atau "Label — nilai"');
+    kb.push('• 💡 Spasi 1 baris antar bagian — jangan teks padat berdesakan');
     kb.push('');
     
     kb.push('🔄 Knowledge base auto-refresh setiap 3 menit dari database live.');
