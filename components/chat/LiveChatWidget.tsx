@@ -3,6 +3,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { FaComments, FaTimes, FaRobot, FaTrash, FaPaperPlane, FaWindowMinimize, FaWindowMaximize, FaWindowRestore, FaGripVertical, FaPlus, FaImage, FaFileAlt, FaExternalLinkAlt, FaArrowRight, FaInfoCircle, FaUsers, FaCalendarAlt, FaBook, FaBriefcase, FaImages, FaNewspaper, FaBullhorn, FaUserCircle, FaHome, FaHeart, FaQuestionCircle, FaBell, FaEnvelope, FaPalette, FaEye, FaUserShield, FaMagic, FaCheck, FaCog } from 'react-icons/fa';
 import ChatBoundary from './ChatBoundary';
+import ChatMarkdown from './ChatMarkdown';
 import Link from 'next/link';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1183,7 +1184,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               ═══════════════════════════════════════════════════════════════════ */}
           {!isMinimized && (
             <>
-              <div className={`flex-1 ${isMobile ? 'px-3 py-3' : 'px-4 py-4'} space-y-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300/50 dark:scrollbar-thumb-slate-700/50 scrollbar-track-transparent`}>
+              <div className={`flex-1 ${isMobile ? 'px-3 py-4' : 'px-4 py-4'} space-y-4 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300/50 dark:scrollbar-thumb-slate-700/50 scrollbar-track-transparent`}>
             {(() => {
               const lastAssistantIdx = messages.reduce((acc, mm, idx) => (mm.role === 'assistant' ? idx : acc), -1);
               return messages.map((m, i) => (
@@ -1239,69 +1240,51 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                     }
                     return null;
                   })()}
-                  {/* Render text content (strip markdown image syntax for cleaner display) */}
-                  {m.content.replace(/!\[Generated Image\]\(https?:\/\/[^\)]+\)/g, '').trim()}
-                  
-                  {/* 🔗 SMART QUICK LINKS - hanya di pesan balasan terakhir agar tidak menumpuk */}
+                  {/* Render konten: assistant = markdown ringan (tabel→list), user = teks biasa */}
+                  {m.role === 'assistant' ? (
+                    <ChatMarkdown text={m.content.replace(/!\[Generated Image\]\(https?:\/\/[^\)]+\)/g, '').trim()} />
+                  ) : (
+                    m.content
+                  )}
+
+                  {/* 🔗 CHIPS: quick links + follow-up — satu baris, hanya di balasan terakhir */}
                   {m.role === 'assistant' && i === lastAssistantIdx && (() => {
                     const quickLinks = detectQuickLinks(m.content);
-                    if (quickLinks.length > 0) {
-                      return (
-                        <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-600/40">
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1">
-                            <FaExternalLinkAlt size={8} /> Quick Links
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {quickLinks.map((link, idx) => (
-                              <Link
-                                key={idx}
-                                href={link.path}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-700/50 hover:from-indigo-100 hover:to-blue-100 dark:hover:from-indigo-800/40 dark:hover:to-blue-800/40 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all duration-200 shadow-sm hover:shadow group"
-                                title={link.description}
-                              >
-                                <span className="opacity-70 group-hover:opacity-100">{link.icon}</span>
-                                <span className="font-medium">{link.label}</span>
-                                <FaArrowRight size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                  
-                  {/* ⚡ QUICK ACTIONS - follow-up suggestions, hanya pesan terakhir */}
-                  {m.role === 'assistant' && i === lastAssistantIdx && (() => {
                     const quickActions = detectQuickActions(m.content);
-                    if (quickActions.length > 0) {
-                      return (
-                        <div className="mt-2 pt-2 border-t border-slate-100/60 dark:border-slate-700/40">
-                          <div className="text-[10px] text-slate-400 dark:text-slate-500 mb-1.5">💡 Tanya lebih lanjut:</div>
-                          <div className="flex flex-wrap gap-1">
-                            {quickActions.map((action, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => {
-                                  setInput(action.action);
-                                  // Auto send after small delay
-                                  setTimeout(() => {
-                                    const sendBtn = document.querySelector('[aria-label="Kirim pesan"]') as HTMLButtonElement;
-                                    sendBtn?.click();
-                                  }, 100);
-                                }}
-                                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                                title={action.action}
-                              >
-                                {action.icon}
-                                <span>{action.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
+                    if (!quickLinks.length && !quickActions.length) return null;
+                    return (
+                      <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 dark:border-slate-600/40 flex flex-wrap gap-1.5">
+                        {quickLinks.map((link, idx) => (
+                          <Link
+                            key={`l${idx}`}
+                            href={link.path}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] rounded-lg bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-700/50 hover:from-indigo-100 hover:to-blue-100 dark:hover:from-indigo-800/40 dark:hover:to-blue-800/40 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all duration-200 shadow-sm hover:shadow group"
+                            title={link.description}
+                          >
+                            <span className="opacity-70 group-hover:opacity-100">{link.icon}</span>
+                            <span className="font-medium">{link.label}</span>
+                            <FaArrowRight size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </Link>
+                        ))}
+                        {quickActions.map((action, idx) => (
+                          <button
+                            key={`a${idx}`}
+                            onClick={() => {
+                              setInput(action.action);
+                              setTimeout(() => {
+                                const sendBtn = document.querySelector('[aria-label="Kirim pesan"]') as HTMLButtonElement;
+                                sendBtn?.click();
+                              }, 100);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200/70 dark:border-slate-600/60 transition-colors"
+                            title={action.action}
+                          >
+                            {action.icon}
+                            <span className="font-medium">{action.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    );
                   })()}
                 </div>
               </div>

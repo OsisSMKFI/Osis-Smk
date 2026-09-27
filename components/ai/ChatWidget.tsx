@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
+import ChatMarkdown from '@/components/chat/ChatMarkdown';
 
 type ChatMessage = {
   role: 'user' | 'assistant' | 'system';
@@ -126,7 +127,7 @@ const ChatWidget: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
             {messages.filter(m => m.role !== 'system').length === 0 && (
               <div className="text-xs text-neutral-500">
                 Tanyakan apapun seputar OSIS: kegiatan, anggota, sekbid, proker, pengumuman, dan konten halaman.
@@ -135,12 +136,12 @@ const ChatWidget: React.FC = () => {
             {messages.filter(m => m.role !== 'system').map((m, idx) => (
               <div key={idx} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                 <div className={
-                  'max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words leading-relaxed ' +
+                  'max-w-[85%] rounded-lg px-3 py-2.5 text-sm whitespace-pre-wrap break-words leading-relaxed ' +
                   (m.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100')
                 }>
-                  {m.content}
+                  {m.role === 'assistant' ? <ChatMarkdown text={m.content} /> : m.content}
                 </div>
               </div>
             ))}
