@@ -32,7 +32,8 @@ export const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah
 // v5: Added Sharp compression to reduce image size for WhatsApp (<300KB)
 // v6: Fixed logo path to logo-2.png
 // v7: Changed fit:cover to fit:contain to prevent cropping on all platforms
-const OG_VERSION = 7;
+// v8: Fixed og/gallery proxy (foto item kini terkirim, bukan selalu logo)
+const OG_VERSION = 8;
 
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og/default?v=${OG_VERSION}`;
 export const FALLBACK_OG_IMAGE = `${SITE_URL}/og/default?v=${OG_VERSION}`;

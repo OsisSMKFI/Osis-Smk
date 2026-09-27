@@ -175,6 +175,25 @@ export default function GalleryPageClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gallery]);
 
+  // Sinkronkan URL dgn item yg sedang dibuka — supaya link yg di-copy dari
+  // address bar (atau tombol share) selalu membawa ?item=<id> dan
+  // preview share-nya menampilkan foto/video itu, bukan logo default.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!itemParamTried.current) return; // tunggu deep-link selesai membaca param
+    const url = new URL(window.location.href);
+    if (selectedImage !== null && filteredGallery[selectedImage]) {
+      const id = String(filteredGallery[selectedImage].id);
+      if (url.searchParams.get('item') !== id) {
+        url.searchParams.set('item', id);
+        window.history.replaceState(null, '', url.toString());
+      }
+    } else if (selectedImage === null && url.searchParams.has('item')) {
+      url.searchParams.delete('item');
+      window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+    }
+  }, [selectedImage, filteredGallery]);
+
   const fetchGallery = async () => {
     try {
       const data = await cachedGetJson<any>('/api/gallery');

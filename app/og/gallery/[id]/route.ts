@@ -37,14 +37,17 @@ export async function GET(
     let src: string | null = null
 
     if (/^\d+$/.test(id)) {
-      const { data } = await supabase
+      // Hanya kolom yang benar-benar ada di tabel gallery —
+      // select kolom tak dikenal membuat seluruh query gagal (PGRST204)
+      // dan semua share jatuh ke fallback logo.
+      const { data, error } = await supabase
         .from('gallery')
-        .select('image_url, video_url, url, thumbnail_url, category, folder')
+        .select('image_url, video_url, url, thumbnail_url')
         .eq('id', Number(id))
         .single()
 
-      if (data) {
-        const folder = (data as any).category || (data as any).folder || 'general'
+      if (!error && data) {
+        const folder = 'general'
         const thumb = resolveStorageUrl((data as any).thumbnail_url, folder)
         const image = resolveStorageUrl((data as any).image_url, folder)
         const video = resolveStorageUrl((data as any).video_url, folder)
