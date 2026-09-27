@@ -33,6 +33,27 @@ export function resolveChatCompletionsUrl(baseUrl: string): string {
   return `${base}/v1/chat/completions`;
 }
 
+/** URL alternatif (dipakai retry bila URL utama 403/404). Kosong = tanpa alternatif. */
+export function resolveAltChatCompletionsUrl(baseUrl: string): string {
+  const base = baseUrl.trim().replace(/\/+$/, '');
+  // Base sudah menunjuk persis ke chat/completions → tidak ada variasi lain
+  if (/\/chat\/completions$/i.test(base)) return '';
+  if (/\/v\d+$/i.test(base)) {
+    // primary = <base>/chat/completions → alternatif buang segmen versi
+    return `${base.replace(/\/v\d+$/i, '')}/chat/completions`;
+  }
+  // primary = <base>/v1/chat/completions → alternatif tanpa /v1
+  return `${base}/chat/completions`;
+}
+
+/** Header ala browser — beberapa API (di balik Cloudflare) menolak fetch telanjang. */
+const BROWSER_HEADERS: Record<string, string> = {
+  'Content-Type': 'application/json',
+  Accept: 'application/json, text/plain, */*',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+};
+
 /** Ambil konfigurasi custom provider; null bila belum lengkap. */
 export async function getCustomAIProvider(): Promise<CustomAIProvider | null> {
   const baseUrl = (await getConfig('CUSTOM_AI_BASE_URL'))?.trim();
@@ -44,7 +65,8 @@ export async function getCustomAIProvider(): Promise<CustomAIProvider | null> {
 
 /**
  * Panggil custom provider (OpenAI-compatible chat completions).
- * Melempar error bila gagal — caller boleh fallback ke provider lain.
+ * Mencoba URL utama, lalu URL alternatif (bila 403/404).
+ * Melempar error informatif bila gagal — caller boleh fallback ke provider lain.
  */
 export async function callCustomAI(
   messages: AIMessage[],
@@ -53,37 +75,67 @@ export async function callCustomAI(
   const provider = await getCustomAIProvider();
   if (!provider) throw new Error('Custom AI provider belum dikonfigurasi');
 
-  const url = resolveChatCompletionsUrl(provider.baseUrl);
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${provider.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: provider.model,
-      messages,
-      temperature: options.temperature ?? 0.3,
-      max_tokens: options.maxTokens ?? 4096,
-    }),
-  });
+  const primaryUrl = resolveChatCompletionsUrl(provider.baseUrl);
+  const altUrl = resolveAltChatCompletionsUrl(provider.baseUrl);
+  const urls = altUrl && altUrl !== primaryUrl ? [primaryUrl, altUrl] : [primaryUrl];
 
-  const text = await res.text();
-  let data: any = null;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    /* non-JSON response */
+  let lastError = '';
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...BROWSER_HEADERS,
+          Authorization: `Bearer ${provider.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: provider.model,
+          messages,
+          temperature: options.temperature ?? 0.3,
+          max_tokens: options.maxTokens ?? 4096,
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+
+      const text = await res.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        /* non-JSON response */
+      }
+
+      if (!res.ok) {
+        // HTML (mis. Cloudflare "Just a moment...") → kemungkinan base link mengarah ke situs web, bukan endpoint API
+        if (/^\s*<!doctype html|<html[\s>]/i.test(text)) {
+          throw new Error(
+            `Base link mengembalikan halaman HTML (HTTP ${res.status}) — kemungkinan bukan endpoint API ` +
+              `(terdeteksi proteksi seperti Cloudflare). Pastikan base link adalah URL API langsung, ` +
+              `contoh: https://api.openai.com atau https://openrouter.ai/api/v1`
+          );
+        }
+        const detail = data?.error?.message || data?.message || text.slice(0, 300);
+        lastError = `HTTP ${res.status}: ${detail}`;
+        // 403/404 → coba URL alternatif
+        if (res.status === 403 || res.status === 404) continue;
+        throw new Error(`Custom AI ${lastError}`);
+      }
+
+      const content = data?.choices?.[0]?.message?.content;
+      if (!content) throw new Error('Custom AI tidak mengembalikan isi pesan');
+      return content;
+    } catch (e: any) {
+      const msg = e?.message || 'Unknown error';
+      const isTimeout = e?.name === 'TimeoutError' || e?.name === 'AbortError';
+      // Error jaringan/HTML/timeout → hentikan, tidak ada gunanya retry URL lain
+      if (isTimeout || /halaman HTML|network/i.test(msg)) {
+        throw new Error(isTimeout ? 'Custom AI timeout (30 detik) — server tidak merespons' : e);
+      }
+      lastError = msg;
+    }
   }
 
-  if (!res.ok) {
-    const detail = data?.error?.message || data?.message || text.slice(0, 300);
-    throw new Error(`Custom AI HTTP ${res.status}: ${detail}`);
-  }
-
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Custom AI tidak mengembalikan isi pesan');
-  return content;
+  throw new Error(`Custom AI gagal (${urls.length} url dicoba): ${lastError}`);
 }
 
 export interface AITestResult {
