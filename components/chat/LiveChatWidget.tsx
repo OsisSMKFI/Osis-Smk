@@ -912,8 +912,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               left: 0,
               right: 0,
               width: '100%',
-              height: '75vh',
-              maxHeight: '75vh',
+              height: '75dvh',
+              maxHeight: '75dvh',
               borderRadius: '20px 20px 0 0',
             } : isMaximized ? {
               top: 0,
@@ -940,7 +940,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               📌 HEADER - Clean & Modern
               ═══════════════════════════════════════════════════════════════════ */}
           <div 
-            className={`flex items-center justify-between px-4 ${isMobile ? 'py-3 min-h-[56px]' : 'py-3 min-h-[60px]'} border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 to-slate-50/80 dark:from-slate-900/80 dark:to-slate-800/80 backdrop-blur-xl flex-shrink-0 ${!isMobile && !isMaximized ? 'cursor-move select-none' : ''}`}
+            className={`flex items-center justify-between ${isMobile ? 'px-3' : 'px-4'} py-3 ${isMobile ? 'min-h-[52px]' : 'min-h-[60px]'} border-b border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-r from-white/80 to-slate-50/80 dark:from-slate-900/80 dark:to-slate-800/80 backdrop-blur-xl flex-shrink-0 ${!isMobile && !isMaximized ? 'cursor-move select-none' : ''}`}
             onMouseDown={(e) => {
               if (!isMobile && !isMaximized && e.button === 0) {
                 const target = e.target as HTMLElement;
@@ -954,7 +954,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               }
             }}
           > 
-            <div className="flex items-center gap-3 pointer-events-none min-w-0 flex-shrink">
+            <div className={`flex items-center gap-2 min-w-0 flex-shrink pointer-events-none ${isMobile ? 'gap-2' : 'gap-3'}`}>
               {/* AI Avatar with gradient */}
               <div className="relative">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
@@ -1184,7 +1184,9 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
           {!isMinimized && (
             <>
               <div className={`flex-1 ${isMobile ? 'px-3 py-3' : 'px-4 py-4'} space-y-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-slate-300/50 dark:scrollbar-thumb-slate-700/50 scrollbar-track-transparent`}>
-            {messages.map((m, i) => (
+            {(() => {
+              const lastAssistantIdx = messages.reduce((acc, mm, idx) => (mm.role === 'assistant' ? idx : acc), -1);
+              return messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl shadow-sm leading-relaxed ${
@@ -1240,8 +1242,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                   {/* Render text content (strip markdown image syntax for cleaner display) */}
                   {m.content.replace(/!\[Generated Image\]\(https?:\/\/[^\)]+\)/g, '').trim()}
                   
-                  {/* 🔗 SMART QUICK LINKS - Premium Feature */}
-                  {m.role === 'assistant' && (() => {
+                  {/* 🔗 SMART QUICK LINKS - hanya di pesan balasan terakhir agar tidak menumpuk */}
+                  {m.role === 'assistant' && i === lastAssistantIdx && (() => {
                     const quickLinks = detectQuickLinks(m.content);
                     if (quickLinks.length > 0) {
                       return (
@@ -1269,8 +1271,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                     return null;
                   })()}
                   
-                  {/* ⚡ QUICK ACTIONS - Follow-up suggestions */}
-                  {m.role === 'assistant' && (() => {
+                  {/* ⚡ QUICK ACTIONS - follow-up suggestions, hanya pesan terakhir */}
+                  {m.role === 'assistant' && i === lastAssistantIdx && (() => {
                     const quickActions = detectQuickActions(m.content);
                     if (quickActions.length > 0) {
                       return (
@@ -1303,7 +1305,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                   })()}
                 </div>
               </div>
-            ))}
+            ));
+            })()}
             {/* Elegant Loading Indicator */}
             {loading && (
               <div className="flex items-start gap-3">
@@ -1371,7 +1374,26 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
           {/* ═══════════════════════════════════════════════════════════════════
               ⌨️ INPUT AREA - Modern & Clean
               ═══════════════════════════════════════════════════════════════════ */}
-          <div className={`${isMobile ? 'p-3' : 'p-4'} border-t border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-t from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur-xl flex-shrink-0`}>
+          <div
+            className={`${isMobile ? 'p-3' : 'p-4'} border-t border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-t from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur-xl flex-shrink-0`}
+            style={isMobile ? { paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' } : undefined}
+          >
+            {/* Mobile: provider select di baris sendiri — baris input jadi lega (upload+teks+kirim) */}
+            {isMobile && (
+              <select
+                value={provider}
+                onChange={e=> setProvider(e.target.value as any)}
+                className="w-full mb-2.5 text-xs px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 text-slate-600 dark:text-slate-300"
+                title="Provider AI"
+                aria-label="Provider AI"
+              >
+                {providerStatus.map(p => (
+                  <option key={p.id} value={p.id} disabled={!p.available}>
+                    {p.name}{!p.available ? ' (no key)' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
             {/* Image Preview */}
             {uploadedImage && (
               <div className="relative inline-block max-w-xs mb-3">
@@ -1447,8 +1469,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                     style={{ height: '48px', maxHeight: '120px' }}
                   />
                   
-                  {/* Subtle hint text */}
-                  {!input && (
+                  {/* Subtle hint text (desktop only) */}
+                  {!input && !isMobile && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                       <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium tracking-wide opacity-60">
                         <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-[9px]">⏎</kbd>
@@ -1511,22 +1533,6 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               >
                 <FaPaperPlane size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
-              
-              {/* Mobile Provider Select - Hidden for cleaner look */}
-              {isMobile && (
-                <select
-                  value={provider}
-                  onChange={e=> setProvider(e.target.value as any)}
-                  className="text-[10px] px-2 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
-                  title="Provider AI"
-                >
-                  {providerStatus.map(p => (
-                    <option key={p.id} value={p.id} disabled={!p.available}>
-                      {p.name}{!p.available ? ' (no key)' : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
             </div>
           </div>
             </>
