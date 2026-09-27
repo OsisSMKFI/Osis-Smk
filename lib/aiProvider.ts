@@ -106,12 +106,17 @@ export async function callCustomAI(
       }
 
       if (!res.ok) {
-        // HTML (mis. Cloudflare "Just a moment...") → kemungkinan base link mengarah ke situs web, bukan endpoint API
+        // HTML (mis. Cloudflare "Just a moment...") → siapa yang memblokir?
+        // cf-ray/cf-mitigated ada = Cloudflare edge; tidak ada = origin sendiri.
         if (/^\s*<!doctype html|<html[\s>]/i.test(text)) {
+          const who = [
+            `server=${res.headers.get('server') || '-'}`,
+            `cf-ray=${res.headers.get('cf-ray') || '-'}`,
+            `cf-mitigated=${res.headers.get('cf-mitigated') || '-'}`,
+            `content-type=${res.headers.get('content-type') || '-'}`,
+          ].join(', ');
           throw new Error(
-            `Base link mengembalikan halaman HTML (HTTP ${res.status}) di URL ${url} — kemungkinan bukan endpoint API ` +
-              `(terdeteksi proteksi seperti Cloudflare). Pastikan base link adalah URL API langsung, ` +
-              `contoh: https://api.openai.com atau https://openrouter.ai/api/v1`
+            `Base link mengembalikan halaman HTML (HTTP ${res.status}) di URL ${url} [${who}]`
           );
         }
         const detail = data?.error?.message || data?.message || text.slice(0, 300);
