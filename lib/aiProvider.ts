@@ -64,6 +64,40 @@ export async function getCustomAIProvider(): Promise<CustomAIProvider | null> {
 }
 
 /**
+ * Ekstrak isi balasan dari berbagai bentuk respons (OpenAI, legacy completion,
+ * Anthropic-like, dsb). Mengembalikan string kosong bila tidak terdeteksi.
+ */
+function extractContent(data: any): string {
+  if (!data || typeof data !== 'object') return '';
+  // OpenAI chat: choices[0].message.content (string atau array parts)
+  const choice = data?.choices?.[0];
+  const msg = choice?.message;
+  if (msg) {
+    if (typeof msg.content === 'string' && msg.content.trim()) return msg.content;
+    if (Array.isArray(msg.content)) {
+      const joined = msg.content
+        .map((p: any) => (typeof p === 'string' ? p : p?.text || p?.content || ''))
+        .join('');
+      if (joined.trim()) return joined;
+    }
+    if (typeof msg.text === 'string' && msg.text.trim()) return msg.text;
+  }
+  // Legacy completion: choices[0].text
+  if (typeof choice?.text === 'string' && choice.text.trim()) return choice.text;
+  // Anthropic-like: content[] parts
+  if (Array.isArray(data?.content)) {
+    const joined = data.content.map((p: any) => p?.text || '').join('');
+    if (joined.trim()) return joined;
+  }
+  // Bentuk lain yang umum
+  const candidates = [data?.output_text, data?.response, data?.message?.content, data?.text, data?.result];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim()) return c;
+  }
+  return '';
+}
+
+/**
  * Panggil custom provider (OpenAI-compatible chat completions).
  * Mencoba URL utama, lalu URL alternatif (bila 403/404).
  * Melempar error informatif bila gagal — caller boleh fallback ke provider lain.
@@ -127,9 +161,11 @@ export async function callCustomAI(
         break;
       }
 
-      const content = data?.choices?.[0]?.message?.content;
+      const content = extractContent(data);
       if (!content) {
-        attempts.push(`${url} → 200 tapi tanpa isi pesan`);
+        attempts.push(
+          `${url} → HTTP ${res.status} tapi format respons tak dikenali; body: ${text.slice(0, 500)}`
+        );
         break;
       }
       return content;
