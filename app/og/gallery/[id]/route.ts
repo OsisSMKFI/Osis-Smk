@@ -39,12 +39,12 @@ export async function GET(
 
     if (/^\d+$/.test(id)) {
       stage = 'querying'
-      // Hanya kolom yang benar-benar ada di tabel gallery —
-      // select kolom tak dikenal membuat seluruh query gagal (PGRST204)
-      // dan semua share jatuh ke fallback logo.
+      // select('*') — paling toleran: tak pernah gagal walau ada kolom
+      // yang belum dikenal PostgREST (error 42703 membuat semua share
+      // jatuh ke fallback logo).
       const { data, error } = await supabase
         .from('gallery')
-        .select('image_url, video_url, url, thumbnail_url')
+        .select('*')
         .eq('id', Number(id))
         .single()
 
