@@ -112,13 +112,19 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    // Kolom thumbnail_url belum dibuat (SQL migration belum dijalankan) → retry tanpa kolom itu
-    if (error && (error as any).code === 'PGRST204' && 'thumbnail_url' in insertPayload) {
-      console.warn('[admin/gallery POST] thumbnail_url column missing — run scripts/setup-gallery-thumbnails.sql, retrying without it');
+    // Kolom thumbnail_url ditolak DB (PGRST204/42703) → retry tanpa kolom itu,
+    // tapi sertakan warning agar client memberi tahu user (jangan sukses senyap).
+    let warning: string | undefined;
+    const unknownCol = (error as any)?.code === 'PGRST204' || (error as any)?.code === '42703';
+    if (error && unknownCol && 'thumbnail_url' in insertPayload) {
+      console.warn('[admin/gallery POST] thumbnail_url column rejected:', (error as any).code, (error as any).message);
       delete insertPayload.thumbnail_url;
       const retry = await supabaseAdmin.from('gallery').insert(insertPayload).select().single();
       data = retry.data;
       error = retry.error;
+      if (!error) {
+        warning = 'Thumbnail tidak dapat disimpan (kolom thumbnail_url ditolak database). Jalankan scripts/setup-gallery-thumbnails.sql di Supabase SQL Editor, lalu simpan ulang.';
+      }
     }
 
     if (error) {
@@ -152,7 +158,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message, code: (error as any).code }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data, ...(warning ? { warning } : {}) });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

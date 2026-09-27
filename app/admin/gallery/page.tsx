@@ -172,6 +172,17 @@ export default function GalleryPage() {
         alert('Item ini sudah ada di galeri (judul + media sama) — tidak disimpan ulang.');
       }
 
+      if (result?.warning) {
+        alert('⚠️ ' + result.warning);
+      }
+
+      // Verifikasi thumbnail benar-benar tersimpan — kalau tidak, kasih tahu user
+      // (biasanya kolom thumbnail_url ditolak database).
+      const savedThumb = (result?.data as any)?.thumbnail_url;
+      if (formData.thumbnail_url && result?.success && !result.duplicate && !savedThumb) {
+        alert('⚠️ Thumbnail video TIDAK tersimpan. Jalankan scripts/setup-gallery-thumbnails.sql di Supabase SQL Editor, lalu edit item ini dan simpan ulang.');
+      }
+
       await fetchData();
       setShowForm(false);
       setEditingId(null);
@@ -310,7 +321,9 @@ export default function GalleryPage() {
     if (!formData.image_url || thumbWorking || uploading) return;
     setThumbWorking(true);
     try {
-      const blob = await captureVideoFrameBlob(formData.image_url);
+      let blob = await captureVideoFrameBlob(formData.image_url);
+      // Retry sekali dgn waktu frame berbeda kalau percobaan pertama gagal
+      if (!blob) blob = await captureVideoFrameBlob(formData.image_url, 1);
       if (!blob) {
         alert('Gagal mengambil frame dari video. Gunakan "Upload gambar" sebagai gantinya.');
         return;
