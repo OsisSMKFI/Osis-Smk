@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     // WebAuthn authentication options
     // ✅ RP ID MUST MATCH registration - Use dynamic detection
-    const hostname = request.headers.get('host') || 'osissmktest.biezz.my.id';
+    const hostname = request.headers.get('host') || 'osissmkfi.biezz.my.id';
     const rpId = hostname.includes('localhost') ? 'localhost' : 'biezz.my.id';
     
     const options = {

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // WebAuthn registration options
     // ✅ RP ID MUST MATCH EXACTLY - Use environment variable or auto-detect
-    const hostname = request.headers.get('host') || 'osissmktest.biezz.my.id';
+    const hostname = request.headers.get('host') || 'osissmkfi.biezz.my.id';
     const rpId = hostname.includes('localhost') ? 'localhost' : 'biezz.my.id'; // Parent domain for all subdomains
     
     const options = {

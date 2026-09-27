@@ -11,7 +11,7 @@ export async function sendMail(opts: MailOptions) {
   const fromEmail = opts.from || process.env.SENDGRID_FROM || process.env.SMTP_FROM || `no-reply@${process.env.NEXT_PUBLIC_BASE_URL?.replace(/^https?:\/\//, '') || 'local'}`;
   const fromName = process.env.SENDGRID_FROM_NAME || 'OSIS SMK Informatika FI';
   const replyToEmail = opts.replyTo || process.env.SENDGRID_FROM || fromEmail;
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://osissmktest.biezz.my.id';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://osissmkfi.biezz.my.id';
 
   // Prefer SendGrid if configured
   if (process.env.SENDGRID_API_KEY) {

@@ -123,7 +123,7 @@ export default function AdminLoginPage() {
             </div>
             <p className="text-xs font-medium text-[var(--text-muted)]">Masuk untuk mengelola konten & sistem</p>
             <p className="text-[10px] text-[var(--text-muted)] mt-1 opacity-70">
-              osissmktest.biezz.my.id - SMK Informatika 2 Fithrah Insani
+              osissmkfi.biezz.my.id - SMK Informatika 2 Fithrah Insani
             </p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-5" aria-label="Form Login Admin" data-form-type="login" suppressHydrationWarning>
@@ -214,7 +214,7 @@ export default function AdminLoginPage() {
         </div>
         <p className="text-center mt-6 text-[10px] tracking-wide text-[var(--text-muted)]">
           © {new Date().getFullYear()} OSIS SMK Informatika 2 Fithrah Insani<br/>
-          <span className="opacity-60">Website Resmi - osissmktest.biezz.my.id</span>
+          <span className="opacity-60">Website Resmi - osissmkfi.biezz.my.id</span>
         </p>
       </div>
     </div>

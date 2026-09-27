@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { generatePageMetadata } from '@/lib/metadata-helper';
+import { generatePageMetadata, DEFAULT_OG_IMAGE } from '@/lib/metadata-helper';
 import { getPublicSekbid, getPublicProker } from '@/lib/publicData';
 import SekbidPageClient from './SekbidPageClient';
 
@@ -8,7 +8,7 @@ export const metadata: Metadata = generatePageMetadata({
     description: 'Informasi lengkap tentang 6 Seksi Bidang OSIS SMK Informatika 2 Fithrah Insani: Keagamaan, Kaderisasi, Akademik, Olahraga, Lingkungan, dan Publikasi.',
     url: '/sekbid',
     type: 'website',
-    image: '/images/logo.png',
+    image: DEFAULT_OG_IMAGE,
 });
 
 export const revalidate = 60;

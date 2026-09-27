@@ -1,37 +1,30 @@
 /**
- * OG Image Proxy for Posts - WhatsApp Compatible
- * 
- * CRITICAL FOR WHATSAPP:
- * ✅ Binary image response (NOT JSON, NOT JSX)
- * ✅ Status 200 OK
- * ✅ Content-Type: image/jpeg
- * ✅ NO redirect
- * ✅ NO auth
- * ✅ Use facebookexternalhit User-Agent
- * ✅ COMPRESSED to < 300KB for WhatsApp preview
+ * OG Image Proxy for Gallery Items - WhatsApp Compatible
+ *
+ * Serves the gallery photo (image_url) compressed for WhatsApp preview.
+ * Falls back to the OSIS logo when the item has no image
+ * (e.g. a video without a poster frame).
  */
 
 import { NextResponse } from 'next/server'
 import { supabaseAdmin as supabase } from '@/lib/supabase/server'
+import { resolveStorageUrl } from '@/lib/mediaUrls'
 import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 
-// Fallback image - MUST be accessible without auth
-const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 
+const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL
   ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo-2.png`
   : 'https://osissmkfi.biezz.my.id/images/logo-2.png'
 
-// WhatsApp OG Image requirements:
-// - Max size: ~300KB (WhatsApp times out on large images)
-// - Recommended dimensions: 1200x630
-// - Format: JPEG (best compression)
 const OG_WIDTH = 1200
 const OG_HEIGHT = 630
-const MAX_SIZE_KB = 250 // Target under 300KB
+const MAX_SIZE_KB = 250
+
+const VIDEO_RE = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i
 
 interface RouteParams {
-  params: Promise<{ slug: string }>
+  params: Promise<{ id: string }>
 }
 
 export async function GET(
@@ -39,49 +32,49 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const { slug } = await params
+    const { id } = await params
 
-    // 1. Get post from database
-    const { data } = await supabase
-      .from('posts')
-      .select('featured_image')
-      .eq('slug', slug)
-      .single()
+    let src: string | null = null
 
-    // 2. Determine source image
-    let src = FALLBACK_URL
+    if (/^\d+$/.test(id)) {
+      const { data } = await supabase
+        .from('gallery')
+        .select('image_url, video_url, url, category, folder')
+        .eq('id', Number(id))
+        .single()
 
-    if (data?.featured_image) {
-      // Skip videos
-      const isVideo = /\.(mp4|webm|ogg)$/i.test(data.featured_image)
-      if (!isVideo) {
-        src = data.featured_image
+      if (data) {
+        const folder = (data as any).category || (data as any).folder || 'general'
+        const image = resolveStorageUrl((data as any).image_url, folder)
+        const video = resolveStorageUrl((data as any).video_url, folder)
+        const url = resolveStorageUrl((data as any).url, folder)
+        const candidate = image || url || video
+        // Videos cannot be used as OG preview image - fall back to logo
+        if (candidate && !VIDEO_RE.test(candidate)) {
+          src = candidate
+        }
       }
     }
 
-    // 3. Fetch image as binary with WhatsApp-compatible headers
+    if (!src) {
+      return serveFallback()
+    }
+
     const res = await fetch(src, {
       redirect: 'follow',
       headers: {
-        'User-Agent': 'facebookexternalhit/1.1', // WhatsApp uses this
+        'User-Agent': 'facebookexternalhit/1.1',
         'Accept': 'image/jpeg, image/png, image/webp, image/*',
       },
     })
 
-    // 4. Validate response is actually an image
     const contentType = res.headers.get('content-type') || ''
-    
     if (!res.ok || !contentType.startsWith('image')) {
-      // Fallback to logo
       return serveFallback()
     }
 
-    // 5. Get image buffer and compress with Sharp
     const originalBuffer = Buffer.from(await res.arrayBuffer())
-    
-    // Resize and compress for WhatsApp
-    // Target: 1200x630, JPEG quality adjusted to stay under 250KB
-    // Using 'contain' to prevent cropping - adds white background if needed
+
     let quality = 80
     let compressedBuffer = await sharp(originalBuffer)
       .resize(OG_WIDTH, OG_HEIGHT, {
@@ -90,8 +83,7 @@ export async function GET(
       })
       .jpeg({ quality, mozjpeg: true })
       .toBuffer()
-    
-    // If still too large, reduce quality progressively
+
     while (compressedBuffer.length > MAX_SIZE_KB * 1024 && quality > 30) {
       quality -= 10
       compressedBuffer = await sharp(originalBuffer)
@@ -103,7 +95,6 @@ export async function GET(
         .toBuffer()
     }
 
-    // 6. Return compressed image
     return new NextResponse(new Uint8Array(compressedBuffer), {
       status: 200,
       headers: {
@@ -112,9 +103,8 @@ export async function GET(
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     })
-
   } catch (error) {
-    console.error('[OG/post] Error:', error)
+    console.error('[OG/gallery] Error:', error)
     return serveFallback()
   }
 }
@@ -124,17 +114,16 @@ async function serveFallback() {
     const fallbackRes = await fetch(FALLBACK_URL, {
       headers: { 'User-Agent': 'facebookexternalhit/1.1' },
     })
-    
+
     if (!fallbackRes.ok) throw new Error('Fallback fetch failed')
-    
+
     const buffer = Buffer.from(await fallbackRes.arrayBuffer())
-    
-    // Compress fallback too
+
     const compressed = await sharp(buffer)
       .resize(OG_WIDTH, OG_HEIGHT, { fit: 'contain', background: '#ffffff' })
       .jpeg({ quality: 80, mozjpeg: true })
       .toBuffer()
-    
+
     return new NextResponse(new Uint8Array(compressed), {
       status: 200,
       headers: {
@@ -144,7 +133,6 @@ async function serveFallback() {
       },
     })
   } catch {
-    // Last resort - return 1x1 transparent PNG
     const transparentPng = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       'base64'

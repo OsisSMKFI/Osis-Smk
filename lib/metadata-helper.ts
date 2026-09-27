@@ -20,7 +20,7 @@ import { Metadata } from 'next';
 // - Pure HTTP image response
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmkfi.biezz.my.id';
 export const DEFAULT_TITLE = 'OSIS SMK Informatika 2 Fithrah Insani';
 export const DEFAULT_DESCRIPTION = 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani - Organisasi Siswa Intra Sekolah yang aktif dalam kegiatan keislaman, kepemimpinan, dan kreativitas siswa.';
 
@@ -73,6 +73,15 @@ export function getAnnouncementOGImage(id: string): string {
 }
 
 /**
+ * Get proxied OG image URL for a gallery item
+ * Image is served from our domain, proxying the Supabase image
+ * Falls back to default logo if item has no image (e.g. video without poster)
+ */
+export function getGalleryOGImage(id: string): string {
+    return `${SITE_URL}/og/gallery/${id}?v=${OG_VERSION}`;
+}
+
+/**
  * Get safe OG image URL
  * Uses proxy URLs for dynamic content, default for static pages
  */
@@ -81,6 +90,7 @@ export function getSafeOGImage(options: {
     sekbidId?: number;
     eventId?: string;
     announcementId?: string;
+    galleryId?: string;
     staticImage?: string;
 }): string {
     // 1. Post-specific (proxied)
@@ -102,8 +112,13 @@ export function getSafeOGImage(options: {
     if (options.announcementId) {
         return getAnnouncementOGImage(options.announcementId);
     }
+
+    // 5. Gallery item-specific (proxied with fallback)
+    if (options.galleryId) {
+        return getGalleryOGImage(options.galleryId);
+    }
     
-    // 5. Static local image
+    // 6. Static local image
     if (options.staticImage) {
         if (options.staticImage.startsWith('http')) {
             return options.staticImage;
@@ -111,7 +126,7 @@ export function getSafeOGImage(options: {
         return `${SITE_URL}${options.staticImage.startsWith('/') ? '' : '/'}${options.staticImage}`;
     }
     
-    // 6. Default (proxied)
+    // 7. Default (proxied)
     return DEFAULT_OG_IMAGE;
 }
 
@@ -131,6 +146,7 @@ interface MetadataParams {
     sekbidId?: number;        // For sekbid-specific OG image proxy
     eventId?: string;         // For event-specific OG image proxy
     announcementId?: string;  // For announcement-specific OG image proxy
+    galleryId?: string;       // For gallery item-specific OG image proxy
 }
 
 /**
@@ -143,7 +159,7 @@ interface MetadataParams {
  * - Announcement: /og/announcement/{id} (fallback to logo)
  * - Static pages: /og/default (serves logo)
  * 
- * WhatsApp sees: osissmktest.biezz.my.id/og/...
+ * WhatsApp sees: osissmkfi.biezz.my.id/og/...
  * WhatsApp doesn't see: supabase.co/...
  */
 export function generatePageMetadata(params: MetadataParams): Metadata {
@@ -158,6 +174,7 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
         sekbidId: params.sekbidId,
         eventId: params.eventId,
         announcementId: params.announcementId,
+        galleryId: params.galleryId,
         staticImage: params.image || undefined,
     });
     

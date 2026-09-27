@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify origin
-    const expectedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://osissmktest.biezz.my.id';
+    const expectedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://osissmkfi.biezz.my.id';
     if (clientData.origin !== expectedOrigin) {
       console.warn('[WebAuthn] Origin mismatch:', clientData.origin, 'vs', expectedOrigin);
       // Don't fail on origin mismatch in development

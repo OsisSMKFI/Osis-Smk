@@ -43,6 +43,29 @@ export async function getPublicGallery() {
   );
 }
 
+export async function getPublicGalleryItem(id: string) {
+  if (!id || !/^\d+$/.test(id)) return null;
+  const rows = await safeRows<any>(
+    supabaseAdmin
+      .from('gallery')
+      .select('*')
+      .eq('id', Number(id))
+      .limit(1)
+  );
+  const item = rows[0];
+  if (!item) return null;
+  const folder = item.category || item.folder || 'general';
+  const fixedImage = resolveStorageUrl(item.image_url, folder);
+  const fixedVideo = resolveStorageUrl(item.video_url, folder);
+  const fixedUrl = resolveStorageUrl(item.url, folder);
+  return {
+    ...item,
+    image_url: fixedImage || fixedVideo || fixedUrl,
+    video_url: fixedVideo,
+    url: fixedUrl,
+  };
+}
+
 export async function getPublicPosts(limit = 24, featuredOnly = false) {
   let query = supabaseAdmin
     .from('posts')

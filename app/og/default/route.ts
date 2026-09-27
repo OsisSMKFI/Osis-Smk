@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 
 const FALLBACK_URL = process.env.NEXT_PUBLIC_SITE_URL 
   ? `${process.env.NEXT_PUBLIC_SITE_URL}/images/logo-2.png`
-  : 'https://osissmktest.biezz.my.id/images/logo-2.png'
+  : 'https://osissmkfi.biezz.my.id/images/logo-2.png'
 
 export async function GET() {
   try {

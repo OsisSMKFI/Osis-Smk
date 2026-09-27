@@ -95,7 +95,7 @@ export default function RegisterPageClient() {
         </div>
         <h1 className="text-2xl font-extrabold mb-2 bg-gradient-to-r from-amber-600 to-yellow-500 bg-clip-text text-transparent text-center">Registrasi Akun</h1>
         <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 text-center">Buat akun baru untuk akses dashboard setelah verifikasi & persetujuan admin.</p>
-        <p className="text-[10px] text-gray-500 dark:text-gray-500 mb-6 text-center opacity-70">OSIS SMK Informatika 2 Fithrah Insani - osissmktest.biezz.my.id</p>
+        <p className="text-[10px] text-gray-500 dark:text-gray-500 mb-6 text-center opacity-70">OSIS SMK Informatika 2 Fithrah Insani - osissmkfi.biezz.my.id</p>
         <form onSubmit={handleSubmit} className="space-y-4" aria-label="Form Registrasi">
           <div>
             <label className="block text-xs font-semibold mb-1" htmlFor="name">Nama Lengkap</label>

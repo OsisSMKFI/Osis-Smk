@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // Call AI verification API (automatically fetches reference from database)
-        const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://osissmktest.biezz.my.id'}/api/ai/verify-face`, {
+        const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://osissmkfi.biezz.my.id'}/api/ai/verify-face`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

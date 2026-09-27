@@ -161,6 +161,19 @@ export default function GalleryPageClient({
     return () => document.removeEventListener('fullscreenchange', onFs);
   }, []);
 
+  // Deep link: buka lightbox item saat dibuka lewat /gallery?item=<id> (share link)
+  const itemParamTried = useRef(false);
+  useEffect(() => {
+    if (itemParamTried.current) return;
+    if (gallery.length === 0) return; // tunggu data siap
+    itemParamTried.current = true;
+    const id = new URLSearchParams(window.location.search).get('item');
+    if (!id) return;
+    const idx = filteredGallery.findIndex(g => String(g.id) === id);
+    if (idx >= 0) setSelectedImage(idx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gallery]);
+
   const fetchGallery = async () => {
     try {
       const data = await cachedGetJson<any>('/api/gallery');
@@ -233,7 +246,9 @@ export default function GalleryPageClient({
   };
 
   const shareUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/gallery`
+    ? (current
+        ? `${window.location.origin}/gallery?item=${encodeURIComponent(String(current.id))}`
+        : `${window.location.origin}/gallery`)
     : '/gallery';
   const shareTitle = current?.title
     ? `${current.title} — Galeri OSIS SMK Fithrah Insani`

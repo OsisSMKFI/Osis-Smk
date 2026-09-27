@@ -4,6 +4,8 @@ import './globals-mobile.css';
 import type { Metadata } from 'next';
 import { DM_Sans } from 'next/font/google';
 
+import { DEFAULT_OG_IMAGE } from '@/lib/metadata-helper';
+
 import LocationServiceProvider from '@/components/LocationServiceProvider';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -21,7 +23,7 @@ const dmSans = DM_Sans({
   display: "swap"
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmkfi.biezz.my.id';
 
 export const metadata: Metadata = {
     title: {
@@ -45,7 +47,7 @@ export const metadata: Metadata = {
         type: 'website',
         images: [
             {
-                url: `${SITE_URL}/images/logo.png`,
+                url: DEFAULT_OG_IMAGE,
                 width: 1200,
                 height: 630,
                 alt: 'OSIS SMK Informatika 2 Fithrah Insani',
@@ -56,7 +58,7 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: 'OSIS SMK Informatika 2 Fithrah Insani',
         description: 'Website Resmi OSIS SMK Informatika 2 Fithrah Insani',
-        images: [`${SITE_URL}/images/logo.png`],
+        images: [DEFAULT_OG_IMAGE],
         creator: '@osissmkinformatika2fi',
     },
     robots: {

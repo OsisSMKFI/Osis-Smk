@@ -46,7 +46,7 @@ async function getPost(slug: string): Promise<Post | null> {
 
 // Generate dynamic metadata with Open Graph
 // OG IMAGE PROXY: Image served from /og/post/{slug} (our domain)
-// WhatsApp sees: osissmktest.biezz.my.id/og/post/xxx
+// WhatsApp sees: osissmkfi.biezz.my.id/og/post/xxx
 // NOT: supabase.co/xxx
 export async function generateMetadata({ 
   params 

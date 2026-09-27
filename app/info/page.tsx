@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { generatePageMetadata } from '@/lib/metadata-helper';
+import { generatePageMetadata, DEFAULT_OG_IMAGE } from '@/lib/metadata-helper';
 import {
     getPublicAnnouncements,
     getPublicEvents,
@@ -13,7 +13,7 @@ export const metadata: Metadata = generatePageMetadata({
     description: 'Informasi event, pengumuman, polling, dan berita terbaru dari OSIS SMK Informatika 2 Fithrah Insani.',
     url: '/info',
     type: 'website',
-    image: '/images/logo.png',
+    image: DEFAULT_OG_IMAGE,
 });
 
 export const revalidate = 60;

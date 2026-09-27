@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { generatePageMetadata } from '@/lib/metadata-helper';
+import { generatePageMetadata, DEFAULT_OG_IMAGE } from '@/lib/metadata-helper';
 import { getPublicPageContent } from '@/lib/publicData';
 import AboutPageClient from './AboutPageClient';
 
@@ -8,7 +8,7 @@ export const metadata: Metadata = generatePageMetadata({
     description: 'Mengenal lebih dekat OSIS SMK Informatika 2 Fithrah Insani - Visi, Misi, Filosofi, Sejarah, dan Struktur Organisasi kami.',
     url: '/about',
     type: 'website',
-    image: '/images/logo.png',
+    image: DEFAULT_OG_IMAGE,
 });
 
 export const revalidate = 60;

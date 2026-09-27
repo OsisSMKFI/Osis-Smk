@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { supabaseAdmin as supabase } from '@/lib/supabase/server'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmktest.biezz.my.id'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://osissmkfi.biezz.my.id'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const currentDate = new Date().toISOString()
