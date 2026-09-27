@@ -975,8 +975,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               </div>
             </div>
             
-            {/* Header Controls */}
-            <div className="flex items-center gap-0.5 pointer-events-auto flex-shrink-0">
+            {/* Header Controls — jarak lega, tanpa select (pindah ke baris input) */}
+            <div className="flex items-center gap-1 pointer-events-auto flex-shrink-0 ml-2">
               {/* Forward Message Button (Public only) */}
               {mode === 'public' && (
                 <button
@@ -1023,24 +1023,11 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                 aria-label="Clear Chat"
                 title="Clear Chat"
               ><FaTrash size={12} /></button>
-              {!isMinimized && !isMobile && (
-                <select
-                  value={provider}
-                  onChange={e=> setProvider(e.target.value as any)}
-                  className="text-[10px] px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 ml-1"
-                  title="AI Provider"
-                >
-                  {providerStatus.map(p => (
-                    <option key={p.id} value={p.id} disabled={!p.available}>
-                      {p.name}{!p.available ? ' (no key)' : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
               <button
                 onClick={() => setOpen(false)}
-                className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 ml-1"
+                className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 ml-1.5 pl-2 border-l border-slate-200 dark:border-slate-700"
                 aria-label="Close Chat"
+                title="Tutup"
               ><FaTimes size={16} /></button>
             </div>
           </div>
@@ -1358,25 +1345,23 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               ⌨️ INPUT AREA - Modern & Clean
               ═══════════════════════════════════════════════════════════════════ */}
           <div
-            className={`${isMobile ? 'p-3' : 'p-4'} border-t border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-t from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur-xl flex-shrink-0`}
-            style={isMobile ? { paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' } : undefined}
+            className={`${isMobile ? 'p-3.5' : 'p-4'} border-t border-slate-200/50 dark:border-slate-700/50 bg-gradient-to-t from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur-xl flex-shrink-0`}
+            style={isMobile ? { paddingBottom: 'calc(0.875rem + env(safe-area-inset-bottom))' } : undefined}
           >
-            {/* Mobile: provider select di baris sendiri — baris input jadi lega (upload+teks+kirim) */}
-            {isMobile && (
-              <select
-                value={provider}
-                onChange={e=> setProvider(e.target.value as any)}
-                className="w-full mb-2.5 text-xs px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 text-slate-600 dark:text-slate-300"
-                title="Provider AI"
-                aria-label="Provider AI"
-              >
-                {providerStatus.map(p => (
-                  <option key={p.id} value={p.id} disabled={!p.available}>
-                    {p.name}{!p.available ? ' (no key)' : ''}
-                  </option>
-                ))}
-              </select>
-            )}
+            {/* Provider select di baris sendiri (semua device) — header lega, baris input hanya upload+teks+kirim */}
+            <select
+              value={provider}
+              onChange={e=> setProvider(e.target.value as any)}
+              className={`mb-2.5 text-xs px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 text-slate-600 dark:text-slate-300 ${isMobile ? 'w-full' : 'w-auto max-w-[240px]'}`}
+              title="Provider AI"
+              aria-label="Provider AI"
+            >
+              {providerStatus.map(p => (
+                <option key={p.id} value={p.id} disabled={!p.available}>
+                  {p.name}{!p.available ? ' (no key)' : ''}
+                </option>
+              ))}
+            </select>
             {/* Image Preview */}
             {uploadedImage && (
               <div className="relative inline-block max-w-xs mb-3">
@@ -1396,7 +1381,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
             )}
 
             {/* Input Row - Premium Modern Design */}
-            <div className="flex items-end gap-2.5">
+            <div className="flex items-end gap-2 sm:gap-2.5">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1408,7 +1393,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               {/* Upload Button - Floating Glass Style */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border border-slate-200/80 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 transition-all duration-300 flex items-center justify-center flex-shrink-0 hover:scale-110 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 hover:text-indigo-500 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 group"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border border-slate-200/80 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 transition-all duration-300 flex items-center justify-center flex-shrink-0 hover:scale-110 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 hover:text-indigo-500 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 group"
                 title="Upload gambar"
                 aria-label="Upload file"
               >
@@ -1511,7 +1496,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               <button
                 onClick={send}
                 disabled={loading || (!input.trim() && !uploadedImage)}
-                className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 disabled:from-slate-300 disabled:via-slate-400 disabled:to-slate-300 dark:disabled:from-slate-700 dark:disabled:via-slate-600 dark:disabled:to-slate-700 text-white shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-purple-500/30 disabled:shadow-none transition-all duration-300 flex items-center justify-center flex-shrink-0 hover:scale-110 disabled:hover:scale-100 group"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 disabled:from-slate-300 disabled:via-slate-400 disabled:to-slate-300 dark:disabled:from-slate-700 dark:disabled:via-slate-600 dark:disabled:to-slate-700 text-white shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-purple-500/30 disabled:shadow-none transition-all duration-300 flex items-center justify-center flex-shrink-0 hover:scale-110 disabled:hover:scale-100 group"
                 aria-label="Kirim pesan"
               >
                 <FaPaperPlane size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
