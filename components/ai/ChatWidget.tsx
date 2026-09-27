@@ -17,7 +17,7 @@ const ChatWidget: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [provider, setProvider] = useState<'auto'|'anthropic'|'gemini'|'openai'>('auto');
+  const [provider, setProvider] = useState<'auto'|'anthropic'|'gemini'|'openai'|'custom'>('auto');
   const endRef = useRef<HTMLDivElement>(null);
 
   // Load and save session chat to sessionStorage so it persists across navigation
@@ -30,7 +30,7 @@ const ChatWidget: React.FC = () => {
       } catch {}
     }
     const savedProvider = sessionStorage.getItem('ai_chat_provider');
-    if (savedProvider && ['auto','anthropic','gemini','openai'].includes(savedProvider)) {
+    if (savedProvider && ['auto','anthropic','gemini','openai','custom'].includes(savedProvider)) {
       setProvider(savedProvider as any);
     }
     // Ensure a stable session id per browser session (for admin pending actions)
@@ -116,9 +116,10 @@ const ChatWidget: React.FC = () => {
               value={provider}
               onChange={e=> setProvider(e.target.value as any)}
               className="text-xs px-2 py-1 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Pilih penyedia AI (Auto prioritaskan Anthropic)"
+              title="Pilih penyedia AI (Auto memakai Custom bila dikonfigurasi)"
             >
-              <option value="auto">Auto (Anthropic)</option>
+              <option value="auto">Auto (Smart Pick)</option>
+              <option value="custom">Custom AI (Base Link)</option>
               <option value="anthropic">Anthropic</option>
               <option value="gemini">Gemini</option>
               <option value="openai">OpenAI</option>

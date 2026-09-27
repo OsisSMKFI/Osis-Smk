@@ -136,7 +136,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   const [messages, setMessages] = React.useState<{ role: 'user' | 'assistant'; content: string; image?: string; isForward?: boolean; forwardTarget?: ForwardTarget }[]>([]);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [provider, setProvider] = React.useState<'auto'|'anthropic'|'gemini'|'openai'>('auto');
+  const [provider, setProvider] = React.useState<'auto'|'anthropic'|'gemini'|'openai'|'custom'>('auto');
   const [providerStatus, setProviderStatus] = React.useState<{ id: string; name: string; available: boolean }[]>([
     { id: 'auto', name: 'Auto (Smart Pick)', available: true },
     { id: 'gemini', name: 'Gemini', available: false },

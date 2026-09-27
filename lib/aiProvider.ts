@@ -89,8 +89,17 @@ function extractContent(data: any): string {
     const joined = data.content.map((p: any) => p?.text || '').join('');
     if (joined.trim()) return joined;
   }
-  // Bentuk lain yang umum
-  const candidates = [data?.output_text, data?.response, data?.message?.content, data?.text, data?.result];
+  // Bentuk lain yang umum — reasoning_content terakhir (model reasoning
+  // kadang menghabiskan token utk berpikir sehingga content masih kosong)
+  const candidates = [
+    data?.output_text,
+    data?.response,
+    data?.message?.content,
+    data?.text,
+    data?.result,
+    choice?.message?.reasoning_content,
+    choice?.reasoning_content,
+  ];
   for (const c of candidates) {
     if (typeof c === 'string' && c.trim()) return c;
   }
@@ -212,7 +221,7 @@ export async function testAIConnection(): Promise<AITestResult> {
   if (custom) {
     checked.push('custom');
     try {
-      const reply = await callCustomAI(ping, { maxTokens: 32 });
+      const reply = await callCustomAI(ping, { maxTokens: 1024 });
       return { ok: true, provider: 'custom', model: custom.model, reply: reply.trim().slice(0, 200), checked };
     } catch (e: any) {
       // lanjut coba provider lain, tapi catat error custom
