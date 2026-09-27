@@ -79,7 +79,7 @@ export async function callCustomAI(
   const altUrl = resolveAltChatCompletionsUrl(provider.baseUrl);
   const urls = altUrl && altUrl !== primaryUrl ? [primaryUrl, altUrl] : [primaryUrl];
 
-  let lastError = '';
+  const attempts: string[] = [];
   for (const url of urls) {
     try {
       const res = await fetch(url, {
@@ -106,41 +106,49 @@ export async function callCustomAI(
       }
 
       if (!res.ok) {
-        // HTML (mis. Cloudflare "Just a moment...") → siapa yang memblokir?
-        // cf-ray/cf-mitigated ada = Cloudflare edge; tidak ada = origin sendiri.
+        const hdrs = [
+          `server=${res.headers.get('server') || '-'}`,
+          `cf-ray=${res.headers.get('cf-ray') || '-'}`,
+          `cf-mitigated=${res.headers.get('cf-mitigated') || '-'}`,
+          `content-type=${res.headers.get('content-type') || '-'}`,
+        ].join(', ');
+
+        // HTML (mis. Cloudflare "Just a moment...") → catat, lalu coba URL alternatif
         if (/^\s*<!doctype html|<html[\s>]/i.test(text)) {
-          const who = [
-            `server=${res.headers.get('server') || '-'}`,
-            `cf-ray=${res.headers.get('cf-ray') || '-'}`,
-            `cf-mitigated=${res.headers.get('cf-mitigated') || '-'}`,
-            `content-type=${res.headers.get('content-type') || '-'}`,
-          ].join(', ');
-          throw new Error(
-            `Base link mengembalikan halaman HTML (HTTP ${res.status}) di URL ${url} [${who}]`
-          );
+          attempts.push(`${url} → HTTP ${res.status} HTML-CHALLENGE [${hdrs}]`);
+          if (res.status === 403 || res.status === 404) continue;
+          break;
         }
+
         const detail = data?.error?.message || data?.message || text.slice(0, 300);
-        lastError = `HTTP ${res.status}: ${detail}`;
+        attempts.push(`${url} → HTTP ${res.status}: ${detail} [${hdrs}]`);
         // 403/404 → coba URL alternatif
         if (res.status === 403 || res.status === 404) continue;
-        throw new Error(`Custom AI ${lastError}`);
+        break;
       }
 
       const content = data?.choices?.[0]?.message?.content;
-      if (!content) throw new Error('Custom AI tidak mengembalikan isi pesan');
+      if (!content) {
+        attempts.push(`${url} → 200 tapi tanpa isi pesan`);
+        break;
+      }
       return content;
     } catch (e: any) {
       const msg = e?.message || 'Unknown error';
       const isTimeout = e?.name === 'TimeoutError' || e?.name === 'AbortError';
-      // Error jaringan/HTML/timeout → hentikan, tidak ada gunanya retry URL lain
-      if (isTimeout || /halaman HTML|network/i.test(msg)) {
-        throw new Error(isTimeout ? 'Custom AI timeout (30 detik) — server tidak merespons' : e);
+      if (isTimeout) {
+        attempts.push(`${url} → timeout 30 detik`);
+        break;
       }
-      lastError = msg;
+      if (/network|ENOTFOUND|ECONNREFUSED|ECONNRESET/i.test(msg)) {
+        attempts.push(`${url} → network error: ${msg}`);
+        break;
+      }
+      attempts.push(`${url} → ${msg}`);
     }
   }
 
-  throw new Error(`Custom AI gagal (${urls.length} url dicoba): ${lastError}`);
+  throw new Error(`Custom AI gagal:\n${attempts.map((a) => `• ${a}`).join('\n') || 'tidak ada percobaan tercatat'}`);
 }
 
 export interface AITestResult {

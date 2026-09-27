@@ -597,7 +597,7 @@ export default function AdminSettingsPage() {
                           </span>
                         </div>
                         {aiTestResult && (
-                          <p className={`text-[10px] md:text-xs font-mono break-all rounded p-2 border ${
+                          <p className={`text-[10px] md:text-xs font-mono break-all whitespace-pre-wrap rounded p-2 border ${
                             aiTestResult.startsWith('✅')
                               ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200'
                               : 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200'
