@@ -114,6 +114,14 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
     .select('page_key, content, content_type, category')
     .limit(200);
 
+  // Focused fetch: jamin konten inti (about/filosofi/site) selalu ikut terbawa
+  // walau query umum di atas kelewat limit 200 baris.
+  const { data: pageContentFocused } = await supabaseAdmin
+    .from('page_content')
+    .select('page_key, content, content_type, category')
+    .or('page_key.like.about_%,page_key.like.filosofi_logo_%,page_key.like.site_%')
+    .limit(200);
+
   // Fetch program kerja / proker if table exists (try common names)
   let prokerData: any[] | null = null;
   try {
@@ -136,7 +144,7 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
     // seluruh anggota aktif
     members_sample: (members || []).map((m: any) => ({ name: m.name || m.nama || m.full_name || m.display_name || '', role: m.position || m.role || m.jabatan || '' })),
     ketua: null,
-    page_content: (pageContent || []).reduce((acc: any, p: any) => {
+    page_content: [...(pageContent || []), ...(pageContentFocused || [])].reduce((acc: any, p: any) => {
       try {
         acc[p.page_key] = String(p.content || '');
       } catch (e) {

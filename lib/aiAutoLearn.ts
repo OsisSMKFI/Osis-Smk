@@ -36,6 +36,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { fetchSiteSnapshot } from '@/lib/aiSiteFetcher';
+import { DEFAULT_FILOSOFI } from '@/lib/filosofiLogo';
 
 // In-memory knowledge base (auto-refreshed every 60 seconds for fresher data)
 let knowledgeBase: string | null = null;
@@ -611,9 +612,66 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push(`🏫 Organisasi: OSIS SMK Informatika Fithrah Insani`);
     kb.push(`👑 Ketua OSIS: ${snap.ketua || '-'}`);
     if (snap.page_content) {
-      if (snap.page_content.site_visi) kb.push(`\n🌟 VISI:\n${snap.page_content.site_visi}`);
-      if (snap.page_content.site_misi) kb.push(`\n🎯 MISI:\n${snap.page_content.site_misi}`);
-      if (snap.page_content.site_about) kb.push(`\nℹ️ TENTANG:\n${snap.page_content.site_about}`);
+      const pc = snap.page_content;
+      // Visi: admin_settings site_visi > isi CMS halaman About > rangkaian teks home
+      if (pc.site_visi) {
+        kb.push(`\n🌟 VISI:\n${pc.site_visi}`);
+      } else if (pc.about_vision_content) {
+        kb.push(`\n🌟 VISI:\n${pc.about_vision_content}`);
+      } else {
+        const visiHome = [pc.site_vision_text, pc.site_vision_hl1, pc.site_vision_part2, pc.site_vision_hl2, pc.site_vision_part3, pc.site_vision_hl3]
+          .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+        if (visiHome) kb.push(`\n🌟 VISI:\n${visiHome}`);
+      }
+      // Misi: admin_settings site_misi > daftar misi CMS halaman About
+      if (pc.site_misi) {
+        kb.push(`\n🎯 MISI:\n${pc.site_misi}`);
+      } else {
+        const misi = [pc.about_mission_1, pc.about_mission_2, pc.about_mission_3, pc.about_mission_4].filter(Boolean);
+        if (misi.length) kb.push(`\n🎯 MISI:\n${misi.map((m: string, i: number) => `${i + 1}. ${m}`).join('\n')}`);
+      }
+      if (pc.site_about) kb.push(`\nℹ️ TENTANG:\n${pc.site_about}`);
+
+      // Filosofi nama OSIS (rangkai kalimat utama dari potongan CMS)
+      const filosofiKalimat = [pc.about_philosophy_part1, pc.about_philosophy_name_hl, pc.about_philosophy_part2, pc.about_philosophy_sky_hl, pc.about_philosophy_part3]
+        .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      if (filosofiKalimat || pc.about_philosophy_desc1) {
+        kb.push(`\n✨ ${pc.about_philosophy_title || 'FILOSOFI NAMA OSIS'} (${pc.about_philosophy_hl || 'Raveka Sena'}):`);
+        if (filosofiKalimat) kb.push(filosofiKalimat);
+        if (pc.about_philosophy_desc1) kb.push(pc.about_philosophy_desc1);
+        if (pc.about_philosophy_desc2) kb.push(pc.about_philosophy_desc2);
+      }
+
+      // Filosofi logo (5 elemen) — dari CMS, fallback default yang sama dgn halaman /about
+      const logoRows: string[] = [];
+      for (let i = 1; i <= 5; i++) {
+        const title = pc[`filosofi_logo_${i}_title`];
+        const desc = pc[`filosofi_logo_${i}_description`];
+        if (title || desc) logoRows.push(`${i}. ${title || '-'}${desc ? ` — ${desc}` : ''}`);
+      }
+      const logoList = logoRows.length
+        ? logoRows
+        : DEFAULT_FILOSOFI.map((e, i) => `${i + 1}. ${e.title} — ${e.description}`);
+      kb.push(`\n🎨 ${pc.about_logo_title || 'FILOSOFI LOGO OSIS'}${pc.about_logo_subtitle ? ` (${pc.about_logo_subtitle})` : ''}:`);
+      logoList.forEach((row) => kb.push(`  ${row}`));
+
+      // Nilai-nilai organisasi
+      const values = [1, 2, 3, 4]
+        .map((i) => ({ name: pc[`about_value${i}_name`], desc: pc[`about_value${i}_desc`] }))
+        .filter((v) => v.name);
+      if (values.length) {
+        kb.push(`\n💎 NILAI-NILAI OSIS:`);
+        values.forEach((v, i) => kb.push(`  ${i + 1}. ${v.name}${v.desc ? ` — ${v.desc}` : ''}`));
+      }
+
+      // Profil sekolah (footer CMS)
+      if (pc.site_school_name || pc.site_address || pc.site_phone || pc.site_email) {
+        kb.push(`\n🏫 PROFIL SEKOLAH:`);
+        if (pc.site_school_name) kb.push(`  Nama: ${pc.site_school_name}`);
+        if (pc.site_address) kb.push(`  Alamat: ${pc.site_address}`);
+        if (pc.site_phone) kb.push(`  Telp: ${pc.site_phone}`);
+        if (pc.site_email) kb.push(`  Email: ${pc.site_email}`);
+      }
     }
     kb.push('');
 
@@ -665,6 +723,7 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push('║  ✅ Pengumuman aktif                                                       ║');
     kb.push('║  ✅ Artikel & berita terbaru                                               ║');
     kb.push('║  ✅ Visi, misi, tentang OSIS                                               ║');
+    kb.push('║  ✅ Filosofi nama & logo OSIS, nilai organisasi, profil sekolah            ║');
     kb.push('║  ✅ Kontak resmi (email, IG, phone)                                        ║');
     kb.push('║  ✅ Galeri dokumentasi                                                     ║');
     kb.push('║                                                                            ║');
