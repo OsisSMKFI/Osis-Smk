@@ -35,8 +35,10 @@ export async function GET(
     const { id } = await params
 
     let src: string | null = null
+    let stage = 'no-id'
 
     if (/^\d+$/.test(id)) {
+      stage = 'querying'
       // Hanya kolom yang benar-benar ada di tabel gallery —
       // select kolom tak dikenal membuat seluruh query gagal (PGRST204)
       // dan semua share jatuh ke fallback logo.
@@ -46,7 +48,11 @@ export async function GET(
         .eq('id', Number(id))
         .single()
 
-      if (!error && data) {
+      if (error) {
+        stage = `db:${(error as any).code || (error as any).message || 'err'}`
+      } else if (!data) {
+        stage = 'no-row'
+      } else {
         const folder = 'general'
         const thumb = resolveStorageUrl((data as any).thumbnail_url, folder)
         const image = resolveStorageUrl((data as any).image_url, folder)
@@ -56,16 +62,21 @@ export async function GET(
         // Prioritas: poster/thumbnail eksplisit → foto → (bukan video) → fallback logo
         if (thumb) {
           src = thumb
+          stage = 'thumb'
         } else if (image && !VIDEO_RE.test(image)) {
           src = image
+          stage = 'photo'
         } else if (url && !VIDEO_RE.test(url)) {
           src = url
+          stage = 'url'
+        } else {
+          stage = image ? 'skip-video' : 'no-media'
         }
       }
     }
 
     if (!src) {
-      return serveFallback()
+      return serveFallback(stage)
     }
 
     const res = await fetch(src, {
@@ -78,7 +89,7 @@ export async function GET(
 
     const contentType = res.headers.get('content-type') || ''
     if (!res.ok || !contentType.startsWith('image')) {
-      return serveFallback()
+      return serveFallback(`fetch:${res.status}:${contentType}`)
     }
 
     const originalBuffer = Buffer.from(await res.arrayBuffer())
@@ -109,15 +120,16 @@ export async function GET(
         'Content-Type': 'image/jpeg',
         'Content-Length': compressedBuffer.length.toString(),
         'Cache-Control': 'public, max-age=31536000, immutable',
+        'x-og-src': stage,
       },
     })
   } catch (error) {
     console.error('[OG/gallery] Error:', error)
-    return serveFallback()
+    return serveFallback(`ex:${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
-async function serveFallback() {
+async function serveFallback(stage = 'unknown') {
   try {
     const fallbackRes = await fetch(FALLBACK_URL, {
       headers: { 'User-Agent': 'facebookexternalhit/1.1' },
@@ -138,6 +150,7 @@ async function serveFallback() {
         'Content-Type': 'image/jpeg',
         'Content-Length': compressed.length.toString(),
         'Cache-Control': 'public, max-age=86400',
+        'x-og-src': `fallback:${stage}`,
       },
     })
   } catch {
@@ -150,6 +163,7 @@ async function serveFallback() {
       headers: {
         'Content-Type': 'image/png',
         'Cache-Control': 'public, max-age=60',
+        'x-og-src': `transparent:${stage}`,
       },
     })
   }
