@@ -77,7 +77,9 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const isVideo = file.type.startsWith('video/');
+    const isVideo =
+      file.type.startsWith('video/') ||
+      /\.(mp4|webm|mov|m4v|ogg|avi|mkv)$/i.test(file.name);
 
     const timestamp = Date.now();
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -87,7 +89,10 @@ export async function POST(request: NextRequest) {
     const fileBuffer = Buffer.from(arrayBuffer);
 
     // Upload to Supabase — ensure bucket supports the file's MIME type
-    const targetBuckets = isVideo ? ['media', bucket] : [bucket];
+    // Video: coba semua bucket yang memungkinkan (media, target, gallery)
+    const targetBuckets = isVideo
+      ? Array.from(new Set(['media', bucket, 'gallery']))
+      : [bucket];
 
     let uploadError: any = null;
     let uploadData: any = null;
@@ -127,13 +132,23 @@ export async function POST(request: NextRequest) {
       break;
     }
 
-    // If all Supabase attempts failed → Vercel Blob fallback (smart save policy:
-    // Supabase = primary, Blob = automatic fallback so the upload never fails
-    // silently and the public page still gets a live URL)
+    // Semua percobaan Supabase gagal
     if (uploadError) {
       const errMsg = uploadError?.message || 'Upload failed';
       console.error('[Upload] Supabase upload error:', errMsg);
-      if (process.env.BLOB_READ_WRITE_TOKEN) {
+
+      // Video WAJIB tersimpan di Supabase Storage — jangan pernah jatuh ke
+      // Vercel Blob (kuota Blob hanya 1GB, Supabase 100GB).
+      if (isVideo) {
+        return NextResponse.json({
+          error: `Video gagal disimpan di Supabase Storage: ${errMsg}. Coba lagi atau periksa storage Supabase.`,
+        }, { status: 500 });
+      }
+
+      // Non-video kecil: fallback Vercel Blob agar upload tidak gagal diam-diam.
+      // Batas 5MB — supaya kuota Blob 1GB tidak cepat terpakai file besar.
+      const BLOB_FALLBACK_MAX = 5 * 1024 * 1024;
+      if (file.size <= BLOB_FALLBACK_MAX && process.env.BLOB_READ_WRITE_TOKEN) {
         try {
           const { uploadFile } = await import('@/lib/vercel/blob');
           const blobResult = await uploadFile(filePath, fileBuffer, {
