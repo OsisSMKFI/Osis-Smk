@@ -32,12 +32,14 @@ export async function getPublicGallery() {
       const fixedImage = resolveStorageUrl(item.image_url, folder);
       const fixedVideo = resolveStorageUrl(item.video_url, folder);
       const fixedUrl = resolveStorageUrl(item.url, folder);
+      const fixedThumb = resolveStorageUrl(item.thumbnail_url, folder);
       return {
         ...item,
         id,
         image_url: fixedImage || fixedVideo || fixedUrl,
         video_url: fixedVideo,
         url: fixedUrl,
+        thumbnail_url: fixedThumb || null,
       };
     })
   );
@@ -58,11 +60,13 @@ export async function getPublicGalleryItem(id: string) {
   const fixedImage = resolveStorageUrl(item.image_url, folder);
   const fixedVideo = resolveStorageUrl(item.video_url, folder);
   const fixedUrl = resolveStorageUrl(item.url, folder);
+  const fixedThumb = resolveStorageUrl(item.thumbnail_url, folder);
   return {
     ...item,
     image_url: fixedImage || fixedVideo || fixedUrl,
     video_url: fixedVideo,
     url: fixedUrl,
+    thumbnail_url: fixedThumb || null,
   };
 }
 

@@ -28,6 +28,7 @@ interface GalleryItem {
   image_url?: string | null;
   video_url?: string | null;
   url?: string | null;
+  thumbnail_url?: string | null;
   created_at: string;
   event_id?: string | null;
   sekbid_id?: number | null;
@@ -482,6 +483,7 @@ export default function GalleryPageClient({
                 >
                   <MediaRenderer
                     src={mediaSrcOf(item)}
+                    poster={item.thumbnail_url || undefined}
                     alt={item.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     controlsForVideo={false}
@@ -712,6 +714,7 @@ export default function GalleryPageClient({
                 <MediaRenderer
                   key={`${current.id}-${selectedImage}`}
                   src={currentSrc}
+                  poster={current.thumbnail_url || undefined}
                   alt={current.title}
                   className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg shadow-2xl"
                   controlsForVideo={currentIsVideo}

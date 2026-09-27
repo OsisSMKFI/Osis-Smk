@@ -39,19 +39,24 @@ export async function GET(
     if (/^\d+$/.test(id)) {
       const { data } = await supabase
         .from('gallery')
-        .select('image_url, video_url, url, category, folder')
+        .select('image_url, video_url, url, thumbnail_url, category, folder')
         .eq('id', Number(id))
         .single()
 
       if (data) {
         const folder = (data as any).category || (data as any).folder || 'general'
+        const thumb = resolveStorageUrl((data as any).thumbnail_url, folder)
         const image = resolveStorageUrl((data as any).image_url, folder)
         const video = resolveStorageUrl((data as any).video_url, folder)
         const url = resolveStorageUrl((data as any).url, folder)
-        const candidate = image || url || video
-        // Videos cannot be used as OG preview image - fall back to logo
-        if (candidate && !VIDEO_RE.test(candidate)) {
-          src = candidate
+
+        // Prioritas: poster/thumbnail eksplisit → foto → (bukan video) → fallback logo
+        if (thumb) {
+          src = thumb
+        } else if (image && !VIDEO_RE.test(image)) {
+          src = image
+        } else if (url && !VIDEO_RE.test(url)) {
+          src = url
         }
       }
     }

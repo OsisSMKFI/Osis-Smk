@@ -147,6 +147,7 @@ interface MetadataParams {
     eventId?: string;         // For event-specific OG image proxy
     announcementId?: string;  // For announcement-specific OG image proxy
     galleryId?: string;       // For gallery item-specific OG image proxy
+    videoUrl?: string;        // og:video (Discord & co. can play inline)
 }
 
 /**
@@ -204,6 +205,14 @@ export function generatePageMetadata(params: MetadataParams): Metadata {
                     type: 'image/jpeg',
                 }
             ],
+            ...(params.videoUrl && {
+                videos: [
+                    {
+                        url: params.videoUrl,
+                        type: 'video/mp4',
+                    },
+                ],
+            }),
             ...(type === 'article' && {
                 publishedTime: params.publishedTime,
                 modifiedTime: params.modifiedTime,

@@ -9,6 +9,7 @@ interface MediaRendererProps {
   loop?: boolean; // for video previews
   muted?: boolean; // for video previews
   fallbackSrc?: string; // Optional fallback image
+  poster?: string; // Poster/thumbnail utk video (preview sebelum play & utk share)
   retryCount?: number; // Number of retries (default: 2)
   loading?: 'lazy' | 'eager'; // image loading (default lazy; use eager in lightbox)
   objectFit?: 'cover' | 'contain'; // fit mode for media (default cover)
@@ -79,6 +80,7 @@ export default function MediaRenderer({
   loop,
   muted,
   fallbackSrc,
+  poster,
   retryCount = 2,
   loading = 'lazy',
   objectFit = 'cover',
@@ -144,6 +146,7 @@ export default function MediaRenderer({
     return (
       <video
         src={currentSrc}
+        poster={poster || undefined}
         className={`${className} ${fitClass}`}
         playsInline
         webkit-playsinline="true"

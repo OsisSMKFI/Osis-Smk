@@ -22,12 +22,14 @@ export async function GET() {
         const resolvedImage = resolveStorageUrl(item.image_url, folder);
         const resolvedVideo = resolveStorageUrl(item.video_url, folder);
         const resolvedUrl = resolveStorageUrl(item.url, folder);
+        const resolvedThumb = resolveStorageUrl(item.thumbnail_url, folder);
 
         return {
           ...item,
           image_url: resolvedImage || resolvedVideo || resolvedUrl,
           video_url: resolvedVideo,
           url: resolvedUrl,
+          thumbnail_url: resolvedThumb || null,
         };
       })
     );

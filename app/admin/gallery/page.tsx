@@ -6,7 +6,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { uploadWithProgressSmart } from '@/lib/client/uploadWithProgress';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import Image from 'next/image';
-import MediaRenderer from '@/components/MediaRenderer';
+import MediaRenderer, { isVideoSrc } from '@/components/MediaRenderer';
+import { captureVideoFrameBlob } from '@/lib/client/videoPoster';
 import { FaImage, FaPlus, FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
 import ImageUploadField from '@/components/ImageUploadField';
 import AdminPageShell from '@/components/admin/AdminPageShell';
@@ -16,6 +17,7 @@ interface GalleryItem {
   title: string;
   description: string | null;
   image_url: string;
+  thumbnail_url?: string | null;
   event_id: string | null;
   sekbid_id: string | null;
   created_at: string;
@@ -46,11 +48,13 @@ export default function GalleryPage() {
     description: '',
     event_id: '',
     sekbid_id: '',
-    image_url: ''
+    image_url: '',
+    thumbnail_url: ''
   });
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [thumbWorking, setThumbWorking] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -149,6 +153,7 @@ export default function GalleryPage() {
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           image_url: formData.image_url,
+          thumbnail_url: formData.thumbnail_url || null,
           event_id: formData.event_id || null,
           sekbid_id: formData.sekbid_id ? parseInt(formData.sekbid_id) : null
         })
@@ -170,7 +175,7 @@ export default function GalleryPage() {
       await fetchData();
       setShowForm(false);
       setEditingId(null);
-      setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '' });
+      setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '', thumbnail_url: '' });
     } catch (error) {
       console.error('Error saving gallery item:', error);
       alert('Gagal menyimpan gambar');
@@ -186,7 +191,8 @@ export default function GalleryPage() {
       description: item.description || '',
       event_id: item.event_id || '',
       sekbid_id: item.sekbid_id?.toString() || '',
-      image_url: item.image_url
+      image_url: item.image_url,
+      thumbnail_url: item.thumbnail_url || ''
     });
     setShowForm(true);
   };
@@ -224,7 +230,6 @@ export default function GalleryPage() {
   const handleImageChange = async (imageUrl: string, file: File) => {
     try {
       console.log('[Gallery handleImageChange] Starting upload:', {
-        imageUrl: imageUrl.substring(0, 100),
         fileName: file.name,
         fileType: file.type,
         fileSize: file.size
@@ -232,19 +237,18 @@ export default function GalleryPage() {
 
       setUploading(true);
       setUploadProgress(0);
-      
-      console.log('[Gallery handleImageChange] Using smart upload for:', {
-        fileName: file.name,
-        fileSize: file.size,
-        bucket: 'gallery',
-        folder: 'general'
-      });
-      
-      // Use smart upload - direct to Supabase for large files
+
+      const isVideo = file.type.startsWith('video/') || isVideoSrc(file.name) || isVideoSrc(imageUrl);
+
+      // Untuk video: ambil frame poster DULU dari objectURL lokal (offline, cepat)
+      let posterBlob: Blob | null = null;
+      if (isVideo) {
+        posterBlob = await captureVideoFrameBlob(imageUrl);
+      }
+
+      // Upload media utama - direct to Supabase for large files
       const { status, json } = await uploadWithProgressSmart(file, 'gallery', 'general', (p)=> setUploadProgress(p));
-      
-      console.log('[Gallery handleImageChange] Upload response:', { status, json });
-      
+
       if (status < 200 || status >= 300) {
         console.error('[Gallery handleImageChange] Upload failed:', json);
         throw new Error(json?.error || 'Upload gagal');
@@ -252,7 +256,26 @@ export default function GalleryPage() {
       // Prefer public URL (permanent, no expiry), fallback to signed URL
       const uploadedUrl = json?.publicUrl || json?.url || json?.signedUrl;
       console.log('[Gallery handleImageChange] ✅ Upload success, URL:', uploadedUrl);
-      setFormData(prev => ({ ...prev, image_url: uploadedUrl }));
+
+      if (isVideo) {
+        // Upload poster hasil capture → thumbnail_url (preview share WA/Discord)
+        let posterUrl = '';
+        if (posterBlob) {
+          setUploadProgress(0);
+          const posterFile = new File([posterBlob], 'video-poster.jpg', { type: 'image/jpeg' });
+          const up = await uploadWithProgressSmart(posterFile, 'gallery', 'general', (p)=> setUploadProgress(p));
+          if (up.status >= 200 && up.status < 300) {
+            posterUrl = up.json?.publicUrl || up.json?.url || up.json?.signedUrl || '';
+          } else {
+            console.warn('[Gallery handleImageChange] Poster upload failed:', up.json);
+          }
+        } else {
+          console.warn('[Gallery handleImageChange] Frame capture returned null');
+        }
+        setFormData(prev => ({ ...prev, image_url: uploadedUrl, thumbnail_url: posterUrl }));
+      } else {
+        setFormData(prev => ({ ...prev, image_url: uploadedUrl, thumbnail_url: '' }));
+      }
     } catch (e) {
       console.error('[Gallery handleImageChange] Exception:', e);
       alert('Gagal upload gambar: ' + (e instanceof Error ? e.message : String(e)));
@@ -266,6 +289,62 @@ export default function GalleryPage() {
     setFormData(prev => ({ ...prev, image_url: '' }));
   };
 
+  // ── Thumbnail video: ambil frame otomatis dari video yang sudah ter-upload ──
+  const uploadThumbBlob = async (blob: Blob) => {
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const posterFile = new File([blob], 'video-thumbnail.jpg', { type: 'image/jpeg' });
+      const { status, json } = await uploadWithProgressSmart(posterFile, 'gallery', 'general', (p)=> setUploadProgress(p));
+      if (status < 200 || status >= 300) throw new Error(json?.error || 'Upload gagal');
+      const url = json?.publicUrl || json?.url || json?.signedUrl;
+      if (!url) throw new Error('URL thumbnail tidak diterima');
+      setFormData(prev => ({ ...prev, thumbnail_url: url }));
+    } finally {
+      setUploading(false);
+      setTimeout(()=> setUploadProgress(0), 400);
+    }
+  };
+
+  const handleAutoCapture = async () => {
+    if (!formData.image_url || thumbWorking || uploading) return;
+    setThumbWorking(true);
+    try {
+      const blob = await captureVideoFrameBlob(formData.image_url);
+      if (!blob) {
+        alert('Gagal mengambil frame dari video. Gunakan "Upload gambar" sebagai gantinya.');
+        return;
+      }
+      await uploadThumbBlob(blob);
+    } catch (e) {
+      alert('Gagal membuat thumbnail: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setThumbWorking(false);
+    }
+  };
+
+  const handleThumbFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Thumbnail harus berupa gambar (JPG/PNG/WebP).');
+      return;
+    }
+    setThumbWorking(true);
+    try {
+      await uploadThumbBlob(file);
+    } catch (err) {
+      alert('Gagal upload thumbnail: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setThumbWorking(false);
+    }
+  };
+
+  const handleThumbRemove = () => {
+    setFormData(prev => ({ ...prev, thumbnail_url: '' }));
+  };
+
   return (
     <AdminPageShell
       icon={<FaImage className="w-8 h-8" />}
@@ -277,7 +356,7 @@ export default function GalleryPage() {
           onClick={() => {
             setShowForm(true);
             setEditingId(null);
-            setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '' });
+            setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '', thumbnail_url: '' });
           }}
           className="flex items-center space-x-2 bg-amber-400 text-slate-900 px-6 py-3 rounded-xl font-semibold hover:bg-amber-500 transition-colors shadow-md"
         >
@@ -299,7 +378,7 @@ export default function GalleryPage() {
                 onClick={() => {
                   setShowForm(false);
                   setEditingId(null);
-                  setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '' });
+                  setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '', thumbnail_url: '' });
                 }}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
@@ -327,6 +406,63 @@ export default function GalleryPage() {
                     <div className="h-2 bg-amber-400 rounded transition-all" style={{ width: `${uploadProgress}%` }} />
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Mengupload {uploadProgress}%</p>
+                </div>
+              )}
+
+              {/* Thumbnail video — preview saat link dishare ke WA / Discord / Facebook */}
+              {isVideoSrc(formData.image_url) && (
+                <div className="border-2 border-dashed border-amber-300 dark:border-amber-500/40 rounded-xl p-4 bg-amber-50/50 dark:bg-amber-500/5 space-y-3">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    Thumbnail Video <span className="font-normal text-gray-500 dark:text-gray-400">(preview saat link dishare)</span>
+                  </label>
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="w-full sm:w-44 aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0">
+                      {formData.thumbnail_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={formData.thumbnail_url} alt="Thumbnail video" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 text-center px-3">
+                          Belum ada thumbnail
+                          <br />(akan diambil otomatis saat upload)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleAutoCapture}
+                          disabled={thumbWorking || uploading || !formData.image_url}
+                          className="px-4 py-2 bg-slate-800 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-60"
+                        >
+                          {thumbWorking ? 'Memproses...' : 'Ambil frame otomatis'}
+                        </button>
+                        <label className="px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer disabled:opacity-60">
+                          Upload gambar
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleThumbFile}
+                            disabled={thumbWorking || uploading}
+                          />
+                        </label>
+                        {formData.thumbnail_url && (
+                          <button
+                            type="button"
+                            onClick={handleThumbRemove}
+                            disabled={thumbWorking || uploading}
+                            className="px-4 py-2 bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors disabled:opacity-60"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Thumbnail dipakai sebagai gambar preview di WhatsApp, Discord, Facebook, Twitter, dll.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -404,7 +540,7 @@ export default function GalleryPage() {
                   onClick={() => {
                     setShowForm(false);
                     setEditingId(null);
-                    setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '' });
+                    setFormData({ title: '', description: '', event_id: '', sekbid_id: '', image_url: '', thumbnail_url: '' });
                   }}
                   className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
@@ -431,6 +567,7 @@ export default function GalleryPage() {
               <div className="relative h-56 overflow-hidden">
                 <MediaRenderer
                   src={item.image_url}
+                  poster={item.thumbnail_url || undefined}
                   alt={item.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   controlsForVideo={true}

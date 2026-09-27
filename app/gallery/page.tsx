@@ -38,6 +38,8 @@ export async function generateMetadata({
                     url: `/gallery?item=${encodeURIComponent(item)}`,
                     type: 'website',
                     galleryId: item,
+                    // Discord dll. bisa menampilkan preview video — thumbnail tetap dipakai utk WA
+                    videoUrl: isVideo && g.image_url ? g.image_url : undefined,
                 });
             }
         } catch {

@@ -45,11 +45,12 @@ export async function GET(request: NextRequest) {
 
     // Resolve image/video URLs to live public URLs (blob, supabase, signed, relative)
     const itemsWithUrls = normalized.map((g: any) => {
-      if (!g.image_url) return g;
       const folder = g.category || g.folder || 'general';
+      const resolvedThumb = g.thumbnail_url ? resolveStorageUrl(g.thumbnail_url, folder) : null;
+      if (!g.image_url) return resolvedThumb ? { ...g, thumbnail_url: resolvedThumb } : g;
       const publicUrl = resolveStorageUrl(g.image_url, folder);
-      if (publicUrl) return { ...g, image_url: publicUrl };
-      return g;
+      const base = publicUrl ? { ...g, image_url: publicUrl } : g;
+      return resolvedThumb ? { ...base, thumbnail_url: resolvedThumb } : base;
     });
 
     console.log(`[admin/gallery GET] Returning ${itemsWithUrls.length} items (${itemsWithUrls.filter((g: any) => g._isVideo).length} videos)`);
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     if (authErr) return authErr;
 
     const body = await request.json();
-    const { title, description, image_url, event_id, sekbid_id } = body;
+    const { title, description, image_url, thumbnail_url, event_id, sekbid_id } = body;
 
     // Anti-duplikat: URL media + judul yang sama sudah pernah tersimpan
     // (mis. double-click tombol Simpan) → kembalikan record lama, jangan insert lagi.
@@ -98,17 +99,27 @@ export async function POST(request: NextRequest) {
       title,
       description,
       image_url,
+      thumbnail_url: thumbnail_url ?? null,
       event_id,
       sekbid_id,
       created_by: session.user.id,
     } as any;
 
-    const { data, error } = await supabaseAdmin
+    let { data, error } = await supabaseAdmin
       .from('gallery')
       // Attempt insert with created_by first
       .insert(insertPayload)
       .select()
       .single();
+
+    // Kolom thumbnail_url belum dibuat (SQL migration belum dijalankan) → retry tanpa kolom itu
+    if (error && (error as any).code === 'PGRST204' && 'thumbnail_url' in insertPayload) {
+      console.warn('[admin/gallery POST] thumbnail_url column missing — run scripts/setup-gallery-thumbnails.sql, retrying without it');
+      delete insertPayload.thumbnail_url;
+      const retry = await supabaseAdmin.from('gallery').insert(insertPayload).select().single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       // Foreign key violation code 23503 -> retry without created_by
