@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { testAIConnection, getCustomAIProvider } from '@/lib/aiProvider';
+import {
+  testAIConnection,
+  getCustomAIProvider,
+  resolveChatCompletionsUrl,
+  resolveAltChatCompletionsUrl,
+} from '@/lib/aiProvider';
 import { getConfig } from '@/lib/adminConfig';
 
 export const runtime = 'nodejs';
@@ -23,13 +28,18 @@ export async function POST() {
 
     const custom = await getCustomAIProvider();
     const result = await testAIConnection();
+    const baseUrl = (await getConfig('CUSTOM_AI_BASE_URL')) || null;
+    const resolvedUrls = custom
+      ? [resolveChatCompletionsUrl(custom.baseUrl), resolveAltChatCompletionsUrl(custom.baseUrl)].filter(Boolean)
+      : [];
 
     return NextResponse.json({
       success: result.ok,
       configured: {
         custom: !!custom,
-        customBaseUrl: (await getConfig('CUSTOM_AI_BASE_URL')) || null,
+        customBaseUrl: baseUrl,
         customModel: custom?.model || null,
+        resolvedUrls,
         gemini: !!(await getConfig('GEMINI_API_KEY')),
         openai: !!(await getConfig('OPENAI_API_KEY')),
       },

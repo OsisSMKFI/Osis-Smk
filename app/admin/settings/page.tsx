@@ -164,7 +164,10 @@ export default function AdminSettingsPage() {
       } else if (json?.ok) {
         setAiTestResult(`✅ OK via ${json.provider}${json.model ? ` (${json.model})` : ''} — balasan: "${json.reply}"`);
       } else {
-        setAiTestResult(`❌ ${json?.error || 'Test gagal'}`);
+        const cfg = json?.configured;
+        const tried = cfg?.resolvedUrls?.length ? ` | URL dicoba: ${cfg.resolvedUrls.join(' , ')}` : '';
+        const base = cfg?.customBaseUrl ? ` | Base link tersimpan: ${cfg.customBaseUrl}` : '';
+        setAiTestResult(`❌ ${json?.error || 'Test gagal'}${tried}${base}`);
       }
     } catch (e: any) {
       setAiTestResult(`❌ ${e?.message || 'Network error'}`);

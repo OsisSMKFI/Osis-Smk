@@ -109,7 +109,7 @@ export async function callCustomAI(
         // HTML (mis. Cloudflare "Just a moment...") → kemungkinan base link mengarah ke situs web, bukan endpoint API
         if (/^\s*<!doctype html|<html[\s>]/i.test(text)) {
           throw new Error(
-            `Base link mengembalikan halaman HTML (HTTP ${res.status}) — kemungkinan bukan endpoint API ` +
+            `Base link mengembalikan halaman HTML (HTTP ${res.status}) di URL ${url} — kemungkinan bukan endpoint API ` +
               `(terdeteksi proteksi seperti Cloudflare). Pastikan base link adalah URL API langsung, ` +
               `contoh: https://api.openai.com atau https://openrouter.ai/api/v1`
           );
