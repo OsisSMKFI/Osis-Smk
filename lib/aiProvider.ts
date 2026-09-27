@@ -59,7 +59,10 @@ export async function getCustomAIProvider(): Promise<CustomAIProvider | null> {
   const baseUrl = (await getConfig('CUSTOM_AI_BASE_URL'))?.trim();
   const apiKey = (await getConfig('CUSTOM_AI_API_KEY'))?.trim();
   if (!baseUrl || !apiKey) return null;
-  const model = (await getConfig('CUSTOM_AI_MODEL'))?.trim() || 'gpt-4o-mini';
+  // Ambil token pertama: field model kadang diisi banyak nama dipisah spasi
+  // (mis. "gpt-oss:120b nvidia/...") — server origin menolak model gabungan.
+  const rawModel = (await getConfig('CUSTOM_AI_MODEL'))?.trim() || 'gpt-4o-mini';
+  const model = rawModel.split(/\s+/)[0] || 'gpt-4o-mini';
   return { baseUrl, apiKey, model };
 }
 

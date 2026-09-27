@@ -36,7 +36,7 @@ const SETTINGS_GROUPS = {
     settings: [
       { key: 'CUSTOM_AI_BASE_URL', label: 'Custom Provider — Base Link', secret: false, description: '🌐 Base link endpoint OpenAI-compatible, contoh: https://api.openai.com atau https://openrouter.ai/api/v1 (kosongkan untuk memakai provider lain)' },
       { key: 'CUSTOM_AI_API_KEY', label: 'Custom Provider — API Key', secret: true, description: '🔑 API key untuk custom provider di atas' },
-      { key: 'CUSTOM_AI_MODEL', label: 'Custom Provider — Model', secret: false, description: 'Nama model, contoh: gpt-4o-mini | deepseek-chat | llama-3.3-70b (default: gpt-4o-mini)' },
+      { key: 'CUSTOM_AI_MODEL', label: 'Custom Provider — Model', secret: false, description: 'SATU nama model tanpa spasi, contoh: gpt-4o-mini | gpt-oss:120b | deepseek-chat (default: gpt-4o-mini)' },
       { key: 'GEMINI_API_KEY', label: 'Google Gemini API Key', secret: true, description: '🔑 Paste Gemini key (format: AIza... atau key Google lainnya)' },
       { key: 'OPENAI_API_KEY', label: 'OpenAI API Key', secret: true, description: '🔑 Paste OpenAI key (format: sk-... atau sk-proj-...)' },
       { key: 'ANTHROPIC_API_KEY', label: 'Anthropic Claude API Key', secret: true, description: '🔑 Paste Claude key (format: sk-ant-...)' },
