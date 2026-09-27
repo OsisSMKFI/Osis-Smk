@@ -34,6 +34,9 @@ const SETTINGS_GROUPS = {
     icon: <FaRobot className="w-5 h-5" />,
     color: 'from-amber-500 to-orange-500',
     settings: [
+      { key: 'CUSTOM_AI_BASE_URL', label: 'Custom Provider — Base Link', secret: false, description: '🌐 Base link endpoint OpenAI-compatible, contoh: https://api.openai.com atau https://openrouter.ai/api/v1 (kosongkan untuk memakai provider lain)' },
+      { key: 'CUSTOM_AI_API_KEY', label: 'Custom Provider — API Key', secret: true, description: '🔑 API key untuk custom provider di atas' },
+      { key: 'CUSTOM_AI_MODEL', label: 'Custom Provider — Model', secret: false, description: 'Nama model, contoh: gpt-4o-mini | deepseek-chat | llama-3.3-70b (default: gpt-4o-mini)' },
       { key: 'GEMINI_API_KEY', label: 'Google Gemini API Key', secret: true, description: '🔑 Paste Gemini key (format: AIza... atau key Google lainnya)' },
       { key: 'OPENAI_API_KEY', label: 'OpenAI API Key', secret: true, description: '🔑 Paste OpenAI key (format: sk-... atau sk-proj-...)' },
       { key: 'ANTHROPIC_API_KEY', label: 'Anthropic Claude API Key', secret: true, description: '🔑 Paste Claude key (format: sk-ant-...)' },
@@ -128,6 +131,8 @@ export default function AdminSettingsPage() {
   const [showSecrets, setShowSecrets] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [testingAI, setTestingAI] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<string | null>(null);
   
   // Theme editor states
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
@@ -146,6 +151,26 @@ export default function AdminSettingsPage() {
   const clearField = (key: string) => {
     setValues(v => ({ ...v, [key]: '' }));
     setMessage(`🗑️ Field ${key} cleared. You can now enter new value.`);
+  };
+
+  const handleTestAI = async () => {
+    setTestingAI(true);
+    setAiTestResult(null);
+    try {
+      const res = await apiFetch('/api/ai/test', { method: 'POST' });
+      const json = await safeJson(res, { url: '/api/ai/test', method: 'POST' }).catch(() => ({} as any));
+      if (!res.ok) {
+        setAiTestResult(`❌ ${json?.error || `HTTP ${res.status}`}`);
+      } else if (json?.ok) {
+        setAiTestResult(`✅ OK via ${json.provider}${json.model ? ` (${json.model})` : ''} — balasan: "${json.reply}"`);
+      } else {
+        setAiTestResult(`❌ ${json?.error || 'Test gagal'}`);
+      }
+    } catch (e: any) {
+      setAiTestResult(`❌ ${e?.message || 'Network error'}`);
+    } finally {
+      setTestingAI(false);
+    }
   };
 
   const handleSave = async () => {
@@ -171,6 +196,15 @@ export default function AdminSettingsPage() {
     }
     if (values.TAVILY_API_KEY && values.TAVILY_API_KEY !== '***' && values.TAVILY_API_KEY.length < 10) {
       validationErrors.push('❌ TAVILY_API_KEY terlalu pendek (minimal 10 karakter)');
+    }
+    if (values.CUSTOM_AI_API_KEY && values.CUSTOM_AI_API_KEY !== '***' && values.CUSTOM_AI_API_KEY.length < 5) {
+      validationErrors.push('❌ CUSTOM_AI_API_KEY terlalu pendek (minimal 5 karakter)');
+    }
+    if (values.CUSTOM_AI_BASE_URL && values.CUSTOM_AI_BASE_URL !== '***') {
+      const baseUrl = values.CUSTOM_AI_BASE_URL.trim();
+      if (!/^https?:\/\//i.test(baseUrl)) {
+        validationErrors.push('❌ CUSTOM_AI_BASE_URL harus diawali http:// atau https://');
+      }
     }
     
     if (validationErrors.length > 0) {
@@ -517,7 +551,7 @@ export default function AdminSettingsPage() {
                       </p>
                       <p className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
                         <span className="font-semibold sm:min-w-[100px]">Priority:</span>
-                        <span>Gemini → OpenAI → Anthropic (menggunakan yang pertama tersedia)</span>
+                        <span>Custom Provider (Base Link + API Key) → Gemini → OpenAI → Anthropic (yang pertama tersedia dipakai)</span>
                       </p>
                       <p className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
                         <span className="font-semibold sm:min-w-[100px]">Key Format:</span>
@@ -535,6 +569,39 @@ export default function AdminSettingsPage() {
                         <p className="mt-2 text-[10px] md:text-xs bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded p-1.5 md:p-2">
                           ⚠️ <strong>Penting:</strong> Jika field masih <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded">***</code>, klik "Show Secrets" dulu sebelum save!
                         </p>
+                      </div>
+
+                      {/* Custom Provider */}
+                      <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-purple-300 dark:border-purple-600 space-y-1.5 md:space-y-2">
+                        <p className="font-semibold text-xs md:text-sm">🌐 Custom Provider (Base Link + API Key):</p>
+                        <ol className="list-decimal list-inside space-y-0.5 ml-1 md:ml-2 text-[10px] md:text-xs">
+                          <li>Isi <strong>Custom Provider — Base Link</strong> (endpoint OpenAI-compatible, contoh: <code className="bg-purple-200 dark:bg-purple-800 px-1 rounded">https://api.openai.com</code>)</li>
+                          <li>Isi <strong>Custom Provider — API Key</strong> & <strong>Model</strong></li>
+                          <li>Klik <strong>"Simpan Perubahan"</strong></li>
+                          <li>Klik <strong>"Test Koneksi AI"</strong> di bawah untuk memastikan berfungsi</li>
+                        </ol>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleTestAI}
+                            disabled={testingAI}
+                            className="px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px] md:text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {testingAI ? '⏳ Menguji koneksi...' : '🧪 Test Koneksi AI'}
+                          </button>
+                          <span className="text-[10px] md:text-xs text-purple-700 dark:text-purple-300">
+                            Test mengirim pesan ping nyata ke provider (custom → gemini → openai)
+                          </span>
+                        </div>
+                        {aiTestResult && (
+                          <p className={`text-[10px] md:text-xs font-mono break-all rounded p-2 border ${
+                            aiTestResult.startsWith('✅')
+                              ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200'
+                              : 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200'
+                          }`}>
+                            {aiTestResult}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

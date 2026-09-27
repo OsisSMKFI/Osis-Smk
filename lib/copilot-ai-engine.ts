@@ -17,6 +17,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { getConfig } from '@/lib/adminConfig';
+import { getCustomAIProvider, callCustomAI } from '@/lib/aiProvider';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES & INTERFACES
@@ -346,10 +347,11 @@ async function generateAIResponse(
     session: CopilotSession,
     baseUrl: string
 ): Promise<string> {
+    const customProvider = await getCustomAIProvider();
     const geminiKey = await getConfig('GEMINI_API_KEY');
     const openaiKey = await getConfig('OPENAI_API_KEY');
     
-    if (!geminiKey && !openaiKey) {
+    if (!customProvider && !geminiKey && !openaiKey) {
         return 'No AI API key configured.';
     }
     
@@ -419,6 +421,13 @@ Respond with actionable code or clear explanations. Always specify file paths.`;
     ];
     
     try {
+        if (customProvider) {
+            try {
+                return await callCustomAI(messages, { temperature: 0.3, maxTokens: 8192 });
+            } catch (err) {
+                console.error('[Copilot] Custom AI failed, falling back:', err instanceof Error ? err.message : err);
+            }
+        }
         if (geminiKey) {
             const response = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`,

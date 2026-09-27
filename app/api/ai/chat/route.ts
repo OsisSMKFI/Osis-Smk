@@ -9,6 +9,7 @@ import { getConfig } from '@/lib/adminConfig';
 import { logActivity } from '@/lib/activity-logger';
 import { getAIGatewayStatus, chat as gatewayChat } from '@/lib/vercel/ai-gateway';
 import { EASTER_EGG_SOURCE_TEXT } from '@/lib/aiAutoLearn';
+import { getCustomAIProvider, callCustomAI } from '@/lib/aiProvider';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔍 TAVILY WEB SEARCH - Search mendalam untuk data real-time
@@ -333,9 +334,12 @@ function sanitizePublicAI(text: string, opts: PublicSanitizeOptions = {}): strin
  */
 async function callAI(
   messages: Array<{ role: 'system'|'user'|'assistant'; content: string }>,
-  providerOverride?: 'openai' | 'gemini' | 'anthropic' | 'auto',
+  providerOverride?: 'openai' | 'gemini' | 'anthropic' | 'custom' | 'auto',
   rawQuery?: string
 ) {
+  // Custom provider (Admin Settings: CUSTOM_AI_BASE_URL / CUSTOM_AI_API_KEY / CUSTOM_AI_MODEL)
+  const customProvider = await getCustomAIProvider();
+
   // Get API keys from database first, then fallback to env
   const openaiKey = await getConfig('OPENAI_API_KEY');
   const geminiKey = await getConfig('GEMINI_API_KEY');
@@ -380,6 +384,7 @@ async function callAI(
   });
   
   console.log('[AI] Available providers:', {
+    custom: !!customProvider,
     openai: !!openaiKey,
     gemini: !!geminiKey,
     anthropic: !!anthropicKey,
@@ -409,16 +414,21 @@ async function callAI(
   }
 
   if (providerOverride === 'auto' || !providerOverride) {
-    // Auto / no override: try all providers, then gateway
+    // Auto / no override: Custom (jika diisi) → provider lain → gateway
     console.log('[AI] Provider mode:', providerOverride || 'auto (no override)');
-    
-    const tryOrder = identificationQuery
+
+    const baseOrder = identificationQuery
       ? [hasOpenAI ? 'openai' : null, hasGemini ? 'gemini' : null, hasAnthropic ? 'anthropic' : null].filter(Boolean)
       : [hasGemini ? 'gemini' : null, hasOpenAI ? 'openai' : null, hasAnthropic ? 'anthropic' : null].filter(Boolean);
+    const tryOrder = customProvider ? ['custom', ...baseOrder] : baseOrder;
 
     for (const p of tryOrder) {
       console.log('[AI] Trying provider:', p);
-      if (p === 'openai') {
+      if (p === 'custom') {
+        const r = await callCustomProvider(messages);
+        if (!('error' in r)) return r;
+        console.log('[AI] Custom provider failed:', r.error);
+      } else if (p === 'openai') {
         const r = await callOpenAI(messages, openaiKey!, openaiModel);
         if (!('error' in r)) return r;
         console.log('[AI] OpenAI failed:', r.error);
@@ -444,6 +454,17 @@ async function callAI(
     });
     return gw;
     
+  } else if (providerOverride === 'custom') {
+    if (!customProvider) {
+      return { error: 'Custom provider belum diset. Isi CUSTOM_AI_BASE_URL + CUSTOM_AI_API_KEY di Admin → Settings.' };
+    }
+    const r = await callCustomProvider(messages);
+    if (!('error' in r)) return r;
+    console.log('[AI] Custom provider explicit failed:', r.error);
+    const gw = await tryGateway();
+    if (!gw.error) return gw;
+    return r;
+
   } else if (providerOverride === 'gemini') {
     if (!hasGemini) return { error: 'Gemini API key belum diset. Masukkan di Admin → Settings → GEMINI_API_KEY.' };
     const r = await callGemini(messages, geminiKey, geminiModel);
@@ -473,6 +494,21 @@ async function callAI(
   }
   
   return { error: 'Provider tidak dikenali: ' + providerOverride };
+}
+
+/**
+ * Custom provider OpenAI-compatible (CUSTOM_AI_BASE_URL + CUSTOM_AI_API_KEY).
+ */
+async function callCustomProvider(
+  messages: Array<{ role: 'system'|'user'|'assistant'; content: string }>
+): Promise<{ text?: string; error?: string }> {
+  try {
+    const text = await callCustomAI(messages, { temperature: 0.2 });
+    return { text };
+  } catch (e: any) {
+    console.error('[AI] Custom provider error:', e?.message);
+    return { error: e?.message || 'Custom provider error' };
+  }
 }
 
 async function callOpenAI(

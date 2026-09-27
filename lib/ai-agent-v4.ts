@@ -1,4 +1,5 @@
 import { getConfig } from '@/lib/adminConfig';
+import { getCustomAIProvider, callCustomAI } from '@/lib/aiProvider';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🤖 AI AGENT v4.4 - COPILOT++ AUTONOMOUS CODING AGENT
@@ -854,10 +855,11 @@ EXECUTION REQUIREMENTS:
 - Do not suggest.`;
     
     // Get AI key
+    const customProvider = await getCustomAIProvider();
     const geminiKey = await getConfig('GEMINI_API_KEY');
     const openaiKey = await getConfig('OPENAI_API_KEY');
     
-    if (!geminiKey && !openaiKey) {
+    if (!customProvider && !geminiKey && !openaiKey) {
         return {
             response: 'Error: No AI API key configured.',
             toolsUsed,
@@ -868,7 +870,22 @@ EXECUTION REQUIREMENTS:
     let aiResponse = '';
     
     try {
-        if (geminiKey) {
+        if (customProvider) {
+            try {
+                aiResponse = await callCustomAI(
+                    [
+                        { role: 'system', content: systemPrompt },
+                        ...(ctxInput.conversationHistory || []).slice(-4),
+                        { role: 'user', content: userPrompt }
+                    ],
+                    { temperature: 0.05, maxTokens: 8192 }
+                );
+            } catch (err) {
+                console.error('[Agent] Custom AI failed, falling back:', err instanceof Error ? err.message : err);
+                aiResponse = '';
+            }
+        }
+        if (!aiResponse && geminiKey) {
             const res = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`,
                 {
@@ -895,7 +912,7 @@ EXECUTION REQUIREMENTS:
             if (!aiResponse && data.error) {
                 aiResponse = `Error: ${data.error.message}`;
             }
-        } else if (openaiKey) {
+        } else if (!aiResponse && openaiKey) {
             const res = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
