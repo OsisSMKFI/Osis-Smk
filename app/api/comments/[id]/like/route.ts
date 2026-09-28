@@ -25,17 +25,29 @@ export async function POST(
 
     if (existingLike) {
       // Unlike
-      await supabase
+      const { error: unlikeErr } = await supabase
         .from('comment_likes')
         .delete()
         .eq('comment_id', commentId)
         .eq('user_id', userId);
+      if (unlikeErr) {
+        return NextResponse.json(
+          { error: 'Gagal membatalkan like', details: unlikeErr.message },
+          { status: 500 }
+        );
+      }
       liked = false;
     } else {
       // Like
-      await supabase
+      const { error: likeErr } = await supabase
         .from('comment_likes')
         .insert([{ comment_id: commentId, user_id: userId }]);
+      if (likeErr) {
+        return NextResponse.json(
+          { error: 'Gagal menyukai komentar', details: likeErr.message },
+          { status: 500 }
+        );
+      }
       liked = true;
     }
 

@@ -22,6 +22,20 @@ export async function GET(request: NextRequest) {
       }
 
       if (!data) {
+        // Key design override bersifat opsional (belum pernah dibuat di
+        // Design Studio) → balas 200 kosong supaya tidak spam 404 di console.
+        if (key.startsWith('design_override_')) {
+          return NextResponse.json(
+            buildSuccess('OK', {
+              page_key: key,
+              content: '',
+              content_value: '',
+              category: 'design',
+              content_type: 'css',
+              published: true,
+            })
+          );
+        }
         return NextResponse.json(buildError('CONTENT_NOT_FOUND', `No content for key: ${key}`), { status: 404 });
       }
 

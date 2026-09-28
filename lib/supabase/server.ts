@@ -3,7 +3,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!serviceRoleKey) {
+// Hanya warning di server. Kalau module ini tidak sengaja ter-bundle ke
+// client, `process.env.SUPABASE_SERVICE_ROLE_KEY` (non-public) selalu
+// kosong di browser — jangan spam console dengan CRITICAL palsu.
+if (!serviceRoleKey && typeof window === 'undefined') {
   console.error('CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing. Server-side admin operations will fail.');
 }
 // Do not log secrets. Avoid printing SUPABASE_SERVICE_ROLE_KEY even in development.

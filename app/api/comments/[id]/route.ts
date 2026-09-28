@@ -135,12 +135,26 @@ export async function PATCH(
       );
     }
 
-    const { data: updatedComment, error: updateError } = await supabase
+    let { data: updatedComment, error: updateError } = await supabase
       .from('comments')
       .update({ content: content.trim(), updated_at: new Date().toISOString() })
       .eq('id', commentId)
       .select()
       .single();
+
+    // updated_at belum ada di skema → ulangi tanpa kolom itu
+    if (updateError && (updateError as any).code !== 'PGRST116' &&
+        ((updateError as any).code === 'PGRST204' || (updateError as any).code === '42703') &&
+        (updateError.message || '').includes('updated_at')) {
+      const retry = await supabase
+        .from('comments')
+        .update({ content: content.trim() })
+        .eq('id', commentId)
+        .select()
+        .single();
+      updatedComment = retry.data;
+      updateError = retry.error;
+    }
 
     if (updateError) {
       console.error('Error updating comment:', updateError);

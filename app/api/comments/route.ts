@@ -60,16 +60,28 @@ export async function GET(request: NextRequest) {
          let kelas = null;
          let nickname = null;
         if (comment.user_id) {
-          const { data: userData } = await supabase
+          // Coba lengkap dulu; kalau ada kolom yang tidak ada di skema
+          // (PGRST204/42703) → fallback minimal: role tetap terbaca
+          // supaya badge role penulis selalu tampil.
+          const full = await supabase
             .from('users')
-             .select('role, photo_url, instagram_username, kelas, nickname')
+            .select('role, photo_url, instagram_username, kelas, nickname')
             .eq('id', comment.user_id)
-            .single();
+            .maybeSingle();
+          let userData: any = full.data || null;
+          if (full.error) {
+            const min = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', comment.user_id)
+              .maybeSingle();
+            userData = min.data || null;
+          }
           authorRole = userData?.role || null;
-           authorPhotoUrl = userData?.photo_url || null;
-           instagramUsername = userData?.instagram_username || null;
-           kelas = userData?.kelas || null;
-           nickname = userData?.nickname || null;
+          authorPhotoUrl = userData?.photo_url || null;
+          instagramUsername = userData?.instagram_username || null;
+          kelas = userData?.kelas || null;
+          nickname = userData?.nickname || null;
         }
 
         // Get like count
@@ -145,53 +157,40 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString()
     };
 
-    console.log('[Comments API] Inserting comment (with user_id):', commentData);
+    console.log('[Comments API] Inserting comment:', commentData);
 
-    let { data: comment, error } = await supabase
-      .from('comments')
-      .insert([commentData])
-      .select()
-      .single();
+    // Insert dgn retry: kalau DB menolak kolom tertentu (PGRST204/42703 —
+    // kolom belum ada di skema / schema cache) → buang kolom itu & coba lagi,
+    // sampai insert masuk. Ini mencegah 500 saat kolom opsional (parent_id,
+    // is_anonymous, dll) belum tersedia.
+    let attemptPayload: any = { ...commentData };
+    let comment: any = null;
+    let error: any = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const res = await supabase
+        .from('comments')
+        .insert([attemptPayload])
+        .select()
+        .single();
+      comment = res.data;
+      error = res.error;
+      if (!error) break;
 
-    // Handle various schema compatibility issues
-    if (error) {
-      // Case 1: user_id column doesn't exist (old schema)
-      if (error.message?.includes('user_id') || error.code === '42703') {
-        console.log('[Comments API] Column user_id not found, retrying without it...');
-        const { user_id, ...dataWithoutUserId } = commentData;
-        
-        const retry = await supabase
-          .from('comments')
-          .insert([dataWithoutUserId])
-          .select()
-          .single();
-        
-        comment = retry.data;
-        error = retry.error;
+      const msg = error.message || '';
+      const colMatch = msg.match(/'([^']+)' column/) || msg.match(/column "([^"]+)"/);
+      const unknownCol = error.code === 'PGRST204' || error.code === '42703';
+      if (unknownCol && colMatch && colMatch[1] in attemptPayload) {
+        console.warn('[Comments API] Column rejected by DB, dropping:', colMatch[1]);
+        delete attemptPayload[colMatch[1]];
+        continue;
       }
-      // Case 2: author_id FK constraint (auth.users doesn't exist in our setup)
-      // Code 23503 = foreign key violation
-      else if (error.code === '23503' && error.message?.includes('author_id')) {
-        console.log('[Comments API] FK constraint on author_id, using minimal data...');
-        // Retry with only essential fields, let DB defaults handle the rest
-        const minimalData: any = {
-          content_id: contentId,
-          content_type: contentType,
-          content: content.trim(),
-          author_name: displayName,
-          is_anonymous: isAnonymous,
-          parent_id: parentId || null
-        };
-        
-        const retry = await supabase
-          .from('comments')
-          .insert([minimalData])
-          .select()
-          .single();
-        
-        comment = retry.data;
-        error = retry.error;
+      // FK violation on author_id (auth.users tidak ada di setup ini)
+      if (error.code === '23503' && 'author_id' in attemptPayload && msg.includes('author_id')) {
+        console.warn('[Comments API] FK violation on author_id, dropping it');
+        delete attemptPayload.author_id;
+        continue;
       }
+      break;
     }
 
     if (error) {

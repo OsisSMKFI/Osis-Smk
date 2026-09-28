@@ -71,7 +71,7 @@ export default function CommentSection({
       console.log('[CommentSection] User role:', {
         raw: session.user.role,
         normalized: session.user.role.trim().toLowerCase(),
-        canDeleteAll: ['admin', 'superadmin', 'osis'].includes(session.user.role.trim().toLowerCase())
+        canDeleteAll: ['admin', 'superadmin', 'super_admin', 'osis'].includes(session.user.role.trim().toLowerCase())
       });
     }
   }, [session?.user?.role]);
