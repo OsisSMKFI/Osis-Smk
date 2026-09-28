@@ -111,61 +111,80 @@ export async function POST(request: NextRequest) {
       console.warn('[Error Log] ⚠️ Cannot check duplicates:', checkError.message);
     }
 
-    // Try to insert new error log (gracefully handle if table doesn't exist)
+    // Try to insert new error log — loop strip kolom yang ditolak DB
+    // (error_logs versi lama mungkin belum punya kolom tertentu)
     let errorLog = null;
     try {
-      const { data, error: insertError } = await supabaseAdmin
-        .from('error_logs')
-        .insert({
-          error_type: errorType,
-          severity: severity || aiAnalysis.suggestedSeverity,
-          message,
-          stack_trace: stackTrace,
-          error_code: errorCode,
-          user_id: userId,
-          user_email: userEmail,
-          user_role: userRole,
-          page_url: pageUrl,
-          api_endpoint: apiEndpoint,
-          request_method: requestMethod,
-          request_body: requestBody,
-          response_status: responseStatus,
-          environment: environment || 'production',
-          browser,
-          os,
-          device_type: deviceType,
-          ip_address: ipAddress,
-          user_agent: userAgent,
-          ai_analyzed: true,
-          ai_risk_level: aiAnalysis.riskLevel,
-          ai_category: aiAnalysis.category,
-          ai_suggestions: aiAnalysis.suggestions,
-          ai_analysis: aiAnalysis.panel,
-          fix_status: 'analyzed',
-          auto_fixable: aiAnalysis.autoFixable,
-          metadata,
-          first_occurred_at: new Date().toISOString(),
-          last_occurred_at: new Date().toISOString()
-        })
-        .select()
-        .maybeSingle();
+      let insertPayload: any = {
+        error_type: errorType,
+        severity: severity || aiAnalysis.suggestedSeverity,
+        message,
+        stack_trace: stackTrace,
+        error_code: errorCode,
+        user_id: userId,
+        user_email: userEmail,
+        user_role: userRole,
+        page_url: pageUrl,
+        api_endpoint: apiEndpoint,
+        request_method: requestMethod,
+        request_body: requestBody,
+        response_status: responseStatus,
+        environment: environment || 'production',
+        browser,
+        os,
+        device_type: deviceType,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        ai_analyzed: true,
+        ai_risk_level: aiAnalysis.riskLevel,
+        ai_category: aiAnalysis.category,
+        ai_suggestions: aiAnalysis.suggestions,
+        ai_analysis: aiAnalysis.panel,
+        fix_status: 'analyzed',
+        auto_fixable: aiAnalysis.autoFixable,
+        metadata,
+        first_occurred_at: new Date().toISOString(),
+        last_occurred_at: new Date().toISOString()
+      };
 
-      if (insertError) {
-        console.error('[Error Log] ⚠️ Insert error:', insertError.message);
-        // Don't throw - just log to console instead
+      let insertError: any = null;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const res = await supabaseAdmin
+          .from('error_logs')
+          .insert([insertPayload])
+          .select()
+          .maybeSingle();
+        if (!res.error) {
+          errorLog = res.data;
+          break;
+        }
+        insertError = res.error;
+        const msg = insertError.message || '';
+        const colMatch = msg.match(/'([^']+)' column/) || msg.match(/column "([^"]+)"/);
+        const unknownCol = insertError.code === 'PGRST204' || insertError.code === '42703';
+        if (unknownCol && colMatch && colMatch[1] in insertPayload) {
+          console.warn('[Error Log] Column rejected, dropping:', colMatch[1]);
+          delete insertPayload[colMatch[1]];
+          continue;
+        }
+        break;
+      }
+
+      if (insertError || !errorLog) {
+        console.error('[Error Log] ⚠️ Insert error:', insertError?.message);
         console.log('[Error Log] 📋 Logged to console only (DB unavailable)');
-        
+
         return NextResponse.json({
           success: true,
           data: {
             errorId: 'console-only',
             logged: 'console',
-            aiAnalysis
+            aiAnalysis,
+            warning: insertError?.message?.slice(0, 300)
           }
         });
       }
 
-      errorLog = data;
       console.log('[Error Log] ✅ Created new error log:', errorLog?.id);
     } catch (dbError: any) {
       // Database error - log to console only

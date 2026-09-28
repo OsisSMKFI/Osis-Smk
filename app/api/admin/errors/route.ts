@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { analyzeErrorRuleBased, buildAiAnalysisPayload } from '@/lib/errorAnalysis';
+import { analyzeErrorRuleBased, buildAiAnalysisPayload, analyzeErrorWithLLM, saveAiAnalysis } from '@/lib/errorAnalysis';
 
 export async function GET(request: NextRequest) {
   try {
@@ -104,20 +104,12 @@ export async function GET(request: NextRequest) {
           statusCode: e.response_status,
         });
         const payload = buildAiAnalysisPayload(a);
-        const { error: updErr } = await supabaseAdmin
-          .from('error_logs')
-          .update({
-            ai_analysis: payload,
-            fix_status: e.fix_status && e.fix_status !== 'pending' ? e.fix_status : 'analyzed',
-            ai_analyzed: true,
-            ai_risk_level: a.riskLevel,
-            ai_category: a.category,
-            auto_fixable: a.autoFixable,
-          })
-          .eq('id', e.id);
-        if (!updErr) {
+        const save = await saveAiAnalysis(supabaseAdmin, e.id, payload, {
+          auto_fixable: a.autoFixable,
+        });
+        if (save.saved) {
           e.ai_analysis = payload;
-          e.fix_status = e.fix_status && e.fix_status !== 'pending' ? e.fix_status : 'analyzed';
+          e.fix_status = 'analyzed';
           e.ai_analyzed = true;
         }
       }));
@@ -140,50 +132,53 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { errorId, errorData, message, severity, stack, metadata } = body;
+    const { errorId, errorData, deep, message, severity, stack, metadata } = body;
 
     // If errorId provided, this is an AI analysis request
     if (errorId && errorData) {
-      // Rule-based analysis (ringan, tanpa LLM) — konsisten dengan analisis
-      // otomatis di /api/errors/log dan auto-analyze saat GET.
-      const shared = analyzeErrorRuleBased({
-        message: errorData.message || errorData.error_message,
-        stack: errorData.stack_trace || errorData.error_stack,
-        errorType: errorData.error_type,
-        errorCode: errorData.error_code,
-        statusCode: errorData.response_status || errorData.status_code,
-      });
+      // deep=true (tombol Analyze) → AI provider custom default (1 panggilan);
+      // selalu ada fallback rule-based sehingga analisis tidak pernah gagal total.
+      const result = deep
+        ? await analyzeErrorWithLLM({
+            message: errorData.message || errorData.error_message,
+            stack: errorData.stack_trace || errorData.error_stack,
+            error_type: errorData.error_type,
+            response_status: errorData.response_status || errorData.status_code,
+          })
+        : (() => {
+            const a = analyzeErrorRuleBased({
+              message: errorData.message || errorData.error_message,
+              stack: errorData.stack_trace || errorData.error_stack,
+              errorType: errorData.error_type,
+              errorCode: errorData.error_code,
+              statusCode: errorData.response_status || errorData.status_code,
+            });
+            return { analysis: a, payload: buildAiAnalysisPayload(a), source: 'rule-based' };
+          })();
+
       const aiAnalysis = {
         timestamp: new Date().toISOString(),
         error_type: errorData.error_type || 'Unknown',
-        severity: shared.severity,
-        root_cause: shared.root_cause,
-        suggestions: shared.suggestions,
-        category: shared.category,
-        confidence: shared.confidence,
-        analyzer: 'rule-based v1',
+        severity: result.analysis.severity,
+        root_cause: result.payload.root_cause,
+        suggestions: result.payload.suggestions,
+        category: result.payload.category,
+        confidence: result.payload.confidence,
+        analyzer: result.payload.analyzer,
       };
 
-      // Update error log with AI analysis
-      const { error: updateError } = await supabaseAdmin
-        .from('error_logs')
-        .update({
-          ai_analysis: aiAnalysis,
-          fix_status: 'analyzed',
-          ai_analyzed: true,
-          ai_risk_level: shared.riskLevel,
-          ai_category: shared.category,
-          auto_fixable: shared.autoFixable,
-        })
-        .eq('id', errorId);
-
-      if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
-      }
+      // Simpan — toleran kolom hilang (kalau SQL setup belum dijalankan,
+      // analisis tetap dikembalikan + warning, bukan error 500)
+      const save = await saveAiAnalysis(supabaseAdmin, errorId, aiAnalysis, {
+        auto_fixable: result.analysis.autoFixable,
+      });
 
       return NextResponse.json({ 
         success: true, 
         analysis: aiAnalysis,
+        analyzer: result.payload.analyzer,
+        saved: save.saved,
+        warning: save.saved ? undefined : `Hasil tidak tersimpan ke DB: ${save.warning} — jalankan scripts/setup-error-logs.sql`,
         message: 'AI analysis completed successfully'
       });
     }

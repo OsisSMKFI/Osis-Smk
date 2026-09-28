@@ -46,17 +46,21 @@ export default function ErrorMonitoringPage() {
   };
 
   const analyzeError = async (errorLog: ErrorLog) => {
-    if (!confirm('Analisis error ini dengan AI rule-based (ringan, tanpa API luar)?')) return;
+    if (!confirm('Analisis error ini dengan AI provider custom (1 panggilan ringan, fallback rule-based bila gagal)?')) return;
     setAnalyzing(errorLog.id);
     try {
       const r = await apiFetch('/api/admin/errors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ errorId: errorLog.id, errorData: errorLog }),
+        body: JSON.stringify({ errorId: errorLog.id, errorData: errorLog, deep: true }),
       });
       const j = await safeJson(r, { url: '/api/admin/errors', method: 'POST' }).catch(() => ({}));
       if (r.ok) {
-        alert('✅ AI analysis complete! Refresh untuk melihat fix suggestions.');
+        if (j.warning) {
+          alert('⚠️ Analisis selesai (' + (j.analyzer || 'AI') + ') tapi belum tersimpan ke DB:\n' + j.warning);
+        } else {
+          alert('✅ AI analysis complete (' + (j.analyzer || 'AI') + ')!');
+        }
         await loadErrors();
       } else {
         alert('❌ Analysis failed: ' + JSON.stringify(j));
@@ -217,9 +221,20 @@ export default function ErrorMonitoringPage() {
                         {analyzing === err.id ? 'Analyzing...' : 'Analyze'}
                       </button>
                     ) : (
-                      <span className="flex items-center gap-2 px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg">
-                        <FaCheck /> Analyzed
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="flex items-center gap-2 px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg">
+                          <FaCheck /> Analyzed
+                        </span>
+                        <button
+                          onClick={() => analyzeError(err)}
+                          disabled={analyzing === err.id}
+                          title={err.ai_analysis?.analyzer ? `Analyzer: ${err.ai_analysis.analyzer}` : 'Analisis ulang dengan AI'}
+                          className="flex items-center gap-1 px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs rounded transition disabled:opacity-50"
+                        >
+                          <FaRobot className={analyzing === err.id ? 'animate-spin' : ''} />
+                          {analyzing === err.id ? 'Analyzing...' : 'Deep AI'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -237,6 +252,12 @@ export default function ErrorMonitoringPage() {
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         <strong>Severity:</strong> <span className="capitalize">{err.ai_analysis.severity}</span>
                       </p>
+                      {err.ai_analysis.analyzer && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <strong>Analyzer:</strong> <span className="capitalize">{err.ai_analysis.analyzer}</span>
+                          {err.ai_analysis.confidence != null && <> · Confidence: {err.ai_analysis.confidence}%</>}
+                        </p>
+                      )}
                     </div>
                     {err.ai_analysis.suggestions?.length > 0 && (
                       <div className="space-y-2">

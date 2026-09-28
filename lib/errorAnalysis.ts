@@ -184,3 +184,135 @@ export function buildAiAnalysisPayload(a: ErrorAnalysis) {
     analyzed_at: new Date().toISOString(),
   };
 }
+
+/**
+ * Analisis DEEP memakai AI provider (custom default → fallback rule-based).
+ * Hanya dipanggil saat admin klik tombol Analyze — 1 panggilan ringan.
+ */
+export async function analyzeErrorWithLLM(errorData: {
+  message?: string;
+  stack?: string;
+  error_type?: string;
+  response_status?: number;
+}): Promise<{ analysis: ErrorAnalysis; payload: ReturnType<typeof buildAiAnalysisPayload>; source: string }> {
+  const fallback = analyzeErrorRuleBased({
+    message: errorData.message,
+    stack: errorData.stack,
+    errorType: errorData.error_type,
+    statusCode: errorData.response_status,
+  });
+  const fallbackResult = { analysis: fallback, payload: buildAiAnalysisPayload(fallback), source: 'rule-based' };
+
+  try {
+    const { getCustomAIProvider, callCustomAI } = await import('@/lib/aiProvider');
+    const provider = await getCustomAIProvider();
+    if (!provider) return fallbackResult;
+
+    const prompt = `Kamu adalah inspektor error aplikasi Next.js + Supabase. Analisis error berikut dan balas HANYA JSON tanpa teks lain.
+
+PESAN ERROR:
+${String(errorData.message || '').slice(0, 1500)}
+
+TIPE: ${errorData.error_type || 'unknown'} | STATUS: ${errorData.response_status ?? '-'} 
+
+STACK TRACE (potongan):
+${String(errorData.stack || '').slice(0, 2500) || '(tidak ada)'}
+
+Balas JSON persis:
+{
+  "root_cause": "penyebab paling mungkin dalam bahasa Indonesia (1-2 kalimat)",
+  "severity": "critical" | "high" | "medium" | "low",
+  "category": "database/schema | security | performance | configuration | routing | bug | network | other",
+  "confidence": 0-100,
+  "suggestions": [
+    { "action": "judul aksi konkret", "details": "langkah detail dalam bahasa Indonesia", "priority": 1 }
+  ]
+}
+Beri 2-3 suggestions yang benar-benar spesifik ke error ini (sebutkan nama kolom/route/berkas bila terdeteksi dari stack trace).`;
+
+    const text = await callCustomAI(
+      [
+        { role: 'system', content: 'You output only valid JSON. Jawab dalam bahasa Indonesia.' },
+        { role: 'user', content: prompt },
+      ],
+      { temperature: 0.2, maxTokens: 700 }
+    );
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return fallbackResult;
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    const suggestions = Array.isArray(parsed.suggestions)
+      ? parsed.suggestions
+          .filter((s: any) => s && s.action)
+          .slice(0, 5)
+          .map((s: any, i: number) => ({
+            action: String(s.action).slice(0, 200),
+            details: String(s.details || '').slice(0, 500),
+            priority: Number(s.priority) || i + 1,
+          }))
+      : [];
+    if (suggestions.length === 0) return fallbackResult;
+
+    const sev = ['critical', 'high', 'medium', 'low'].includes(parsed.severity)
+      ? parsed.severity
+      : fallback.severity;
+
+    const analysis: ErrorAnalysis = {
+      root_cause: String(parsed.root_cause || fallback.root_cause).slice(0, 600),
+      severity: sev,
+      suggestions,
+      riskLevel: sev,
+      category: String(parsed.category || fallback.category).slice(0, 60),
+      autoFixable: fallback.autoFixable,
+      autoFixCode: fallback.autoFixCode,
+      confidence: Math.min(100, Math.max(0, Number(parsed.confidence) || fallback.confidence)),
+    };
+
+    const payload = {
+      ...buildAiAnalysisPayload(analysis),
+      analyzer: `custom:${provider.model}`,
+    };
+    return { analysis, payload, source: `custom (${provider.model})` };
+  } catch (e: any) {
+    // LLM gagal → rule-based tetap jalan (analisis tidak pernah gagal total)
+    console.warn('[ErrorAnalysis] LLM analysis failed, using rule-based:', e?.message);
+    return fallbackResult;
+  }
+}
+
+/**
+ * Simpan hasil analisis ke error_logs — TOLERAN terhadap kolom hilang:
+ * kolom yang ditolak DB dibuang satu per satu sampai update masuk.
+ * Mengembalikan { saved, warning? } — tidak pernah melempar error.
+ */
+export async function saveAiAnalysis(
+  supabase: any,
+  errorId: string,
+  payload: any,
+  extra: Record<string, any> = {}
+): Promise<{ saved: boolean; warning?: string }> {
+  const row: Record<string, any> = {
+    ai_analysis: payload,
+    fix_status: 'analyzed',
+    ai_analyzed: true,
+    ai_risk_level: payload?.severity,
+    ai_category: payload?.category,
+    ...extra,
+  };
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { error } = await supabase.from('error_logs').update(row).eq('id', errorId);
+    if (!error) return { saved: true };
+
+    const msg = error.message || '';
+    const colMatch = msg.match(/'([^']+)' column/) || msg.match(/column "([^"]+)"/);
+    const unknownCol = error.code === 'PGRST204' || error.code === '42703';
+    if (unknownCol && colMatch && colMatch[1] in row) {
+      delete row[colMatch[1]];
+      continue;
+    }
+    return { saved: false, warning: msg.slice(0, 300) };
+  }
+  return { saved: false, warning: 'Gagal menyimpan setelah beberapa percobaan kolom' };
+}
