@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
             errorId: 'console-only',
             logged: 'console',
             aiAnalysis,
-            warning: insertError?.message?.slice(0, 300)
+            warning: `${insertError?.code || 'nocode'}: ${insertError?.message?.slice(0, 250)}`.trim()
           }
         });
       }
