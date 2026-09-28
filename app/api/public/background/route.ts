@@ -12,11 +12,17 @@ export async function GET(request: NextRequest) {
     if (key) {
       const { data, error } = await supabaseAdmin
         .from('page_content')
-        .select('page_key, content, category, content_type, published')
+        .select('*')
         .eq('page_key', key)
         .maybeSingle();
 
       if (error) {
+        // Key design override opsional — query error juga tidak boleh spam 404
+        if (key.startsWith('design_override_')) {
+          return NextResponse.json(
+            buildSuccess('OK', { page_key: key, content: '', content_value: '', category: 'design', content_type: 'css', published: true })
+          );
+        }
         // Optional design key / missing table — treat as not found, not 500
         return NextResponse.json(buildError('CONTENT_NOT_FOUND', error.message), { status: 404 });
       }
