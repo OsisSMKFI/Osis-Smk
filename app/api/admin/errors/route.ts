@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { analyzeErrorRuleBased, buildAiAnalysisPayload } from '@/lib/errorAnalysis';
 
 export async function GET(request: NextRequest) {
   try {
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
       if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
         return NextResponse.json({ 
           error: 'Table error_logs not found',
-          hint: 'Please create the error_logs table. See ERROR_LOGS_SETUP_GUIDE.md',
+          hint: 'Jalankan scripts/setup-error-logs.sql di Supabase SQL Editor',
           setupRequired: true,
           errors: []
         }, { status: 200 });
@@ -88,8 +89,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    console.log('[/api/admin/errors GET] Returning errors:', errors?.length || 0);
-    return NextResponse.json({ errors: errors || [] });
+    // Auto-analyze ringan: error yang belum punya ai_analysis dianalisis
+    // sekarang juga (rule-based, tanpa LLM) supaya panel selalu menampilkan
+    // root cause + saran perbaikan tanpa klik manual.
+    const list = errors || [];
+    const pending = list.filter((e: any) => !e.ai_analysis && !e.deleted_at).slice(0, 20);
+    if (pending.length > 0) {
+      await Promise.all(pending.map(async (e: any) => {
+        const a = analyzeErrorRuleBased({
+          message: e.message,
+          stack: e.stack_trace,
+          errorType: e.error_type,
+          errorCode: e.error_code,
+          statusCode: e.response_status,
+        });
+        const payload = buildAiAnalysisPayload(a);
+        const { error: updErr } = await supabaseAdmin
+          .from('error_logs')
+          .update({
+            ai_analysis: payload,
+            fix_status: e.fix_status && e.fix_status !== 'pending' ? e.fix_status : 'analyzed',
+            ai_analyzed: true,
+            ai_risk_level: a.riskLevel,
+            ai_category: a.category,
+            auto_fixable: a.autoFixable,
+          })
+          .eq('id', e.id);
+        if (!updErr) {
+          e.ai_analysis = payload;
+          e.fix_status = e.fix_status && e.fix_status !== 'pending' ? e.fix_status : 'analyzed';
+          e.ai_analyzed = true;
+        }
+      }));
+      console.log('[/api/admin/errors GET] Auto-analyzed', pending.length, 'error(s)');
+    }
+
+    console.log('[/api/admin/errors GET] Returning errors:', list.length);
+    return NextResponse.json({ errors: list });
   } catch (error: any) {
     console.error('[/api/admin/errors GET] Exception:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
@@ -108,13 +144,24 @@ export async function POST(request: NextRequest) {
 
     // If errorId provided, this is an AI analysis request
     if (errorId && errorData) {
-      // Simulate AI analysis (replace with actual AI call if needed)
+      // Rule-based analysis (ringan, tanpa LLM) — konsisten dengan analisis
+      // otomatis di /api/errors/log dan auto-analyze saat GET.
+      const shared = analyzeErrorRuleBased({
+        message: errorData.message || errorData.error_message,
+        stack: errorData.stack_trace || errorData.error_stack,
+        errorType: errorData.error_type,
+        errorCode: errorData.error_code,
+        statusCode: errorData.response_status || errorData.status_code,
+      });
       const aiAnalysis = {
         timestamp: new Date().toISOString(),
         error_type: errorData.error_type || 'Unknown',
-        severity: determineSeverity(errorData),
-        suggestions: generateSuggestions(errorData),
-        root_cause: analyzeRootCause(errorData),
+        severity: shared.severity,
+        root_cause: shared.root_cause,
+        suggestions: shared.suggestions,
+        category: shared.category,
+        confidence: shared.confidence,
+        analyzer: 'rule-based v1',
       };
 
       // Update error log with AI analysis
@@ -123,6 +170,10 @@ export async function POST(request: NextRequest) {
         .update({
           ai_analysis: aiAnalysis,
           fix_status: 'analyzed',
+          ai_analyzed: true,
+          ai_risk_level: shared.riskLevel,
+          ai_category: shared.category,
+          auto_fixable: shared.autoFixable,
         })
         .eq('id', errorId);
 
@@ -158,90 +209,6 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
-
-// Helper functions for AI analysis
-function determineSeverity(errorData: any): string {
-  if (errorData.status_code >= 500) return 'critical';
-  if (errorData.status_code >= 400) return 'warning';
-  return 'info';
-}
-
-function analyzeRootCause(errorData: any): string {
-  const { error_message, error_stack, url, method } = errorData;
-  
-  if (error_message?.includes('CORS')) {
-    return 'CORS policy blocking the request. Check API headers and allowed origins.';
-  }
-  if (error_message?.includes('404') || error_message?.includes('Not Found')) {
-    return 'Resource not found. Verify endpoint URL and routing configuration.';
-  }
-  if (error_message?.includes('401') || error_message?.includes('Unauthorized')) {
-    return 'Authentication failure. Check session token and user permissions.';
-  }
-  if (error_message?.includes('500')) {
-    return 'Server-side error. Check API implementation and database connection.';
-  }
-  if (error_stack?.includes('TypeError')) {
-    return 'Type error detected. Check data types and null/undefined values.';
-  }
-  
-  return 'Error analysis inconclusive. Manual review recommended.';
-}
-
-function generateSuggestions(errorData: any): Array<{ action: string; details: string; priority: number }> {
-  const suggestions = [];
-  const { error_message, url, method, status_code } = errorData;
-
-  if (error_message?.includes('CORS')) {
-    suggestions.push({
-      action: 'Add CORS headers to API response',
-      details: 'Update API route to include: Access-Control-Allow-Origin, Access-Control-Allow-Methods, Access-Control-Allow-Headers',
-      priority: 1,
-    });
-  }
-
-  if (status_code === 404) {
-    suggestions.push({
-      action: 'Verify route configuration',
-      details: `Check if route ${url} exists in app/api/ or app/ directory. Verify file naming and export.`,
-      priority: 1,
-    });
-  }
-
-  if (status_code === 401) {
-    suggestions.push({
-      action: 'Check authentication middleware',
-      details: 'Verify session token is being sent in request headers. Check auth() function in API route.',
-      priority: 1,
-    });
-  }
-
-  if (status_code >= 500) {
-    suggestions.push({
-      action: 'Review server-side code',
-      details: 'Check database queries, environment variables, and error handling in API route.',
-      priority: 1,
-    });
-  }
-
-  if (error_message?.includes('fetch')) {
-    suggestions.push({
-      action: 'Add error handling to fetch call',
-      details: 'Wrap fetch in try-catch block and handle network errors gracefully.',
-      priority: 2,
-    });
-  }
-
-  if (suggestions.length === 0) {
-    suggestions.push({
-      action: 'Enable detailed error logging',
-      details: 'Add console.error statements to identify the exact failure point.',
-      priority: 3,
-    });
-  }
-
-  return suggestions;
 }
 
 export async function DELETE(request: NextRequest) {

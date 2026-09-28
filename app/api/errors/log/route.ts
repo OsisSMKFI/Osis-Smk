@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { analyzeErrorRuleBased, buildAiAnalysisPayload } from '@/lib/errorAnalysis';
 
 /**
  * LOG ERROR - Called from client or server
@@ -52,15 +53,23 @@ export async function POST(request: NextRequest) {
                      'unknown';
     const userAgent = request.headers.get('user-agent') || '';
 
-    // AI Analysis
-    const aiAnalysis = await analyzeErrorWithAI({
-      errorType,
-      severity,
+    // AI Analysis (rule-based, ringan — tanpa LLM/network)
+    const analysis = analyzeErrorRuleBased({
       message,
-      stackTrace,
+      stack: stackTrace,
+      errorType,
       errorCode,
-      metadata
+      statusCode: responseStatus,
     });
+    const aiAnalysis = {
+      riskLevel: analysis.riskLevel,
+      category: analysis.category,
+      suggestions: analysis.suggestions.map((s) => `${s.action}: ${s.details}`),
+      autoFixable: analysis.autoFixable,
+      autoFixCode: analysis.autoFixCode,
+      suggestedSeverity: severity || analysis.severity,
+      panel: buildAiAnalysisPayload(analysis),
+    };
 
     // Try to check for duplicates (skip if table doesn't exist)
     let existingError = null;
@@ -131,6 +140,8 @@ export async function POST(request: NextRequest) {
           ai_risk_level: aiAnalysis.riskLevel,
           ai_category: aiAnalysis.category,
           ai_suggestions: aiAnalysis.suggestions,
+          ai_analysis: aiAnalysis.panel,
+          fix_status: 'analyzed',
           auto_fixable: aiAnalysis.autoFixable,
           metadata,
           first_occurred_at: new Date().toISOString(),
@@ -215,100 +226,6 @@ export async function POST(request: NextRequest) {
       }
     });
   }
-}
-
-/**
- * AI Error Analysis
- */
-async function analyzeErrorWithAI(error: any) {
-  const { errorType, severity, message, stackTrace, errorCode } = error;
-
-  let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'medium';
-  let category = 'bug';
-  const suggestions: string[] = [];
-  let autoFixable = false;
-  let autoFixCode = null;
-  let suggestedSeverity = severity;
-
-  // 1. Analyze error type
-  if (errorType === 'authentication_error' || errorType === 'authorization_error') {
-    riskLevel = 'high';
-    category = 'security';
-    suggestions.push('Verify user credentials and permissions');
-    suggestions.push('Check for brute force attempts');
-  }
-
-  // 2. Analyze message patterns
-  if (message?.includes('CORS') || message?.includes('cross-origin')) {
-    riskLevel = 'medium';
-    category = 'configuration';
-    autoFixable = true;
-    autoFixCode = 'ADD_CORS_HEADER';
-    suggestions.push('Auto-fix: Add CORS headers to response');
-  }
-
-  if (message?.includes('timeout') || message?.includes('ETIMEDOUT')) {
-    riskLevel = 'medium';
-    category = 'performance';
-    autoFixable = true;
-    autoFixCode = 'RETRY_WITH_BACKOFF';
-    suggestions.push('Auto-fix: Retry with exponential backoff');
-  }
-
-  if (message?.includes('404') || message?.includes('Not Found')) {
-    riskLevel = 'low';
-    category = 'user_error';
-    suggestions.push('Check if resource exists');
-    suggestions.push('Verify URL is correct');
-  }
-
-  if (message?.includes('500') || message?.includes('Internal Server Error')) {
-    riskLevel = 'critical';
-    category = 'bug';
-    suggestions.push('Investigate server logs immediately');
-    suggestions.push('Check database connection');
-  }
-
-  if (message?.includes('memory') || message?.includes('heap')) {
-    riskLevel = 'critical';
-    category = 'performance';
-    suggestions.push('Memory leak detected - restart server');
-    suggestions.push('Optimize memory-intensive operations');
-  }
-
-  if (message?.includes('SQL') || message?.includes('database')) {
-    riskLevel = 'high';
-    category = 'database';
-    suggestions.push('Check database query syntax');
-    suggestions.push('Verify RLS policies');
-  }
-
-  // 3. Analyze stack trace
-  if (stackTrace?.includes('node_modules')) {
-    suggestions.push('Third-party library error - check for updates');
-  }
-
-  if (stackTrace?.includes('auth') || stackTrace?.includes('session')) {
-    riskLevel = 'high';
-    category = 'security';
-  }
-
-  // 4. Auto-suggest severity
-  if (!severity) {
-    if (riskLevel === 'critical') suggestedSeverity = 'critical';
-    else if (riskLevel === 'high') suggestedSeverity = 'high';
-    else if (riskLevel === 'low') suggestedSeverity = 'low';
-    else suggestedSeverity = 'medium';
-  }
-
-  return {
-    riskLevel,
-    category,
-    suggestions,
-    autoFixable,
-    autoFixCode,
-    suggestedSeverity
-  };
 }
 
 /**

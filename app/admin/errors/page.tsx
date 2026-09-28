@@ -7,11 +7,12 @@ import { FaBug, FaRobot, FaCheck, FaExclamationTriangle, FaCode, FaSync } from '
 interface ErrorLog {
   id: string;
   error_type: string;
-  url: string;
-  method: string;
-  status_code: number;
-  error_message: string;
-  error_stack: string;
+  page_url: string;
+  request_method: string;
+  response_status: number | null;
+  message: string;
+  stack_trace: string;
+  severity: string;
   created_at: string;
   fix_status: string;
   ai_analysis: any;
@@ -45,7 +46,7 @@ export default function ErrorMonitoringPage() {
   };
 
   const analyzeError = async (errorLog: ErrorLog) => {
-    if (!confirm('Analyze error dengan AI? Ini akan menggunakan OpenAI API.')) return;
+    if (!confirm('Analisis error ini dengan AI rule-based (ringan, tanpa API luar)?')) return;
     setAnalyzing(errorLog.id);
     try {
       const r = await apiFetch('/api/admin/errors', {
@@ -142,16 +143,16 @@ export default function ErrorMonitoringPage() {
                     <li>Pilih project Anda</li>
                     <li>Klik <strong>SQL Editor</strong> di sidebar</li>
                     <li>Klik <strong>New Query</strong></li>
-                    <li>Copy SQL dari file <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">create_error_logs_table.sql</code></li>
+                    <li>Copy SQL dari file <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">scripts/setup-error-logs.sql</code> di repo</li>
                     <li>Paste dan klik <strong>Run</strong></li>
                   </ol>
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => window.open('/ERROR_LOGS_SETUP_GUIDE.md', '_blank')}
+                    onClick={() => window.open('https://github.com/OsisSMKFI/Osis-Smk/blob/main/scripts/setup-error-logs.sql', '_blank')}
                     className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition font-medium"
                   >
-                    📖 Lihat Panduan Lengkap
+                    📖 Lihat File SQL
                   </button>
                   <button
                     onClick={loadErrors}
@@ -185,11 +186,11 @@ export default function ErrorMonitoringPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        err.status_code >= 500 ? 'bg-red-100 text-red-800' :
-                        err.status_code >= 400 ? 'bg-yellow-100 text-yellow-800' :
+                        (err.response_status || 0) >= 500 || err.severity === 'critical' ? 'bg-red-100 text-red-800' :
+                        (err.response_status || 0) >= 400 || err.severity === 'high' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-blue-100 text-blue-800'
                       }`}>
-                        {err.status_code}
+                        {err.response_status || err.severity || 'error'}
                       </span>
                       <span className="text-xs text-gray-500">
                         {new Date(err.created_at).toLocaleString('id-ID')}
@@ -199,10 +200,10 @@ export default function ErrorMonitoringPage() {
                       {err.error_type}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {err.method} {err.url}
+                      {err.request_method} {err.page_url}
                     </p>
                     <p className="text-sm text-red-600 dark:text-red-400">
-                      {err.error_message}
+                      {err.message}
                     </p>
                   </div>
                   <div className="flex gap-2 ml-4">
@@ -265,13 +266,13 @@ export default function ErrorMonitoringPage() {
                   </div>
                 )}
 
-                {err.error_stack && (
+                {err.stack_trace && (
                   <details className="mt-3">
                     <summary className="cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
                       Show Stack Trace
                     </summary>
-                    <pre className="mt-2 p-3 bg-gray-900 text-gray-100 text-xs rounded overflow-x-auto">
-                      {err.error_stack}
+                    <pre className="mt-2 p-3 bg-gray-900 text-white text-xs rounded overflow-x-auto">
+                      {err.stack_trace}
                     </pre>
                   </details>
                 )}

@@ -14,6 +14,7 @@ import BackgroundSync from '../components/BackgroundSync';
 import ClientRole from '../components/ClientRole';
 import DeferredMount from '../components/DeferredMount';
 import DesignThemeLoader from '../components/DesignThemeLoader';
+import ErrorMonitorInit from '../components/ErrorMonitorInit';
 import Providers from '../components/Providers';
 import ScrollToTop from '../components/ScrollToTop';
 
@@ -80,6 +81,7 @@ export default function RootLayout({
         <LocationServiceProvider>
         <Providers>
             <ScrollToTop />
+            <ErrorMonitorInit />
             <DeferredMount>
               <BackgroundSync />
               <DesignThemeLoader />
