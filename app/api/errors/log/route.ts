@@ -148,7 +148,9 @@ export async function POST(request: NextRequest) {
       };
 
       let insertError: any = null;
-      for (let attempt = 0; attempt < 8; attempt++) {
+      // Batas = jumlah kolom payload (~30) — tabel versi lama bisa kehilangan
+      // banyak kolom sekaligus; strip satu per satu sampai insert masuk.
+      for (let attempt = 0; attempt < 40; attempt++) {
         const res = await supabaseAdmin
           .from('error_logs')
           .insert([insertPayload])
