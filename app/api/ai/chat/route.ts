@@ -1029,7 +1029,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     const body = await request.json();
-    const { messages: incomingMessages, message: singleMessage, history, reset = false, sessionId, mode: requestMode, provider, emphasis = false, context } = body || {};
+    const { messages: incomingMessages, message: singleMessage, history, reset = false, sessionId, provider, emphasis = false, context } = body || {};
     
     // Support both 'messages' array and single 'message' string (for Design Studio)
     let baseMessages: Array<{ role: string; content: string }> = [];
@@ -1052,7 +1052,11 @@ export async function POST(request: NextRequest) {
     const userQuery: string = lastUser?.content || '';
     const role = (session?.user as any)?.role as string | undefined;
     const userId = (session?.user as any)?.id as string | undefined;
-    const mode: 'admin' | 'public' = requestMode || (role && (role === 'admin' || role === 'super_admin') ? 'admin' : 'public');
+    // Mode admin HANYA dari role session yang diverifikasi server.
+    // Jangan pernah percaya `mode` dari body client — bisa dipalsukan
+    // utk mengakses /sql, /errors, dsb tanpa login.
+    const roleIsAdmin = role === 'admin' || role === 'super_admin';
+    const mode: 'admin' | 'public' = roleIsAdmin ? 'admin' : 'public';
     
     console.log('[/api/ai/chat] Request:', { mode, userQuery: userQuery.substring(0, 50), hasSession: !!session });
     

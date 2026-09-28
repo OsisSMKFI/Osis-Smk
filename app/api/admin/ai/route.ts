@@ -21,6 +21,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Admin commands (/sql, /errors, fix, dst) hanya utk admin & super_admin —
+    // cek role di server, jangan hanya status login.
+    const requesterRole = ((session.user as any)?.role || '').toLowerCase();
+    if (requesterRole !== 'admin' && requesterRole !== 'super_admin') {
+      return NextResponse.json({ error: 'Forbidden', role: requesterRole }, { status: 403 });
+    }
+
     const body = await request.json();
     const { prompt, provider, sessionId, action } = body;
 

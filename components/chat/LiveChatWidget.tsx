@@ -130,7 +130,7 @@ function detectQuickActions(content: string): QuickAction[] {
   return actions.slice(0, 2); // Max 2 quick actions
 }
 
-export default function LiveChatWidget({ role, showFloating = true }: { role?: 'super_admin' | 'member' | 'guest', showFloating?: boolean }) {
+export default function LiveChatWidget({ role, showFloating = true }: { role?: 'super_admin' | 'admin' | 'member' | 'guest' | string, showFloating?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [input, setInput] = React.useState('');
@@ -269,7 +269,12 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
     return () => window.removeEventListener('design-updated', handleDesignUpdate);
   }, [mounted]);
 
-  const mode: 'admin' | 'public' = role === 'super_admin' ? 'admin' : 'public';
+  // Mode admin sesuai role yang login (sinkron dgn server /api/ai/chat —
+  // server juga mengabaikan mode dari client dan memakai role session).
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'super_admin' || role === 'admin';
+  const roleName = isSuperAdmin ? 'Super Admin' : 'Admin';
+  const mode: 'admin' | 'public' = isAdmin ? 'admin' : 'public';
   const suggestionsEnabled = process.env.NEXT_PUBLIC_CHAT_SUGGESTIONS !== '0';
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -305,7 +310,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   // 🎨 DESIGN PREVIEW SYSTEM - Realtime Design Changes (Super Admin)
   // ═══════════════════════════════════════════════════════════════════════════
   const requestDesignChange = async (component: string, changes: string) => {
-    if (mode !== 'admin') return null;
+    if (!isSuperAdmin) return null;
     
     setDesignLoading(true);
     try {
@@ -331,7 +336,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
   };
   
   const applyDesignChange = async () => {
-    if (!designPreview || mode !== 'admin') return false;
+    if (!designPreview || !isSuperAdmin) return false;
     
     setDesignApplying(true);
     try {
@@ -441,11 +446,18 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
     const saved = localStorage.getItem('livechat_state');
     if (saved) {
       try {
-        const { messages: savedMessages, sessionId: savedSessionId, open: savedOpen, provider: savedProvider } = JSON.parse(saved);
-        if (savedMessages) setMessages(savedMessages);
-        if (savedSessionId) setSessionId(savedSessionId);
+        const parsed = JSON.parse(saved);
+        const { messages: savedMessages, sessionId: savedSessionId, open: savedOpen, provider: savedProvider, role: savedRole } = parsed;
         if (savedOpen !== undefined) setOpen(savedOpen);
         if (savedProvider) setProvider(savedProvider);
+        // Riwayat chat hanya dipulihkan kalau role-nya sama — cegah sisa
+        // sambutan "Super Admin" dari sesi lama tampil untuk tamu/guest.
+        if (savedRole === role) {
+          if (savedMessages) setMessages(savedMessages);
+          if (savedSessionId) setSessionId(savedSessionId);
+        } else {
+          localStorage.removeItem('livechat_state');
+        }
       } catch (e) {
         console.error('Failed to load chat state:', e);
       }
@@ -465,7 +477,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
         messages: messagesWithoutImages, 
         sessionId, 
         open, 
-        provider 
+        provider,
+        role 
       }));
     } catch (e: any) {
       if (e.name === 'QuotaExceededError') {
@@ -473,7 +486,17 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
         localStorage.removeItem('livechat_state');
       }
     }
-  }, [messages, sessionId, open, provider]);
+  }, [messages, sessionId, open, provider, role]);
+
+  // Role berubah (login/logout) → reset riwayat, sambutan menyusul sesuai role baru
+  const prevRoleRef = React.useRef(role);
+  React.useEffect(() => {
+    if (prevRoleRef.current !== role) {
+      prevRoleRef.current = role;
+      setMessages([]);
+      setSessionId(null);
+    }
+  }, [role]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 📨 POLL FOR ADMIN REPLIES - Check if admin has replied to forwarded message
@@ -604,8 +627,10 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
       const welcomeMsg = (mode === 'admin')
         ? (
           isMobile
-            ? `🤖 AI Super Admin — quick tips:\n• /help • /errors list • /sql <query>`
-            : `🤖 **AI Super Admin Assistant** - Full System Access\n\nSaya punya akses lengkap ke database dan sistem. Type / for command suggestions, or ask me to analyze errors and run SQL queries.`
+            ? `🤖 AI ${roleName} — quick tips:\n• /help • /errors list • /sql <query>`
+            : isSuperAdmin
+              ? `🤖 **AI Super Admin Assistant** - Full System Access\n\nSaya punya akses lengkap ke database dan sistem. Type / for command suggestions, or ask me to analyze errors and run SQL queries.`
+              : `🤖 **AI Admin Assistant** - Admin Access\n\nSaya punya akses admin ke sistem. Type / for command suggestions, atau minta analisa error dan perintah sistem.`
         )
         : (
           isMobile
@@ -770,7 +795,6 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
             image: currentImage
           }],
           sessionId,
-          mode,
           provider,
         })
       });
@@ -966,11 +990,11 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="text-sm font-bold text-slate-800 dark:text-white truncate">
-                  {mode === 'admin' ? '🔥 Super Admin AI' : 'WEBOSIS AI'}
+                  {isSuperAdmin ? '🔥 Super Admin AI' : mode === 'admin' ? '🛠️ Admin AI' : 'WEBOSIS AI'}
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                  <span>{mode === 'admin' ? 'Premium v5.0' : 'Online'}</span>
+                  <span>{isSuperAdmin ? 'Premium v5.0' : mode === 'admin' ? 'Admin' : 'Online'}</span>
                 </div>
               </div>
             </div>
@@ -989,8 +1013,8 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
                 </button>
               )}
               
-              {/* Design Mode (Admin only) */}
-              {mode === 'admin' && !isMobile && (
+              {/* Design Mode (Super Admin only) */}
+              {isSuperAdmin && !isMobile && (
                 <button
                   onClick={() => setShowDesignPreview(!showDesignPreview)}
                   className={`text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400 transition p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 ${showDesignPreview ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600' : ''}`}
@@ -1124,7 +1148,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
           {/* ═══════════════════════════════════════════════════════════════════
               🎨 DESIGN PREVIEW PANEL (Super Admin)
               ═══════════════════════════════════════════════════════════════════ */}
-          {showDesignPreview && mode === 'admin' && designPreview && (
+          {showDesignPreview && isSuperAdmin && designPreview && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-5">
                 <div className="flex items-center justify-between mb-4">

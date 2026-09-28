@@ -9,8 +9,10 @@ const LiveChatWidget = dynamic(() => import('./chat/LiveChatWidget'), {
 });
 
 export default function ClientRole() {
-  const { data: session } = useSession();
-  const role = ((session?.user as any)?.role || 'guest') as 'super_admin' | 'member' | 'guest';
+  const { data: session, status } = useSession();
+  // Role apa adanya dari session (guest bila belum login) — LiveChatWidget
+  // yang menentukan tampilan admin/public sesuai role ini.
+  const role = ((session?.user as any)?.role || 'guest') as string;
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -39,7 +41,9 @@ export default function ClientRole() {
     };
   }, []);
 
-  if (!ready) return null;
+  // Tunggu session resolve dulu — role harus final saat widget di-mount
+  // (mencegah sambutan "Super Admin" muncul untuk tamu/guest).
+  if (!ready || status === 'loading') return null;
 
   return <LiveChatWidget role={role} showFloating={false} />;
 }
