@@ -163,8 +163,11 @@ export async function POST(request: NextRequest) {
         insertError = res.error;
         const msg = insertError.message || '';
         const colMatch = msg.match(/'([^']+)' column/) || msg.match(/column "([^"]+)"/);
-        const unknownCol = insertError.code === 'PGRST204' || insertError.code === '42703';
-        if (unknownCol && colMatch && colMatch[1] in insertPayload) {
+        const unknownCol =
+          insertError.code === 'PGRST204' ||
+          insertError.code === '42703' ||
+          /Could not find the '[^']+' column|schema cache/i.test(msg);
+        if (colMatch && colMatch[1] in insertPayload && (unknownCol || !insertError.code)) {
           console.warn('[Error Log] Column rejected, dropping:', colMatch[1]);
           delete insertPayload[colMatch[1]];
           continue;

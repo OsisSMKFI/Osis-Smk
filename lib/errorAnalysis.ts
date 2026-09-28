@@ -307,8 +307,11 @@ export async function saveAiAnalysis(
 
     const msg = error.message || '';
     const colMatch = msg.match(/'([^']+)' column/) || msg.match(/column "([^"]+)"/);
-    const unknownCol = error.code === 'PGRST204' || error.code === '42703';
-    if (unknownCol && colMatch && colMatch[1] in row) {
+    const unknownCol =
+      error.code === 'PGRST204' ||
+      error.code === '42703' ||
+      /Could not find the '[^']+' column|schema cache/i.test(msg);
+    if (colMatch && colMatch[1] in row && (unknownCol || !error.code)) {
       delete row[colMatch[1]];
       continue;
     }

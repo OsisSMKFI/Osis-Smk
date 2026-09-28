@@ -178,8 +178,11 @@ export async function POST(request: NextRequest) {
 
       const msg = error.message || '';
       const colMatch = msg.match(/'([^']+)' column/) || msg.match(/column "([^"]+)"/);
-      const unknownCol = error.code === 'PGRST204' || error.code === '42703';
-      if (unknownCol && colMatch && colMatch[1] in attemptPayload) {
+      const unknownCol =
+        error.code === 'PGRST204' ||
+        error.code === '42703' ||
+        /Could not find the '[^']+' column|schema cache/i.test(msg);
+      if (colMatch && colMatch[1] in attemptPayload && (unknownCol || !error.code)) {
         console.warn('[Comments API] Column rejected by DB, dropping:', colMatch[1]);
         delete attemptPayload[colMatch[1]];
         continue;
