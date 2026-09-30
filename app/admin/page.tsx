@@ -215,8 +215,24 @@ export default function AdminDashboard() {
         const res = await apiFetch('/api/admin/errors?summary=true');
         if (res.ok) {
           const data = await safeJson(res, { url: '/api/admin/errors?summary=true', method: 'GET' });
-          
-          // Calculate summary
+
+          if (typeof data.total === 'number') {
+            // Bentuk baru: server sudah menghitung semua statistik
+            setErrorSummary({
+              total: data.total,
+              critical: data.critical || 0,
+              recent: data.recent || 0,
+              resolved: data.resolved || 0,
+              topErrors: (data.topErrors || []).map((t: any) => ({
+                message: t.message,
+                count: t.count,
+                lastSeen: t.lastSeen || (t.latest ? new Date(t.latest).toLocaleTimeString('id-ID') : 'Unknown'),
+              })),
+            });
+            return;
+          }
+
+          // Fallback lama: hitung sendiri dari data.errors
           const errors = data.errors || [];
           const now = Date.now();
           const oneHourAgo = now - (60 * 60 * 1000);

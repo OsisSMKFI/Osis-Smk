@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { maybePurgeLogs } from '@/lib/logRetention';
 
 /**
  * GET ALL USER ACTIVITIES - ADMIN ONLY
@@ -25,6 +26,10 @@ export async function GET(request: NextRequest) {
         error: 'Forbidden: Admin access required'
       }, { status: 403 });
     }
+
+    // Retention otomatis (throttled): activity > 14 hari dibuang
+    // supaya tabel tidak penuh & panel tidak berat.
+    await maybePurgeLogs(supabaseAdmin, 'activity');
 
     const { searchParams } = new URL(request.url);
     
@@ -93,12 +98,7 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    // Calculate stats
-    const { data: allActivities } = await supabaseAdmin
-      .from('activity_logs')
-      .select('status, user_name, ip_address')
-      .is('deleted_at', null);
-
+    // Calculate stats — pakai count query ringan (tanpa select semua baris)
     const stats = {
       total: count || 0,
       suspicious: 0,
@@ -106,24 +106,42 @@ export async function GET(request: NextRequest) {
       failed: 0
     };
 
-    if (allActivities) {
-      stats.failed = allActivities.filter(a => a.status === 'failure' || a.status === 'error').length;
-      stats.anonymous = allActivities.filter(a => !a.user_name || a.user_name === 'Anonymous').length;
-      
-      // Detect suspicious: multiple IPs for same user
+    const [{ count: failedCount }, { count: anonCount }, { data: recentActs }] =
+      await Promise.all([
+        supabaseAdmin
+          .from('activity_logs')
+          .select('id', { count: 'exact', head: true })
+          .is('deleted_at', null)
+          .in('status', ['failure', 'error']),
+        supabaseAdmin
+          .from('activity_logs')
+          .select('id', { count: 'exact', head: true })
+          .is('deleted_at', null)
+          .or('user_name.is.null,user_name.eq.Anonymous'),
+        // 24 jam terakhir — deteksi suspicious berbasis jendela waktu,
+        // bukan semua waktu (pindah IP selama berminggu-minggu itu normal)
+        supabaseAdmin
+          .from('activity_logs')
+          .select('user_id, user_name, user_email, ip_address')
+          .is('deleted_at', null)
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+      ]);
+
+    stats.failed = failedCount || 0;
+    stats.anonymous = anonCount || 0;
+
+    if (recentActs) {
+      // IP nyata saja (Unknown/kosong tidak dihitung)
       const ipByUser = new Map<string, Set<string>>();
-      allActivities.forEach(a => {
-        if (a.user_name) {
-          if (!ipByUser.has(a.user_name)) {
-            ipByUser.set(a.user_name, new Set());
-          }
-          if (a.ip_address) {
-            ipByUser.get(a.user_name)!.add(a.ip_address);
-          }
-        }
+      recentActs.forEach((a) => {
+        const key = a.user_id || a.user_email || a.user_name;
+        const ip = (a.ip_address || '').trim().toLowerCase();
+        if (!key || !ip || ip === 'unknown' || ip === '-' || ip === 'n/a') return;
+        if (!ipByUser.has(key)) ipByUser.set(key, new Set());
+        ipByUser.get(key)!.add(ip);
       });
-      
-      stats.suspicious = Array.from(ipByUser.values()).filter(ips => ips.size > 3).length;
+      // ≥6 IP nyata berbeda dalam 24 jam = patut dicurigai
+      stats.suspicious = Array.from(ipByUser.values()).filter((ips) => ips.size >= 6).length;
     }
 
     console.log('[Admin Activity] Found:', count, 'activities');

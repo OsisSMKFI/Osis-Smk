@@ -71,6 +71,23 @@ export async function POST(request: NextRequest) {
       panel: buildAiAnalysisPayload(analysis),
     };
 
+    // Anti-loop: maks 20 laporan/menit per instance server.
+    // Kalau ada client/script yang spam error, sisanya hanya masuk console.
+    const rl = ((globalThis as any).__errorLogRate ||= { ts: Date.now(), n: 0 });
+    if (Date.now() - rl.ts > 60000) { rl.ts = Date.now(); rl.n = 0; }
+    rl.n++;
+    if (rl.n > 20) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          errorId: 'rate-limited',
+          logged: 'console',
+          aiAnalysis,
+          warning: 'Rate limit anti-loop aktif (lebih dari 20 error/menit) — hanya dicatat ke console'
+        }
+      });
+    }
+
     // Try to check for duplicates (skip if table doesn't exist)
     let existingError: any = null;
     try {
@@ -150,6 +167,7 @@ export async function POST(request: NextRequest) {
 
       let insertError: any = null;
       let lastAttempt = -1;
+      let strayColumn: string | null = null;
       // Batas = jumlah kolom payload (~30) — tabel versi lama bisa kehilangan
       // banyak kolom sekaligus; strip satu per satu sampai insert masuk.
       for (let attempt = 0; attempt < 40; attempt++) {
@@ -163,7 +181,8 @@ export async function POST(request: NextRequest) {
           .select('id')
           .maybeSingle();
         if (!res.error) {
-          errorLog = res.data;
+          // SUKSES — res.data bisa null pada insert tertentu, tetap dianggap masuk DB
+          errorLog = res.data || { id: null };
           break;
         }
         insertError = res.error;
@@ -178,10 +197,21 @@ export async function POST(request: NextRequest) {
           delete insertPayload[colMatch[1]];
           continue;
         }
+        // Error menyebut kolom yang TIDAK ada di payload (mis. dari jalur
+        // RETURNING / validasi cache) — coba insert tanpa select sama sekali.
+        if (colMatch && unknownCol) {
+          strayColumn = colMatch[1];
+          const res2 = await supabaseAdmin.from('error_logs').insert([insertPayload]);
+          if (!res2.error) {
+            errorLog = { id: null };
+            break;
+          }
+          insertError = res2.error;
+        }
         break;
       }
 
-      if (insertError || !errorLog) {
+      if (!errorLog) {
         console.error('[Error Log] ⚠️ Insert error:', insertError?.message);
         console.log('[Error Log] 📋 Logged to console only (DB unavailable)');
 
@@ -191,7 +221,7 @@ export async function POST(request: NextRequest) {
             errorId: 'console-only',
             logged: 'console',
             aiAnalysis,
-            warning: `attempt=${lastAttempt} keys=${Object.keys(insertPayload).length} has=${'user_role' in insertPayload} ${insertError?.code || 'nocode'}: ${insertError?.message?.slice(0, 200)}`.trim()
+            warning: `attempt=${lastAttempt} keys=[${Object.keys(insertPayload).join(',')}] stray=${strayColumn || '-'} ${insertError?.code || 'nocode'}: ${insertError?.message?.slice(0, 200)}`.trim()
           }
         });
       }
@@ -214,7 +244,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Auto-fix if applicable and we have an error log ID
-    if (errorLog && aiAnalysis.autoFixable && aiAnalysis.autoFixCode) {
+    if (errorLog?.id && aiAnalysis.autoFixable && aiAnalysis.autoFixCode) {
       try {
         const fixResult = await applyAutoFix(errorLog.id, aiAnalysis.autoFixCode);
         

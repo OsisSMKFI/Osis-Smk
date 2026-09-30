@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { analyzeErrorRuleBased, buildAiAnalysisPayload, analyzeErrorWithLLM, saveAiAnalysis } from '@/lib/errorAnalysis';
+import { maybePurgeLogs } from '@/lib/logRetention';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,13 +18,16 @@ export async function GET(request: NextRequest) {
 
     console.log('[/api/admin/errors GET] Fetching errors, summary:', summary);
 
+    // Retention otomatis (throttled): error > 30 hari + baris probe dibuang
+    await maybePurgeLogs(supabaseAdmin, 'errors');
+
     if (summary) {
       // Get error summary for dashboard
-      const { data: errors, error } = await supabaseAdmin
+      const { data: errors, error, count } = await supabaseAdmin
         .from('error_logs')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (error) {
         console.error('[/api/admin/errors GET] Supabase error:', error);
@@ -33,14 +37,19 @@ export async function GET(request: NextRequest) {
       console.log('[/api/admin/errors GET] Fetched errors:', errors?.length || 0);
 
       // Calculate statistics
-      const total = errors?.length || 0;
-      const critical = errors?.filter((e: any) => e.severity === 'critical').length || 0;
-      const recentCount = errors?.filter((e: any) => {
-        const errorDate = new Date(e.created_at);
-        const oneDayAgo = new Date();
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-        return errorDate > oneDayAgo;
-      }).length || 0;
+      const now = Date.now();
+      const oneHourAgo = now - 60 * 60 * 1000;
+      const oneWeekAgo = now - 7 * 86400000;
+      const total = count ?? errors?.length ?? 0;
+      const critical =
+        errors?.filter((e: any) => e.severity === 'critical' || e.severity === 'error').length || 0;
+      const recent =
+        errors?.filter((e: any) => new Date(e.created_at).getTime() > oneHourAgo).length || 0;
+      const resolved =
+        errors?.filter((e: any) => {
+          const t = e.resolved_at ? new Date(e.resolved_at).getTime() : 0;
+          return e.fix_status === 'fixed' || (t > oneWeekAgo);
+        }).length || 0;
 
       // Group errors by message
       const grouped = errors?.reduce((acc: any, err: any) => {
@@ -57,12 +66,19 @@ export async function GET(request: NextRequest) {
 
       const topErrors = Object.values(grouped || {})
         .sort((a: any, b: any) => b.count - a.count)
-        .slice(0, 3);
+        .slice(0, 3)
+        .map((e: any) => ({
+          message: e.message,
+          count: e.count,
+          latest: e.latest,
+          lastSeen: new Date(e.latest).toLocaleString('id-ID'),
+        }));
 
       return NextResponse.json({
         total,
         critical,
-        recent: recentCount,
+        recent,
+        resolved,
         topErrors,
       });
     }
