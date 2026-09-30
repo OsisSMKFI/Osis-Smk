@@ -156,7 +156,10 @@ export async function POST(request: NextRequest) {
         const res = await supabaseAdmin
           .from('error_logs')
           .insert([insertPayload])
-          .select()
+          // RETURNING id saja — select(*) ikut memvalidasi SEMUA kolom tabel
+          // terhadap schema cache PostgREST (basi setelah ALTER) dan gagal
+          // dengan "Could not find the 'x' column in the schema cache"
+          .select('id')
           .maybeSingle();
         if (!res.error) {
           errorLog = res.data;
