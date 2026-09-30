@@ -72,21 +72,22 @@ export async function POST(request: NextRequest) {
     };
 
     // Try to check for duplicates (skip if table doesn't exist)
-    let existingError = null;
+    let existingError: any = null;
     try {
       const { data } = await supabaseAdmin
         .from('error_logs')
-        .select('*')
+        // id saja — select(*) ikut memvalidasi semua kolom terhadap schema
+        // cache PostgREST dan gagal setelah ALTER (kolom baru belum masuk cache)
+        .select('id')
         .eq('message', message)
         .eq('error_type', errorType)
         .gte('created_at', new Date(Date.now() - 3600000).toISOString())
-        .is('deleted_at', null)
         .maybeSingle(); // Use maybeSingle to avoid error on 0 rows
 
       existingError = data;
 
       if (existingError) {
-        // Update occurrence count
+        // Update occurrence count (toleran kolom hilang)
         await supabaseAdmin
           .from('error_logs')
           .update({
