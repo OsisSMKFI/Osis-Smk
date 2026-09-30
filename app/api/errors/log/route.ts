@@ -104,14 +104,19 @@ export async function POST(request: NextRequest) {
       existingError = data;
 
       if (existingError) {
-        // Update occurrence count (toleran kolom hilang)
-        await supabaseAdmin
-          .from('error_logs')
-          .update({
-            occurrence_count: (existingError.occurrence_count || 0) + 1,
-            last_occurred_at: new Date().toISOString()
-          })
-          .eq('id', existingError.id);
+        // Update occurrence count — gagal pun tidak apa-apa, yang penting
+        // duplikat TIDAK dibuat row baru (return duplicate di bawah)
+        try {
+          await supabaseAdmin
+            .from('error_logs')
+            .update({
+              occurrence_count: (existingError.occurrence_count || 0) + 1,
+              last_occurred_at: new Date().toISOString()
+            })
+            .eq('id', existingError.id);
+        } catch (updErr: any) {
+          console.warn('[Error Log] occurrence update skipped:', updErr?.message);
+        }
 
         console.log('[Error Log] ✅ Updated existing error:', existingError.id);
 
