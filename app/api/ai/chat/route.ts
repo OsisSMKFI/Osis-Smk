@@ -1053,21 +1053,6 @@ export async function POST(request: NextRequest) {
     const role = (session?.user as any)?.role as string | undefined;
     const userId = (session?.user as any)?.id as string | undefined;
 
-    // ═════════════════════════════════════════════════════════════════════════
-    // 🔒 CHATBOT KHUSUS ROLE TERTENTU - super_admin, admin, osis
-    // ═════════════════════════════════════════════════════════════════════════
-    const CHAT_ROLES = ['super_admin', 'admin', 'osis'];
-    if (!session?.user || !CHAT_ROLES.includes((role || '').trim().toLowerCase())) {
-      console.log('[/api/ai/chat] Blocked - role not allowed:', { role: role || null, hasSession: !!session });
-      return NextResponse.json(
-        {
-          error: 'Forbidden',
-          reply: 'Chatbot ini hanya tersedia untuk akun OSIS/admin yang sudah login ya 🙂',
-        },
-        { status: 403 }
-      );
-    }
-
     // Mode admin HANYA dari role session yang diverifikasi server.
     // Jangan pernah percaya `mode` dari body client — bisa dipalsukan
     // utk mengakses /sql, /errors, dsb tanpa login.
@@ -2063,7 +2048,8 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
 
     // All queries go through AI with COMPLETE auto-learned knowledge + specific retrieval
     const { getAIKnowledge } = await import('@/lib/aiAutoLearn');
-    const completeKnowledge = await getAIKnowledge(); // Full DB snapshot, auto-refreshed every 3min with temporal awareness
+    // Mode publik: hanya knowledge base publik (tanpa bagian teknis admin)
+    const completeKnowledge = await getAIKnowledge({ publicOnly: mode === 'public' });
     const specificContext = await retrieveContext(userQuery || ''); // Query-specific search
     
     // Tavily web search for real-time data (if key available)
@@ -2090,26 +2076,31 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
     // CRITICAL FIX: Inject knowledge directly into user message to force AI to read it
     // Some AI providers ignore system messages, so we prepend to user query
     const lastUserMessage = baseMessages[baseMessages.length - 1];
-    const enhancedUserQuery = `[CONTEXT - DATABASE OSIS SMK INFORMATIKA FITRAH INSANI]
+    const antiLeakRule = mode === 'public'
+      ? `
+9. RAHASIA SISTEM (mode publik): JANGAN pernah menyebutkan hal teknis internal — struktur/kolom database, kode sumber/codebase, nama file teknis, status/error server, API key, backup, konfigurasi, atau angka jumlah record internal. Jika ditanya soal teknis, error sistem, atau "apakah website error/database aman?", jawab singkat: "Semua sistem berjalan normal 🙂". Yang BOLEH dibahas hanya data publik website OSIS: anggota, sekbid, event/kegiatan, berita, pengumuman, galeri, visi-misi, kontak.
+10. JANGAN sebut kata "database" dalam jawabanmu ke publik — gunakan istilah "data website OSIS".`
+      : '';
+    const enhancedUserQuery = `[DATA WEBSITE OSIS SMK INFORMATIKA FITHRAH INSANI]
 ${completeKnowledge}
 
 [DATA SPESIFIK PERTANYAAN INI]
 ${specificContext}
 
 ${webContext ? `[WEBSITE OSIS - HANYA DATA DARI OSISSMKFI.BIEZZ.MY.ID]\n${webContext}\n` : ''}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[PERTANYAAN USER - JAWAB HANYA BERDASARKAN DATABASE DI ATAS]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[PERTANYAAN USER - JAWAB HANYA BERDASARKAN DATA DI ATAS]
 ${lastUserMessage.content}
 
 ⚠️ ATURAN KETAT - WAJIB DIIKUTI:
-1. JAWAB HANYA dari DATABASE OSIS di atas — ini adalah satu-satunya sumber data yang benar
-2. JANGAN gunakan data dari website/sekolah lain — semua data anggota, sekbid, berita HARUS dari database lokal
-3. JANGAN mengarang nama, sekbid, atau jabatan yang tidak ada di database
-4. Jika nama/anggota tidak ada di database, katakan "tidak ditemukan di database osis smk informatika fithrah insani"
-5. Sekbid, anggota, program kerja, berita HARUS sesuai dengan database lokal
+1. JAWAB HANYA dari data website OSIS di atas — ini adalah satu-satunya sumber data yang benar
+2. JANGAN gunakan data dari website/sekolah lain — semua data anggota, sekbid, berita HARUS dari data lokal
+3. JANGAN mengarang nama, sekbid, atau jabatan yang tidak ada di data
+4. Jika nama/anggota tidak ada di data, katakan "tidak ditemukan di website OSIS smk informatika fithrah insani"
+5. Sekbid, anggota, program kerja, berita HARUS sesuai dengan data lokal
 6. VALIDASI: Setiap nama yang disebutkan HARUS ada di daftar "ANGGOTA OSIS" di atas
 7. Web search hanya untuk pertanyaan umum yang TIDAK berhubungan dengan data OSIS (contoh: cuaca, berita nasional, dll)
-8. UNTUK SEMUA PERTANYAAN TENTANG ANGGOTA, SEKBID, BERITA OSIS → GUNAKAN DATABASE LOKAL SAJA
+8. UNTUK SEMUA PERTANYAAN TENTANG ANGGOTA, SEKBID, BERITA OSIS → GUNAKAN DATA LOKAL SAJA${antiLeakRule}
 
 REMINDER: You have ALL the data above. Answer from this data. DO NOT hallucinate.`;
     

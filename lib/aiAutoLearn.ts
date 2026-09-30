@@ -42,6 +42,8 @@ import { PUBLIC_CONTENT_DEFAULTS, buildDefaultPhilosophyKalimat } from '@/lib/pu
 // In-memory knowledge base (auto-refreshed every 60 seconds for fresher data)
 let knowledgeBase: string | null = null;
 let lastUpdate: number = 0;
+let knowledgeBasePublic: string | null = null;
+let lastUpdatePublic: number = 0;
 const UPDATE_INTERVAL = 60 * 1000; // 60 seconds for responsive updates
 
 /**
@@ -116,8 +118,10 @@ function categorizeEventByDate(
 
 /**
  * Build comprehensive knowledge base from all database tables
+ * publicOnly=true → tanpa bagian teknis admin (commands, schema, system ops)
  */
-async function buildKnowledgeBase(): Promise<string> {
+async function buildKnowledgeBase(opts?: { publicOnly?: boolean }): Promise<string> {
+  const publicOnly = !!opts?.publicOnly;
   const kb: string[] = [];
   const temporal = getTemporalContext();
   
@@ -959,8 +963,8 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push('• /sekbid - Semua seksi bidang');
     kb.push('');
     kb.push('📚 SEKSI BIDANG DETAIL:');
-    kb.push('• /sekbid - daftar semua seksi bidang dari database admin');
-    kb.push('• /sekbid/{id} - detail sekbid (id numerik dari database, contoh /sekbid/1)');
+    kb.push('• /sekbid - daftar semua seksi bidang dari website OSIS');
+    kb.push('• /sekbid/{id} - detail sekbid (id numerik dari website, contoh /sekbid/1)');
     kb.push('Jangan mengarang slug lama seperti /sekbid/sekbid-1 — gunakan /sekbid lalu pilih dari daftar.');
     kb.push('');
     kb.push('📰 KONTEN:');
@@ -1055,12 +1059,14 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push('• 💡 Spasi 1 baris antar bagian — jangan teks padat berdesakan');
     kb.push('');
     
-    kb.push('🔄 Knowledge base auto-refresh setiap 3 menit dari database live.');
+    kb.push('🔄 Data website OSIS auto-refresh setiap 3 menit.');
     kb.push('💎 STATUS: PREMIUM MODE ACTIVE - All features unlocked!');
     kb.push('💝 Remember: Kamu TEMAN CERDAS yang bijak, ramah, dan super menyenangkan!');
     kb.push('');
     
     // 18. SUPER ADMIN EXCLUSIVE SECTION
+    // (Dilewati untuk publicOnly — bagian teknis tidak boleh bocor ke mode publik)
+    if (!publicOnly) {
     kb.push('');
     kb.push('╔════════════════════════════════════════════════════════════════════════════╗');
     kb.push('║     🔐 SUPER ADMIN EXCLUSIVE - FULL SYSTEM ACCESS                         ║');
@@ -1339,6 +1345,7 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push('🎨 DESIGN MODE: AVAILABLE FOR SUPER ADMIN');
     kb.push('📨 MESSAGE BRIDGE: ACTIVE');
     kb.push('═══════════════════════════════════════════════════════════════════');
+    } // end if (!publicOnly)
 
   } catch (e) {
     kb.push('\n❌ ERROR building knowledge base: ' + (e as Error).message);
@@ -1350,8 +1357,20 @@ async function buildKnowledgeBase(): Promise<string> {
 /**
  * Get current knowledge base (auto-refresh if stale)
  */
-export async function getAIKnowledge(): Promise<string> {
+export async function getAIKnowledge(opts?: { publicOnly?: boolean }): Promise<string> {
+  const publicOnly = !!opts?.publicOnly;
   const now = Date.now();
+
+  if (publicOnly) {
+    if (!knowledgeBasePublic || now - lastUpdatePublic > UPDATE_INTERVAL) {
+      console.log('[AI AutoLearn] Building/refreshing PUBLIC knowledge base...');
+      knowledgeBasePublic = await buildKnowledgeBase({ publicOnly: true });
+      lastUpdatePublic = now;
+      console.log('[AI AutoLearn] Public knowledge base updated. Size:', knowledgeBasePublic.length, 'chars');
+    }
+    return knowledgeBasePublic;
+  }
+
   if (!knowledgeBase || now - lastUpdate > UPDATE_INTERVAL) {
     console.log('[AI AutoLearn] Building/refreshing knowledge base...');
     knowledgeBase = await buildKnowledgeBase();
@@ -1366,6 +1385,10 @@ export async function getAIKnowledge(): Promise<string> {
  */
 export async function refreshAIKnowledge(): Promise<void> {
   console.log('[AI AutoLearn] Force refresh requested...');
+  knowledgeBase = null;
+  knowledgeBasePublic = null;
+  lastUpdate = 0;
+  lastUpdatePublic = 0;
   knowledgeBase = await buildKnowledgeBase();
   lastUpdate = Date.now();
   console.log('[AI AutoLearn] Force refresh complete.');
