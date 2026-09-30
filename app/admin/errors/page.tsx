@@ -21,6 +21,7 @@ interface ErrorLog {
 
 export default function ErrorMonitoringPage() {
   const [errors, setErrors] = useState<ErrorLog[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [fixing, setFixing] = useState<string | null>(null);
@@ -35,9 +36,11 @@ export default function ErrorMonitoringPage() {
       if (j.setupRequired) {
         setSetupRequired(true);
         setErrors([]);
+        setTotal(0);
       } else {
         setSetupRequired(false);
         setErrors(j.errors || []);
+        setTotal(typeof j.total === 'number' ? j.total : (j.errors || []).length);
       }
     } catch (e) {
       console.error('Failed to load errors:', e);
@@ -117,7 +120,10 @@ export default function ErrorMonitoringPage() {
               Recent Errors
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {errors.length} error(s) detected
+              {total} error(s) detected
+              {errors.length < total && (
+                <span className="text-gray-400"> · menampilkan {errors.length} terbaru</span>
+              )}
             </p>
           </div>
           <button

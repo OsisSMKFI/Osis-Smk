@@ -83,11 +83,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get all errors
-    const { data: errors, error } = await supabaseAdmin
+    // Get all errors — 500 terbaru + count akurat untuk label panel
+    const { data: errors, error, count } = await supabaseAdmin
       .from('error_logs')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (error) {
       console.error('[/api/admin/errors GET] Supabase error:', error);
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('[/api/admin/errors GET] Returning errors:', list.length);
-    return NextResponse.json({ errors: list });
+    return NextResponse.json({ errors: list, total: count ?? list.length });
   } catch (error: any) {
     console.error('[/api/admin/errors GET] Exception:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
