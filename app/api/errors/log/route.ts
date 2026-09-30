@@ -148,9 +148,11 @@ export async function POST(request: NextRequest) {
       };
 
       let insertError: any = null;
+      let lastAttempt = -1;
       // Batas = jumlah kolom payload (~30) — tabel versi lama bisa kehilangan
       // banyak kolom sekaligus; strip satu per satu sampai insert masuk.
       for (let attempt = 0; attempt < 40; attempt++) {
+        lastAttempt = attempt;
         const res = await supabaseAdmin
           .from('error_logs')
           .insert([insertPayload])
@@ -185,7 +187,7 @@ export async function POST(request: NextRequest) {
             errorId: 'console-only',
             logged: 'console',
             aiAnalysis,
-            warning: `${insertError?.code || 'nocode'}: ${insertError?.message?.slice(0, 250)}`.trim()
+            warning: `attempt=${lastAttempt} keys=${Object.keys(insertPayload).length} has=${'user_role' in insertPayload} ${insertError?.code || 'nocode'}: ${insertError?.message?.slice(0, 200)}`.trim()
           }
         });
       }
