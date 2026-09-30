@@ -90,8 +90,9 @@ export async function POST(request: NextRequest) {
 
     // Try to check for duplicates (skip if table doesn't exist)
     let existingError: any = null;
+    let dupStatus = 'unknown';
     try {
-      const { data } = await supabaseAdmin
+      const { data, error: dupErr } = await supabaseAdmin
         .from('error_logs')
         // id saja — select(*) ikut memvalidasi semua kolom terhadap schema
         // cache PostgREST dan gagal setelah ALTER (kolom baru belum masuk cache)
@@ -101,6 +102,11 @@ export async function POST(request: NextRequest) {
         .gte('created_at', new Date(Date.now() - 3600000).toISOString())
         .maybeSingle(); // Use maybeSingle to avoid error on 0 rows
 
+      if (dupErr) {
+        dupStatus = `ERR:${dupErr.code || ''}:${(dupErr.message || '').slice(0, 120)}`;
+        throw dupErr;
+      }
+      dupStatus = data ? `row:${data.id}` : 'empty';
       existingError = data;
 
       if (existingError) {
@@ -125,6 +131,7 @@ export async function POST(request: NextRequest) {
           data: {
             errorId: existingError.id,
             duplicate: true,
+            dupCheck: dupStatus,
             aiAnalysis
           }
         });
@@ -275,7 +282,8 @@ export async function POST(request: NextRequest) {
         errorId: errorLog?.id || 'console-only',
         aiAnalysis,
         autoFixApplied: aiAnalysis.autoFixable,
-        logged: errorLog ? 'database' : 'console'
+        logged: errorLog ? 'database' : 'console',
+        dupCheck: dupStatus
       }
     });
 
