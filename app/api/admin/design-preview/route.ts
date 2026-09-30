@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🎨 DESIGN PREVIEW API - Super Admin Premium v5.0
@@ -53,10 +53,8 @@ const DESIGN_PRESETS = {
 export async function POST(request: NextRequest) {
   try {
     // Check admin authentication
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('settings:write');
+    if (authErr) return authErr;
 
     const body = await request.json();
     const { component, changes, preset } = body;

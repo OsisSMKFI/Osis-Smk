@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('settings:write');
+    if (authErr) return authErr;
 
     // Placeholder for snapshot refresh functionality
     return NextResponse.json({

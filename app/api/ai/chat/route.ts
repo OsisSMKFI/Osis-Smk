@@ -1052,6 +1052,22 @@ export async function POST(request: NextRequest) {
     const userQuery: string = lastUser?.content || '';
     const role = (session?.user as any)?.role as string | undefined;
     const userId = (session?.user as any)?.id as string | undefined;
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 🔒 CHATBOT KHUSUS ROLE TERTENTU - super_admin, admin, osis
+    // ═════════════════════════════════════════════════════════════════════════
+    const CHAT_ROLES = ['super_admin', 'admin', 'osis'];
+    if (!session?.user || !CHAT_ROLES.includes((role || '').trim().toLowerCase())) {
+      console.log('[/api/ai/chat] Blocked - role not allowed:', { role: role || null, hasSession: !!session });
+      return NextResponse.json(
+        {
+          error: 'Forbidden',
+          reply: 'Chatbot ini hanya tersedia untuk akun OSIS/admin yang sudah login ya 🙂',
+        },
+        { status: 403 }
+      );
+    }
+
     // Mode admin HANYA dari role session yang diverifikasi server.
     // Jangan pernah percaya `mode` dari body client — bisa dipalsukan
     // utk mengakses /sql, /errors, dsb tanpa login.

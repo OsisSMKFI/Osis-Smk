@@ -812,7 +812,7 @@ export default function LiveChatWidget({ role, showFloating = true }: { role?: '
         if (json.sessionId) setSessionId(json.sessionId);
         setMessages(prev => [...prev, { role: 'assistant', content: json.reply }]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${json.error}: ${json.details || ''}` }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: json.reply || `❌ ${json.error}: ${json.details || ''}` }]);
       }
     } catch (e: any) {
       setMessages(prev => [...prev, { role: 'assistant', content: `❌ Network error: ${e.message}` }]);

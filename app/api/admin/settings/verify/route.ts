@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('settings:read');
+    if (authErr) return authErr;
 
     // Verify Supabase connection
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

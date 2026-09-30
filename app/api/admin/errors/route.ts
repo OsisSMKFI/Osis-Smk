@@ -4,14 +4,25 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { analyzeErrorRuleBased, buildAiAnalysisPayload, analyzeErrorWithLLM, saveAiAnalysis } from '@/lib/errorAnalysis';
 import { maybePurgeLogs } from '@/lib/logRetention';
 
+const ERROR_ADMINS = ['super_admin', 'admin'];
+
+async function requireErrorAdmin() {
+  const session = await auth();
+  if (!session?.user) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+  const role = ((session.user as any).role || '').trim().toLowerCase();
+  if (!ERROR_ADMINS.includes(role)) {
+    return { error: NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 }) };
+  }
+  return { session };
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
+    const { session, error: gateErr } = await requireErrorAdmin();
+    if (gateErr) return gateErr;
     console.log('[/api/admin/errors GET] Session:', { hasSession: !!session, user: session?.user?.email });
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { searchParams } = new URL(request.url);
     const summary = searchParams.get('summary') === 'true';
@@ -143,10 +154,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, error: gateErr } = await requireErrorAdmin();
+    if (gateErr) return gateErr;
 
     const body = await request.json();
     const { errorId, errorData, deep, message, severity, stack, metadata } = body;
@@ -225,10 +234,8 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { error: gateErr } = await requireErrorAdmin();
+    if (gateErr) return gateErr;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

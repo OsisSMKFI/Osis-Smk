@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .eq('email', session.user.email)
       .single();
     
-    if (profile?.role !== 'admin') {
+    if (!['admin', 'super_admin'].includes(profile?.role || '')) {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }

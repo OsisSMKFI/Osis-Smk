@@ -98,6 +98,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Only admins can change role and is_active
     if (!isOwnProfile) {
       if (role !== undefined) {
+        const roleErr = await requirePermission('users:role_assign');
+        if (roleErr) return roleErr;
         if (!ALLOWED_ROLES.has(role)) {
           console.error('[admin/users/[id] PUT] Invalid role:', role);
           return NextResponse.json({ error: `Invalid role: ${role}` }, { status: 400 });

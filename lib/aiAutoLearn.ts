@@ -125,7 +125,7 @@ async function buildKnowledgeBase(): Promise<string> {
   kb.push('║     🤖 AI KNOWLEDGE BASE - OSIS SMK INFORMATIKA FITHRAH INSANI            ║');
   kb.push('╠════════════════════════════════════════════════════════════════════════════╣');
   kb.push(`║  🕐 Data diperbarui: ${temporal.currentTime}                        ║`);
-  kb.push('║  📊 Status: COMPLETE DATABASE ACCESS - All data available                 ║');
+  kb.push('║  📊 Pengetahuan: informasi OSIS terbaru (hanya data publik)           ║');
   kb.push('╚════════════════════════════════════════════════════════════════════════════╝');
   kb.push('');
 
@@ -937,9 +937,9 @@ async function buildKnowledgeBase(): Promise<string> {
     kb.push('   • Mood-responsive communication');
     kb.push('');
     kb.push('5. 📊 DATA MASTERY:');
-    kb.push('   • Real-time database access');
-    kb.push('   • 3-minute auto-refresh');
-    kb.push('   • Full snapshot of all OSIS data');
+    kb.push('   • Informasi OSIS diperbarui otomatis');
+    kb.push('   • Auto-refresh setiap 3 menit');
+    kb.push('   • Pengetahuan lengkap data OSIS');
     kb.push('   • Time-aware event handling');
     kb.push('');
     

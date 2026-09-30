@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { invalidateSettingsCache } from '@/lib/getAdminSettings';
 import { clearSnapshotCache } from '@/lib/aiSiteFetcher';
@@ -7,10 +7,8 @@ import { refreshAIKnowledge } from '@/lib/aiAutoLearn';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('settings:read');
+    if (authErr) return authErr;
 
     const { data, error } = await supabaseAdmin
       .from('admin_settings')
@@ -37,10 +35,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('settings:write');
+    if (authErr) return authErr;
 
     const body = await request.json();
     const settings: Record<string, string> = body?.settings || {};

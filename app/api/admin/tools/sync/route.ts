@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/apiAuth';
+import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 /**
@@ -8,7 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
  * Ensures data integrity and consistency across the platform
  */
 export async function POST(req: NextRequest) {
-  const authErr = await requireAuth();
+  const authErr = await requirePermission('tools:access');
   if (authErr) return authErr;
 
   try {
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
  * Get sync status and last sync information
  */
 export async function GET(req: NextRequest) {
-  const authErr = await requireAuth();
+  const authErr = await requirePermission('tools:access');
   if (authErr) return authErr;
 
   try {

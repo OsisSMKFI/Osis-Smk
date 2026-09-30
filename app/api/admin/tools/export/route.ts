@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/apiAuth';
+import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
-  const authErr = await requireAuth();
+  const authErr = await requirePermission('tools:access');
   if (authErr) return authErr;
 
   try {

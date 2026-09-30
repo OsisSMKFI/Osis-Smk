@@ -8,6 +8,10 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const role = ((session.user as any).role || '').trim().toLowerCase();
+    if (!['super_admin', 'admin'].includes(role)) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    }
 
     const body = await request.json();
     const { errorId, fixIndex } = body;

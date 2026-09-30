@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 /**
@@ -8,10 +8,8 @@ import { supabaseAdmin } from '@/lib/supabase/server';
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('settings:write');
+    if (authErr) return authErr;
 
     const defaultSettings = {
       'GLOBAL_BG_MODE': 'gradient',
@@ -77,10 +75,8 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('settings:read');
+    if (authErr) return authErr;
 
     const { data, error } = await supabaseAdmin
       .from('admin_settings')

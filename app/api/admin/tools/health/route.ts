@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/apiAuth';
+import { requirePermission } from '@/lib/apiAuth';
 
 export async function GET(req: NextRequest) {
-  const authErr = await requireAuth();
+  const authErr = await requirePermission('tools:access');
   if (authErr) return authErr;
 
   try {

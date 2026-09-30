@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('tools:access');
+    if (authErr) return authErr;
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -75,10 +73,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('tools:access');
+    if (authErr) return authErr;
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { data: buckets, error } = await supabase.storage.listBuckets();

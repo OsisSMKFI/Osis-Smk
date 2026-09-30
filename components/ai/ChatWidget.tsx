@@ -73,6 +73,10 @@ const ChatWidget: React.FC = () => {
       });
       const json = await safeJson(res, { url: '/api/ai/chat', method: 'POST' }).catch(() => ({}));
       if (!res.ok) {
+        if (json?.reply) {
+          setMessages(prev => [...prev, { role: 'assistant', content: json.reply as string }]);
+          return;
+        }
         throw new Error(json?.error || 'Gagal memproses permintaan AI');
       }
       const reply = (json?.reply as string) || '';

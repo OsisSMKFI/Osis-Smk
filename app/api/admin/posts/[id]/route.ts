@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 export const runtime = 'nodejs';
 
@@ -19,8 +19,8 @@ function mapToAdmin(p: any) {
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authErr = await requirePermission('posts:read');
+    if (authErr) return authErr;
     const { id } = await params;
     const { data, error } = await supabaseAdmin
       .from('posts')
@@ -36,8 +36,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authErr = await requirePermission('posts:edit');
+    if (authErr) return authErr;
     
     const { id } = await params;
     const body = await request.json();
@@ -105,8 +105,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authErr = await requirePermission('posts:delete');
+    if (authErr) return authErr;
     const { id } = await params;
     const { error } = await supabaseAdmin
       .from('posts')
