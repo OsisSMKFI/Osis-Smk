@@ -113,11 +113,11 @@ export async function GET(request: NextRequest) {
     if (pending.length > 0) {
       await Promise.all(pending.map(async (e: any) => {
         const a = analyzeErrorRuleBased({
-          message: e.message,
-          stack: e.stack_trace,
+          message: e.message || e.error_message,
+          stack: e.stack_trace || e.error_stack,
           errorType: e.error_type,
           errorCode: e.error_code,
-          statusCode: e.response_status,
+          statusCode: e.response_status || e.status_code,
         });
         const payload = buildAiAnalysisPayload(a);
         const save = await saveAiAnalysis(supabaseAdmin, e.id, payload, {

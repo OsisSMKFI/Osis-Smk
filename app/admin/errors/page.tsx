@@ -11,6 +11,7 @@ interface ErrorLog {
   request_method: string;
   response_status: number | null;
   message: string;
+  error_message?: string; // kolom legacy tabel lama
   stack_trace: string;
   severity: string;
   created_at: string;
@@ -207,7 +208,7 @@ export default function ErrorMonitoringPage() {
                       {err.request_method} {err.page_url}
                     </p>
                     <p className="text-sm text-red-600 dark:text-red-400">
-                      {err.message}
+                      {err.message || err.error_message || '(pesan tidak tersimpan — jalankan scripts/setup-error-logs.sql)'}
                     </p>
                   </div>
                   <div className="flex gap-2 ml-4">
