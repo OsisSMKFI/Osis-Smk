@@ -35,7 +35,7 @@ export async function GET() {
     );
 
     const res = NextResponse.json({ gallery: galleryWithUrls });
-    res.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
+    res.headers.set('Cache-Control', 'no-store');
     return res;
   } catch (error: any) {
     console.error('Unexpected error:', error);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { fetchUserRole, supabaseAdmin } from '@/lib/supabase/server';
 import { auth } from '@/lib/auth';
 import { buildAIContext } from '@/lib/aiContext';
 import { handleAdminCommand } from '@/lib/adminChatCommands';
@@ -10,6 +10,9 @@ import { logActivity } from '@/lib/activity-logger';
 import { getAIGatewayStatus, chat as gatewayChat } from '@/lib/vercel/ai-gateway';
 import { EASTER_EGG_SOURCE_TEXT } from '@/lib/aiAutoLearn';
 import { getCustomAIProvider, callCustomAI } from '@/lib/aiProvider';
+import { PIKET_VIEW_ROLES, jakartaDateKey } from '@/lib/piket';
+import { checkRateLimit, getIdentifier, RateLimitPresets } from '@/lib/rateLimitRedis';
+import { getTrustedAppBaseUrl } from '@/lib/trustedOrigin';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔍 TAVILY WEB SEARCH - Search mendalam untuk data real-time
@@ -375,14 +378,6 @@ async function callAI(
     geminiModel = 'gemini-2.0-flash';
   }
   
-  // Debug: Show key details (first 10 chars + length)
-  console.log('[AI] Key status:', {
-    openai: openaiKey ? `${openaiKey.substring(0, 10)}... (${openaiKey.length} chars)` : 'NOT SET',
-    gemini: geminiKey ? `${geminiKey.substring(0, 10)}... (${geminiKey.length} chars)` : 'NOT SET',
-    anthropic: anthropicKey ? `${anthropicKey.substring(0, 10)}... (${anthropicKey.length} chars)` : 'NOT SET',
-    tavily: tavilyKey ? `${tavilyKey.substring(0, 10)}... (${tavilyKey.length} chars)` : 'NOT SET',
-  });
-  
   console.log('[AI] Available providers:', {
     custom: !!customProvider,
     openai: !!openaiKey,
@@ -720,23 +715,29 @@ let retrievalCache: { query: string; result: string; ts: number } | null = null;
 const RETRIEVAL_CACHE_TTL = 30 * 1000; // 30 seconds for fresher data
 
 // Enhanced retriever with full member-sekbid mapping and structured data
-async function retrieveContext(query: string) {
+async function retrieveContext(query: string, options: { role?: string; fresh?: boolean } = {}) {
+  const role = options.role || 'guest';
+  const canSeeDrafts = ['super_admin', 'admin', 'osis'].includes(role);
+  const cacheKey = `${canSeeDrafts ? 'staff' : 'public'}:${query}`;
   // Check cache
   const now = Date.now();
-  if (retrievalCache && retrievalCache.query === query && now - retrievalCache.ts < RETRIEVAL_CACHE_TTL) {
+  if (!options.fresh && retrievalCache && retrievalCache.query === cacheKey && now - retrievalCache.ts < RETRIEVAL_CACHE_TTL) {
     return retrievalCache.result;
   }
 
   const ctx: string[] = [];
-  const q = `%${query}%`;
+  const safeQuery = query.replace(/[^\p{L}\p{N}\s-]/gu, ' ').trim().replace(/\s+/g, ' ').slice(0, 100);
+  const q = `%${safeQuery}%`;
   try {
     // posts
     {
-      const { data } = await supabaseAdmin
+      let postsQuery = supabaseAdmin
         .from('posts')
         .select('id,title,content,excerpt,published_at')
         .or(`title.ilike.${q},content.ilike.${q},excerpt.ilike.${q}`)
         .limit(8);
+      if (!canSeeDrafts) postsQuery = postsQuery.eq('status', 'published');
+      const { data } = await postsQuery;
       if (data?.length) {
         ctx.push('Posts:');
         for (const p of data) {
@@ -749,6 +750,7 @@ async function retrieveContext(query: string) {
       const { data } = await supabaseAdmin
         .from('events')
         .select('id,title,description,location,event_date,start_date,end_date,sekbid_id,status')
+        .neq('status', 'cancelled')
         .or(`title.ilike.${q},description.ilike.${q},location.ilike.${q}`)
         .limit(8);
       if (data?.length) {
@@ -764,6 +766,8 @@ async function retrieveContext(query: string) {
       const { data } = await supabaseAdmin
         .from('announcements')
         .select('id,title,content,priority,expires_at,created_at')
+        .eq('published', true)
+        .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
         .or(`title.ilike.${q},content.ilike.${q}`)
         .limit(8);
       if (data?.length) {
@@ -777,8 +781,9 @@ async function retrieveContext(query: string) {
     {
       const { data } = await supabaseAdmin
         .from('members')
-        .select('id,name,nama,role,sekbid_id,instagram,class,quote,is_active,display_order')
-        .or(`name.ilike.${q},role.ilike.${q},quote.ilike.${q},class.ilike.${q},instagram.ilike.${q},nama.ilike.${q}`)
+        .select('id,name,role,sekbid_id,instagram,class,quote,is_active,display_order')
+        .eq('is_active', true)
+        .or(`name.ilike.${q},role.ilike.${q},quote.ilike.${q},class.ilike.${q},instagram.ilike.${q}`)
         .limit(50); // Increased limit for better coverage
       if (data?.length) {
         // Fetch all sekbid names for resolution
@@ -793,7 +798,7 @@ async function retrieveContext(query: string) {
         }
         ctx.push('Members (active OSIS members with sekbid mapping):');
         for (const m of data) {
-          const displayName = m.name || m.nama || 'Unknown';
+          const displayName = m.name || 'Unknown';
           const roleInfo = m.role || '-';
           const sekbidName = m.sekbid_id ? (sekbidMap[m.sekbid_id] || `ID ${m.sekbid_id}`) : 'Tidak ada sekbid';
           ctx.push(`- ${displayName} | Jabatan: ${roleInfo} | Sekbid: ${sekbidName} | Aktif: ${m.is_active} | Kelas: ${m.class || '-'} | IG: ${m.instagram || '-'}`);
@@ -848,18 +853,43 @@ async function retrieveContext(query: string) {
     {
       const { data } = await supabaseAdmin
         .from('page_content')
-        .select('*')
+        .select('page_key,content,category')
+        .eq('published', true)
         .or(`page_key.ilike.${q},content.ilike.${q},category.ilike.${q}`)
         .limit(12);
       if (data?.length) {
         ctx.push('Page Content:');
         for (const c of data) {
-          ctx.push(`- ${c.page_key} [${c.category || 'general'}|${c.content_type || 'text'}]: ${(c.content || '').slice(0, 300)}`);
+          ctx.push(`- ${c.page_key} [${c.category || 'general'}]: ${(c.content || '').slice(0, 300)}`);
         }
       }
     }
+    // Piket reports are private school records; retrieve them only for roles
+    // explicitly allowed to view the recap, and only when the question asks.
+    if (PIKET_VIEW_ROLES.includes(role as (typeof PIKET_VIEW_ROLES)[number]) && /(piket|terlambat|keterlambatan|laporan hari ini|rekap hari ini)/i.test(query)) {
+      const reportDate = jakartaDateKey();
+      const [{ data: reports, error: reportsError }, { data: approval, error: approvalError }] = await Promise.all([
+        supabaseAdmin.from('piket_late_reports')
+          .select('student_name,student_class,submitted_at')
+          .eq('report_date', reportDate)
+          .order('submitted_at', { ascending: true }),
+        supabaseAdmin.from('piket_daily_approvals')
+          .select('approver_name,approved_at,report_count')
+          .eq('report_date', reportDate)
+          .maybeSingle(),
+      ]);
+      if (reportsError || approvalError) {
+        ctx.push('Rekap Piket belum tersedia. Perlu memeriksa konfigurasi fitur terlebih dahulu.');
+      } else {
+      ctx.push(`Rekap Piket hari ini (${reportDate}), hanya untuk role yang berhak:`);
+      ctx.push(`Jumlah laporan: ${(reports || []).length}. Status persetujuan: ${approval ? `disetujui oleh ${approval.approver_name} pada ${approval.approved_at}` : 'menunggu persetujuan guru'}.`);
+      for (const report of reports || []) {
+        ctx.push(`- ${report.student_name}, kelas ${report.student_class}, dikirim ${report.submitted_at}`);
+      }
+      }
+    }
   } catch (e) {
-    ctx.push(`Retriever error: ${(e as Error).message}`);
+    console.error('[AI] Public content retrieval failed');
   }
 
   if (!ctx.length) {
@@ -881,7 +911,7 @@ async function retrieveContext(query: string) {
         // Fetch all members with sekbid_id
         const { data: allMembers } = await supabaseAdmin
           .from('members')
-          .select('id,name,nama,role,sekbid_id,class,is_active')
+          .select('id,name,role,sekbid_id,class,is_active')
           .eq('is_active', true)
           .order('display_order', { ascending: true })
           .limit(200);
@@ -895,7 +925,7 @@ async function retrieveContext(query: string) {
           }
           
           allMembers.forEach((m, i) => {
-            const name = m.name || m.nama || 'Unknown';
+            const name = m.name || 'Unknown';
             const role = m.role || '-';
             const sekbid = m.sekbid_id ? (sekbidMap[m.sekbid_id] || `Sekbid ID ${m.sekbid_id}`) : 'Belum ada sekbid';
             ctx.push(`  ${i+1}. ${name} | ${role} | Sekbid: ${sekbid} | Kelas: ${m.class || '-'}`);
@@ -924,7 +954,7 @@ async function retrieveContext(query: string) {
 
   const result = ctx.join('\n');
   // Cache result
-  retrievalCache = { query, result, ts: now };
+  retrievalCache = { query: cacheKey, result, ts: now };
   return result;
 }
 
@@ -1041,25 +1071,38 @@ export async function POST(request: NextRequest) {
     } else if (singleMessage && typeof singleMessage === 'string') {
       // Single message mode (from Design Studio)
       baseMessages = [{ role: 'user', content: singleMessage }];
-      console.log('[AI Chat] Single message mode:', singleMessage.substring(0, 100));
+      console.log('[AI Chat] Single message request received');
     }
+    // The client may submit arbitrary role=system entries. Keep only bounded
+    // user/assistant history; the server owns every instruction and privilege.
+    baseMessages = baseMessages
+      .filter((m): m is { role: string; content: string } =>
+        !!m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string'
+      )
+      .map((m) => ({ role: m.role, content: m.content.slice(0, 8000) }))
+      .slice(-12);
     if (reset) {
-      // Preserve only the earliest system message if provided
-      const firstSystem = baseMessages.find(m => m.role === 'system');
-      baseMessages = firstSystem ? [firstSystem] : [];
+      baseMessages = [];
     }
     const lastUser = [...baseMessages].reverse().find((m: any) => m.role === 'user');
     const userQuery: string = lastUser?.content || '';
-    const role = (session?.user as any)?.role as string | undefined;
+    if (userQuery.length > 4000) {
+      return NextResponse.json({ error: 'Pesan terlalu panjang. Batas pesan adalah 4.000 karakter.' }, { status: 413 });
+    }
     const userId = (session?.user as any)?.id as string | undefined;
+    // Never use a role claim from the browser/session for privileged behavior.
+    const role = userId ? (await fetchUserRole(userId) || undefined) : undefined;
+    const aiLimit = await checkRateLimit(request, userId || getIdentifier(request), RateLimitPresets.AI_ENDPOINT, 'ai-chat');
+    if (!aiLimit.allowed) {
+      return NextResponse.json({ error: 'Terlalu banyak pesan AI. Coba lagi sebentar.' }, { status: 429 });
+    }
 
     // Mode admin HANYA dari role session yang diverifikasi server.
     // Jangan pernah percaya `mode` dari body client — bisa dipalsukan
     // utk mengakses /sql, /errors, dsb tanpa login.
-    const roleIsAdmin = role === 'admin' || role === 'super_admin';
-    const mode: 'admin' | 'public' = roleIsAdmin ? 'admin' : 'public';
+    const mode: 'admin' | 'public' = role === 'super_admin' ? 'admin' : 'public';
     
-    console.log('[/api/ai/chat] Request:', { mode, userQuery: userQuery.substring(0, 50), hasSession: !!session });
+    console.log('[/api/ai/chat] Request:', { mode, role: role || 'guest', queryLength: userQuery.length, hasSession: !!session });
     
     // ═══════════════════════════════════════════════════════════════════════════
     // 🔍 TYPO DETECTION - Konfirmasi jika ada kemungkinan typo
@@ -1069,11 +1112,12 @@ export async function POST(request: NextRequest) {
     try {
       const { data: members } = await supabaseAdmin
         .from('members')
-        .select('name,nama')
+        .select('name')
+        .eq('is_active', true)
         .limit(100);
       if (members) {
         members.forEach(m => {
-          const name = m.name || m.nama;
+          const name = m.name;
           if (name) {
             // Add first names and full names
             knownTerms.push(name.toLowerCase());
@@ -1330,7 +1374,7 @@ export async function POST(request: NextRequest) {
       // Actually call the forward API with action verification
       console.log('[AI Action] 🚀 Starting forward action to:', target);
       try {
-        const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
+        const baseUrl = getTrustedAppBaseUrl(request);
         const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         
         const forwardRes = await fetch(`${baseUrl}/api/notifications/forward`, {
@@ -1526,7 +1570,7 @@ Silakan gunakan metode di atas atau hubungi admin.`,
       // ACTUALLY EXECUTE THE DESIGN CHANGE
       console.log('[AI Action] 🎨 EXECUTING REAL DESIGN CHANGE');
       try {
-        const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
+        const baseUrl = getTrustedAppBaseUrl(request);
         const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const designType = detectDesignType();
         const component = detectComponent();
@@ -1624,7 +1668,7 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
       // User wants to forward design request to admin (not execute directly)
       console.log('[AI Action] 🎨 Forwarding design request to admin');
       try {
-        const baseUrl = request.headers.get('origin') || `https://${request.headers.get('host')}`;
+        const baseUrl = getTrustedAppBaseUrl(request);
         const userSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         
         // Extract design context from conversation
@@ -2037,8 +2081,8 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
     }
 
     // Admin slash-commands only (no direct intents)
-    if (mode === 'admin' && typeof userQuery === 'string') {
-      const origin = request.headers.get('origin') || request.headers.get('host') || '';
+    if (role === 'super_admin' && mode === 'admin' && typeof userQuery === 'string') {
+      const origin = getTrustedAppBaseUrl(request);
       const trimmed = userQuery.trim();
       if (trimmed.startsWith('/') || /(analisis(kan)? semua error|perbaik(i|an)? semua error)/i.test(trimmed)) {
         const cmdRes = await handleAdminCommand({ input: trimmed, sessionId: sessionId || 'browser', origin });
@@ -2049,8 +2093,8 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
     // All queries go through AI with COMPLETE auto-learned knowledge + specific retrieval
     const { getAIKnowledge } = await import('@/lib/aiAutoLearn');
     // Mode publik: hanya knowledge base publik (tanpa bagian teknis admin)
-    const completeKnowledge = await getAIKnowledge({ publicOnly: mode === 'public' });
-    const specificContext = await retrieveContext(userQuery || ''); // Query-specific search
+    const completeKnowledge = await getAIKnowledge({ publicOnly: role !== 'super_admin', refresh: true });
+    const specificContext = await retrieveContext(userQuery || '', { role, fresh: true }); // Pull the latest published website records per request.
     
     // Tavily web search for real-time data (if key available)
     let webContext = '';
@@ -2070,8 +2114,7 @@ header, footer, sidebar, button, card, input, modal, table, badge, alert, hero, 
     console.log('[AI] Knowledge base size:', completeKnowledge.length, 'chars');
     console.log('[AI] Specific context size:', specificContext.length, 'chars');
     console.log('[AI] Web context size:', webContext.length, 'chars');
-    console.log('[AI] Sample knowledge (first 800 chars):', completeKnowledge.substring(0, 800));
-    console.log('[AI] User query:', userQuery);
+    console.log('[AI] Fresh website context loaded', { role: role || 'guest', knowledgeChars: completeKnowledge.length, queryLength: userQuery.length });
     
     // CRITICAL FIX: Inject knowledge directly into user message to force AI to read it
     // Some AI providers ignore system messages, so we prepend to user query
@@ -2106,7 +2149,16 @@ REMINDER: You have ALL the data above. Answer from this data. DO NOT hallucinate
     
     // Build messages with enhanced user query
     // Extend system prompt with public member field policy & correction acceptance
-    const memberPublicAddendum = `\n\nKebijakan Tambahan (WAJIB):\n- Data anggota berupa Nama, Kelas, Sekbid, dan IG adalah publik dalam konteks organisasi ini dan BOLEH diberikan jika ada di database.\n- Jika user memberikan koreksi yang valid (mengandung kata 'koreksi:'), TANGGAPI dengan menerima koreksi, akui kesalahan, dan perbarui jawaban secara ringkas tanpa defensif.\n- Jika data tidak ada di konteks, jawab 'tidak ditemukan dalam database'. Jangan mengarang.\n- Tunjukkan keraguan dengan kalimat: 'Perlu verifikasi lanjut' jika tidak 100% yakin.`;
+    const roleAccess = role === 'super_admin'
+      ? 'Role super_admin: boleh menerima konteks dan bantuan operasional internal yang memang diberikan di sesi ini.'
+      : role === 'admin'
+        ? 'Role admin: gunakan informasi situs yang dipublikasikan; jangan tampilkan data akun, rahasia, log sistem, atau kemampuan super_admin.'
+        : role === 'osis'
+          ? 'Role OSIS: gunakan data situs yang dipublikasikan dan bantu pekerjaan OSIS sesuai hak aksesnya; jangan tampilkan data akun atau rahasia sistem.'
+          : role === 'guru'
+            ? 'Role guru: gunakan data situs yang dipublikasikan dan bantu peninjauan Piket hanya jika konteks yang diizinkan tersedia; jangan tampilkan data akun atau rahasia sistem.'
+            : 'Role siswa/pengunjung: hanya gunakan informasi publik website; jangan tampilkan data internal.';
+    const memberPublicAddendum = `\n\nKebijakan Akses berdasarkan role:\n- ${roleAccess}\n- Data anggota berupa Nama, Kelas, Sekbid, dan IG hanya boleh disebut jika ada pada data publik terbaru.\n- Jika data tidak ada di konteks, katakan belum ditemukan dan jangan mengarang.\n- Jika menerima koreksi, verifikasi terhadap data terbaru sebelum mengubah jawaban.`;
     const composite = [
       { role: 'system' as const, content: aiContext.systemPrompt + memberPublicAddendum },
       ...(baseMessages.slice(0, -1) || []).map((m: any) => ({ role: m.role as 'user'|'assistant'|'system', content: m.content })),

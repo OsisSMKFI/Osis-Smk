@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { auth } from '@/lib/auth';
+import { fetchUserRole } from '@/lib/supabase/server';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 📁 DESIGN FILES API - Read actual component files from workspace
@@ -77,8 +79,31 @@ const FILE_CATEGORIES = {
     }
 };
 
+async function requireDesignAdmin() {
+    const session = await auth();
+    if (!session?.user?.id) return { response: NextResponse.json({ error: 'Login diperlukan' }, { status: 401 }) };
+    if (await fetchUserRole(session.user.id) !== 'super_admin') {
+        return { response: NextResponse.json({ error: 'Akses super admin diperlukan' }, { status: 403 }) };
+    }
+    return { response: null };
+}
+
+function resolveWorkspaceFile(workspaceRoot: string, filePath: string) {
+    if (typeof filePath !== 'string' || !filePath.trim() || filePath.includes('\0')) return null;
+    const root = path.resolve(workspaceRoot);
+    const fullPath = path.resolve(root, filePath);
+    const relative = path.relative(root, fullPath);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+    const segments = relative.split(/[\\/]/);
+    if (segments.some((segment) => segment === 'node_modules' || segment === '.git' || segment === '.next' || /^\.env/i.test(segment))) return null;
+    return { fullPath, relative };
+}
+
 export async function GET(request: NextRequest) {
     try {
+        const authResult = await requireDesignAdmin();
+        if (authResult.response) return authResult.response;
+
         const { searchParams } = new URL(request.url);
         const action = searchParams.get('action') || 'list';
         const filePath = searchParams.get('file');
@@ -88,12 +113,13 @@ export async function GET(request: NextRequest) {
         
         if (action === 'read' && filePath) {
             // Read a specific file
-            const fullPath = path.join(workspaceRoot, filePath);
+            const safePath = resolveWorkspaceFile(workspaceRoot, filePath);
             
             // Security: Ensure path is within workspace
-            if (!fullPath.startsWith(workspaceRoot)) {
+            if (!safePath) {
                 return NextResponse.json({ success: false, error: 'Invalid path' }, { status: 400 });
             }
+            const fullPath = safePath.fullPath;
             
             try {
                 const content = await fs.readFile(fullPath, 'utf-8');
@@ -203,6 +229,9 @@ import { fileOnDevServer, isProduction, hasDevServer } from '@/lib/dev-server-cl
 
 export async function POST(request: NextRequest) {
     try {
+        const authResult = await requireDesignAdmin();
+        if (authResult.response) return authResult.response;
+
         const body = await request.json();
         const { action, filePath, content } = body;
         
@@ -246,12 +275,13 @@ export async function POST(request: NextRequest) {
             // 💻 LOCAL MODE: Save directly
             // ═══════════════════════════════════════════════════════════════
             
-            const fullPath = path.join(workspaceRoot, filePath);
+            const safePath = resolveWorkspaceFile(workspaceRoot, filePath);
             
             // Security: Ensure path is within workspace
-            if (!fullPath.startsWith(workspaceRoot)) {
+            if (!safePath) {
                 return NextResponse.json({ success: false, error: 'Invalid path' }, { status: 400 });
             }
+            const fullPath = safePath.fullPath;
             
             // Ensure directory exists (for new files)
             const dir = path.dirname(fullPath);

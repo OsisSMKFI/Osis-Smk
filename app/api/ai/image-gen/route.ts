@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/adminConfig';
+import { auth } from '@/lib/auth';
+import { fetchUserRole } from '@/lib/supabase/server';
+import { checkRateLimit } from '@/lib/rateLimitRedis';
 
 /**
  * Image Generation API
@@ -17,6 +20,14 @@ import { getConfig } from '@/lib/adminConfig';
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: 'Login diperlukan' }, { status: 401 });
+    if (await fetchUserRole(session.user.id) !== 'super_admin') {
+      return NextResponse.json({ error: 'Akses super admin diperlukan' }, { status: 403 });
+    }
+    const rateLimit = await checkRateLimit(req, session.user.id, { limit: 5, windowMs: 24 * 60 * 60 * 1000 }, 'ai-image-generation');
+    if (!rateLimit.allowed) return NextResponse.json({ error: 'Batas pembuatan gambar hari ini sudah tercapai.' }, { status: 429 });
+
     const body = await req.json();
     const { 
       prompt, 
@@ -28,6 +39,10 @@ export async function POST(req: NextRequest) {
       sourceImage, // Optional source image for variations (data URL or URL)
       mode = 'generate' // 'generate' or 'variation'
     } = body;
+
+    if (!Number.isInteger(n) || n < 1 || n > 3) {
+      return NextResponse.json({ error: 'Jumlah gambar harus antara 1 dan 3.' }, { status: 400 });
+    }
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json({ 
@@ -47,10 +62,10 @@ export async function POST(req: NextRequest) {
       huggingfaceModel = 'black-forest-labs/FLUX.1-schnell';
     }
 
-    console.log('[Image Gen] Key status:', {
-      openai: openaiKey ? openaiKey.substring(0, 8) + '...' : 'none',
-      gemini: geminiKey ? geminiKey.substring(0, 8) + '...' : 'none',
-      huggingface: huggingfaceKey ? huggingfaceKey.substring(0, 8) + '...' : 'none',
+    console.log('[Image Gen] Provider availability:', {
+      openai: !!openaiKey,
+      gemini: !!geminiKey,
+      huggingface: !!huggingfaceKey,
       model: huggingfaceModel
     });
     

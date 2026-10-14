@@ -11,7 +11,7 @@ export const metadata: Metadata = generatePageMetadata({
     image: DEFAULT_OG_IMAGE,
 });
 
-export const revalidate = 60;
+export const revalidate = 5;
 
 export default async function SekbidPage() {
     const [sekbid, programs] = await Promise.all([getPublicSekbid(), getPublicProker()]);

@@ -166,6 +166,12 @@ export default function AdminAttendancePage() {
             </div>
             <div className="flex gap-2 md:gap-3">
               <Link
+                href="/admin/attendance/piket"
+                className="px-3 md:px-6 py-2 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg md:rounded-xl hover:shadow-xl transition-all flex items-center gap-1 md:gap-2 text-xs md:text-sm"
+              >
+                <FaCheckCircle /> <span>Piket Pagi</span>
+              </Link>
+              <Link
                 href="/admin/attendance/settings"
                 className="px-3 md:px-6 py-2 md:py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold rounded-lg md:rounded-xl hover:shadow-xl transition-all flex items-center gap-1 md:gap-2 text-xs md:text-sm"
               >

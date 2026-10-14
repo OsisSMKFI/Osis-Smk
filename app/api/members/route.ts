@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 
     const etag = crypto.createHash('sha1').update(JSON.stringify(payload)).digest('hex');
     const res = NextResponse.json(payload, { status: 200 });
-    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.headers.set('Cache-Control', 'no-store');
     res.headers.set('ETag', etag);
     if (invalid.length) {
       res.headers.set('X-Invalid-Members', String(invalid.length));

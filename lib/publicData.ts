@@ -143,6 +143,7 @@ export async function getPublicAnnouncements(limit = 20) {
     supabaseAdmin
       .from('announcements')
       .select('*')
+      .eq('published', true)
       .or(`expires_at.is.null,expires_at.gte.${now}`)
       .order('created_at', { ascending: false })
       .limit(limit)

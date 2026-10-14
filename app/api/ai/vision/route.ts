@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getAIGatewayStatus } from '@/lib/vercel/ai-gateway';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { fetchUserRole, supabaseAdmin } from '@/lib/supabase/server';
 
 /**
  * Clean up AI response for better readability
@@ -77,9 +77,17 @@ function sanitizePublicVision(text: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const contentLength = Number(req.headers.get('content-length') || 0);
+    if (contentLength > 16 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Ukuran permintaan terlalu besar.' }, { status: 413 });
+    }
     // Determine user role for sanitization decision
     const session = await auth();
-    const role = (session?.user as any)?.role as string | undefined;
+    if (!session?.user?.id) return NextResponse.json({ error: 'Login diperlukan' }, { status: 401 });
+    const role = await fetchUserRole(session.user.id) || undefined;
+    if (!['super_admin', 'admin', 'osis', 'guru'].includes(role || '')) {
+      return NextResponse.json({ error: 'Fitur analisis visual tidak tersedia untuk role ini.' }, { status: 403 });
+    }
     const isAdmin = role === 'admin' || role === 'super_admin';
     const isPublic = !isAdmin;
     const maybeSanitize = (txt: string) => isPublic ? sanitizePublicVision(txt) : txt;
@@ -117,10 +125,10 @@ export async function POST(req: NextRequest) {
       supabaseAdmin.from('members').select('*').eq('is_active', true),
       supabaseAdmin.from('sekbid').select('*'),
       supabaseAdmin.from('posts').select('*').eq('status', 'published').order('created_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('events').select('*').order('event_date', { ascending: false }).limit(10),
-      supabaseAdmin.from('announcements').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(10),
+      supabaseAdmin.from('events').select('*').neq('status', 'cancelled').order('event_date', { ascending: false }).limit(10),
+      supabaseAdmin.from('announcements').select('*').eq('published', true).or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`).order('created_at', { ascending: false }).limit(10),
       supabaseAdmin.from('program_kerja').select('*').order('created_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('gallery').select('*').order('uploaded_at', { ascending: false }).limit(20)
+      supabaseAdmin.from('gallery').select('*').order('created_at', { ascending: false }).limit(20)
     ]);
 
     const sekbidMap: Record<number, any> = {};

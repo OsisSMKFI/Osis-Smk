@@ -5,7 +5,7 @@ import PostsPageClient from './PostsPageClient';
 
 export const metadata = STATIC_METADATA.posts;
 
-export const revalidate = 60;
+export const revalidate = 5;
 
 export default async function PostsPage() {
     const posts = await getPublicPosts(24);

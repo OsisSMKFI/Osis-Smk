@@ -13,7 +13,7 @@ import { getCustomAIProvider, callCustomAI } from '@/lib/aiProvider';
 // - No response without tool execution
 // - No idle state
 // - No "no changes" without search
-// - If intent unclear → ASSUME MOST LIKELY → EXECUTE
+// - If intent unclear → inspect only; ask before changing files or running commands
 // - AI does NOT control itself
 //
 // v4.4 ENHANCEMENTS:
@@ -23,9 +23,8 @@ import { getCustomAIProvider, callCustomAI } from '@/lib/aiProvider';
 // - TOOL BATCHING: Copilot-style parallel execution
 //
 // COPILOT PHILOSOPHY:
-// - Assumption over clarification
-// - Confidence over correctness
-// - Momentum over politeness
+// - Evidence before edits
+// - Clarify missing requirements before consequential actions
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -101,56 +100,16 @@ let sessionMemory: SessionMemory = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 🎲 ASSUMPTION ENGINE - Infer intent BEFORE explicit detection
-// Copilot sering salah, tapi SELALU percaya diri
+// 🧭 CONTINUATION ENGINE - Continue only an explicit, low-risk search request
 // ═══════════════════════════════════════════════════════════════════════════════
 function assumeIntent(
     input: string, 
-    openFile?: { path: string },
     memory: SessionMemory = sessionMemory
 ): Intent | null {
     const lower = input.toLowerCase().trim();
     
-    // IMPLICIT CONTINUATION - "masih", "belum", "sama", "tetap", "yaudah"
-    // Reuse last execution plan, don't re-analyze
-    if (/^(masih|belum|sama|tetap|yaudah|lanjut|terus|ok|oke|sip|gas|next)/.test(lower)) {
-        return memory.lastIntent !== 'UNKNOWN' ? memory.lastIntent : 'FIX';
-    }
-    
-    // SHORT INPUT (< 15 chars) = likely continuation of last task
-    if (lower.length < 15 && memory.lastIntent !== 'UNKNOWN') {
-        // Check if it's a status word
-        if (/salah|error|gagal|rusak|gak|tidak|hilang/.test(lower)) {
-            return 'FIX';
-        }
-        return memory.lastIntent;
-    }
-    
-    // DOMINANT FILE BIAS - if recent files are metadata-related
-    if (memory.lastFilesEdited.some(f => /meta|og|seo/i.test(f))) {
-        if (/masih|salah|belum|gak|tidak/.test(lower)) {
-            return 'METADATA';
-        }
-    }
-    
-    // DOMINANT FILE BIAS - if recent files are UI components
-    if (memory.lastFilesEdited.some(f => /component|page|tsx/i.test(f))) {
-        if (/gak|tidak|muncul|hilang|tampil/.test(lower)) {
-            return 'UI';
-        }
-    }
-    
-    // OPEN FILE BIAS - assume intent based on currently open file
-    if (openFile?.path) {
-        if (/meta|og|seo/i.test(openFile.path)) {
-            return 'METADATA';
-        }
-        if (/page|component/i.test(openFile.path)) {
-            return 'UI';
-        }
-    }
-    
-    // No assumption - let explicit detection handle it
+    // A brief acknowledgment or the currently open file never authorizes an edit.
+    if (/^(lanjut cari|cari lagi|teruskan pencarian)\b/.test(lower) && memory.lastIntent === 'SEARCH') return 'SEARCH';
     return null;
 }
 
@@ -257,7 +216,7 @@ function collectContext(
     preferredFiles: string[];
 } {
     // STEP 1: Try assumption engine FIRST (Copilot behavior)
-    const assumedIntent = assumeIntent(message, openFile, memory);
+    const assumedIntent = assumeIntent(message, memory);
     
     // STEP 2: Fall back to explicit detection
     const explicitIntent = detectIntent(message);
@@ -267,8 +226,7 @@ function collectContext(
     
     // Check if this is implicit continuation
     const lower = message.toLowerCase().trim();
-    const isImplicitContinuation = /^(masih|belum|sama|tetap|yaudah|lanjut|terus|ok|oke|sip|gas|next)/.test(lower) ||
-                                   (lower.length < 15 && memory.lastIntent !== 'UNKNOWN');
+    const isImplicitContinuation = /^(lanjut cari|cari lagi|teruskan pencarian)\b/.test(lower) && memory.lastIntent === 'SEARCH';
     
     // DOMINANT FILE BIAS - prefer recently edited files
     const preferredFiles = [...memory.lastFilesEdited, ...memory.lastFilesRead].slice(0, 3);
@@ -345,7 +303,12 @@ async function executeTool(
     try {
         const response = await fetch(`${baseUrl}/api/ai/tools`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+                    ? { 'x-internal-agent-token': process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET as string }
+                    : {}),
+            },
             body: JSON.stringify({ tool, params })
         });
         const data = await response.json();
@@ -847,12 +810,11 @@ export async function runAgentWithStreaming(
 "${message}"
 
 EXECUTION REQUIREMENTS:
-- Execute immediately.
-- If files are missing, they were already searched.
-- Either apply changes via diff or output FAILURE.
-- Do not ask questions.
-- Do not describe possibilities.
-- Do not suggest.`;
+- Do not infer a target, requirement, or permission from a short acknowledgment or open file.
+- If the request is ambiguous, ask one specific question before editing.
+- Do not run terminal commands, delete data, change roles, or publish/deploy unless explicitly requested.
+- For a clear edit request, use the inspected source, apply the smallest supported change, then verify the result.
+- Report what was changed and any verification that could not be completed.`;
     
     // Get AI key
     const customProvider = await getCustomAIProvider();

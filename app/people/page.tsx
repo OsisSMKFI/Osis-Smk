@@ -8,7 +8,7 @@ import { CURRENT_SUPABASE_PROJECT } from '@/lib/supabase/storage';
 import { STATIC_METADATA } from '@/lib/metadata-helper';
 
 export const metadata: Metadata = STATIC_METADATA.people;
-export const revalidate = 60; // ISR: fresh members within 60s
+export const revalidate = 5; // ISR: fresh members within 5s
 
 const SUPABASE_STORAGE_URL = `https://${CURRENT_SUPABASE_PROJECT}.supabase.co/storage/v1/object/public/gallery/members`;
 

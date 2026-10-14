@@ -50,7 +50,7 @@ export async function generateMetadata({
     return DEFAULT_GALLERY_METADATA();
 }
 
-export const revalidate = 60;
+export const revalidate = 5;
 
 export default async function GalleryPage() {
     const [gallery, events, sekbids] = await Promise.all([

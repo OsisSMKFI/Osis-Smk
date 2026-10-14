@@ -227,6 +227,16 @@ export default function DashboardPageClient() {
                   Absensi
                 </Link>
               )}
+
+              {userRole === 'guru' && (
+                <Link
+                  href="/admin/attendance/piket"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                >
+                  <FaCalendarAlt className="text-xl" />
+                  Rekap Piket
+                </Link>
+              )}
               
               <Link
                 href="/dashboard"

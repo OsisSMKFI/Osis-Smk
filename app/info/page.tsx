@@ -16,7 +16,7 @@ export const metadata: Metadata = generatePageMetadata({
     image: DEFAULT_OG_IMAGE,
 });
 
-export const revalidate = 60;
+export const revalidate = 5;
 
 export default async function InfoPage() {
     const [announcements, events, polls, posts] = await Promise.all([

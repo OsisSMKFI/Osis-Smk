@@ -120,7 +120,7 @@ function categorizeEventByDate(
  * Build comprehensive knowledge base from all database tables
  * publicOnly=true → tanpa bagian teknis admin (commands, schema, system ops)
  */
-async function buildKnowledgeBase(opts?: { publicOnly?: boolean }): Promise<string> {
+async function buildKnowledgeBase(opts?: { publicOnly?: boolean; fresh?: boolean }): Promise<string> {
   const publicOnly = !!opts?.publicOnly;
   const kb: string[] = [];
   const temporal = getTemporalContext();
@@ -135,7 +135,7 @@ async function buildKnowledgeBase(opts?: { publicOnly?: boolean }): Promise<stri
 
   try {
     // 1. Get site snapshot (cached 30s)
-    const snap = await fetchSiteSnapshot();
+    const snap = await fetchSiteSnapshot({ fresh: opts?.fresh });
     
     // 2. TEMPORAL CONTEXT - Critical for time-based queries
     kb.push('═══════════════════════════════════════════════════════════════════');
@@ -516,6 +516,7 @@ async function buildKnowledgeBase(opts?: { publicOnly?: boolean }): Promise<stri
     const { data: events } = await supabaseAdmin
       .from('events')
       .select('*')
+      .neq('status', 'cancelled')
       .order('event_date', { ascending: false })
       .limit(100);
     
@@ -1357,23 +1358,23 @@ async function buildKnowledgeBase(opts?: { publicOnly?: boolean }): Promise<stri
 /**
  * Get current knowledge base (auto-refresh if stale)
  */
-export async function getAIKnowledge(opts?: { publicOnly?: boolean }): Promise<string> {
+export async function getAIKnowledge(opts?: { publicOnly?: boolean; refresh?: boolean }): Promise<string> {
   const publicOnly = !!opts?.publicOnly;
   const now = Date.now();
 
   if (publicOnly) {
-    if (!knowledgeBasePublic || now - lastUpdatePublic > UPDATE_INTERVAL) {
+    if (opts?.refresh || !knowledgeBasePublic || now - lastUpdatePublic > UPDATE_INTERVAL) {
       console.log('[AI AutoLearn] Building/refreshing PUBLIC knowledge base...');
-      knowledgeBasePublic = await buildKnowledgeBase({ publicOnly: true });
+      knowledgeBasePublic = await buildKnowledgeBase({ publicOnly: true, fresh: opts?.refresh });
       lastUpdatePublic = now;
       console.log('[AI AutoLearn] Public knowledge base updated. Size:', knowledgeBasePublic.length, 'chars');
     }
     return knowledgeBasePublic;
   }
 
-  if (!knowledgeBase || now - lastUpdate > UPDATE_INTERVAL) {
+  if (opts?.refresh || !knowledgeBase || now - lastUpdate > UPDATE_INTERVAL) {
     console.log('[AI AutoLearn] Building/refreshing knowledge base...');
-    knowledgeBase = await buildKnowledgeBase();
+    knowledgeBase = await buildKnowledgeBase({ fresh: opts?.refresh });
     lastUpdate = now;
     console.log('[AI AutoLearn] Knowledge base updated. Size:', knowledgeBase.length, 'chars');
   }
@@ -1389,7 +1390,7 @@ export async function refreshAIKnowledge(): Promise<void> {
   knowledgeBasePublic = null;
   lastUpdate = 0;
   lastUpdatePublic = 0;
-  knowledgeBase = await buildKnowledgeBase();
+  knowledgeBase = await buildKnowledgeBase({ fresh: true });
   lastUpdate = Date.now();
   console.log('[AI AutoLearn] Force refresh complete.');
 }

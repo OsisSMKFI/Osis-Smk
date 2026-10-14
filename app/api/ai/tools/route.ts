@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { fetchUserRole } from '@/lib/supabase/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
@@ -472,6 +474,18 @@ async function getDatabaseContext(table: string, query?: string): Promise<any[]>
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function POST(request: NextRequest) {
     try {
+        const serverSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+        const internalAgentToken = request.headers.get('x-internal-agent-token');
+        const trustedAgentCall = !!serverSecret && internalAgentToken === serverSecret;
+        const session = await auth();
+        if (!trustedAgentCall && !session?.user?.id) {
+            return NextResponse.json({ error: 'Login diperlukan' }, { status: 401 });
+        }
+        const role = session?.user?.id ? await fetchUserRole(session.user.id) : null;
+        if (!trustedAgentCall && role !== 'super_admin') {
+            return NextResponse.json({ error: 'Akses super admin diperlukan' }, { status: 403 });
+        }
+
         const body = await request.json();
         const { tool, params } = body;
         
@@ -545,6 +559,13 @@ export async function POST(request: NextRequest) {
 
 // Health check
 export async function GET() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Login diperlukan' }, { status: 401 });
+    }
+    if (await fetchUserRole(session.user.id) !== 'super_admin') {
+        return NextResponse.json({ error: 'Akses super admin diperlukan' }, { status: 403 });
+    }
     return NextResponse.json({
         status: 'ok',
         version: '1.0',

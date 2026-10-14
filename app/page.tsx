@@ -14,7 +14,7 @@ import {
 } from '@/lib/publicData';
 
 export const metadata = STATIC_METADATA.home;
-export const revalidate = 60;
+export const revalidate = 5;
 
 const HERO_KEYS = ['home_hero_title', 'home_hero_subtitle', 'home_hero_description'] as const;
 const VISION_KEYS = [

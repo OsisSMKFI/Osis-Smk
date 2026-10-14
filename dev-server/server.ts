@@ -20,6 +20,7 @@ import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import { timingSafeEqual } from 'crypto';
 
 const execAsync = promisify(exec);
 const app = express();
@@ -34,7 +35,7 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean);
 
 // Secret token for authentication
-const AUTH_TOKEN = process.env.DEV_SERVER_TOKEN || 'your-secret-token';
+const AUTH_TOKEN = process.env.DEV_SERVER_TOKEN?.trim() || '';
 
 // Repo configuration
 const REPO_URL = process.env.GITHUB_REPO_URL || 'https://github.com/Ashera12/webosis-archive.git';
@@ -55,34 +56,29 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 
 // Valid auth tokens - support multiple tokens for flexibility
-const VALID_TOKENS = [
-    AUTH_TOKEN?.trim(),
-    'webosis-dev-token-2024',
-    'webosis-dev-2024',
-    'webosissmk-dev-2024',
-    process.env.BACKUP_TOKEN?.trim()
-].filter(Boolean) as string[];
-
-// Auth middleware - accepts any valid token
+// The remote server accepts only a configured high-entropy secret via header.
 const authMiddleware = (req: any, res: any, next: any) => {
-    const token = req.headers['x-auth-token'] || req.query.token;
-    const trimmedToken = token?.trim();
-    
-    console.log(`Auth check - received: "${trimmedToken?.slice(0, 4)}...${trimmedToken?.slice(-4)}"`);
-    
-    if (!trimmedToken || !VALID_TOKENS.includes(trimmedToken)) {
-        return res.status(401).json({ 
-            success: false, 
-            error: 'Unauthorized',
-            debug: {
-                receivedLength: trimmedToken?.length || 0,
-                validTokenLengths: VALID_TOKENS.map(t => t.length),
-                receivedPreview: trimmedToken ? `${trimmedToken.slice(0, 4)}...` : 'none'
-            }
-        });
+    if (AUTH_TOKEN.length < 32) {
+        return res.status(503).json({ success: false, error: 'Dev server authentication is not configured' });
+    }
+    const candidate = String(req.headers['x-auth-token'] || '').trim();
+    const expectedBuffer = Buffer.from(AUTH_TOKEN);
+    const candidateBuffer = Buffer.from(candidate);
+    if (candidateBuffer.length !== expectedBuffer.length || !timingSafeEqual(candidateBuffer, expectedBuffer)) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
     next();
 };
+
+function resolveRepoPath(input: unknown) {
+    if (typeof input !== 'string' || input.includes('\0')) return null;
+    const fullPath = path.resolve(REPO_DIR, input);
+    const relative = path.relative(REPO_DIR, fullPath);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+    const parts = relative.split(path.sep);
+    if (parts.some((part) => part === '.git' || part === 'node_modules' || part === '.next' || /^\.env/i.test(part))) return null;
+    return { fullPath, relative };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 📂 REPO MANAGEMENT
@@ -151,20 +147,12 @@ app.get('/health', (req, res) => {
     res.json({ 
         status: 'ok', 
         service: 'webosis-dev-server',
-        repoDir: REPO_DIR,
-        timestamp: new Date().toISOString(),
-        config: {
-            hasGithubToken: !!GITHUB_TOKEN,
-            githubTokenLength: GITHUB_TOKEN?.length || 0,
-            repoUrl: REPO_URL,
-            hasAuthToken: !!AUTH_TOKEN,
-            authTokenPreview: AUTH_TOKEN ? `${AUTH_TOKEN.slice(0, 4)}...${AUTH_TOKEN.slice(-4)}` : 'not-set'
-        }
+        timestamp: new Date().toISOString()
     });
 });
 
 // Debug endpoint - test git push (temporary)
-app.get('/api/test-git', async (req, res) => {
+app.get('/api/test-git', authMiddleware, async (req, res) => {
     try {
         // Check git remote
         const { stdout: remoteInfo } = await execAsync('git remote -v', { cwd: REPO_DIR });
@@ -211,10 +199,20 @@ app.post('/api/exec', authMiddleware, async (req, res) => {
             return res.status(400).json({ success: false, error: 'Command required' });
         }
         
-        // No command blocking - Super admin has full access
-        // Security is handled by AUTH_TOKEN authentication
-        
-        const workDir = cwd ? path.join(REPO_DIR, cwd) : REPO_DIR;
+        const allowedCommands = [
+            /^(npm|pnpm|yarn)\s+(install|ci)$/i,
+            /^(npm|pnpm|yarn)\s+run\s+(build|lint|dev|start|typecheck|test)$/i,
+            /^git\s+(status|log|diff|branch)$/i,
+            /^(pwd|ls|dir)$/i,
+            /^tsc\s+--(version|noEmit)$/i,
+        ];
+        if (/[\r\n;&|<>`$()]/.test(command) || !allowedCommands.some(pattern => pattern.test(command.trim()))) {
+            return res.status(403).json({ success: false, error: 'Command is not allowed' });
+        }
+
+        const safeDir = cwd ? resolveRepoPath(cwd) : null;
+        if (cwd && !safeDir) return res.status(400).json({ success: false, error: 'Invalid working directory' });
+        const workDir = safeDir?.fullPath || REPO_DIR;
         
         console.log(`🖥️ Executing: ${command}`);
         const { stdout, stderr } = await execAsync(command, { 
@@ -252,6 +250,12 @@ app.post('/api/exec', authMiddleware, async (req, res) => {
 app.post('/api/npm', authMiddleware, async (req, res) => {
     try {
         const { action, packages } = req.body;
+
+        if (packages !== undefined && (!Array.isArray(packages) || packages.length > 10 || packages.some((name: unknown) =>
+            typeof name !== 'string' || name.startsWith('-') || !/^(?:@[a-zA-Z0-9._-]+\/)?[a-zA-Z0-9][a-zA-Z0-9._-]*(?:@[a-zA-Z0-9._*^~<>=,-]+)?$/.test(name)
+        ))) {
+            return res.status(400).json({ success: false, error: 'Invalid package name' });
+        }
         
         let command = '';
         switch (action) {
@@ -299,6 +303,18 @@ app.post('/api/npm', authMiddleware, async (req, res) => {
 app.post('/api/git', authMiddleware, async (req, res) => {
     try {
         const { action, message, files, branch } = req.body;
+
+        if (message !== undefined && (typeof message !== 'string' || message.length > 200 || /[\r\n\\$`;&|<>]/.test(message))) {
+            return res.status(400).json({ success: false, error: 'Invalid commit message' });
+        }
+        if (branch !== undefined && (typeof branch !== 'string' || !/^[A-Za-z0-9._/-]{1,120}$/.test(branch) || branch.startsWith('-') || branch.includes('..'))) {
+            return res.status(400).json({ success: false, error: 'Invalid branch name' });
+        }
+        if (files !== undefined && (!Array.isArray(files) || files.length > 100 || files.some((file: unknown) =>
+            typeof file !== 'string' || file.startsWith('-') || file.startsWith('/') || file.includes('..') || !/^[A-Za-z0-9_./-]+$/.test(file)
+        ))) {
+            return res.status(400).json({ success: false, error: 'Invalid file list' });
+        }
         
         let command = '';
         let result: any = {};
@@ -433,12 +449,11 @@ app.post('/api/file', authMiddleware, async (req, res) => {
             return res.status(400).json({ success: false, error: 'File path required' });
         }
         
-        const fullPath = path.join(REPO_DIR, filePath);
-        
-        // Security: Ensure path is within repo
-        if (!fullPath.startsWith(REPO_DIR)) {
+        const safePath = resolveRepoPath(filePath);
+        if (!safePath) {
             return res.status(403).json({ success: false, error: 'Invalid path' });
         }
+        const fullPath = safePath.fullPath;
         
         switch (action) {
             case 'read':
@@ -482,7 +497,9 @@ app.post('/api/file', authMiddleware, async (req, res) => {
 app.get('/api/files', authMiddleware, async (req, res) => {
     try {
         const dir = (req.query.dir as string) || '';
-        const fullPath = path.join(REPO_DIR, dir);
+        const safePath = dir ? resolveRepoPath(dir) : { fullPath: REPO_DIR, relative: '' };
+        if (!safePath) return res.status(403).json({ success: false, error: 'Invalid path' });
+        const fullPath = safePath.fullPath;
         
         const items = await fs.readdir(fullPath, { withFileTypes: true });
         const files = items.map(item => ({

@@ -4,7 +4,7 @@ import PostDetailClient from './PostDetailClient';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 
 // ISR: serve cached post for 60s to avoid DB hit on every request
-export const revalidate = 60;
+export const revalidate = 5;
 
 interface Post {
   id: string;

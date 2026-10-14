@@ -529,7 +529,7 @@ export async function getSystemStats(): Promise<string> {
  */
 export async function getPublicOSISInfo(): Promise<{ ketua: string; visi: string; misi: string; about: string; infoText: string }> {
   try {
-    const snap = await fetchSiteSnapshot();
+    const snap = await fetchSiteSnapshot({ fresh: true });
     const ketua = snap.ketua || (snap.page_content && snap.page_content.site_ketua) || '-';
 
     // Robust extraction for visi & misi: check multiple keys and fallback to fuzzy match in page_content
@@ -642,8 +642,9 @@ export async function buildAIContext(
   userName?: string | null
 ): Promise<AIContext> {
   const role = (userRole || '').toLowerCase();
-  const isAdmin = role === 'super_admin' || role === 'admin';
-  const effectiveMode = mode === 'admin' && isAdmin ? 'admin' : 'public';
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin' || isSuperAdmin;
+  const effectiveMode = mode === 'admin' && isSuperAdmin ? 'admin' : 'public';
 const systemContext: string[] = [];
 
 // RULE HALUS (ANTI MAKSA)

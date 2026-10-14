@@ -7,17 +7,7 @@ import { NextResponse } from 'next/server';
 import { auth } from './auth';
 import { hasPermission, hasAnyPermission, hasAllPermissions, type Permission } from './rbac';
 
-// Lightweight in-memory role cache to minimize DB hits when many API calls
-// Keyed by userId, stores { role, expires }
-const roleCache = new Map<string, { role: string; expires: number }>();
-const ROLE_CACHE_TTL_MS = 30_000; // 30 seconds
-
 async function fetchFreshRole(userId: string): Promise<string | null> {
-  const cached = roleCache.get(userId);
-  const now = Date.now();
-  if (cached && cached.expires > now) {
-    return cached.role;
-  }
   try {
     const { supabaseAdmin } = await import('./supabase/server');
     const { data, error } = await supabaseAdmin
@@ -27,20 +17,16 @@ async function fetchFreshRole(userId: string): Promise<string | null> {
       .single();
     if (error) return null;
     const role = (data?.role || '').trim().toLowerCase();
-    if (role) {
-      roleCache.set(userId, { role, expires: now + ROLE_CACHE_TTL_MS });
-      return role;
-    }
-    return null;
+    return role || null;
   } catch (e) {
     console.error('[apiAuth] fetchFreshRole error:', e);
     return null;
   }
 }
 
-function resolveEffectiveRole(sessionRole: string | undefined | null, freshRole: string | null): string | null {
-  // Prefer fresh DB role when available; fallback to session role
-  return (freshRole || sessionRole || null);
+function resolveEffectiveRole(freshRole: string | null): string | null {
+  // The session claim is only a hint. Fail closed if the database role is unavailable.
+  return freshRole;
 }
 
 /**
@@ -65,7 +51,7 @@ export async function requirePermission(permission: Permission) {
     freshRole = await fetchFreshRole(userId);
   }
 
-  const effectiveRole = resolveEffectiveRole(sessionRole, freshRole);
+  const effectiveRole = resolveEffectiveRole(freshRole);
 
   if (process.env.DEBUG_AUTH === '1') {
     console.log('[requirePermission]', {
@@ -111,7 +97,7 @@ export async function requireAnyPermission(permissions: Permission[]) {
   const sessionRole = (session.user as any).role;
   const userId = (session.user as any).id;
   const freshRole = userId ? await fetchFreshRole(userId) : null;
-  const effectiveRole = resolveEffectiveRole(sessionRole, freshRole);
+  const effectiveRole = resolveEffectiveRole(freshRole);
 
   if (!hasAnyPermission(effectiveRole || undefined, permissions)) {
     return NextResponse.json(
@@ -146,7 +132,7 @@ export async function requireAllPermissions(permissions: Permission[]) {
   const sessionRole = (session.user as any).role;
   const userId = (session.user as any).id;
   const freshRole = userId ? await fetchFreshRole(userId) : null;
-  const effectiveRole = resolveEffectiveRole(sessionRole, freshRole);
+  const effectiveRole = resolveEffectiveRole(freshRole);
 
   if (!hasAllPermissions(effectiveRole || undefined, permissions)) {
     return NextResponse.json(

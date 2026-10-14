@@ -16,7 +16,7 @@ type SiteSnapshot = {
   top_gallery: { title?: string; url?: string }[];
 };
 
-const CACHE_TTL_MS = 30 * 1000; // 30 seconds
+const CACHE_TTL_MS = 30 * 1000;
 let cached: { ts: number; data: SiteSnapshot } | null = null;
 
 function truncate(str: string | null | undefined, max = 200) {
@@ -25,14 +25,16 @@ function truncate(str: string | null | undefined, max = 200) {
   return str.substring(0, max) + '...';
 }
 
-export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
+export async function fetchSiteSnapshot(options: { fresh?: boolean } = {}): Promise<SiteSnapshot> {
   const now = Date.now();
-  if (cached && now - cached.ts < CACHE_TTL_MS) return cached.data;
+  if (!options.fresh && cached && now - cached.ts < CACHE_TTL_MS) return cached.data;
 
   // Fetch announcements
   const { data: announcements } = await supabaseAdmin
     .from('announcements')
     .select('title, content')
+    .eq('published', true)
+    .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
     .order('created_at', { ascending: false })
     .limit(5);
 
@@ -41,7 +43,7 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
   const { data: events } = await supabaseAdmin
     .from('events')
     .select('title, event_date, start_date, end_date, description, status')
-    .not('status', 'in', '("completed","cancelled")')
+    .neq('status', 'cancelled')
     .order('event_date', { ascending: true })
     .limit(20); // Fetch more then filter
   
@@ -104,21 +106,23 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
   // Top gallery items
   const { data: gallery } = await supabaseAdmin
     .from('gallery')
-    .select('title, url')
+    .select('title, image_url')
     .order('created_at', { ascending: false })
     .limit(5);
 
   // Fetch CMS-managed page content (visi/misi/about and other editable texts)
   const { data: pageContent } = await supabaseAdmin
     .from('page_content')
-    .select('page_key, content, content_type, category')
+    .select('page_key, content, category')
+    .eq('published', true)
     .limit(200);
 
   // Focused fetch: jamin konten inti (about/filosofi/site) selalu ikut terbawa
   // walau query umum di atas kelewat limit 200 baris.
   const { data: pageContentFocused } = await supabaseAdmin
     .from('page_content')
-    .select('page_key, content, content_type, category')
+    .select('page_key, content, category')
+    .eq('published', true)
     .or('page_key.like.about_%,page_key.like.filosofi_logo_%,page_key.like.site_%')
     .limit(200);
 
@@ -153,7 +157,7 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
       return acc;
     }, {}),
     proker: (prokerData || []).map((p: any) => ({ id: p.id, title: truncate(p.title || p.nama || p.name || '', 120), description: truncate(p.description || p.tujuan || p.waktu || '', 200) })),
-    top_gallery: (gallery || []).map((g: any) => ({ title: truncate(g.title, 100), url: g.url }))
+    top_gallery: (gallery || []).map((g: any) => ({ title: truncate(g.title, 100), url: g.image_url }))
   };
 
 
@@ -165,12 +169,12 @@ export async function fetchSiteSnapshot(): Promise<SiteSnapshot> {
     try {
       const { data: maybe } = await supabaseAdmin
         .from('members')
-        .select('id, name, role, nama')
+        .select('id, name, role')
         .or("role.ilike.%ketua%")
         .limit(1);
       const found = maybe && maybe.length ? maybe[0] : null;
       if (found) {
-        const leaderName = found.name || found.nama || '';
+        const leaderName = found.name || '';
         snapshot.ketua = leaderName;
         snapshot.page_content['site_ketua'] = leaderName;
       } else {

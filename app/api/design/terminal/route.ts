@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import path from 'path';
+import { auth } from '@/lib/auth';
+import { fetchUserRole } from '@/lib/supabase/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { execOnDevServer, isProduction, hasDevServer } from '@/lib/dev-server-client';
@@ -21,16 +24,11 @@ const execAsync = promisify(exec);
 
 // Whitelist of allowed commands
 const ALLOWED_COMMANDS = [
-    // Package managers
-    /^(npm|pnpm|yarn)\s+(install|add|remove|uninstall|update|run|exec|init)/i,
-    // Git commands
-    /^git\s+(status|log|diff|add|commit|push|pull|branch|checkout|stash|merge)/i,
-    // File operations (safe ones)
-    /^(mkdir|touch|cat|head|tail|wc|ls|dir|pwd|cd)/i,
-    // Build commands
-    /^(npx|bunx)\s+/i,
-    // TypeScript compiler
-    /^(tsc|tsx)\s+/i,
+    /^(npm|pnpm|yarn)\s+(install|ci)$/i,
+    /^(npm|pnpm|yarn)\s+run\s+(build|lint|dev|start|typecheck|test)$/i,
+    /^git\s+(status|log|diff|branch)$/i,
+    /^(pwd|ls|dir)$/i,
+    /^tsc\s+--(version|noEmit)$/i,
 ];
 
 // Blocked patterns for security
@@ -47,6 +45,10 @@ const BLOCKED_PATTERNS = [
 ];
 
 function isCommandAllowed(command: string): { allowed: boolean; reason?: string } {
+    if (/[\r\n;&|<>`$()]/.test(command)) {
+        return { allowed: false, reason: 'Karakter shell yang dapat menggabungkan perintah tidak diizinkan' };
+    }
+
     // Check blocked patterns first
     for (const pattern of BLOCKED_PATTERNS) {
         if (pattern.test(command)) {
@@ -66,6 +68,14 @@ function isCommandAllowed(command: string): { allowed: boolean; reason?: string 
 
 export async function POST(request: NextRequest) {
     try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return NextResponse.json({ success: false, error: 'Login diperlukan' }, { status: 401 });
+        }
+        if (await fetchUserRole(session.user.id) !== 'super_admin') {
+            return NextResponse.json({ success: false, error: 'Akses super admin diperlukan' }, { status: 403 });
+        }
+
         const body = await request.json();
         const { command, cwd } = body;
         
@@ -76,6 +86,19 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
         
+        // Validate before forwarding to the remote service too.
+        const check = isCommandAllowed(command);
+        if (!check.allowed) {
+            return NextResponse.json({ success: false, error: check.reason }, { status: 403 });
+        }
+
+        const workspaceRoot = process.cwd();
+        const workingDir = cwd ? path.resolve(workspaceRoot, cwd) : workspaceRoot;
+        const relativeDir = path.relative(workspaceRoot, workingDir);
+        if (relativeDir.startsWith('..') || path.isAbsolute(relativeDir)) {
+            return NextResponse.json({ success: false, error: 'Direktori kerja tidak valid' }, { status: 400 });
+        }
+
         // ═══════════════════════════════════════════════════════════════════
         // 🌐 PRODUCTION MODE: Forward to Dev Server
         // ═══════════════════════════════════════════════════════════════════
@@ -90,34 +113,13 @@ export async function POST(request: NextRequest) {
             }
             
             console.log(`[Terminal API] Forwarding to Dev Server`);
-            const result = await execOnDevServer(command, cwd);
+            const result = await execOnDevServer(command, relativeDir || undefined);
             return NextResponse.json(result);
         }
         
         // ═══════════════════════════════════════════════════════════════════
         // 💻 LOCAL MODE: Execute directly
         // ═══════════════════════════════════════════════════════════════════
-        
-        // Check if command is allowed
-        const check = isCommandAllowed(command);
-        if (!check.allowed) {
-            return NextResponse.json({
-                success: false,
-                error: check.reason,
-                command,
-                allowed_patterns: [
-                    'npm install <package>',
-                    'pnpm add <package>',
-                    'npm run <script>',
-                    'git status/add/commit/push',
-                    'npx <command>',
-                    'mkdir <directory>'
-                ]
-            }, { status: 403 });
-        }
-        
-        const workspaceRoot = process.cwd();
-        const workingDir = cwd ? `${workspaceRoot}/${cwd}` : workspaceRoot;
         
         console.log(`[Terminal API] Executing: ${command}`);
         console.log(`[Terminal API] Working dir: ${workingDir}`);
@@ -165,6 +167,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Login diperlukan' }, { status: 401 });
+    }
+    if (await fetchUserRole(session.user.id) !== 'super_admin') {
+        return NextResponse.json({ error: 'Akses super admin diperlukan' }, { status: 403 });
+    }
     return NextResponse.json({
         status: 'ok',
         version: '1.0.0',

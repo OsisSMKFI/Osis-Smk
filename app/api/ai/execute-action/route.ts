@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { auth } from '@/lib/auth';
+import { fetchUserRole, supabaseAdmin } from '@/lib/supabase/server';
 import { DESIGN_REGISTRY, findComponent } from '@/lib/design-registry';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -859,6 +860,14 @@ ${selector}:hover {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Login diperlukan' }, { status: 401 });
+    }
+    if (await fetchUserRole(session.user.id) !== 'super_admin') {
+      return NextResponse.json({ success: false, error: 'Akses super admin diperlukan' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { action, params, sessionId } = body;
 
@@ -1125,6 +1134,13 @@ async function logAIAction(sessionId: string | undefined, action: string, detail
 
 // GET - Get available actions and templates
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Login diperlukan' }, { status: 401 });
+  }
+  if (await fetchUserRole(session.user.id) !== 'super_admin') {
+    return NextResponse.json({ error: 'Akses super admin diperlukan' }, { status: 403 });
+  }
   return NextResponse.json({
     availableActions: [
       {

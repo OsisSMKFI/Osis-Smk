@@ -5,7 +5,7 @@ import EventDetailClient from './EventDetailClient';
 import { supabaseAdmin as supabase } from '@/lib/supabase/server';
 
 // ISR: serve cached event for 60s to avoid DB hit on every request
-export const revalidate = 60;
+export const revalidate = 5;
 
 interface PageProps {
   params: Promise<{ id: string }>;

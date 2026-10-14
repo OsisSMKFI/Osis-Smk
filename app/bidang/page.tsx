@@ -5,7 +5,7 @@ import BidangPageClient from './BidangPageClient';
 
 export const metadata = STATIC_METADATA.bidang;
 
-export const revalidate = 60;
+export const revalidate = 5;
 
 export default async function BidangPage() {
     const proker = await getPublicProker();

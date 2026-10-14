@@ -22,7 +22,10 @@ type UserRecord = {
 // environments without a central store. For production, consider a DB/Redis
 // backed counter.
 const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const LOGIN_MAX_ATTEMPTS = Number(process.env.LOGIN_MAX_ATTEMPTS ?? 5);
+const configuredLoginAttempts = Number.parseInt(process.env.LOGIN_MAX_ATTEMPTS || '5', 10);
+const LOGIN_MAX_ATTEMPTS = Number.isInteger(configuredLoginAttempts) && configuredLoginAttempts >= 3 && configuredLoginAttempts <= 20
+  ? configuredLoginAttempts
+  : 5;
 const loginAttempts = new Map<string, { count: number; first: number }>();
 
 function getAttempts(key: string) {
@@ -47,11 +50,22 @@ function incrementAttempts(key: string) {
     return;
   }
   v.count += 1;
+  if (loginAttempts.size > 5000) {
+    const oldestAllowed = now - LOGIN_WINDOW_MS;
+    for (const [attemptKey, attempt] of loginAttempts) {
+      if (attempt.first < oldestAllowed) loginAttempts.delete(attemptKey);
+    }
+  }
   loginAttempts.set(key, v);
 }
 
 function resetAttempts(key: string) {
   loginAttempts.delete(key);
+}
+
+function getRequestIp(request: Request) {
+  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  return request.headers.get('x-real-ip')?.trim() || forwarded || 'unknown';
 }
 
 async function findUserByEmail(email: string): Promise<UserRecord | null> {
@@ -91,15 +105,25 @@ export const authConfig: NextAuthConfig = {
             throw new Error('Email dan password harus diisi');
           }
           const email = rawEmail.trim().toLowerCase();
-          if (dbg) console.log('[NextAuth] Normalized email:', email);
+          if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length > 1024) {
+            throw new Error('Email atau password tidak sesuai.');
+          }
 
-          // rate-limit by normalized email (process-local)
-          const attemptKey = `login:${email}`;
-          const attempts = getAttempts(attemptKey);
-          if (attempts.count >= LOGIN_MAX_ATTEMPTS) {
-            await logAuthEvent('warn', { event: 'authorize_rate_limited', email });
+          // Limit both a single account and a source address to slow guessing.
+          const emailAttemptKey = `login:email:${email}`;
+          const requestIp = getRequestIp(request);
+          const ipAttemptKey = requestIp === 'unknown' ? null : `login:ip:${requestIp}`;
+          const emailAttempts = getAttempts(emailAttemptKey);
+          const ipAttempts = ipAttemptKey ? getAttempts(ipAttemptKey) : { count: 0, first: 0 };
+          if (emailAttempts.count >= LOGIN_MAX_ATTEMPTS || (ipAttemptKey && ipAttempts.count >= LOGIN_MAX_ATTEMPTS * 3)) {
+            await logAuthEvent('warn', { event: 'authorize_rate_limited' });
             throw new Error('Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.');
           }
+
+          const recordFailure = () => {
+            incrementAttempts(emailAttemptKey);
+            if (ipAttemptKey) incrementAttempts(ipAttemptKey);
+          };
 
           const user = await findUserByEmail(email);
           
@@ -111,15 +135,15 @@ export const authConfig: NextAuthConfig = {
           });
           
           if (!user) {
-            incrementAttempts(attemptKey);
-            await logAuthEvent('warn', { event: 'authorize_user_not_found', email });
-            throw new Error(`Email "${email}" tidak terdaftar. Silakan registrasi terlebih dahulu atau periksa ejaan email Anda.`);
+            recordFailure();
+            await logAuthEvent('warn', { event: 'authorize_credentials_invalid' });
+            throw new Error('Email atau password tidak sesuai.');
           }
 
           if (!user.password_hash) {
-            incrementAttempts(attemptKey);
-            await logAuthEvent('warn', { event: 'authorize_no_password_hash', email, user_id: user.id });
-            throw new Error('Akun Anda belum memiliki password. Silakan hubungi admin untuk reset password.');
+            recordFailure();
+            await logAuthEvent('warn', { event: 'authorize_credentials_invalid' });
+            throw new Error('Email atau password tidak sesuai.');
           }
 
           // Dynamically import bcrypt to verify password first
@@ -129,16 +153,15 @@ export const authConfig: NextAuthConfig = {
           if (dbg) console.log('[NextAuth] Password valid:', valid);
           
           if (!valid) {
-            incrementAttempts(attemptKey);
-            const remainingAttempts = LOGIN_MAX_ATTEMPTS - getAttempts(attemptKey).count;
+            recordFailure();
+            const remainingAttempts = LOGIN_MAX_ATTEMPTS - getAttempts(emailAttemptKey).count;
             await logAuthEvent('warn', { 
-              event: 'authorize_bad_password', 
-              email, 
+              event: 'authorize_credentials_invalid',
               user_id: user.id,
-              attempts: getAttempts(attemptKey).count,
+              attempts: getAttempts(emailAttemptKey).count,
               remaining: remainingAttempts
             });
-            throw new Error(`Password salah! Anda masih memiliki ${remainingAttempts} percobaan lagi. Setelah ${LOGIN_MAX_ATTEMPTS} kali gagal, akun akan dikunci selama 15 menit.`);
+            throw new Error('Email atau password tidak sesuai.');
           }
 
           // Check email verification after password is correct (do NOT increment attempts for unverified)
@@ -156,7 +179,8 @@ export const authConfig: NextAuthConfig = {
           }
 
           // Success: reset attempts and log success
-          resetAttempts(attemptKey);
+          resetAttempts(emailAttemptKey);
+          if (ipAttemptKey) resetAttempts(ipAttemptKey);
           await logAuthEvent('info', { 
             event: 'login_success', 
             user_id: user.id, 

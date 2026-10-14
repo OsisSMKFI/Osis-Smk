@@ -314,7 +314,12 @@ async function executeTool(toolName: string, params: Record<string, any>, baseUr
     try {
         const response = await fetch(`${baseUrl}/api/ai/tools`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+                    ? { 'x-internal-agent-token': process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET as string }
+                    : {}),
+            },
             body: JSON.stringify({ tool: toolName, params })
         });
         

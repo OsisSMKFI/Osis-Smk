@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     const res = NextResponse.json({ sekbid: sekbid || [] });
-    res.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=60');
+    res.headers.set('Cache-Control', 'no-store');
     return res;
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

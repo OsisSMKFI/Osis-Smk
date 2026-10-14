@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runAIAgent, detectUserIntent } from '@/lib/ai-agent-v4';
-import { headers } from 'next/headers';
+import { auth } from '@/lib/auth';
+import { fetchUserRole } from '@/lib/supabase/server';
+import { getTrustedAppBaseUrl } from '@/lib/trustedOrigin';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🤖 AI AGENT API v2.0 - Full Action Copilot Mode
 // ═══════════════════════════════════════════════════════════════════════════════
-// This API provides a Copilot-like AI that:
-// - ACTS FIRST, explains later
-// - Searches files automatically
-// - Reads and understands code
-// - Edits files directly without asking
-// - Runs terminal commands when needed
+// This API provides a super-admin coding assistant that:
+// - Searches and reads code to ground its response
+// - Applies requested file edits after the request is clear
+// - Uses the restricted terminal endpoint when explicitly requested
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function POST(request: NextRequest) {
     try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return NextResponse.json({ success: false, error: 'Login diperlukan' }, { status: 401 });
+        }
+        if (await fetchUserRole(session.user.id) !== 'super_admin') {
+            return NextResponse.json({ success: false, error: 'Akses super admin diperlukan' }, { status: 403 });
+        }
+
         const body = await request.json();
         const { 
             message, 
@@ -30,11 +38,7 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
         
-        // Get base URL for internal API calls
-        const headersList = await headers();
-        const host = headersList.get('host') || 'localhost:3000';
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const baseUrl = `${protocol}://${host}`;
+        const baseUrl = getTrustedAppBaseUrl(request);
         
         // Detect user intent to log
         const intent = detectUserIntent(message);
@@ -76,6 +80,13 @@ export async function POST(request: NextRequest) {
 
 // Health check and info
 export async function GET() {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Login diperlukan' }, { status: 401 });
+    }
+    if (await fetchUserRole(session.user.id) !== 'super_admin') {
+        return NextResponse.json({ error: 'Akses super admin diperlukan' }, { status: 403 });
+    }
     return NextResponse.json({
         status: 'ok',
         name: 'AI Agent API',

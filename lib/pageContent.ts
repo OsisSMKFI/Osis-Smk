@@ -5,7 +5,8 @@ import { supabase } from './supabase/client';
 // Cache for page content
 let contentCache: Record<string, string> | null = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 60 * 1000; // 1 minute
+// Keep the client copy short-lived so edits from another admin session appear quickly.
+const CACHE_TTL = 5 * 1000;
 
 // In-flight promise dedup - prevents parallel identical queries
 let inFlightPromise: Promise<Record<string, string>> | null = null;

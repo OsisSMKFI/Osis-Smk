@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
+import { fetchUserRole, supabaseAdmin } from '@/lib/supabase/server';
 import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+
+async function requireSuperAdmin() {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (await fetchUserRole(session.user.id) !== 'super_admin') {
+        return NextResponse.json({ error: 'Super admin access required' }, { status: 403 });
+    }
+    return null;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🎨 DESIGN STUDIO API - Manage design overrides
@@ -11,6 +20,8 @@ export const dynamic = 'force-dynamic';
 // GET - List all design overrides
 export async function GET(request: NextRequest) {
     try {
+        const authError = await requireSuperAdmin();
+        if (authError) return authError;
         const { data: designs, error } = await supabaseAdmin
             .from('page_content')
             .select('*')
@@ -36,16 +47,8 @@ export async function GET(request: NextRequest) {
 // POST - Save or update a design override
 export async function POST(request: NextRequest) {
     try {
-        // Check auth
-        const session = await auth();
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const role = (session.user as any).role;
-        if (role !== 'super_admin') {
-            return NextResponse.json({ error: 'Super admin access required' }, { status: 403 });
-        }
+        const authError = await requireSuperAdmin();
+        if (authError) return authError;
 
         const body = await request.json();
         const { component, css, style, action } = body;
@@ -109,15 +112,8 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove a design override
 export async function DELETE(request: NextRequest) {
     try {
-        const session = await auth();
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const role = (session.user as any).role;
-        if (role !== 'super_admin') {
-            return NextResponse.json({ error: 'Super admin access required' }, { status: 403 });
-        }
+        const authError = await requireSuperAdmin();
+        if (authError) return authError;
 
         const { searchParams } = new URL(request.url);
         const component = searchParams.get('component');

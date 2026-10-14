@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
-import { headers } from 'next/headers';
 import { runAgentWithStreaming } from '@/lib/ai-agent-v4';
+import { auth } from '@/lib/auth';
+import { fetchUserRole } from '@/lib/supabase/server';
+import { getTrustedAppBaseUrl } from '@/lib/trustedOrigin';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🤖 AI AGENT STREAMING API v2.0 - Full Action Copilot Mode
@@ -28,6 +30,12 @@ function createSSEEncoder() {
 }
 
 export async function POST(request: NextRequest) {
+    const session = await auth();
+    if (!session?.user?.id) return Response.json({ error: 'Login diperlukan' }, { status: 401 });
+    if (await fetchUserRole(session.user.id) !== 'super_admin') {
+        return Response.json({ error: 'Akses super admin diperlukan' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { message, conversationHistory = [], openFile, mode = 'design-studio' } = body;
 
@@ -35,11 +43,7 @@ export async function POST(request: NextRequest) {
         return new Response(JSON.stringify({ error: 'Message required' }), { status: 400 });
     }
 
-    // Get base URL
-    const headersList = await headers();
-    const host = headersList.get('host') || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const baseUrl = `${protocol}://${host}`;
+    const baseUrl = getTrustedAppBaseUrl(request);
 
     // Create streaming response
     const stream = new ReadableStream({

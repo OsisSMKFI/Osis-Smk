@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runCopilotEngine, getSession, CopilotResponse } from '@/lib/copilot-ai-engine';
-import { headers } from 'next/headers';
+import { auth } from '@/lib/auth';
+import { fetchUserRole } from '@/lib/supabase/server';
+import { getTrustedAppBaseUrl } from '@/lib/trustedOrigin';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -18,6 +20,14 @@ import { headers } from 'next/headers';
 
 export async function POST(request: NextRequest): Promise<NextResponse<CopilotResponse>> {
     try {
+        const userSession = await auth();
+        if (!userSession?.user?.id) {
+            return NextResponse.json({ status: 'rejected', error: 'Login diperlukan' } as CopilotResponse, { status: 401 });
+        }
+        if (await fetchUserRole(userSession.user.id) !== 'super_admin') {
+            return NextResponse.json({ status: 'rejected', error: 'Akses super admin diperlukan' } as CopilotResponse, { status: 403 });
+        }
+
         const body = await request.json();
         const {
             message,
@@ -36,11 +46,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CopilotRe
             } as CopilotResponse, { status: 400 });
         }
         
-        // Get base URL for internal API calls
-        const headersList = await headers();
-        const host = headersList.get('host') || 'localhost:3000';
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const baseUrl = `${protocol}://${host}`;
+        const baseUrl = getTrustedAppBaseUrl(request);
         
         // Run the Copilot engine
         const result = await runCopilotEngine(message || '', {
@@ -70,6 +76,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<CopilotRe
  * GET - Health check and session info
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
+    const userSession = await auth();
+    if (!userSession?.user?.id) {
+        return NextResponse.json({ error: 'Login diperlukan' }, { status: 401 });
+    }
+    if (await fetchUserRole(userSession.user.id) !== 'super_admin') {
+        return NextResponse.json({ error: 'Akses super admin diperlukan' }, { status: 403 });
+    }
     const sessionId = request.nextUrl.searchParams.get('sessionId') || 'default';
     const session = getSession(sessionId);
     
