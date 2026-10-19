@@ -46,17 +46,34 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   try {
     const contentLength = Number(request.headers.get('content-length') || 0);
-    if (contentLength > 4096) return NextResponse.json({ error: 'Data formulir terlalu besar.' }, { status: 413 });
+    if (contentLength > 70_000) return NextResponse.json({ error: 'Data formulir terlalu besar.' }, { status: 413 });
     const body = await request.json();
-    const action = body?.action === 'lookup' ? 'lookup' : 'submit';
+    const action = ['lookup', 'suggest'].includes(body?.action) ? body.action : 'submit';
     const name = typeof body?.name === 'string' ? body.name.normalize('NFC').trim() : '';
     const unit = typeof body?.unit === 'string' ? body.unit.normalize('NFC').trim() : '';
     const studentClass = typeof body?.kelas === 'string' ? body.kelas.normalize('NFC').trim() : '';
+    const reason = typeof body?.reason === 'string' ? body.reason.normalize('NFC').trim() : '';
+    const applicantSignature = typeof body?.applicantSignature === 'string' ? body.applicantSignature : '';
     if (!name || name.length > 120 || unit.length > 80 || studentClass.length > 40) {
       return NextResponse.json({ error: 'Nama wajib diisi dan panjang data tidak boleh melebihi batas.' }, { status: 400 });
     }
-    if (action === 'submit' && (!unit || !studentClass)) {
-      return NextResponse.json({ error: 'Periksa nama dan data sekolah sebelum mengirim.' }, { status: 400 });
+    if (action === 'suggest' && name.replace(/[^\p{L}\p{N}]/gu, '').length < 2) {
+      return NextResponse.json({ suggestions: [] });
+    }
+    if (action === 'submit' && (!unit || !studentClass || !reason || reason.length > 500)) {
+      return NextResponse.json({ error: 'Nama, unit, kelas, dan alasan keterlambatan wajib diisi.' }, { status: 400 });
+    }
+    if (action === 'submit' && (!/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(applicantSignature) || applicantSignature.length > 60_000)) {
+      return NextResponse.json({ error: 'Tanda tangan pemohon wajib dibubuhkan dan tidak boleh lebih dari batas ukuran.' }, { status: 400 });
+    }
+
+    if (action === 'suggest') {
+      const { data, error } = await supabaseAdmin.rpc('suggest_piket_student_names', { p_query: name });
+      if (error) {
+        console.error('[piket] Student suggestions failed', error.code);
+        return NextResponse.json({ error: 'Rekomendasi nama belum dapat dimuat.' }, { status: 500 });
+      }
+      return NextResponse.json({ suggestions: (data || []).map((student: { name: string; unit: string; kelas: string }) => ({ name: student.name, unit: student.unit, kelas: student.kelas })) });
     }
 
     let query = supabaseAdmin
@@ -108,6 +125,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       p_student_name: student.name,
       p_student_unit: student.unit_sekolah,
       p_student_class: student.kelas,
+      p_reason: reason,
+      p_applicant_signature: applicantSignature,
     });
     if (error) {
       if (error.code === '23505') {

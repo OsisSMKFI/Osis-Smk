@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-hot-toast';
 
-type PiketReport = { id: string; report_date: string; student_name: string; student_unit: string | null; student_class: string; student_no_induk: string | null; submitted_at: string };
-type DataCorrection = { id: string; student_name: string; student_unit: string; student_class: string; details: string; suggested_name: string | null; suggested_unit: string | null; suggested_class: string | null; status: 'pending' | 'resolved' | 'dismissed'; submitted_at: string };
+type PiketReport = { id: string; report_date: string; student_name: string; student_unit: string | null; student_class: string; student_no_induk: string | null; reason: string; applicant_signature: string | null; submitted_at: string; edited_at: string | null; late_count: number };
+type DataCorrection = { id: string; report_date: string; student_name: string; student_unit: string; student_class: string; details: string; suggested_name: string | null; suggested_unit: string | null; suggested_class: string | null; status: 'pending' | 'resolved' | 'dismissed'; submitted_at: string };
 type PiketApproval = { report_count: number; approver_name: string; approved_at: string; snapshot_sha256: string } | null;
 
 function todayJakarta() {
@@ -30,6 +31,14 @@ export default function PiketAttendancePage() {
   const [corrections, setCorrections] = useState<DataCorrection[]>([]);
   const [approval, setApproval] = useState<PiketApproval>(null);
   const [date, setDate] = useState(todayJakarta);
+  const [allDates, setAllDates] = useState(false);
+  const [searchName, setSearchName] = useState('');
+  const [editingReport, setEditingReport] = useState<string | null>(null);
+  const [editedReason, setEditedReason] = useState('');
+  const [editedName, setEditedName] = useState('');
+  const [editedNoInduk, setEditedNoInduk] = useState('');
+  const [editedUnit, setEditedUnit] = useState('');
+  const [editedClass, setEditedClass] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(true);
@@ -42,9 +51,10 @@ export default function PiketAttendancePage() {
     if (!canView) return;
     setLoading(true);
     try {
+      const filterDate = allDates ? 'all' : date;
       const [reportsResponse, correctionsResponse] = await Promise.all([
-        fetch(`/api/piket/reports?date=${encodeURIComponent(date)}`, { cache: 'no-store' }),
-        fetch(`/api/piket/corrections?date=${encodeURIComponent(date)}`, { cache: 'no-store' }),
+        fetch(`/api/piket/reports?date=${encodeURIComponent(filterDate)}&name=${encodeURIComponent(searchName)}`, { cache: 'no-store' }),
+        fetch(`/api/piket/corrections?date=${encodeURIComponent(filterDate)}`, { cache: 'no-store' }),
       ]);
       const [body, correctionBody] = await Promise.all([reportsResponse.json(), correctionsResponse.json()]);
       if (!reportsResponse.ok) throw new Error(body.error || 'Rekap gagal dimuat');
@@ -57,7 +67,7 @@ export default function PiketAttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [canView, date]);
+  }, [allDates, canView, date, searchName]);
 
   useEffect(() => {
     if (status === 'authenticated') void loadReports();
@@ -102,8 +112,8 @@ export default function PiketAttendancePage() {
   const exportCsv = () => {
     const quote = (value: string) => `"${value.replace(/"/g, '""')}"`;
     const csv = [
-      ['Tanggal', 'Nama', 'No Induk', 'Unit Sekolah', 'Kelas', 'Waktu kirim'],
-      ...reports.map((report) => [report.report_date, report.student_name, report.student_no_induk || '', report.student_unit || '', report.student_class, formatTime(report.submitted_at)]),
+      ['Tanggal', 'Nama', 'No Induk', 'Unit Sekolah', 'Kelas', 'Alasan', 'Keterlambatan ke-', 'Waktu kirim', 'Waktu edit'],
+      ...reports.map((report) => [report.report_date, report.student_name, report.student_no_induk || '', report.student_unit || '', report.student_class, report.reason, report.late_count, formatTime(report.submitted_at), report.edited_at ? formatTime(report.edited_at) : '']),
     ].map((row) => row.map((value) => quote(String(value))).join(',')).join('\r\n');
     const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -112,6 +122,37 @@ export default function PiketAttendancePage() {
     anchor.download = `rekap-piket-${date}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
+  };
+
+  const saveReportEdit = async (report: PiketReport) => {
+    setWorking(true);
+    try {
+      const response = await fetch(`/api/piket/reports/${encodeURIComponent(report.id)}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: editedReason, student_name: editedName, student_no_induk: editedNoInduk, student_unit: editedUnit, student_class: editedClass }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Laporan gagal diperbarui');
+      setEditingReport(null); setEditedReason(''); setEditedName(''); setEditedNoInduk(''); setEditedUnit(''); setEditedClass('');
+      toast.success('Alasan laporan diperbarui. Jika hari itu sudah disahkan, rekap dibuka kembali untuk persetujuan Guru.');
+      await loadReports();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Laporan gagal diperbarui');
+    } finally { setWorking(false); }
+  };
+
+  const deleteReport = async (report: PiketReport) => {
+    if (!window.confirm(`Hapus laporan ${report.student_name} tanggal ${report.report_date}? Tindakan ini dicatat di audit Admin.`)) return;
+    setWorking(true);
+    try {
+      const response = await fetch(`/api/piket/reports/${encodeURIComponent(report.id)}`, { method: 'DELETE' });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Laporan gagal dihapus');
+      toast.success('Laporan dihapus dari rekap aktif dan dicatat di audit.');
+      await loadReports();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Laporan gagal dihapus');
+    } finally { setWorking(false); }
   };
 
   const updateCorrection = async (correction: DataCorrection, nextStatus: DataCorrection['status']) => {
@@ -166,24 +207,26 @@ export default function PiketAttendancePage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">Rekap laporan</h2>
-            <p className="text-sm text-slate-500">{reports.length} siswa tercatat untuk tanggal ini.</p>
+            <p className="text-sm text-slate-500">{reports.length} laporan{allDates ? ' pada semua tanggal' : ` untuk ${date}`} · jumlah keterlambatan per siswa dihitung dari riwayat aktif.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <input aria-label="Tanggal rekap" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="rounded-md border px-3 py-2 dark:bg-slate-800" />
+            <button onClick={() => setAllDates(!allDates)} className="rounded-md border px-3 py-2">{allDates ? 'Pilih satu tanggal' : 'Semua tanggal'}</button>
+            {!allDates && <input aria-label="Tanggal rekap" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="rounded-md border px-3 py-2 dark:bg-slate-800" />}
+            <input aria-label="Cari nama siswa" value={searchName} onChange={(event) => setSearchName(event.target.value)} placeholder="Cari nama siswa" className="rounded-md border px-3 py-2 dark:bg-slate-800" />
             <button onClick={exportCsv} disabled={!reports.length} className="rounded-md border px-3 py-2 disabled:opacity-50">Simpan CSV</button>
-            {role === 'guru' && !approval && <button onClick={approveDay} disabled={working} className="rounded-md bg-emerald-700 px-3 py-2 font-semibold text-white disabled:opacity-50">Setujui rekap hari</button>}
+            {!allDates && role === 'guru' && !approval && <button onClick={approveDay} disabled={working || !reports.length || !!searchName} className="rounded-md bg-emerald-700 px-3 py-2 font-semibold text-white disabled:opacity-50">Setujui rekap hari</button>}
           </div>
         </div>
 
-        {approval && <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
-          Disetujui oleh <strong>{approval.approver_name}</strong> pada {formatTime(approval.approved_at)} · {approval.report_count} laporan · sidik hash rekap {approval.snapshot_sha256.slice(0, 16)}…
+        {approval && !searchName && <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+          Tanda tangan digital Guru: <strong>{approval.approver_name}</strong> · {formatTime(approval.approved_at)} · {approval.report_count} laporan disahkan · hash rekap {approval.snapshot_sha256.slice(0, 16)}…
         </div>}
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead><tr className="border-b text-slate-500"><th className="p-2">No.</th><th className="p-2">Nama</th><th className="p-2">No Induk</th><th className="p-2">Unit sekolah</th><th className="p-2">Kelas</th><th className="p-2">Waktu kirim</th></tr></thead>
+            <thead><tr className="border-b text-slate-500">{allDates && <th className="p-2">Tanggal</th>}<th className="p-2">Nama</th><th className="p-2">No Induk</th><th className="p-2">Unit sekolah</th><th className="p-2">Kelas</th><th className="p-2">Alasan</th><th className="p-2">Telat ke-</th><th className="p-2">Waktu kirim</th><th className="p-2">Tanda tangan pemohon</th>{['admin', 'super_admin'].includes(role) && <th className="p-2">Tindakan</th>}</tr></thead>
             <tbody>
-              {loading ? <tr><td colSpan={6} className="p-6 text-center">Memuat rekap…</td></tr> : reports.length === 0 ? <tr><td colSpan={6} className="p-6 text-center text-slate-500">Belum ada laporan untuk tanggal ini.</td></tr> : reports.map((report, index) => <tr key={report.id} className="border-b last:border-0"><td className="p-2">{index + 1}</td><td className="p-2 font-medium">{report.student_name}</td><td className="p-2 font-mono">{report.student_no_induk || '—'}</td><td className="p-2">{report.student_unit || '—'}</td><td className="p-2">{report.student_class}</td><td className="p-2">{formatTime(report.submitted_at)}</td></tr>)}
+              {loading ? <tr><td colSpan={(allDates ? 1 : 0) + 8 + (['admin', 'super_admin'].includes(role) ? 1 : 0)} className="p-6 text-center">Memuat rekap…</td></tr> : reports.length === 0 ? <tr><td colSpan={(allDates ? 1 : 0) + 8 + (['admin', 'super_admin'].includes(role) ? 1 : 0)} className="p-6 text-center text-slate-500">Belum ada laporan yang cocok dengan filter ini.</td></tr> : reports.map((report) => <tr key={report.id} className="border-b last:border-0">{allDates && <td className="p-2 whitespace-nowrap">{report.report_date}</td>}<td className="p-2 font-medium">{editingReport === report.id ? <input value={editedName} onChange={(event) => setEditedName(event.target.value)} maxLength={120} className="w-40 rounded border p-1 dark:bg-slate-800" /> : report.student_name}</td><td className="p-2 font-mono">{editingReport === report.id ? <input value={editedNoInduk} onChange={(event) => setEditedNoInduk(event.target.value)} maxLength={40} className="w-32 rounded border p-1 dark:bg-slate-800" /> : report.student_no_induk || '—'}</td><td className="p-2">{editingReport === report.id ? <input value={editedUnit} onChange={(event) => setEditedUnit(event.target.value)} maxLength={80} className="w-36 rounded border p-1 dark:bg-slate-800" /> : report.student_unit || '—'}</td><td className="p-2">{editingReport === report.id ? <input value={editedClass} onChange={(event) => setEditedClass(event.target.value)} maxLength={40} className="w-24 rounded border p-1 dark:bg-slate-800" /> : report.student_class}</td><td className="p-2 min-w-44">{editingReport === report.id ? <textarea value={editedReason} onChange={(event) => setEditedReason(event.target.value)} maxLength={500} className="w-full rounded border p-2 dark:bg-slate-800" /> : <span>{report.reason}</span>}</td><td className="p-2 text-center">{report.late_count}×</td><td className="p-2 whitespace-nowrap">{formatTime(report.submitted_at)}{report.edited_at && <span className="block text-xs text-amber-700">Diedit {formatTime(report.edited_at)}</span>}</td><td className="p-2">{report.applicant_signature ? <details><summary className="cursor-pointer text-blue-700 underline">Lihat</summary><Image src={report.applicant_signature} width={384} height={128} unoptimized alt={`Tanda tangan ${report.student_name}`} className="mt-2 h-16 w-48 rounded border bg-white object-contain" /></details> : '—'}</td>{['admin', 'super_admin'].includes(role) && <td className="p-2"><div className="flex gap-2">{editingReport === report.id ? <><button disabled={working} onClick={() => void saveReportEdit(report)} className="text-emerald-700 underline">Simpan</button><button onClick={() => { setEditingReport(null); setEditedReason(''); setEditedName(''); setEditedNoInduk(''); setEditedUnit(''); setEditedClass(''); }} className="text-slate-600 underline">Batal</button></> : <><button onClick={() => { setEditingReport(report.id); setEditedReason(report.reason); setEditedName(report.student_name); setEditedNoInduk(report.student_no_induk || ''); setEditedUnit(report.student_unit || ''); setEditedClass(report.student_class); }} className="text-blue-700 underline">Edit</button><button disabled={working} onClick={() => void deleteReport(report)} className="text-red-700 underline">Hapus</button></>}</div></td>}</tr>)}
             </tbody>
           </table>
         </div>

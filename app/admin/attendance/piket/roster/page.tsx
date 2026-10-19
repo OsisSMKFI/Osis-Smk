@@ -7,9 +7,9 @@ import { toast } from 'react-hot-toast';
 
 type Student = {
   id: string; no_induk: string; name: string; unit_sekolah: string; kelas: string;
-  is_active: boolean; has_account: boolean; updated_at: string;
+  name_aliases: string[]; is_active: boolean; has_account: boolean; updated_at: string;
 };
-type StudentInput = Pick<Student, 'no_induk' | 'name' | 'unit_sekolah' | 'kelas'>;
+type StudentInput = Pick<Student, 'no_induk' | 'name' | 'unit_sekolah' | 'kelas'> & { name_aliases: string };
 
 function parseCsv(text: string) {
   const rows: string[][] = [];
@@ -45,7 +45,7 @@ export default function PiketRosterAdminPage() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<StudentInput>({ no_induk: '', name: '', unit_sekolah: '', kelas: '' });
+  const [form, setForm] = useState<StudentInput>({ no_induk: '', name: '', unit_sekolah: '', kelas: '', name_aliases: '' });
   const [importRows, setImportRows] = useState<StudentInput[]>([]);
   const [importName, setImportName] = useState('');
 
@@ -79,6 +79,7 @@ export default function PiketRosterAdminPage() {
         name: indexFor(['nama', 'name']),
         unit_sekolah: indexFor(['unitsekolah', 'unit']),
         kelas: indexFor(['kelas', 'class']),
+        name_aliases: indexFor(['namapanggilan', 'alias', 'aliases']),
       };
       if (Object.values(indexes).some((index) => index < 0)) {
         throw new Error('Judul kolom wajib: No Induk, Nama, Unit Sekolah, Kelas.');
@@ -89,6 +90,7 @@ export default function PiketRosterAdminPage() {
           name: values[indexes.name] || '',
           unit_sekolah: values[indexes.unit_sekolah] || '',
           kelas: values[indexes.kelas] || '',
+          name_aliases: indexes.name_aliases >= 0 ? values[indexes.name_aliases] || '' : '',
         };
         if (Object.values(result).some((value) => !value)) throw new Error(`Ada kolom kosong pada baris ${rowIndex + 2}.`);
         return result;
@@ -132,7 +134,7 @@ export default function PiketRosterAdminPage() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Data roster gagal disimpan');
       toast.success(editingId ? 'Data roster diperbarui.' : 'Siswa ditambahkan ke roster.');
-      setEditingId(null); setForm({ no_induk: '', name: '', unit_sekolah: '', kelas: '' });
+      setEditingId(null); setForm({ no_induk: '', name: '', unit_sekolah: '', kelas: '', name_aliases: '' });
       await loadRoster();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Data roster gagal disimpan');
@@ -155,7 +157,7 @@ export default function PiketRosterAdminPage() {
   };
 
   const downloadTemplate = () => {
-    const blob = new Blob(['No Induk,Nama,Unit Sekolah,Kelas\r\n'], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob(['No Induk,Nama,Unit Sekolah,Kelas,Nama Panggilan (opsional)\r\n'], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'template-roster-piket.csv'; anchor.click(); URL.revokeObjectURL(url);
   };
@@ -175,7 +177,7 @@ export default function PiketRosterAdminPage() {
 
       <section className="rounded-xl border bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h2 className="font-semibold">Impor daftar hadir</h2><p className="text-sm text-slate-500">CSV harus memiliki kolom No Induk, Nama, Unit Sekolah, Kelas. Impor memperbarui data dengan No Induk dan unit sama; baris lain tetap disimpan. Untuk mengubah No Induk, edit baris roster agar tautan akun dan riwayat tetap terjaga.</p></div>
+          <div><h2 className="font-semibold">Impor daftar hadir</h2><p className="text-sm text-slate-500">CSV wajib berisi No Induk, Nama, Unit Sekolah, Kelas. Kolom Nama Panggilan opsional; tulis beberapa panggilan dengan pemisah koma atau titik koma agar sistem merekomendasikan nama resmi. Impor memperbarui No Induk dan unit yang sama. Untuk mengubah No Induk, edit baris roster agar tautan akun dan riwayat tetap terjaga.</p></div>
           <button type="button" onClick={downloadTemplate} className="rounded-md border px-3 py-2 text-sm">Unduh template CSV</button>
         </div>
         <input type="file" accept=".csv,text/csv" onChange={handleCsv} className="mt-4 block w-full text-sm" />
@@ -186,17 +188,18 @@ export default function PiketRosterAdminPage() {
         <h2 className="font-semibold">{editingId ? 'Edit data siswa' : 'Tambah satu siswa'}</h2>
         <form onSubmit={saveStudent} className="mt-3 grid gap-3 md:grid-cols-5">
           <input required aria-label="No Induk" placeholder="No Induk" value={form.no_induk} onChange={(event) => setForm({ ...form, no_induk: event.target.value })} className="rounded-md border px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
-          <input required aria-label="Nama" placeholder="Nama persis" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="rounded-md border px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
+          <input required aria-label="Nama resmi" placeholder="Nama resmi persis" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="rounded-md border px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
           <input required aria-label="Unit sekolah" placeholder="Unit sekolah" value={form.unit_sekolah} onChange={(event) => setForm({ ...form, unit_sekolah: event.target.value })} className="rounded-md border px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
           <input required aria-label="Kelas" placeholder="Kelas" value={form.kelas} onChange={(event) => setForm({ ...form, kelas: event.target.value })} className="rounded-md border px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
-          <div className="flex gap-2"><button disabled={saving} className="flex-1 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? 'Menyimpan…' : editingId ? 'Simpan' : 'Tambah'}</button>{editingId && <button type="button" onClick={() => { setEditingId(null); setForm({ no_induk: '', name: '', unit_sekolah: '', kelas: '' }); }} className="rounded-md border px-3 py-2 text-sm">Batal</button>}</div>
+          <input aria-label="Nama panggilan" placeholder="Nama panggilan (pisahkan koma)" value={form.name_aliases} onChange={(event) => setForm({ ...form, name_aliases: event.target.value })} className="rounded-md border px-3 py-2 dark:border-slate-700 dark:bg-slate-800" />
+          <div className="flex gap-2"><button disabled={saving} className="flex-1 rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? 'Menyimpan…' : editingId ? 'Simpan' : 'Tambah'}</button>{editingId && <button type="button" onClick={() => { setEditingId(null); setForm({ no_induk: '', name: '', unit_sekolah: '', kelas: '', name_aliases: '' }); }} className="rounded-md border px-3 py-2 text-sm">Batal</button>}</div>
         </form>
       </section>
 
       <section className="rounded-xl border bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Roster terdaftar</h2><p className="text-sm text-slate-500">{students.length} baris · {students.filter((student) => student.is_active).length} aktif</p></div><input aria-label="Cari siswa" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama atau No Induk" className="rounded-md border px-3 py-2 dark:border-slate-700 dark:bg-slate-800" /></div>
-        <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-slate-500"><th className="p-2">No Induk</th><th className="p-2">Nama</th><th className="p-2">Unit</th><th className="p-2">Kelas</th><th className="p-2">Akun</th><th className="p-2">Status</th><th className="p-2">Tindakan</th></tr></thead><tbody>
-          {loading ? <tr><td colSpan={7} className="p-6 text-center">Memuat roster…</td></tr> : visibleStudents.length === 0 ? <tr><td colSpan={7} className="p-6 text-center text-slate-500">Data tidak ditemukan.</td></tr> : visibleStudents.map((student) => <tr key={student.id} className="border-b last:border-0"><td className="p-2 font-mono">{student.no_induk}</td><td className="p-2 font-medium">{student.name}</td><td className="p-2">{student.unit_sekolah}</td><td className="p-2">{student.kelas}</td><td className="p-2">{student.has_account ? 'Tertaut' : 'Tanpa akun'}</td><td className="p-2">{student.is_active ? 'Aktif' : 'Nonaktif'}</td><td className="p-2"><div className="flex gap-2"><button onClick={() => { setEditingId(student.id); setForm({ no_induk: student.no_induk, name: student.name, unit_sekolah: student.unit_sekolah, kelas: student.kelas }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-blue-700 underline">Edit</button><button disabled={saving} onClick={() => void toggleActive(student)} className="text-slate-600 underline disabled:opacity-50">{student.is_active ? 'Nonaktifkan' : 'Aktifkan'}</button></div></td></tr>)}
+        <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-slate-500"><th className="p-2">No Induk</th><th className="p-2">Nama resmi & panggilan</th><th className="p-2">Unit</th><th className="p-2">Kelas</th><th className="p-2">Akun</th><th className="p-2">Status</th><th className="p-2">Tindakan</th></tr></thead><tbody>
+          {loading ? <tr><td colSpan={7} className="p-6 text-center">Memuat roster…</td></tr> : visibleStudents.length === 0 ? <tr><td colSpan={7} className="p-6 text-center text-slate-500">Data tidak ditemukan.</td></tr> : visibleStudents.map((student) => <tr key={student.id} className="border-b last:border-0"><td className="p-2 font-mono">{student.no_induk}</td><td className="p-2 font-medium">{student.name}{student.name_aliases.length > 0 && <span className="block text-xs font-normal text-slate-500">Panggilan: {student.name_aliases.join(', ')}</span>}</td><td className="p-2">{student.unit_sekolah}</td><td className="p-2">{student.kelas}</td><td className="p-2">{student.has_account ? 'Tertaut' : 'Tanpa akun'}</td><td className="p-2">{student.is_active ? 'Aktif' : 'Nonaktif'}</td><td className="p-2"><div className="flex gap-2"><button onClick={() => { setEditingId(student.id); setForm({ no_induk: student.no_induk, name: student.name, unit_sekolah: student.unit_sekolah, kelas: student.kelas, name_aliases: student.name_aliases.join(', ') }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-blue-700 underline">Edit</button><button disabled={saving} onClick={() => void toggleActive(student)} className="text-slate-600 underline disabled:opacity-50">{student.is_active ? 'Nonaktifkan' : 'Aktifkan'}</button></div></td></tr>)}
         </tbody></table></div>
       </section>
     </main>

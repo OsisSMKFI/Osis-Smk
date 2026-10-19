@@ -17,15 +17,18 @@ export async function GET(request: NextRequest) {
   const { response } = await getAuthorizedActor();
   if (response) return response;
   const date = request.nextUrl.searchParams.get('date') || jakartaDateKey();
-  if (!isDateKey(date)) return NextResponse.json({ error: 'Format tanggal tidak valid' }, { status: 400 });
-  const { data, error } = await supabaseAdmin.from('piket_data_corrections')
+  const allDates = date === 'all';
+  if (!allDates && !isDateKey(date)) return NextResponse.json({ error: 'Format tanggal tidak valid' }, { status: 400 });
+  let query = supabaseAdmin.from('piket_data_corrections')
     .select('id,report_date,student_name,student_unit,student_class,details,suggested_name,suggested_unit,suggested_class,status,submitted_at')
-    .eq('report_date', date).order('submitted_at', { ascending: false });
+    .order('submitted_at', { ascending: false }).range(0, 9999);
+  if (!allDates) query = query.eq('report_date', date);
+  const { data, error } = await query;
   if (error) {
     console.error('[piket] Correction list failed', error.code);
     return NextResponse.json({ error: 'Daftar keluhan belum tersedia. Pastikan migrasi terbaru sudah diterapkan.' }, { status: 500 });
   }
-  return NextResponse.json({ corrections: data || [], date });
+  return NextResponse.json({ corrections: data || [], date, allDates });
 }
 
 export async function PATCH(request: NextRequest) {

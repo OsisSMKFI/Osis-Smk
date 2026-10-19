@@ -1,11 +1,12 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 
 type FormState = { name: string; unit: string; kelas: string };
 type MatchedStudent = { name: string; unit: string; kelas: string };
 type StudentOption = { unit: string; kelas: string };
+type StudentSuggestion = { name: string; unit: string; kelas: string };
 
 export default function PiketStudentFormPage() {
   const params = useParams<{ token: string }>();
@@ -19,6 +20,32 @@ export default function PiketStudentFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showCorrection, setShowCorrection] = useState(false);
   const [correctionSent, setCorrectionSent] = useState(false);
+  const [suggestions, setSuggestions] = useState<StudentSuggestion[]>([]);
+  const [reason, setReason] = useState('');
+  const [signatureDrawn, setSignatureDrawn] = useState(false);
+  const signatureCanvas = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const query = form.name.trim();
+    if (status !== 'active' || query.replace(/[^\p{L}\p{N}]/gu, '').length < 2 || matchedStudent) {
+      setSuggestions([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/piket/${encodeURIComponent(token)}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+          body: JSON.stringify({ action: 'suggest', name: query }),
+        });
+        const body = await response.json();
+        if (response.ok) setSuggestions(body.suggestions || []);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) setSuggestions([]);
+      }
+    }, 450);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [form.name, matchedStudent, status, token]);
 
   useEffect(() => {
     let alive = true;
@@ -36,8 +63,54 @@ export default function PiketStudentFormPage() {
     setForm(next);
     setMatchedStudent(null);
     setStudentOptions([]);
+    setSuggestions([]);
+    setReason('');
+    clearSignature();
     setError('');
     setCorrectionSent(false);
+  };
+
+  const chooseSuggestion = (student: StudentSuggestion) => {
+    const selected = { name: student.name, unit: student.unit, kelas: student.kelas };
+    setForm(selected);
+    setMatchedStudent(selected);
+    setReason('');
+    clearSignature();
+    setSuggestions([]);
+    setStudentOptions([]);
+    setError('');
+  };
+
+  const signaturePoint = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvas.current;
+    if (!canvas) return null;
+    const bounds = canvas.getBoundingClientRect();
+    return { x: (event.clientX - bounds.left) * canvas.width / bounds.width, y: (event.clientY - bounds.top) * canvas.height / bounds.height };
+  };
+
+  const startSignature = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const point = signaturePoint(event);
+    const context = signatureCanvas.current?.getContext('2d');
+    if (!point || !context) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    context.beginPath(); context.moveTo(point.x, point.y); setSignatureDrawn(true);
+  };
+
+  const drawSignature = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (event.buttons !== 1) return;
+    const point = signaturePoint(event);
+    const context = signatureCanvas.current?.getContext('2d');
+    if (!point || !context) return;
+    context.lineWidth = Math.max(2, signatureCanvas.current!.width / 300);
+    context.lineCap = 'round'; context.lineJoin = 'round'; context.strokeStyle = '#0f172a';
+    context.lineTo(point.x, point.y); context.stroke(); context.beginPath(); context.moveTo(point.x, point.y);
+  };
+
+  const clearSignature = () => {
+    const canvas = signatureCanvas.current;
+    if (!canvas) return;
+    canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+    setSignatureDrawn(false);
   };
 
   const checkStudent = async () => {
@@ -80,14 +153,16 @@ export default function PiketStudentFormPage() {
     }
     setSubmitting(true);
     try {
+      const applicantSignature = signatureCanvas.current?.toDataURL('image/png') || '';
       const response = await fetch(`/api/piket/${encodeURIComponent(token)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), unit: form.unit.trim(), kelas: form.kelas.trim() }),
+        body: JSON.stringify({ name: form.name.trim(), unit: form.unit.trim(), kelas: form.kelas.trim(), reason, applicantSignature }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Laporan tidak dapat dikirim');
       setForm({ name: '', unit: '', kelas: '' });
       setMatchedStudent(null);
+      setReason(''); setSignatureDrawn(false); clearSignature();
       setStatus('sent');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Laporan tidak dapat dikirim');
@@ -132,15 +207,25 @@ export default function PiketStudentFormPage() {
         {status === 'invalid' && <p className="mt-5 rounded-lg bg-red-50 p-4 text-red-800 dark:bg-red-950/30 dark:text-red-200">Tautan QR ini tidak aktif atau sudah kedaluwarsa. Minta QR terbaru kepada petugas OSIS.</p>}
         {status === 'sent' && <div className="mt-5 rounded-lg bg-emerald-50 p-4 text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><h2 className="font-semibold">Data berhasil dikirim</h2><p className="mt-1 text-sm">Laporan keterlambatan hari {date} sudah tercatat. Ikuti arahan petugas OSIS.</p><button type="button" onClick={() => { setStatus('active'); setCorrectionSent(false); setShowCorrection(false); setError(''); }} className="mt-4 rounded-lg border border-emerald-800 px-3 py-2 text-sm font-semibold">Isi untuk siswa berikutnya</button></div>}
         {status === 'active' && <>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Isi nama persis seperti daftar hadir. Unit sekolah, kelas, dan No Induk dicocokkan otomatis dari data akun. Login tidak diperlukan.</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Ketik nama atau sebagian nama, lalu pilih nama resmi dari rekomendasi. Unit sekolah, kelas, dan No Induk dicocokkan otomatis dari roster. Login tidak diperlukan.</p>
           <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
             <label className="block text-sm font-medium">Nama lengkap
               <input required autoComplete="name" maxLength={120} value={form.name} onChange={(event) => updateForm({ name: event.target.value, unit: '', kelas: '' })} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950" />
             </label>
+            {suggestions.length > 0 && <ul role="listbox" aria-label="Rekomendasi nama" className="-mt-3 divide-y rounded-lg border bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">{suggestions.map((student, index) => <li key={`${student.name}-${student.unit}-${student.kelas}-${index}`}><button type="button" role="option" aria-selected="false" onClick={() => chooseSuggestion(student)} className="w-full px-3 py-2 text-left hover:bg-blue-50 dark:hover:bg-slate-800"><span className="block font-medium">{student.name}</span><span className="text-xs text-slate-500">{student.unit} · {student.kelas}</span></button></li>)}</ul>}
             {studentOptions.length > 0 && <fieldset className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30"><legend className="px-1 text-sm font-semibold">Ada beberapa siswa dengan nama ini. Pilih unit dan kelas Anda.</legend><div className="mt-2 space-y-2">{studentOptions.map((option, index) => <label key={`${option.unit}-${option.kelas}-${index}`} className="flex cursor-pointer items-center gap-2 rounded-md bg-white p-3 text-sm dark:bg-slate-900"><input type="radio" name="studentOption" onChange={() => { const student = { name: form.name.trim(), unit: option.unit, kelas: option.kelas }; setForm(student); setMatchedStudent(student); setStudentOptions([]); setError(''); }} /><span>{option.unit} · {option.kelas}</span></label>)}</div></fieldset>}
             {matchedStudent && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100"><p className="font-semibold">Periksa data siswa</p><dl className="mt-2 grid grid-cols-[7rem_1fr] gap-y-1"><dt>Nama</dt><dd>{matchedStudent.name}</dd><dt>Unit</dt><dd>{matchedStudent.unit}</dd><dt>Kelas</dt><dd>{matchedStudent.kelas}</dd><dt>No Induk</dt><dd>No Induk tersimpan akan dilampirkan ke rekap.</dd></dl></div>}
+            <label className="block text-sm font-medium">Alasan terlambat
+              <textarea required maxLength={500} rows={3} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Jelaskan alasan keterlambatan" className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-950" />
+            </label>
+            <div>
+              <label className="block text-sm font-medium" htmlFor="applicant-signature">Tanda tangan pemohon</label>
+              <p className="mt-1 text-xs text-slate-500">Gambar tanda tangan pada area ini menggunakan jari atau tetikus.</p>
+              <canvas id="applicant-signature" ref={signatureCanvas} width={1040} height={300} onPointerDown={startSignature} onPointerMove={drawSignature} className="mt-2 h-28 w-full touch-none rounded-lg border border-slate-300 bg-white dark:border-slate-700" />
+              <button type="button" onClick={clearSignature} className="mt-2 text-xs text-blue-700 underline">Hapus dan gambar ulang</button>
+            </div>
             {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">{error}</p>}
-            {!matchedStudent ? <button type="button" onClick={checkStudent} disabled={submitting} className="w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Memeriksa…' : 'Periksa data siswa'}</button> : <button type="submit" disabled={submitting} className="w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Mengirim…' : 'Konfirmasi dan kirim'}</button>}
+            {!matchedStudent ? <button type="button" onClick={checkStudent} disabled={submitting} className="w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Memeriksa…' : 'Periksa data siswa'}</button> : <button type="submit" disabled={submitting || !reason.trim() || !signatureDrawn} className="w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white disabled:opacity-60">{submitting ? 'Mengirim…' : 'Konfirmasi dan kirim'}</button>}
           </form>
           <p className="mt-4 text-xs text-slate-500">Tanggal laporan: {date}. Jika nama, unit, atau kelas tidak cocok, minta bantuan petugas OSIS.</p>
           <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-700">

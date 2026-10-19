@@ -20,11 +20,15 @@ function clean(value: unknown, maxLength: number) {
 
 function validateRow(value: unknown) {
   const row = value as Record<string, unknown>;
+  const aliases = typeof row?.name_aliases === 'string'
+    ? row.name_aliases.split(/[;,|]/).map((alias) => clean(alias, 120)).filter(Boolean)
+    : Array.isArray(row?.name_aliases) ? row.name_aliases.map((alias: unknown) => clean(alias, 120)).filter(Boolean) : [];
   const normalized = {
     no_induk: clean(row?.no_induk, 40),
     name: clean(row?.name, 120),
     unit_sekolah: clean(row?.unit_sekolah, 80),
     kelas: clean(row?.kelas, 40),
+    name_aliases: Array.from(new Set(aliases)).slice(0, 10),
     is_active: row?.is_active === undefined ? true : row.is_active === true,
   };
   if (!normalized.no_induk || !normalized.name || !normalized.unit_sekolah || !normalized.kelas) return null;
@@ -35,7 +39,7 @@ export async function GET() {
   const { response } = await requireRosterAdmin();
   if (response) return response;
   const { data, error } = await supabaseAdmin.from('piket_student_roster')
-    .select('id,no_induk,name,unit_sekolah,kelas,is_active,student_user_id,updated_at')
+    .select('id,no_induk,name,unit_sekolah,kelas,name_aliases,is_active,student_user_id,updated_at')
     .order('unit_sekolah').order('kelas').order('name');
   if (error) {
     console.error('[piket] Roster load failed', error.code);
@@ -94,8 +98,9 @@ export async function PATCH(request: NextRequest) {
       name: student.name,
       unit_sekolah: student.unit_sekolah,
       kelas: student.kelas,
+      name_aliases: student.name_aliases,
     }).eq('id', body.id)
-    .select('id,no_induk,name,unit_sekolah,kelas,is_active,student_user_id,updated_at').maybeSingle();
+    .select('id,no_induk,name,unit_sekolah,kelas,name_aliases,is_active,student_user_id,updated_at').maybeSingle();
   if (error || !data) {
     console.error('[piket] Roster edit failed', error?.code);
     return NextResponse.json({ error: error?.code === '23505' ? 'No Induk ini sudah tercatat pada unit tersebut.' : 'Data roster gagal diperbarui.' }, { status: error?.code === '23505' ? 409 : 500 });
