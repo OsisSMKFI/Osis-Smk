@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { fetchUserRole, supabaseAdmin } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const PIKET_VIEW_ROLES = ['osis', 'guru', 'admin', 'super_admin'] as const;
 export const PIKET_GENERATE_ROLES = ['osis', 'admin', 'super_admin'] as const;
@@ -8,11 +8,14 @@ export async function getPiketActor() {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return null;
-  const [role, { data: user, error }] = await Promise.all([
-    fetchUserRole(userId),
-    supabaseAdmin.from('users').select('name,email').eq('id', userId).maybeSingle(),
-  ]);
-  if (!role || error || !user) return null;
+  const { data: user, error } = await supabaseAdmin
+    .from('users')
+    .select('name,email,role,approved,email_verified')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error || !user || user.approved !== true || user.email_verified !== true) return null;
+  const role = typeof user.role === 'string' ? user.role.trim().toLowerCase() : '';
+  if (!role) return null;
   return {
     id: userId,
     name: user.name?.trim() || user.email || 'Pengguna',

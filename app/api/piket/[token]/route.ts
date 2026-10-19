@@ -48,34 +48,65 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const contentLength = Number(request.headers.get('content-length') || 0);
     if (contentLength > 4096) return NextResponse.json({ error: 'Data formulir terlalu besar.' }, { status: 413 });
     const body = await request.json();
-    const nisn = typeof body?.nisn === 'string' ? body.nisn.trim() : '';
+    const action = body?.action === 'lookup' ? 'lookup' : 'submit';
     const name = typeof body?.name === 'string' ? body.name.normalize('NFC').trim() : '';
+    const unit = typeof body?.unit === 'string' ? body.unit.normalize('NFC').trim() : '';
     const studentClass = typeof body?.kelas === 'string' ? body.kelas.normalize('NFC').trim() : '';
-    if (!nisn || !name || !studentClass || nisn.length > 32 || name.length > 120 || studentClass.length > 40) {
-      return NextResponse.json({ error: 'Nama, kelas, dan NISN wajib diisi dengan benar.' }, { status: 400 });
+    if (!name || name.length > 120 || unit.length > 80 || studentClass.length > 40) {
+      return NextResponse.json({ error: 'Nama wajib diisi dan panjang data tidak boleh melebihi batas.' }, { status: 400 });
+    }
+    if (action === 'submit' && (!unit || !studentClass)) {
+      return NextResponse.json({ error: 'Periksa nama dan data sekolah sebelum mengirim.' }, { status: 400 });
     }
 
-    const { data: candidates, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('id,name,kelas')
-      .eq('role', 'siswa')
-      .eq('approved', true)
-      .eq('nisn', nisn)
-      .limit(2);
-    if (userError || !candidates || candidates.length !== 1) {
-      return NextResponse.json({ error: 'Data siswa tidak cocok. Periksa nama, kelas, dan NISN.' }, { status: 400 });
+    let query = supabaseAdmin
+      .from('piket_student_roster')
+      .select('id,name,unit_sekolah,kelas,no_induk')
+      .eq('is_active', true)
+      .eq('name', name)
+      .limit(11);
+    if (unit) query = query.eq('unit_sekolah', unit);
+    if (studentClass) query = query.eq('kelas', studentClass);
+    const { data: candidates, error: userError } = await query;
+    if (userError) {
+      console.error('[piket] Student lookup failed', userError.code);
+      return NextResponse.json({ error: 'Data siswa belum dapat diperiksa.' }, { status: 500 });
+    }
+    if (!candidates || candidates.length === 0) {
+      return NextResponse.json({ error: 'Data tidak ditemukan. Periksa ejaan nama, unit sekolah, dan kelas. Jika masih tidak cocok, ajukan koreksi kepada petugas.' }, { status: 404 });
+    }
+    if (candidates.length !== 1) {
+      if (action === 'lookup' && candidates.length <= 10) {
+        const options = Array.from(new Map(candidates.map((candidate) => {
+          const option = { unit: candidate.unit_sekolah, kelas: candidate.kelas };
+          return [`${option.unit || ''}\u0000${option.kelas || ''}`, option];
+        })).values());
+        if (options.length > 1) return NextResponse.json({ candidates: options });
+      }
+      return NextResponse.json({ error: 'Ada lebih dari satu data dengan identitas tersebut. Minta petugas OSIS membantu mencocokkan data.' }, { status: 409 });
     }
 
     const student = candidates[0];
     const normalize = (value: string | null | undefined) => (value || '').normalize('NFC').trim().toLocaleLowerCase('id-ID');
-    if (normalize(student.name) !== normalize(name) || normalize(student.kelas) !== normalize(studentClass)) {
-      return NextResponse.json({ error: 'Data siswa tidak cocok. Periksa nama, kelas, dan NISN.' }, { status: 400 });
+    if (action === 'lookup' && (!unit || !studentClass)) {
+      if (!student.no_induk?.trim() || !student.unit_sekolah?.trim() || !student.kelas?.trim()) {
+        return NextResponse.json({ error: 'Data sekolah belum lengkap. Ajukan keluhan agar Admin memperbaikinya.' }, { status: 400 });
+      }
+      return NextResponse.json({ student: { name: student.name, unit: student.unit_sekolah, kelas: student.kelas } });
+    }
+    if (!student.no_induk?.trim() || normalize(student.name) !== normalize(name) || normalize(student.unit_sekolah) !== normalize(unit) || normalize(student.kelas) !== normalize(studentClass)) {
+      return NextResponse.json({ error: 'Data belum lengkap atau tidak cocok. Periksa kembali nama, unit sekolah, dan kelas, atau ajukan koreksi kepada petugas.' }, { status: 400 });
+    }
+
+    if (action === 'lookup') {
+      return NextResponse.json({ student: { name: student.name, unit: student.unit_sekolah, kelas: student.kelas } });
     }
 
     const { error } = await supabaseAdmin.rpc('submit_piket_late_report', {
       p_token_hash: hashToken(token),
-      p_student_user_id: student.id,
+      p_student_roster_id: student.id,
       p_student_name: student.name,
+      p_student_unit: student.unit_sekolah,
       p_student_class: student.kelas,
     });
     if (error) {

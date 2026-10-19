@@ -31,7 +31,7 @@ export async function GET() {
 
     const { data, error } = await client
       .from('users')
-      .select('id, email, name, nickname, unit_sekolah, kelas, nik, nisn, requested_role, role, photo_url, approved, rejected, rejection_reason, email_verified, created_at, updated_at')
+      .select('id, email, name, nickname, unit_sekolah, kelas, nik, nisn, no_induk, requested_role, role, photo_url, approved, rejected, rejection_reason, email_verified, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -50,6 +50,7 @@ export async function GET() {
         kelas: u.kelas ?? null,
         nik: u.nik ?? null,
         nisn: u.nisn ?? null,
+        no_induk: u.no_induk ?? null,
         requested_role: u.requested_role ?? null,
         role: (u.role || 'osis'),
         is_active: !!u.approved,
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     if (authErr) return authErr;
 
     const body = await request.json();
-    const { email, name, role, password, is_active, profile_image, reject, rejection_reason } = body;
+    const { email, name, role, password, is_active, profile_image, reject, rejection_reason, nickname, unit_sekolah, kelas, nik, nisn, no_induk, instagram_username } = body;
 
     if (!email || !name) {
       return NextResponse.json({ error: 'Email and name are required' }, { status: 400 });
@@ -94,6 +95,13 @@ export async function POST(request: NextRequest) {
       .insert({
         email,
         name,
+        nickname: nickname || null,
+        unit_sekolah: unit_sekolah || null,
+        kelas: kelas || null,
+        nik: nik || null,
+        nisn: nisn || null,
+        no_induk: no_induk || null,
+        instagram_username: instagram_username || null,
         role: dbRole,
         password_hash: null,
         approved: reject ? false : (is_active ?? true),
@@ -101,7 +109,7 @@ export async function POST(request: NextRequest) {
         rejection_reason: reject ? (rejection_reason || 'Ditolak tanpa alasan tertulis') : null,
         photo_url: profile_image ?? null,
       })
-      .select('id, email, name, role, photo_url, approved, rejected, rejection_reason, created_at')
+      .select('id, email, name, nickname, unit_sekolah, kelas, nik, nisn, no_induk, role, photo_url, approved, rejected, rejection_reason, created_at')
       .single();
 
     if (error) throw error;
@@ -110,6 +118,12 @@ export async function POST(request: NextRequest) {
       id: data.id,
       email: data.email,
       name: data.name,
+      nickname: data.nickname,
+      unit_sekolah: data.unit_sekolah,
+      kelas: data.kelas,
+      nik: data.nik,
+      nisn: data.nisn,
+      no_induk: data.no_induk,
       role: data.role,
       is_active: !!data.approved,
       rejected: !!data.rejected,

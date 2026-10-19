@@ -14,6 +14,8 @@ backups/
 *.ps1
 *.sql
 supabase/migrations/
+!supabase/migrations/
+!supabase/migrations/20261019000000_student_no_induk_piket.sql
 
 # TypeScript build info (causes Railway cache issues)
 tsconfig.tsbuildinfo

@@ -18,6 +18,7 @@ interface User {
   kelas?: string | null;
   nik?: string | null;
   nisn?: string | null;
+  no_induk?: string | null;
   requested_role?: string | null;
   role: string;
   is_active: boolean;
@@ -109,6 +110,7 @@ export default function UsersPage() {
     kelas: '',
     nik: '',
     nisn: '',
+    no_induk: '',
     instagram_username: '',
     role: 'siswa',
     password: '',
@@ -200,8 +202,10 @@ export default function UsersPage() {
               name: newRow.name ?? null,
               nickname: newRow.nickname ?? null,
               unit_sekolah: newRow.unit_sekolah ?? null,
+              kelas: newRow.kelas ?? null,
               nik: newRow.nik ?? null,
               nisn: newRow.nisn ?? null,
+              no_induk: newRow.no_induk ?? null,
               requested_role: newRow.requested_role ?? null,
               role: (newRow.role || 'osis'),
               is_active: !!newRow.approved,
@@ -272,6 +276,7 @@ export default function UsersPage() {
           kelas: formData.kelas,
           nik: formData.nik,
           nisn: formData.nisn,
+          no_induk: formData.no_induk,
           instagram_username: formData.instagram_username,
           role: formData.role,
           is_active: formData.is_active,
@@ -326,6 +331,7 @@ export default function UsersPage() {
         kelas: '',
         nik: '',
         nisn: '',
+        no_induk: '',
         instagram_username: '',
         role: 'siswa',
         password: '',
@@ -349,6 +355,7 @@ export default function UsersPage() {
       kelas: item.kelas || '',
       nik: item.nik || '',
       nisn: item.nisn || '',
+      no_induk: item.no_induk || '',
       instagram_username: (item as any).instagram_username || '',
       role: item.role,
       password: '',
@@ -432,6 +439,7 @@ export default function UsersPage() {
                   kelas: '',
                   nik: '',
                   nisn: '',
+                  no_induk: '',
                   instagram_username: '',
                   role: 'siswa',
                   password: '',
@@ -570,7 +578,7 @@ export default function UsersPage() {
                   </div>
                 </div>
 
-                {/* Kelas, NIK & NISN */}
+                {/* Kelas, NIK & No Induk */}
                 <div className="grid md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -601,15 +609,14 @@ export default function UsersPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      NISN (10 digit)
+                      No Induk
                     </label>
                     <input
                       type="text"
-                      value={formData.nisn}
-                      onChange={(e) => setFormData({ ...formData, nisn: e.target.value })}
-                      maxLength={10}
+                      value={formData.no_induk}
+                      onChange={(e) => setFormData({ ...formData, no_induk: e.target.value })}
                       className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-200 dark:focus:ring-purple-900 focus:border-purple-500 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="10 digit"
+                      placeholder="Nomor induk sesuai daftar hadir"
                     />
                   </div>
                 </div>
@@ -930,9 +937,9 @@ export default function UsersPage() {
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                     <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
-                      <FaIdCard className="text-green-600" /> NISN
+                      <FaIdCard className="text-green-600" /> No Induk
                     </div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-white font-mono">{detailUser.nisn || '-'}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white font-mono">{detailUser.no_induk || '-'}</div>
                   </div>
                 </div>
 

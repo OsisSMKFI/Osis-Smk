@@ -73,6 +73,7 @@ begin
      where u.id = p_created_by
        and u.role in ('osis', 'admin', 'super_admin')
        and u.approved = true
+       and u.email_verified = true
   ) then
     raise exception 'role tidak dapat membuat QR Piket' using errcode = '42501';
   end if;
@@ -126,6 +127,7 @@ begin
      where u.id = p_student_user_id
        and u.role = 'siswa'
        and u.approved = true
+       and u.email_verified = true
        and u.name = btrim(p_student_name)
        and u.kelas = btrim(p_student_class)
   ) then
@@ -167,7 +169,7 @@ create or replace function public.approve_piket_daily(
 returns table(report_date date, report_count integer, snapshot_sha256 text, approved_by uuid, approver_name text, approved_at timestamptz)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_rows jsonb;
@@ -183,6 +185,7 @@ begin
      where u.id = p_approved_by
        and u.role = 'guru'
        and u.approved = true
+       and u.email_verified = true
        and u.name = btrim(p_approver_name)
   ) then
     raise exception 'role guru diperlukan untuk persetujuan' using errcode = '42501';

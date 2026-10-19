@@ -11,7 +11,6 @@ export default function RegisterPageClient() {
   const [unitSekolah, setUnitSekolah] = useState('');
   const [kelas, setKelas] = useState('');
   const [nik, setNik] = useState('');
-  const [nisn, setNisn] = useState('');
   const [instagramUsername, setInstagramUsername] = useState('');
   const [requestedRole, setRequestedRole] = useState('siswa');
   const [status, setStatus] = useState<string | null>(null);
@@ -50,7 +49,7 @@ export default function RegisterPageClient() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name, nickname, unit_sekolah: unitSekolah, kelas, nik, nisn, instagram_username: instagramUsername, role: requestedRole })
+        body: JSON.stringify({ email, password, name, nickname, unit_sekolah: unitSekolah, kelas, nik, instagram_username: instagramUsername, role: requestedRole })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -121,10 +120,6 @@ export default function RegisterPageClient() {
             <div>
               <label className="block text-xs font-semibold mb-1" htmlFor="nik">NIK</label>
               <input id="nik" type="text" value={nik} onChange={e => setNik(e.target.value)} maxLength={16} className="w-full px-3 py-2 rounded-lg border text-sm bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="16 digit" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1" htmlFor="nisn">NISN</label>
-              <input id="nisn" type="text" value={nisn} onChange={e => setNisn(e.target.value)} maxLength={10} className="w-full px-3 py-2 rounded-lg border text-sm bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="10 digit" />
             </div>
           </div>
           <div>

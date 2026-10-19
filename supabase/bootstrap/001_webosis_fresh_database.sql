@@ -40,6 +40,7 @@ create table if not exists public.users (
   kelas text,
   nik text,
   nisn text,
+  no_induk text,
   instagram_username text,
   password_hash text,
   role text not null default 'siswa',

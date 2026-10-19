@@ -25,7 +25,7 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, name, nickname, nisn, nik, unit_sekolah, kelas, instagram_username, requested_role, role, photo_url, approved, email_verified, created_at, updated_at')
+      .select('id, email, name, nickname, nisn, no_induk, nik, unit_sekolah, kelas, instagram_username, requested_role, role, photo_url, approved, email_verified, created_at, updated_at')
       .eq('id', session.user.id)
       .single();
 
@@ -43,6 +43,7 @@ export async function GET() {
       name: data.name,
       username: data.nickname,
       nisn: data.nisn,
+      no_induk: data.no_induk,
       unit: data.unit_sekolah,
       kelas: data.kelas,
       nik: data.nik,
@@ -81,6 +82,17 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { name, profile_image, password, username, nisn, nik, unit, kelas, instagram_username } = body;
 
+    if (body.no_induk !== undefined) {
+      return NextResponse.json({ error: 'No Induk hanya dapat diperbarui Admin. Ajukan keluhan data melalui formulir Piket.' }, { status: 403 });
+    }
+
+    const { data: currentUser, error: userError } = await getSupabaseAdmin()
+      .from('users').select('role').eq('id', session.user.id).maybeSingle();
+    if (userError || !currentUser) return NextResponse.json({ error: 'Data akun tidak ditemukan.' }, { status: 404 });
+    if (currentUser.role === 'siswa' && ['name', 'nisn', 'nik', 'unit', 'kelas'].some((field) => body[field] !== undefined)) {
+      return NextResponse.json({ error: 'Data identitas siswa hanya dapat diubah Admin. Ajukan keluhan data melalui formulir Piket.' }, { status: 403 });
+    }
+
     const update: any = {};
     if (name !== undefined) update.name = name;
     if (username !== undefined) update.nickname = username;
@@ -112,7 +124,7 @@ export async function PUT(request: NextRequest) {
       .from('users')
       .update(update)
       .eq('id', session.user.id)
-      .select('id, email, name, nickname, nisn, nik, unit_sekolah, kelas, instagram_username, role, photo_url, approved, email_verified, created_at, updated_at')
+      .select('id, email, name, nickname, nisn, no_induk, nik, unit_sekolah, kelas, instagram_username, role, photo_url, approved, email_verified, created_at, updated_at')
       .single();
 
     if (error) {
@@ -126,6 +138,7 @@ export async function PUT(request: NextRequest) {
       name: data.name,
       username: data.nickname,
       nisn: data.nisn,
+      no_induk: data.no_induk,
       nik: data.nik,
       unit: data.unit_sekolah,
       kelas: data.kelas ?? '',

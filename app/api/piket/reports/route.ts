@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const [{ data: reports, error: reportsError }, { data: approval, error: approvalError }] = await Promise.all([
     supabaseAdmin
       .from('piket_late_reports')
-      .select('id,report_date,student_name,student_class,submitted_at')
+      .select('id,report_date,student_name,student_unit,student_class,student_no_induk,submitted_at')
       .eq('report_date', requestedDate)
       .order('submitted_at', { ascending: true }),
     supabaseAdmin

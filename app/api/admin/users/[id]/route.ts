@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const { data, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, name, nickname, nisn, nik, unit_sekolah, instagram_username, kelas, requested_role, role, photo_url, approved, email_verified, created_at, updated_at')
+      .select('id, email, name, nickname, nisn, no_induk, nik, unit_sekolah, instagram_username, kelas, requested_role, role, photo_url, approved, email_verified, created_at, updated_at')
       .eq('id', id)
       .single();
 
@@ -41,6 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       name: data.name,
       username: data.nickname,
       nisn: data.nisn,
+      no_induk: data.no_induk,
       nik: data.nik,
       unit: data.unit_sekolah,
       kelas: data.kelas || '',
@@ -72,10 +73,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id } = await params;
     const body = await request.json();
-    const { name, role, is_active, profile_image, password, username, nisn, nik, unit, kelas, instagram_username } = body;
+    const { name, role, is_active, profile_image, password, username, nisn, no_induk, nik, unit, unit_sekolah, kelas, instagram_username } = body;
 
     // Check if user is editing their own profile
     const isOwnProfile = session.user.id === id;
+
+    if (isOwnProfile && ['name', 'nisn', 'no_induk', 'nik', 'unit', 'unit_sekolah', 'kelas'].some((field) => body[field] !== undefined)) {
+      const identityEditErr = await requirePermission('users:edit');
+      if (identityEditErr) return identityEditErr;
+    }
     
     // If not own profile, require admin permission
     if (!isOwnProfile) {
@@ -87,8 +93,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (name !== undefined) update.name = name;
     if (username !== undefined) update.nickname = username;
     if (nisn !== undefined) update.nisn = nisn.trim() === '' ? null : nisn;
+    if (no_induk !== undefined) update.no_induk = no_induk.trim() === '' ? null : no_induk.trim();
     if (nik !== undefined) update.nik = nik.trim() === '' ? null : nik;
-    if (unit !== undefined) update.unit_sekolah = unit;
+    if (unit !== undefined || unit_sekolah !== undefined) update.unit_sekolah = unit ?? unit_sekolah;
     if (kelas !== undefined) update.kelas = kelas;
     if (instagram_username !== undefined) {
       const cleaned = instagram_username.trim().replace('@', '');
@@ -133,7 +140,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       .from('users')
       .update(update)
       .eq('id', id)
-      .select('id, email, name, nickname, nisn, nik, unit_sekolah, instagram_username, kelas, requested_role, role, photo_url, approved, email_verified, created_at, updated_at')
+      .select('id, email, name, nickname, nisn, no_induk, nik, unit_sekolah, instagram_username, kelas, requested_role, role, photo_url, approved, email_verified, created_at, updated_at')
       .single();
 
     if (error) {
@@ -149,6 +156,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       name: data.name,
       username: data.nickname,
       nisn: data.nisn,
+      no_induk: data.no_induk,
       nik: data.nik,
       unit: data.unit_sekolah,
       kelas: data.kelas || '',

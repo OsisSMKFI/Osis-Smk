@@ -25,6 +25,7 @@ export default function ProfileEditPageClient() {
     email: '',
     username: '',
     nisn: '',
+    no_induk: '',
     nik: '',
     unit: '',
     kelas: '',
@@ -39,6 +40,7 @@ export default function ProfileEditPageClient() {
   });
   
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const isStudent = (session?.user?.role || '').toLowerCase() === 'siswa';
 
   useEffect(() => {
     if (session?.user) {
@@ -57,6 +59,7 @@ export default function ProfileEditPageClient() {
           email: data.data.email || '',
           username: data.data.username || '',
           nisn: data.data.nisn || '',
+          no_induk: data.data.no_induk || '',
           nik: data.data.nik || '',
           unit: data.data.unit || '',
           kelas: data.data.kelas || '',
@@ -160,12 +163,14 @@ export default function ProfileEditPageClient() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(!isStudent ? {
           name: formData.name,
           username: formData.username,
           nisn: formData.nisn,
           nik: formData.nik,
           unit: formData.unit,
           kelas: formData.kelas,
+          } : { username: formData.username }),
           instagram_username: formData.instagram_username,
           profile_image: formData.photo_url,
         }),
@@ -326,6 +331,7 @@ export default function ProfileEditPageClient() {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                readOnly={isStudent}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 required
               />
@@ -358,6 +364,11 @@ export default function ProfileEditPageClient() {
               />
             </div>
 
+            {isStudent ? <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"><FaIdCard /> No Induk</label>
+              <input type="text" value={formData.no_induk} readOnly className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white" />
+              <p className="mt-1 text-xs text-gray-500">Data sekolah dikelola Admin. Jika ada kesalahan, ajukan keluhan melalui formulir Piket.</p>
+            </div> : <>
             {/* NISN */}
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -372,8 +383,9 @@ export default function ProfileEditPageClient() {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
+            </>}
 
-            {/* NIK */}
+            {!isStudent && <>{/* NIK */}
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <FaIdCard /> NIK (16 digit)
@@ -387,6 +399,7 @@ export default function ProfileEditPageClient() {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
             </div>
+            </>}
 
             {/* Unit */}
             <div>
@@ -396,6 +409,7 @@ export default function ProfileEditPageClient() {
               <select
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                disabled={isStudent}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">Pilih Unit</option>
@@ -414,6 +428,7 @@ export default function ProfileEditPageClient() {
                 type="text"
                 value={formData.kelas}
                 onChange={(e) => setFormData({ ...formData, kelas: e.target.value })}
+                readOnly={isStudent}
                 placeholder="Contoh: XII RPL 1"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
