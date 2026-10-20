@@ -266,35 +266,52 @@ export default function UsersPage() {
         ? `/api/admin/users/${editingId}` 
         : '/api/admin/users';
       const method = editingId ? 'PUT' : 'POST';
+      const editedUser = editingId ? items.find((item) => item.id === editingId) : undefined;
+      const shouldApprovePending = !!editedUser && editedUser.role === 'pending' && !editedUser.rejected && formData.is_active;
+      const editPayload = editingId ? {
+        name: formData.name,
+        nickname: formData.nickname,
+        unit_sekolah: formData.unit_sekolah,
+        kelas: formData.kelas,
+        nik: formData.nik,
+        nisn: formData.nisn,
+        no_induk: formData.no_induk,
+        instagram_username: formData.instagram_username,
+        ...(formData.role !== (() => {
+          const current = editedUser;
+          return current?.role === 'pending'
+            ? current.requested_role || 'siswa'
+            : current?.role || 'siswa';
+        })() ? { role: formData.role } : {}),
+        // Pending accounts must go through the approval endpoint so their
+        // requested role is promoted together with the approval state.
+        is_active: shouldApprovePending ? false : formData.is_active,
+        profile_image: formData.profile_image,
+        password: formData.new_password || undefined,
+      } : formData;
       
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingId ? {
-          name: formData.name,
-          nickname: formData.nickname,
-          unit_sekolah: formData.unit_sekolah,
-          kelas: formData.kelas,
-          nik: formData.nik,
-          nisn: formData.nisn,
-          no_induk: formData.no_induk,
-          instagram_username: formData.instagram_username,
-          ...(formData.role !== (() => {
-            const current = items.find((item) => item.id === editingId);
-            return current?.role === 'pending'
-              ? current.requested_role || 'siswa'
-              : current?.role || 'siswa';
-          })() ? { role: formData.role } : {}),
-          is_active: formData.is_active,
-          profile_image: formData.profile_image,
-          password: formData.new_password || undefined // Only send if provided
-        } : formData)
+        body: JSON.stringify(editPayload)
       });
 
       const result = await response.json();
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to save');
+      }
+
+      if (shouldApprovePending && editingId) {
+        const approvalResponse = await fetch('/api/admin/users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingId }),
+        });
+        const approvalResult = await approvalResponse.json();
+        if (!approvalResponse.ok) {
+          throw new Error(`Data user tersimpan, tetapi persetujuan gagal: ${approvalResult.error || 'coba lagi'}`);
+        }
       }
 
       // Optimistic update - immediately update local state
@@ -712,14 +729,16 @@ export default function UsersPage() {
                     type="checkbox"
                     id="is_active"
                     checked={formData.is_active}
-                    disabled={!!editingId && items.find((item) => item.id === editingId)?.role === 'pending'}
+                    disabled={!!editingId && items.find((item) => item.id === editingId)?.role === 'pending' && !!items.find((item) => item.id === editingId)?.rejected}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                     className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
                   />
                   <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     <FaUserCheck className="inline mr-2 text-green-600" />
-                    {editingId && items.find((item) => item.id === editingId)?.role === 'pending'
-                      ? 'Menunggu persetujuan di halaman persetujuan user'
+                    {editingId && items.find((item) => item.id === editingId)?.role === 'pending' && !items.find((item) => item.id === editingId)?.rejected
+                      ? 'Setujui akun (email tetap harus terverifikasi agar bisa login)'
+                      : editingId && items.find((item) => item.id === editingId)?.rejected
+                        ? 'Akun ditolak; pulihkan dulu dari halaman persetujuan user'
                       : 'Akun Aktif (user dapat login)'}
                   </label>
                 </div>
