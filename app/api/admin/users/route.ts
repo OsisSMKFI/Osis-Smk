@@ -218,7 +218,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Status akun sudah diproses; muat ulang daftar user' }, { status: 409 });
     }
 
-    // Only pending accounts transition from requested_role into an active role.
+    // Approvers may approve only roles offered by public registration. Internal
+    // roles such as admin/super_admin are intentionally not eligible here.
     let newRole: string | undefined;
     if (!reject && !restore && target.role === 'pending') {
       const requestedRole = typeof target.requested_role === 'string' && target.requested_role
@@ -227,10 +228,6 @@ export async function PUT(request: NextRequest) {
       const publicRegistrationRoles = new Set(['osis', 'siswa', 'guru']);
       if (!publicRegistrationRoles.has(requestedRole)) {
         return NextResponse.json({ error: 'Role yang diajukan tidak valid; user belum disetujui' }, { status: 409 });
-      }
-      if (requestedRole !== 'siswa') {
-        const roleErr = await requirePermission('users:role_assign');
-        if (roleErr) return roleErr;
       }
       newRole = requestedRole;
     }
