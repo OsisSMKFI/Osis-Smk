@@ -15,6 +15,19 @@ export type UserRole =
   | 'editor'
   | 'viewer';
 
+/** Roles an administrator can assign. `pending` is an approval state, not a role. */
+export const ASSIGNABLE_USER_ROLES = [
+  'super_admin',
+  'admin',
+  'moderator',
+  'osis',
+  'siswa',
+  'guru',
+  'other',
+  'editor',
+  'viewer',
+] as const satisfies readonly UserRole[];
+
 export type Permission =
   // Content Management
   | 'posts:read'

@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
 import { uploadWithProgressSmart } from '@/lib/client/uploadWithProgress';
 import ImageUploadField from '@/components/ImageUploadField';
 import { LoadingSection } from '@/components/ui/LoadingSpinner';
@@ -80,12 +80,26 @@ const ROLE_CONFIG = {
     textColor: 'text-gray-700 dark:text-gray-300',
     icon: FaUserCheck,
   },
+  editor: {
+    label: 'Editor',
+    color: 'from-teal-500 to-cyan-600',
+    bgColor: 'bg-teal-50 dark:bg-teal-900/20',
+    textColor: 'text-teal-700 dark:text-teal-300',
+    icon: FaEdit,
+  },
   viewer: {
     label: 'Viewer',
     color: 'from-gray-400 to-gray-500',
     bgColor: 'bg-gray-50 dark:bg-gray-700/20',
     textColor: 'text-gray-700 dark:text-gray-300',
     icon: FaUserCheck,
+  },
+  pending: {
+    label: 'Menunggu Persetujuan',
+    color: 'from-amber-500 to-orange-600',
+    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+    textColor: 'text-amber-700 dark:text-amber-300',
+    icon: FaClock,
   },
 } as const;
 
@@ -119,11 +133,6 @@ export default function UsersPage() {
     new_password: '' // For edit mode password change
   });
 
-  // Create Supabase client (browser) for realtime & lightweight fetches
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const supabase = createClient(supabaseUrl, supabaseAnon, { auth: { persistSession: false, autoRefreshToken: false } });
-
   const fetchData = useCallback(async () => {
     try {
       console.log('[Admin Users] Fetching from /api/admin/users...');
@@ -144,13 +153,8 @@ export default function UsersPage() {
       }
       
       const data = await response.json();
-      console.log('[Admin Users] Raw response:', data);
-      console.log('[Admin Users] Is array?', Array.isArray(data));
-      console.log('[Admin Users] Data length:', Array.isArray(data) ? data.length : (data.users?.length || 0));
-      
       // Handle both array and object response formats
       const list = Array.isArray(data) ? data : (data.users || []);
-      console.log('[Admin Users] Final list:', list.length, 'users');
       
       if (list.length === 0) {
         console.warn('[Admin Users] No users returned from API');
@@ -187,7 +191,6 @@ export default function UsersPage() {
     const channel = supabase.channel('users-admin-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
         try {
-          console.log('[Realtime users] Event:', payload.eventType, payload);
           setItems(prev => {
             const event = payload.eventType;
             const newRow: any = payload.new ?? payload.old;
@@ -264,8 +267,6 @@ export default function UsersPage() {
         : '/api/admin/users';
       const method = editingId ? 'PUT' : 'POST';
       
-      console.log('[Admin Users] Submitting form:', { editingId, is_active: formData.is_active });
-      
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -278,7 +279,12 @@ export default function UsersPage() {
           nisn: formData.nisn,
           no_induk: formData.no_induk,
           instagram_username: formData.instagram_username,
-          role: formData.role,
+          ...(formData.role !== (() => {
+            const current = items.find((item) => item.id === editingId);
+            return current?.role === 'pending'
+              ? current.requested_role || 'siswa'
+              : current?.role || 'siswa';
+          })() ? { role: formData.role } : {}),
           is_active: formData.is_active,
           profile_image: formData.profile_image,
           password: formData.new_password || undefined // Only send if provided
@@ -291,8 +297,6 @@ export default function UsersPage() {
         throw new Error(result.error || 'Failed to save');
       }
 
-      console.log('[Admin Users] Save success:', result);
-      
       // Optimistic update - immediately update local state
       if (editingId && result.data) {
         setItems(prev => prev.map(item => 
@@ -357,7 +361,9 @@ export default function UsersPage() {
       nisn: item.nisn || '',
       no_induk: item.no_induk || '',
       instagram_username: (item as any).instagram_username || '',
-      role: item.role,
+      role: item.role === 'pending'
+        ? (item.requested_role && item.requested_role !== 'pending' && item.requested_role in ROLE_CONFIG ? item.requested_role : 'siswa')
+        : (item.role in ROLE_CONFIG ? item.role : 'other'),
       password: '',
       is_active: item.is_active,
       profile_image: item.profile_image || '',
@@ -657,7 +663,7 @@ export default function UsersPage() {
                       onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                       className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-200 dark:focus:ring-purple-900 focus:border-purple-500 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      {Object.entries(ROLE_CONFIG).map(([key, config]) => (
+                      {Object.entries(ROLE_CONFIG).filter(([key]) => key !== 'pending').map(([key, config]) => (
                         <option key={key} value={key}>
                           {config.label}
                         </option>
@@ -675,9 +681,9 @@ export default function UsersPage() {
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-200 dark:focus:ring-purple-900 focus:border-purple-500 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="Min. 6 karakter"
+                        placeholder="8+ karakter, huruf besar, kecil, dan angka"
                         required={!editingId}
-                        minLength={6}
+                        minLength={8}
                       />
                     </div>
                   )}
@@ -693,9 +699,9 @@ export default function UsersPage() {
                         onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
                         className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-4 focus:ring-purple-200 dark:focus:ring-purple-900 focus:border-purple-500 transition-all bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="Kosongkan jika tidak ingin mengubah"
-                        minLength={6}
+                        minLength={8}
                       />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimal 6 karakter. Biarkan kosong jika tidak ingin mengubah password.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimal 8 karakter, harus memuat huruf besar, huruf kecil, dan angka. Kosongkan jika tidak ingin mengubah password.</p>
                     </div>
                   )}
                 </div>
@@ -706,12 +712,15 @@ export default function UsersPage() {
                     type="checkbox"
                     id="is_active"
                     checked={formData.is_active}
+                    disabled={!!editingId && items.find((item) => item.id === editingId)?.role === 'pending'}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                     className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
                   />
                   <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     <FaUserCheck className="inline mr-2 text-green-600" />
-                    Akun Aktif (user dapat login)
+                    {editingId && items.find((item) => item.id === editingId)?.role === 'pending'
+                      ? 'Menunggu persetujuan di halaman persetujuan user'
+                      : 'Akun Aktif (user dapat login)'}
                   </label>
                 </div>
 

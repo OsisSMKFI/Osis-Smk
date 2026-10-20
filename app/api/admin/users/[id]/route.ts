@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { requirePermission } from '@/lib/apiAuth';
+import { ASSIGNABLE_USER_ROLES } from '@/lib/rbac';
+import { validatePassword } from '@/lib/passwordPolicy';
 export const runtime = 'nodejs';
 
-const ALLOWED_ROLES = new Set(['super_admin','admin','moderator','osis','siswa','guru','other']);
+const ALLOWED_ROLES = new Set<string>(ASSIGNABLE_USER_ROLES);
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,6 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       id: data.id,
       email: data.email,
       name: data.name,
+      nickname: data.nickname,
       username: data.nickname,
       nisn: data.nisn,
       no_induk: data.no_induk,
@@ -73,12 +76,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id } = await params;
     const body = await request.json();
-    const { name, role, is_active, profile_image, password, username, nisn, no_induk, nik, unit, unit_sekolah, kelas, instagram_username } = body;
+    const { name, role, is_active, profile_image, password, username, nickname, nisn, no_induk, nik, unit, unit_sekolah, kelas, instagram_username } = body;
+    if (is_active !== undefined && typeof is_active !== 'boolean') {
+      return NextResponse.json({ error: 'Status aktif harus berupa boolean' }, { status: 400 });
+    }
 
     // Check if user is editing their own profile
     const isOwnProfile = session.user.id === id;
 
-    if (isOwnProfile && ['name', 'nisn', 'no_induk', 'nik', 'unit', 'unit_sekolah', 'kelas'].some((field) => body[field] !== undefined)) {
+    if (isOwnProfile && ['name', 'nickname', 'username', 'nisn', 'no_induk', 'nik', 'unit', 'unit_sekolah', 'kelas', 'instagram_username'].some((field) => body[field] !== undefined)) {
       const identityEditErr = await requirePermission('users:edit');
       if (identityEditErr) return identityEditErr;
     }
@@ -90,8 +96,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const update: any = {};
-    if (name !== undefined) update.name = name;
-    if (username !== undefined) update.nickname = username;
+    if (name !== undefined) update.name = typeof name === 'string' ? name.trim() : name;
+    const nextNickname = nickname ?? username;
+    if (nextNickname !== undefined) update.nickname = typeof nextNickname === 'string' && nextNickname.trim() ? nextNickname.trim() : null;
     if (nisn !== undefined) update.nisn = nisn.trim() === '' ? null : nisn;
     if (no_induk !== undefined) update.no_induk = no_induk.trim() === '' ? null : no_induk.trim();
     if (nik !== undefined) update.nik = nik.trim() === '' ? null : nik;
@@ -102,39 +109,69 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       update.instagram_username = cleaned === '' ? null : cleaned;
     }
     
-    // Only admins can change role and is_active
+    // Only administrators can change role and approval status.
     if (!isOwnProfile) {
+      const { data: existingUser, error: existingUserError } = await supabaseAdmin
+        .from('users')
+        .select('id, role, requested_role, approved')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (existingUserError) throw existingUserError;
+      if (!existingUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
       if (role !== undefined) {
-        const roleErr = await requirePermission('users:role_assign');
-        if (roleErr) return roleErr;
-        if (!ALLOWED_ROLES.has(role)) {
+        if (typeof role !== 'string' || !ALLOWED_ROLES.has(role)) {
           console.error('[admin/users/[id] PUT] Invalid role:', role);
           return NextResponse.json({ error: `Invalid role: ${role}` }, { status: 400 });
         }
-        update.role = role;
-        console.log('[admin/users/[id] PUT] Role will be updated to:', role);
+        const currentEffectiveRole = existingUser.role === 'pending'
+          ? existingUser.requested_role || 'siswa'
+          : existingUser.role;
+        if (role !== currentEffectiveRole) {
+          const roleErr = await requirePermission('users:role_assign');
+          if (roleErr) return roleErr;
+
+          // Preserve the pending approval state; update only the role they requested.
+          if (existingUser.role === 'pending') update.requested_role = role;
+          else update.role = role;
+        }
       }
       if (is_active !== undefined) {
-        update.approved = !!is_active;
+        if (is_active === true && existingUser.role === 'pending') {
+          return NextResponse.json({ error: 'Akun pending harus disetujui melalui alur persetujuan user' }, { status: 409 });
+        }
+        if (!!is_active !== !!existingUser.approved) {
+          const approvalErr = await requirePermission('users:approve');
+          if (approvalErr) return approvalErr;
+          update.approved = !!is_active;
+        }
         // Clear rejection when approving AND ensure email is verified
         if (is_active) {
           update.rejected = false;
           update.rejection_reason = null;
-          update.email_verified = true; // Ensure verified when approving
         }
       }
     }
     if (profile_image !== undefined) update.photo_url = profile_image ?? null;
     
     // Hash new password if provided
-    if (password && password.trim()) {
+    if (password !== undefined && password !== null && password !== '') {
+      if (typeof password !== 'string') {
+        return NextResponse.json({ error: 'Password harus berupa teks' }, { status: 400 });
+      }
+      const passwordError = validatePassword(password);
+      if (passwordError) return NextResponse.json({ error: `Password tidak valid: ${passwordError}` }, { status: 400 });
       const bcrypt = (await import('bcryptjs')).default;
-      const hash = await bcrypt.hash(password, 10);
+      const saltRoundsRaw = Number(process.env.PASSWORD_SALT_ROUNDS ?? 10);
+      const saltRounds = Number.isInteger(saltRoundsRaw) && saltRoundsRaw >= 10 && saltRoundsRaw <= 14 ? saltRoundsRaw : 10;
+      const hash = await bcrypt.hash(password, saltRounds);
       update.password_hash = hash;
-      console.log('[admin/users/[id] PUT] Password hashed successfully');
     }
 
-    console.log('[admin/users/[id] PUT] Updating user:', { id, update, is_active });
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: 'Tidak ada perubahan untuk disimpan' }, { status: 400 });
+    }
 
     const { data, error } = await supabaseAdmin
       .from('users')
@@ -148,12 +185,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       throw error;
     }
     
-    console.log('[admin/users/[id] PUT] SUCCESS - Role:', data.role, 'Approved:', data.approved, 'is_active will be:', !!data.approved);
-
     const result = {
       id: data.id,
       email: data.email,
       name: data.name,
+      nickname: data.nickname,
       username: data.nickname,
       nisn: data.nisn,
       no_induk: data.no_induk,

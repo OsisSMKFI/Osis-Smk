@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import crypto from 'crypto';
 import { sendMail } from '@/lib/mailer';
+import { validatePassword } from '@/lib/passwordPolicy';
 
 // Basic in-memory rate limiting (process local)
 const REG_WINDOW = 10 * 60 * 1000; // 10 minutes
@@ -22,20 +23,14 @@ function incReg(key: string) {
   v.count += 1; regMap.set(key, v);
 }
 
-function validatePassword(pw: string): string | null {
-  if (pw.length < 8) return 'Minimal 8 karakter';
-  if (!/[A-Z]/.test(pw)) return 'Harus ada huruf besar';
-  if (!/[a-z]/.test(pw)) return 'Harus ada huruf kecil';
-  if (!/[0-9]/.test(pw)) return 'Harus ada angka';
-  return null;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    let { email, password, name, nickname, role: requestedRole, unit_sekolah, nik, nisn, kelas, instagram_username } = body as { 
+    const payload = body as {
       email?: string; password?: string; name?: string; nickname?: string; role?: string; unit_sekolah?: string; nik?: string; nisn?: string; kelas?: string; instagram_username?: string
     };
+    let { email, name, nickname, role: requestedRole, unit_sekolah, nik, nisn, kelas, instagram_username } = payload;
+    const { password } = payload;
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email dan password wajib diisi' }, { status: 400 });
@@ -146,7 +141,6 @@ export async function POST(req: NextRequest) {
 
     // Send verification email (or expose link in dev if mailer not configured)
     const host = req.headers.get('host') || process.env.NEXT_PUBLIC_BASE_URL || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
     const proto = host.includes('localhost') ? 'http' : 'https';
     const base = `${proto}://${host}`;
     const verificationLink = `${base}/verify-email/${rawToken}`;

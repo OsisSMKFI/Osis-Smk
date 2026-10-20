@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { requirePermission } from '@/lib/apiAuth';
 import { createClient } from '@supabase/supabase-js';
+import { ASSIGNABLE_USER_ROLES } from '@/lib/rbac';
+import { validatePassword } from '@/lib/passwordPolicy';
 export const runtime = 'nodejs';
 
-const ALLOWED_ROLES = new Set(['super_admin','admin','moderator','osis','siswa','guru','other']);
+const ALLOWED_ROLES = new Set<string>(ASSIGNABLE_USER_ROLES);
 
 export async function GET() {
   try {
@@ -83,18 +84,49 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { email, name, role, password, is_active, profile_image, reject, rejection_reason, nickname, unit_sekolah, kelas, nik, nisn, no_induk, instagram_username } = body;
-
-    if (!email || !name) {
-      return NextResponse.json({ error: 'Email and name are required' }, { status: 400 });
+    if (is_active !== undefined && typeof is_active !== 'boolean') {
+      return NextResponse.json({ error: 'Status aktif harus berupa boolean' }, { status: 400 });
+    }
+    if (reject !== undefined && typeof reject !== 'boolean') {
+      return NextResponse.json({ error: 'Status penolakan tidak valid' }, { status: 400 });
     }
 
-    const dbRole = (role && ALLOWED_ROLES.has(role)) ? role : 'osis';
+    if (typeof email !== 'string' || typeof name !== 'string' || !email.trim() || !name.trim()) {
+      return NextResponse.json({ error: 'Email and name are required' }, { status: 400 });
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedName = name.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || normalizedEmail.length > 254) {
+      return NextResponse.json({ error: 'Format email tidak valid' }, { status: 400 });
+    }
+    if (normalizedName.length < 3 || normalizedName.length > 120) {
+      return NextResponse.json({ error: 'Nama harus terdiri dari 3 sampai 120 karakter' }, { status: 400 });
+    }
+    if (typeof password !== 'string') {
+      return NextResponse.json({ error: 'Password wajib diisi' }, { status: 400 });
+    }
+    const passwordError = validatePassword(password);
+    if (passwordError) return NextResponse.json({ error: `Password tidak valid: ${passwordError}` }, { status: 400 });
+
+    const dbRole = role === undefined ? 'siswa' : role;
+    if (typeof dbRole !== 'string' || !ALLOWED_ROLES.has(dbRole)) {
+      return NextResponse.json({ error: `Invalid role: ${String(dbRole)}` }, { status: 400 });
+    }
+    if (dbRole !== 'siswa') {
+      const roleErr = await requirePermission('users:role_assign');
+      if (roleErr) return roleErr;
+    }
+
+    const bcrypt = (await import('bcryptjs')).default;
+    const saltRoundsRaw = Number(process.env.PASSWORD_SALT_ROUNDS ?? 10);
+    const saltRounds = Number.isInteger(saltRoundsRaw) && saltRoundsRaw >= 10 && saltRoundsRaw <= 14 ? saltRoundsRaw : 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
 
     const { data, error } = await supabaseAdmin
       .from('users')
       .insert({
-        email,
-        name,
+        email: normalizedEmail,
+        name: normalizedName,
         nickname: nickname || null,
         unit_sekolah: unit_sekolah || null,
         kelas: kelas || null,
@@ -103,7 +135,8 @@ export async function POST(request: NextRequest) {
         no_induk: no_induk || null,
         instagram_username: instagram_username || null,
         role: dbRole,
-        password_hash: null,
+        password_hash: passwordHash,
+        email_verified: true,
         approved: reject ? false : (is_active ?? true),
         rejected: !!reject,
         rejection_reason: reject ? (rejection_reason || 'Ditolak tanpa alasan tertulis') : null,
@@ -126,6 +159,7 @@ export async function POST(request: NextRequest) {
       no_induk: data.no_induk,
       role: data.role,
       is_active: !!data.approved,
+      email_verified: true,
       rejected: !!data.rejected,
       rejection_reason: data.rejection_reason ?? null,
       profile_image: data.photo_url ?? null,
@@ -151,21 +185,56 @@ export async function PUT(request: NextRequest) {
     if (authErr) return authErr;
     const body = await request.json().catch(() => ({}));
     const id = body.id as string | undefined;
-    const reject = body.reject as boolean | undefined;
-    const rejection_reason = body.rejection_reason as string | undefined;
-    const restore = body.restore as boolean | undefined; // restore previously rejected -> pending
+    const reject = body.reject;
+    const rejection_reason = body.rejection_reason;
+    const restore = body.restore;
     if (!id) {
       return NextResponse.json({ error: 'User id diperlukan' }, { status: 400 });
     }
-    // Promote role from requested_role if present when approving
-    const { data: rows } = await supabaseAdmin.from('users').select('id, role, requested_role').eq('id', id).limit(1);
-    let newRole: string | undefined;
-    if (rows && rows[0]) {
-      const r = rows[0] as any;
-      if (r.role === 'pending' && r.requested_role) {
-        newRole = r.requested_role;
-      }
+    if ((reject !== undefined && typeof reject !== 'boolean') || (restore !== undefined && typeof restore !== 'boolean')) {
+      return NextResponse.json({ error: 'Aksi persetujuan tidak valid' }, { status: 400 });
     }
+    if (reject === true && restore === true) {
+      return NextResponse.json({ error: 'Pilih satu aksi: tolak atau pulihkan' }, { status: 400 });
+    }
+    if (rejection_reason !== undefined && (typeof rejection_reason !== 'string' || rejection_reason.length > 1000)) {
+      return NextResponse.json({ error: 'Alasan penolakan tidak valid (maksimal 1000 karakter)' }, { status: 400 });
+    }
+
+    const { data: target, error: targetError } = await supabaseAdmin
+      .from('users')
+      .select('id, role, requested_role, approved, rejected')
+      .eq('id', id)
+      .maybeSingle();
+    if (targetError) throw targetError;
+    if (!target) return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 });
+    if (restore === true && !target.rejected) {
+      return NextResponse.json({ error: 'Hanya akun yang ditolak yang dapat dipulihkan' }, { status: 409 });
+    }
+    if (reject === true && target.approved) {
+      return NextResponse.json({ error: 'Akun aktif harus dinonaktifkan sebelum ditolak' }, { status: 409 });
+    }
+    if (restore !== true && reject !== true && (target.approved || target.rejected)) {
+      return NextResponse.json({ error: 'Status akun sudah diproses; muat ulang daftar user' }, { status: 409 });
+    }
+
+    // Only pending accounts transition from requested_role into an active role.
+    let newRole: string | undefined;
+    if (!reject && !restore && target.role === 'pending') {
+      const requestedRole = typeof target.requested_role === 'string' && target.requested_role
+        ? target.requested_role
+        : 'siswa';
+      const publicRegistrationRoles = new Set(['osis', 'siswa', 'guru']);
+      if (!publicRegistrationRoles.has(requestedRole)) {
+        return NextResponse.json({ error: 'Role yang diajukan tidak valid; user belum disetujui' }, { status: 409 });
+      }
+      if (requestedRole !== 'siswa') {
+        const roleErr = await requirePermission('users:role_assign');
+        if (roleErr) return roleErr;
+      }
+      newRole = requestedRole;
+    }
+
     const updateObj: any = {};
     if (restore) {
       // Move rejected user back to pending (approved=false, rejected=false)
@@ -174,7 +243,7 @@ export async function PUT(request: NextRequest) {
       updateObj.approved = false;
     } else if (reject) {
       updateObj.rejected = true;
-      updateObj.rejection_reason = rejection_reason || 'Ditolak';
+      updateObj.rejection_reason = (rejection_reason as string | undefined)?.trim() || 'Ditolak';
       updateObj.approved = false;
     } else {
       updateObj.approved = true;
@@ -183,23 +252,26 @@ export async function PUT(request: NextRequest) {
     }
     if (newRole) updateObj.role = newRole;
     
-    console.log('[admin/users PUT approve] Updating user:', { id, updateObj });
-    
     // Update user approval status without restrictive conditions
     // This ensures approval works even if user was previously approved/rejected
-    const { data: updatedUser, error: updErr } = await supabaseAdmin
+    let updateQuery = supabaseAdmin
       .from('users')
       .update(updateObj)
       .eq('id', id)
+      .eq('approved', !!target.approved)
+      .eq('rejected', !!target.rejected);
+    if (target.role === 'pending') updateQuery = updateQuery.eq('role', 'pending');
+    const { data: updatedUser, error: updErr } = await updateQuery
       .select('id, email, approved, rejected, role')
-      .single();
+      .maybeSingle();
     
     if (updErr) {
       console.error('[admin/users PUT approve] Error:', updErr);
       return NextResponse.json({ error: 'Gagal menyetujui user' }, { status: 500 });
     }
-    
-    console.log('[admin/users PUT approve] SUCCESS:', updatedUser);
+    if (!updatedUser) {
+      return NextResponse.json({ error: 'Status user sudah berubah. Muat ulang daftar lalu coba lagi.' }, { status: 409 });
+    }
     
     return NextResponse.json({ 
       ok: true, 
