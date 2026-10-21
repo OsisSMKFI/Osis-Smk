@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function RegisterPageClient() {
@@ -16,13 +16,6 @@ export default function RegisterPageClient() {
   const [privacyConsent, setPrivacyConsent] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    // Delay rendering the form until after hydration to avoid extension-injected attribute mismatches
-    setMounted(true);
-  }, []);
-
   // Validate Instagram username format
   const validateInstagramUsername = (username: string): boolean => {
     if (!username) return true; // Optional field
@@ -69,22 +62,6 @@ export default function RegisterPageClient() {
     } finally {
       setLoading(false);
     }
-  }
-
-  if(!mounted){
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-gray-900 dark:to-gray-800 p-6">
-        <div className="w-full max-w-md bg-white/60 dark:bg-gray-900/60 backdrop-blur rounded-2xl shadow-xl border border-amber-200/40 dark:border-amber-800/30 p-8 animate-pulse">
-          <div className="h-5 w-40 bg-amber-200/50 rounded mb-4" />
-          <div className="space-y-3">
-            <div className="h-9 w-full bg-amber-100/40 rounded" />
-            <div className="h-9 w-full bg-amber-100/40 rounded" />
-            <div className="h-9 w-full bg-amber-100/40 rounded" />
-            <div className="h-9 w-full bg-amber-100/40 rounded" />
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { MdErrorOutline } from "react-icons/md";
 
@@ -125,6 +126,13 @@ export default function AdminLoginPage() {
             <p className="text-[10px] text-[var(--text-muted)] mt-1 opacity-70">
               osissmkfi.biezz.my.id - SMK Informatika 2 Fithrah Insani
             </p>
+            <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
+              Pendaftaran dan penggunaan akun mengikuti{' '}
+              <Link href="/kebijakan-privasi" className="font-semibold text-[var(--accent-emphasis)] underline underline-offset-2">
+                Kebijakan Privasi dan Cookie
+              </Link>
+              . Persetujuan diminta saat membuat akun.
+            </p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-5" aria-label="Form Login Admin" data-form-type="login" suppressHydrationWarning>
             <div>
@@ -187,9 +195,9 @@ export default function AdminLoginPage() {
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition" style={{background:"var(--button-bg-hover)"}} />
             </button>
             <div className="flex flex-wrap justify-between items-center text-xs mt-1 gap-2">
-              <a href="/admin/forgot-password" className="text-[var(--accent-emphasis)] hover:underline font-medium">Lupa password?</a>
-              <a href="/register" className="text-green-600 dark:text-green-400 hover:underline font-medium">Daftar Akun Baru</a>
-              <a href="/" className="text-[var(--text-muted)] hover:underline">← Kembali</a>
+              <Link href="/admin/forgot-password" className="text-[var(--accent-emphasis)] hover:underline font-medium">Lupa password?</Link>
+              <Link href="/register" className="text-green-600 dark:text-green-400 hover:underline font-medium">Daftar Akun Baru</Link>
+              <Link href="/" className="text-[var(--text-muted)] hover:underline">← Kembali</Link>
             </div>
             {error && (
               <div className="mt-2 space-y-2 text-[10px] text-[var(--text-muted)]">
