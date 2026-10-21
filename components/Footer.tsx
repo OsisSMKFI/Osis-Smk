@@ -342,6 +342,12 @@ const Footer: React.FC = () => {
                 >
                   Kebijakan Privasi & Cookie
                 </Link>
+                <Link
+                  href="/syarat-ketentuan"
+                  className="text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-300"
+                >
+                  Syarat dan Ketentuan
+                </Link>
               </div>
             </div>
           </div>
