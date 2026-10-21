@@ -54,6 +54,7 @@ function DynamicHeroInternal({ initialContent }: { initialContent?: Record<strin
   const displayDescription = language === 'id' ? (content.description || t('home.description')) : t('home.description');
   const labelAbout = language === 'id' ? 'Tentang Kami' : 'About Us';
   const labelGallery = language === 'id' ? 'Lihat Galeri' : 'View Gallery';
+  const labelRegister = language === 'id' ? 'Daftar Akun' : 'Create Account';
 
   return (
     <section
@@ -130,8 +131,14 @@ function DynamicHeroInternal({ initialContent }: { initialContent?: Record<strin
             className="flex flex-col sm:flex-row gap-2.5 xs:gap-3 sm:gap-4 justify-center items-stretch sm:items-center px-3 xs:px-4"
           >
             <a
-              href="/about"
+              href="/register"
               className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-yellow-400 hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-600 text-gray-900 dark:text-gray-900 font-bold rounded-full transition-colors duration-200 shadow-lg text-sm sm:text-base text-center min-h-[44px] flex items-center justify-center"
+            >
+              {labelRegister}
+            </a>
+            <a
+              href="/about"
+              className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-white/15 hover:bg-white/25 dark:bg-gray-700/50 dark:hover:bg-gray-600/50 backdrop-blur-md text-white dark:text-gray-100 font-bold rounded-full border-2 border-white/40 dark:border-gray-600/50 transition-colors duration-200 shadow-lg text-sm sm:text-base text-center min-h-[44px] flex items-center justify-center"
             >
               {labelAbout}
             </a>

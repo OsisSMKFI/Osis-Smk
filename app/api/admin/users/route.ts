@@ -249,14 +249,18 @@ export async function PUT(request: NextRequest) {
     }
     if (newRole) updateObj.role = newRole;
     
-    // Update user approval status without restrictive conditions
-    // This ensures approval works even if user was previously approved/rejected
+    // Compare the status read above, including legacy NULL values. `.eq(..., false)`
+    // does not match SQL NULL, which left older pending accounts impossible to approve.
     let updateQuery = supabaseAdmin
       .from('users')
       .update(updateObj)
-      .eq('id', id)
-      .eq('approved', !!target.approved)
-      .eq('rejected', !!target.rejected);
+      .eq('id', id);
+    updateQuery = target.approved === null || target.approved === undefined
+      ? updateQuery.is('approved', null)
+      : updateQuery.eq('approved', !!target.approved);
+    updateQuery = target.rejected === null || target.rejected === undefined
+      ? updateQuery.is('rejected', null)
+      : updateQuery.eq('rejected', !!target.rejected);
     if (target.role === 'pending') updateQuery = updateQuery.eq('role', 'pending');
     const { data: updatedUser, error: updErr } = await updateQuery
       .select('id, email, approved, rejected, role')

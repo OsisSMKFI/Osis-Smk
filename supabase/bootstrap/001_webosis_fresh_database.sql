@@ -51,6 +51,8 @@ create table if not exists public.users (
   approved boolean not null default false,
   rejected boolean not null default false,
   rejection_reason text,
+  privacy_consent_version text,
+  privacy_consent_at timestamptz,
   verification_token text,
   verification_expires timestamptz,
   preferences jsonb not null default '{}'::jsonb,

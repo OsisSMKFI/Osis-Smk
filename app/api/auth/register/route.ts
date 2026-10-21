@@ -7,6 +7,7 @@ import { validatePassword } from '@/lib/passwordPolicy';
 // Basic in-memory rate limiting (process local)
 const REG_WINDOW = 10 * 60 * 1000; // 10 minutes
 const REG_MAX = Number(process.env.REG_MAX_ATTEMPTS ?? 5);
+const PRIVACY_NOTICE_VERSION = '2026-10-21';
 const regMap = new Map<string, { count: number; first: number }>();
 
 function getReg(key: string) {
@@ -27,13 +28,16 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const payload = body as {
-      email?: string; password?: string; name?: string; nickname?: string; role?: string; unit_sekolah?: string; nik?: string; nisn?: string; kelas?: string; instagram_username?: string
+      email?: string; password?: string; name?: string; nickname?: string; role?: string; unit_sekolah?: string; nik?: string; nisn?: string; kelas?: string; instagram_username?: string; privacy_consent?: boolean
     };
     let { email, name, nickname, role: requestedRole, unit_sekolah, nik, nisn, kelas, instagram_username } = payload;
     const { password } = payload;
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email dan password wajib diisi' }, { status: 400 });
+    }
+    if (payload.privacy_consent !== true) {
+      return NextResponse.json({ error: 'Persetujuan Kebijakan Privasi wajib diberikan sebelum membuat akun.' }, { status: 400 });
     }
     email = email.trim().toLowerCase();
     name = (name || '').trim();
@@ -105,6 +109,8 @@ export async function POST(req: NextRequest) {
         instagram_username: instagram_username || null,
         requested_role: requestedRole || null,
         password_hash: hash,
+        privacy_consent_version: PRIVACY_NOTICE_VERSION,
+        privacy_consent_at: new Date().toISOString(),
         role: 'pending',
         email_verified: false,
         approved: false
@@ -113,6 +119,12 @@ export async function POST(req: NextRequest) {
       .single();
     if (insErr || !user) {
       console.error('[register] insert user error', insErr);
+      if (insErr?.message?.includes('privacy_consent_')) {
+        return NextResponse.json(
+          { error: 'Pendaftaran belum dapat diproses karena pembaruan database persetujuan privasi belum diterapkan. Hubungi pengelola situs.' },
+          { status: 503 }
+        );
+      }
       const isDev = process.env.NODE_ENV !== 'production';
       return NextResponse.json({ error: 'Gagal membuat akun.', ...(isDev && insErr ? { dev_detail: insErr.message || String(insErr) } : {}) }, { status: 500 });
     }

@@ -256,11 +256,15 @@ const Footer: React.FC = () => {
                 </li>
                 <li className="flex items-center">
                   <FaPhone className="mr-3 text-yellow-400" />
-                  <span className="text-gray-600 dark:text-gray-400">{siteContent.site_phone || '(022) 87805564'}</span>
+                  <a href={`tel:${(siteContent.site_phone || '(022) 87805564').replace(/[^+\d]/g, '')}`} className="text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400">
+                    {siteContent.site_phone || '(022) 87805564'}
+                  </a>
                 </li>
                 <li className="flex items-center">
                   <FaEnvelope className="mr-3 text-yellow-400" />
-                  <span className="text-gray-600 dark:text-gray-400">{siteContent.site_email || 'osissmkinformatika2.fi@gmail.com'}</span>
+                  <a href={`mailto:${siteContent.site_email || 'osissmkinformatika2.fi@gmail.com'}`} className="text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 break-all">
+                    {siteContent.site_email || 'osissmkinformatika2.fi@gmail.com'}
+                  </a>
                 </li>
               </ul>
             </div>
@@ -332,18 +336,12 @@ const Footer: React.FC = () => {
               </p>
               
               <div className="flex space-x-4 sm:space-x-6 text-xs sm:text-sm">
-                <button 
-                  onClick={() => showToast(t('toast.featureNotAvailable'), 'info')}
+                <Link
+                  href="/kebijakan-privasi"
                   className="text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-300"
                 >
-                  {t('footer.privacyPolicy')}
-                </button>
-                <button 
-                  onClick={() => showToast(t('toast.featureNotAvailable'), 'info')}
-                  className="text-gray-600 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors duration-300"
-                >
-                  {t('footer.termsOfService')}
-                </button>
+                  Kebijakan Privasi & Cookie
+                </Link>
               </div>
             </div>
           </div>

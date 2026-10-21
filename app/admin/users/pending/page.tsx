@@ -12,6 +12,7 @@ interface PendingUser {
   requested_role?: string | null; 
   role: string; 
   created_at: string; 
+  email_verified?: boolean;
   rejected?: boolean;
   rejection_reason?: string | null;
 }
@@ -21,6 +22,8 @@ export default function PendingUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approving, setApproving] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkApproving, setBulkApproving] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -35,6 +38,7 @@ export default function PendingUsersPage() {
       const rej = list.filter(u => !u.is_active && u.rejected);
       setPending(pend);
       setRejected(rej);
+      setSelectedIds(current => current.filter(id => pend.some((user: PendingUser) => user.id === id)));
     } catch (e: any) {
       setError(e.message || 'Error');
     } finally {
@@ -55,6 +59,33 @@ export default function PendingUsersPage() {
       setError(e.message || 'Gagal approve');
     } finally {
       setApproving(null);
+    }
+  }
+
+  async function approveSelected() {
+    if (!selectedIds.length) return;
+    setBulkApproving(true);
+    setError(null);
+    try {
+      const results = await Promise.all(selectedIds.map(async id => {
+        const res = await fetch('/api/admin/users', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        const body = await res.json();
+        return { id, ok: res.ok, error: body.error as string | undefined };
+      }));
+      const failed = results.filter(result => !result.ok);
+      if (failed.length) {
+        setError(`${results.length - failed.length} akun disetujui. ${failed.length} gagal: ${failed[0].error || 'muat ulang lalu coba lagi'}`);
+      }
+      setSelectedIds([]);
+      await load();
+    } catch {
+      setError('Persetujuan massal gagal karena koneksi. Muat ulang daftar dan coba lagi.');
+    } finally {
+      setBulkApproving(false);
     }
   }
 
@@ -98,16 +129,42 @@ export default function PendingUsersPage() {
     <div className="p-6">
       <h1 className="text-xl font-bold mb-4">Pending Users</h1>
       {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
+      {!loading && pending.length > 0 && <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={pending.length > 0 && selectedIds.length === pending.length}
+            onChange={event => setSelectedIds(event.target.checked ? pending.map(user => user.id) : [])}
+            aria-label="Pilih semua akun menunggu persetujuan"
+          />
+          Pilih semua ({pending.length})
+        </label>
+        <button onClick={approveSelected} disabled={bulkApproving || selectedIds.length === 0} className="rounded bg-green-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          {bulkApproving ? 'Menyetujui...' : `Setujui yang dipilih (${selectedIds.length})`}
+        </button>
+      </div>}
       {loading && <div className="text-sm">Memuat...</div>}
       {!loading && pending.length === 0 && <div className="text-sm text-gray-500">Tidak ada user pending.</div>}
       <ul className="space-y-3 mt-2">
         {pending.map(u => (
           <li key={u.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2">
             <div className="flex justify-between items-start">
-              <div>
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(u.id)}
+                  onChange={event => setSelectedIds(current => event.target.checked ? [...current, u.id] : current.filter(id => id !== u.id))}
+                  aria-label={`Pilih akun ${u.name || u.email}`}
+                  className="mt-1"
+                />
+                <div>
                 <div className="font-semibold text-sm">{u.name || '(Tanpa Nama)'} {u.nickname && <span className="text-gray-500 dark:text-gray-400 font-normal">({u.nickname})</span>}</div>
                 <div className="text-xs text-gray-600 dark:text-gray-400">{u.email}</div>
                 <div className="text-[10px] mt-1 text-gray-500 dark:text-gray-400">Dibuat: {new Date(u.created_at).toLocaleString()}</div>
+                <div className={`text-[10px] mt-1 ${u.email_verified ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-300'}`}>
+                  {u.email_verified ? 'Email sudah diverifikasi' : 'Belum verifikasi email — akun belum bisa login'}
+                </div>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button

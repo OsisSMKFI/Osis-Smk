@@ -13,6 +13,7 @@ export default function RegisterPageClient() {
   const [nik, setNik] = useState('');
   const [instagramUsername, setInstagramUsername] = useState('');
   const [requestedRole, setRequestedRole] = useState('siswa');
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -36,6 +37,11 @@ export default function RegisterPageClient() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!privacyConsent) {
+      setStatus('❌ Persetujuan Kebijakan Privasi wajib diberikan untuk membuat akun.');
+      return;
+    }
     
     // Validate Instagram username before submitting
     if (instagramUsername && !validateInstagramUsername(instagramUsername)) {
@@ -49,7 +55,7 @@ export default function RegisterPageClient() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name, nickname, unit_sekolah: unitSekolah, kelas, nik, instagram_username: instagramUsername, role: requestedRole })
+        body: JSON.stringify({ email, password, name, nickname, unit_sekolah: unitSekolah, kelas, nik, instagram_username: instagramUsername, role: requestedRole, privacy_consent: privacyConsent })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -167,7 +173,25 @@ export default function RegisterPageClient() {
             <label className="block text-xs font-semibold mb-1" htmlFor="password">Password</label>
             <input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border text-sm bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="Minimal 8 karakter, huruf besar, angka" />
           </div>
-          <button type="submit" disabled={loading} className="w-full py-2 rounded-lg font-semibold text-sm bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/30 disabled:opacity-50">
+          <div className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 text-xs leading-5 text-gray-700 dark:border-gray-700 dark:text-gray-300">
+            <input
+              id="privacy-consent"
+              type="checkbox"
+              required
+              checked={privacyConsent}
+              onChange={e => setPrivacyConsent(e.target.checked)}
+              aria-label="Setujui Kebijakan Privasi dan Cookie"
+              className="mt-1 h-4 w-4 shrink-0 accent-amber-600"
+            />
+            <p>
+              Saya telah membaca dan menyetujui pemrosesan data yang dijelaskan dalam{' '}
+              <a href="/kebijakan-privasi" target="_blank" rel="noreferrer" className="font-semibold text-amber-700 underline dark:text-amber-400">
+                Kebijakan Privasi dan Cookie
+              </a>
+              . Jika saya belum berusia 18 tahun, saya telah memperoleh persetujuan orang tua/wali.
+            </p>
+          </div>
+          <button type="submit" disabled={loading || !privacyConsent} className="w-full py-2 rounded-lg font-semibold text-sm bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/30 disabled:opacity-50">
             {loading ? 'Memproses...' : 'Daftar'}
           </button>
         </form>
