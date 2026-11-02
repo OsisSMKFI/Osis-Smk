@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
   if (!PIKET_GENERATE_ROLES.includes(actor.role as (typeof PIKET_GENERATE_ROLES)[number])) {
     return NextResponse.json({ error: 'Fitur generate QR hanya untuk role OSIS, admin, dan super admin' }, { status: 403 });
   }
+  if (!actor.sessionKey) return NextResponse.json({ error: 'Sesi login tidak valid. Silakan login ulang.' }, { status: 401 });
 
   try {
     const token = randomBytes(32).toString('base64url');
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
       p_created_by: actor.id,
       p_token_hash: tokenHash,
       p_expires_at: expiresAt.toISOString(),
+      p_device_session_key: actor.sessionKey,
     });
     if (error) {
       if (error.code === '55000') {

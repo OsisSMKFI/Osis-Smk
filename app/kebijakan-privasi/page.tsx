@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 const sections = [
   {
     title: 'Data yang diproses',
-    body: 'Saat membuat akun, situs dapat memproses nama, nama panggilan, email, unit sekolah, kelas, role yang diminta, kata sandi dalam bentuk hash, serta NIK dan nama pengguna Instagram jika diisi. Sistem juga mencatat waktu pendaftaran dan status verifikasi email serta persetujuan kebijakan. Jika menggunakan fitur lain, situs dapat memproses data yang dibutuhkan fitur tersebut, seperti laporan keterlambatan, alasan, tanda tangan yang dikirim, komentar, polling, dan aktivitas akun.',
+    body: 'Saat membuat akun, situs dapat memproses nama, nama panggilan, email, unit sekolah, kelas, role yang diminta, kata sandi dalam bentuk hash, serta NIK dan nama pengguna Instagram jika diisi. Sistem juga mencatat waktu pendaftaran dan status verifikasi email serta persetujuan kebijakan. Untuk keamanan sesi, sistem mencatat alias sesi (bila digunakan), alamat IP yang teramati, User-Agent/peramban, waktu masuk, dan aktivitas terakhir. Jika menggunakan fitur lain, situs dapat memproses data yang dibutuhkan fitur tersebut, seperti laporan keterlambatan, alasan, tanda tangan yang dikirim, komentar, polling, dan aktivitas akun.',
   },
   {
     title: 'Tujuan penggunaan',
@@ -29,7 +29,7 @@ const sections = [
   },
   {
     title: 'Penyimpanan dan keamanan',
-    body: 'Kata sandi disimpan dalam bentuk hash, bukan teks biasa. Sistem menerapkan pembatasan akses berdasarkan role dan menggunakan koneksi terenkripsi saat tersedia. Data disimpan selama akun atau fitur masih diperlukan, lalu dihapus atau dianonimkan ketika tidak lagi diperlukan, kecuali ada kewajiban penyimpanan lain. Jangka waktu retensi khusus untuk setiap jenis data harus ditetapkan oleh pengelola sekolah.',
+    body: 'Kata sandi disimpan dalam bentuk hash, bukan teks biasa. Sistem menerapkan pembatasan akses berdasarkan role dan menggunakan koneksi terenkripsi saat tersedia. Catatan IP, perangkat, alias, dan aktivitas sesi dihapus otomatis setelah 90 hari. Data lain disimpan selama akun atau fitur masih diperlukan, lalu dihapus atau dianonimkan ketika tidak lagi diperlukan, kecuali ada kewajiban penyimpanan lain.',
   },
   {
     title: 'Hak pengguna dan permintaan bantuan',
@@ -43,7 +43,7 @@ export default function PrivacyPolicyPage() {
       <article className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-10">
         <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">OSIS SMK Informatika 2 Fithrah Insani</p>
         <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Kebijakan Privasi dan Cookie</h1>
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Versi 21 Oktober 2026. Kebijakan ini menjelaskan data yang diproses situs dan cara menghubungi pengelola.</p>
+        <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Versi 2 November 2026. Kebijakan ini menjelaskan data yang diproses situs dan cara menghubungi pengelola.</p>
 
         <div className="mt-8 space-y-7">
           {sections.map((section) => (

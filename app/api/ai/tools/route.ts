@@ -25,6 +25,15 @@ const execAsync = promisify(exec);
 
 const WORKSPACE_ROOT = process.cwd();
 
+function resolveWorkspacePath(filePath: string): string {
+    const resolved = path.resolve(WORKSPACE_ROOT, filePath);
+    const relative = path.relative(WORKSPACE_ROOT, resolved);
+    if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+        throw new Error('Invalid path: outside workspace');
+    }
+    return resolved;
+}
+
 // Security: Allowed file extensions for reading/writing
 const ALLOWED_EXTENSIONS = [
     '.ts', '.tsx', '.js', '.jsx', '.json', '.css', '.scss', 
@@ -90,12 +99,7 @@ async function readFile(filePath: string, startLine?: number, endLine?: number):
     totalLines: number;
     language: string;
 }> {
-    const fullPath = path.join(WORKSPACE_ROOT, filePath);
-    
-    // Security check
-    if (!fullPath.startsWith(WORKSPACE_ROOT)) {
-        throw new Error('Invalid path: outside workspace');
-    }
+    const fullPath = resolveWorkspacePath(filePath);
     
     const ext = path.extname(filePath);
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
@@ -210,11 +214,7 @@ interface DirEntry {
 }
 
 async function listDir(dirPath: string): Promise<DirEntry[]> {
-    const fullPath = path.join(WORKSPACE_ROOT, dirPath);
-    
-    if (!fullPath.startsWith(WORKSPACE_ROOT)) {
-        throw new Error('Invalid path');
-    }
+    const fullPath = resolveWorkspacePath(dirPath);
     
     const entries = await fs.readdir(fullPath, { withFileTypes: true });
     const results: DirEntry[] = [];
@@ -267,11 +267,9 @@ async function writeFile(filePath: string, content: string, options: {
         };
     }
     
-    const fullPath = path.join(WORKSPACE_ROOT, filePath);
-    
-    if (!fullPath.startsWith(WORKSPACE_ROOT)) {
-        return { success: false, message: 'Invalid path' };
-    }
+    let fullPath: string;
+    try { fullPath = resolveWorkspacePath(filePath); }
+    catch { return { success: false, message: 'Invalid path' }; }
     
     const ext = path.extname(filePath);
     if (!ALLOWED_EXTENSIONS.includes(ext)) {

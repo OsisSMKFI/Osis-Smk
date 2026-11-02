@@ -15,6 +15,7 @@ type UserRecord = {
   password_hash?: string | null;
   email_verified?: boolean | null;
   approved?: boolean | null;
+  is_universal?: boolean | null;
 };
 
 // Basic in-memory rate limiter for login attempts. This is process-local and
@@ -73,7 +74,7 @@ async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const { supabaseAdmin } = await import('./supabase/server');
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('id, email, name, role, password_hash, email_verified, approved, requested_role')
+    .select('id, email, name, role, password_hash, email_verified, approved, requested_role, is_universal')
     // Use case-insensitive match to be more tolerant of email case differences
     .ilike('email', email)
     .single();
@@ -90,6 +91,7 @@ export const authConfig: NextAuthConfig = {
       credentials: {
         email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
+        alias: { label: 'Alias perangkat', type: 'text' },
       },
       async authorize(credentials, request) {
           const dbg = process.env.DEBUG_AUTH === '1';
@@ -178,6 +180,11 @@ export const authConfig: NextAuthConfig = {
             throw new Error(`NOT_APPROVED: Akun sudah diverifikasi tetapi menunggu persetujuan admin. Role diajukan: ${desired}. Silakan tunggu persetujuan.`);
           }
 
+          const sessionAlias = String(credentials?.alias || '').trim().slice(0, 80);
+          if (user.is_universal && sessionAlias.length < 2) {
+            throw new Error('ALIAS_REQUIRED: Isi alias sesi/perangkat minimal 2 karakter untuk akun universal.');
+          }
+
           // Success: reset attempts and log success
           resetAttempts(emailAttemptKey);
           if (ipAttemptKey) resetAttempts(ipAttemptKey);
@@ -191,7 +198,11 @@ export const authConfig: NextAuthConfig = {
           });
 
           // Activity will be logged in signIn callback
-          const returnUser = { id: user.id, email: user.email, name: user.name ?? undefined, role: user.role ?? undefined };
+          const returnUser = {
+            id: user.id, email: user.email, name: user.name ?? undefined, role: user.role ?? undefined,
+            isUniversal: !!user.is_universal, sessionAlias,
+            sessionIp: getRequestIp(request), sessionUa: request.headers.get('user-agent') || null,
+          };
           if (dbg) console.log('[NextAuth] authorize SUCCESS, returning user:', returnUser);
           return returnUser;
       },
@@ -205,7 +216,7 @@ export const authConfig: NextAuthConfig = {
   // In production, consider 15-30 minutes. For testing role changes, use 5 minutes.
   session: { 
     strategy: 'jwt', 
-    maxAge: 7 * 24 * 60 * 60, // 7 days - role still refreshed from DB via roleCheckedAt
+    maxAge: 12 * 60 * 60,
     updateAge: 15 * 60, // Re-issue token every 15 minutes (was 60s → constant churn)
   },
   callbacks: {
@@ -254,6 +265,48 @@ export const authConfig: NextAuthConfig = {
         (token as Record<string, unknown>)['role'] = ((user as unknown) as { role?: string }).role;
         (token as Record<string, unknown>)['id'] = ((user as unknown) as { id?: string }).id;
         (token as Record<string, unknown>)['roleCheckedAt'] = Date.now();
+        const sessionKey = crypto.randomUUID();
+        const signInUser = user as any;
+        (token as any).sessionKey = sessionKey;
+        (token as any).isUniversal = !!signInUser.isUniversal;
+        (token as any).sessionAlias = signInUser.sessionAlias || null;
+        const { createClient } = await import('@supabase/supabase-js');
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceKey) throw new Error('Session storage is not configured');
+        const sessionDb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+        const { error } = await sessionDb.from('app_sessions').insert({
+          user_id: signInUser.id,
+          session_key: sessionKey,
+          alias: signInUser.sessionAlias || null,
+          ip_address: signInUser.sessionIp || null,
+          user_agent: signInUser.sessionUa || null,
+          expires_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
+        });
+        if (error) (token as any).sessionInvalid = true;
+      }
+
+      const sessionKey = (token as any)?.sessionKey;
+      if (!sessionKey && ((token as any)?.id || token?.sub)) (token as any).sessionInvalid = true;
+      if (sessionKey && !(token as any).sessionInvalid) {
+        try {
+          const { createClient } = await import('@supabase/supabase-js');
+          const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if (!serviceKey) throw new Error('Session storage is not configured');
+          const sessionDb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+          const { data: storedSession, error } = await sessionDb.from('app_sessions')
+            .select('id,last_seen_at,expires_at,revoked_at')
+            .eq('session_key', sessionKey).eq('user_id', (token as any).id || token?.sub).maybeSingle();
+          if (error || !storedSession || storedSession.revoked_at ||
+              Date.now() >= new Date(storedSession.expires_at).getTime() ||
+              Date.now() - new Date(storedSession.last_seen_at).getTime() >= 30 * 60 * 1000) {
+            if (storedSession?.id) await sessionDb.from('app_sessions').update({ revoked_at: new Date().toISOString() }).eq('id', storedSession.id);
+            (token as any).sessionInvalid = true;
+          } else {
+            await sessionDb.from('app_sessions').update({ last_seen_at: new Date().toISOString() }).eq('id', storedSession.id);
+          }
+        } catch {
+          (token as any).sessionInvalid = true;
+        }
       }
 
       // Refresh role from DB at most once per 60s (or on explicit update)
@@ -300,13 +353,30 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
     async session({ session, token }) {
+      if ((token as any)?.sessionInvalid) return { ...session, user: undefined } as any;
       if (session.user && typeof token === 'object' && token !== null) {
         ((session.user as unknown) as Record<string, unknown>)['role'] = (token as Record<string, unknown>)['role'];
         if ((token as Record<string, unknown>)['id']) {
           ((session.user as unknown) as Record<string, unknown>)['id'] = (token as Record<string, unknown>)['id'];
         }
+        (session.user as any).sessionKey = (token as any).sessionKey;
+        (session.user as any).isUniversal = (token as any).isUniversal;
+        (session.user as any).sessionAlias = (token as any).sessionAlias;
       }
       return session;
+    },
+  },
+  events: {
+    async signOut(message) {
+      const token = (message as any)?.token;
+      if (token?.sessionKey) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceKey) return;
+        const sessionDb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+        await sessionDb.from('app_sessions').update({ revoked_at: new Date().toISOString() })
+          .eq('session_key', token.sessionKey).is('revoked_at', null);
+      }
     },
   },
   pages: {

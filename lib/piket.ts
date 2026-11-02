@@ -20,6 +20,7 @@ export async function getPiketActor() {
     id: userId,
     name: user.name?.trim() || user.email || 'Pengguna',
     role,
+    sessionKey: (session.user as any).sessionKey as string | undefined,
   };
 }
 

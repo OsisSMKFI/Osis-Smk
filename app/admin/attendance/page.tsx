@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { FaCheckCircle, FaClock, FaUserGraduate, FaChalkboardTeacher, FaFilter, FaDownload, FaEye, FaCheck, FaTimes, FaCalendar, FaMapMarkerAlt, FaCog } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { formatAttendanceTime, calculateDuration, getStatusColor } from '@/lib/attendance/utils';
+import PiketAttendancePanel from './PiketAttendancePanel';
 
 interface AttendanceRecord {
   id: number;
@@ -42,6 +43,11 @@ export default function AdminAttendancePage() {
     guru: 0,
     verified: 0,
   });
+  const [activeTab, setActiveTab] = useState<'attendance' | 'piket'>('attendance');
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'piket') setActiveTab('piket');
+  }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -52,13 +58,13 @@ export default function AdminAttendancePage() {
   useEffect(() => {
     if (session?.user) {
       const userRole = (session.user.role || '').toLowerCase();
-      if (!['super_admin', 'admin', 'osis'].includes(userRole)) {
+      if (!['super_admin', 'admin', 'osis', 'guru'].includes(userRole)) {
         redirect('/dashboard');
-      } else {
+      } else if (userRole !== 'guru' && activeTab === 'attendance') {
         fetchAttendances();
       }
     }
-  }, [session, filter]);
+  }, [session, filter, activeTab]);
 
   const fetchAttendances = async () => {
     setLoading(true);
@@ -138,7 +144,7 @@ export default function AdminAttendancePage() {
     toast.success('Data berhasil di-export');
   };
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading' || (loading && activeTab === 'attendance')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
@@ -147,6 +153,15 @@ export default function AdminAttendancePage() {
         </div>
       </div>
     );
+  }
+
+  if (activeTab === 'piket' || session?.user?.role?.toLowerCase() === 'guru') {
+    return <main className="min-h-screen bg-slate-50 p-4 dark:bg-slate-950">
+      <div className="mx-auto max-w-7xl space-y-4">
+        <button onClick={() => setActiveTab('attendance')} className="rounded-lg border px-4 py-2">Kembali ke Absensi</button>
+        <PiketAttendancePanel />
+      </div>
+    </main>;
   }
 
   return (
@@ -165,12 +180,7 @@ export default function AdminAttendancePage() {
               </div>
             </div>
             <div className="flex gap-2 md:gap-3">
-              <Link
-                href="/admin/attendance/piket"
-                className="px-3 md:px-6 py-2 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg md:rounded-xl hover:shadow-xl transition-all flex items-center gap-1 md:gap-2 text-xs md:text-sm"
-              >
-                <FaCheckCircle /> <span>Piket Pagi</span>
-              </Link>
+              <button onClick={() => setActiveTab('piket')} className="px-3 md:px-6 py-2 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg md:rounded-xl text-xs md:text-sm">Piket Pagi</button>
               <Link
                 href="/admin/attendance/settings"
                 className="px-3 md:px-6 py-2 md:py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold rounded-lg md:rounded-xl hover:shadow-xl transition-all flex items-center gap-1 md:gap-2 text-xs md:text-sm"

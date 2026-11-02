@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     allDates
       ? Promise.resolve({ data: null, error: null })
       : supabaseAdmin.from('piket_daily_approvals')
-          .select('report_date,report_count,snapshot_sha256,approved_by,approver_name,approved_at')
+          .select('report_date,report_count,snapshot_sha256,approved_by,approver_name,approved_at,teacher_signature')
           .eq('report_date', requestedDate).maybeSingle(),
   ]);
 

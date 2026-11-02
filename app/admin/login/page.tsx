@@ -8,6 +8,7 @@ import { MdErrorOutline } from "react-icons/md";
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [alias, setAlias] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,7 @@ export default function AdminLoginPage() {
       
       // Jika pre-check berhasil, lanjutkan dengan NextAuth signIn
       console.log('[Login] Calling signIn with credentials...');
-      const res = await signIn("credentials", { redirect: false, email, password, callbackUrl: "/admin" });
+      const res = await signIn("credentials", { redirect: false, email, password, alias, callbackUrl: "/admin" });
       console.log('[Login] signIn response:', { ok: res?.ok, error: res?.error, status: res?.status, url: res?.url });
 
       if (res?.error) {
@@ -149,6 +150,10 @@ export default function AdminLoginPage() {
                 aria-required="true"
                 suppressHydrationWarning
               />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide mb-1 text-[var(--text-secondary)]" htmlFor="session-alias">Alias perangkat/sesi <span className="font-normal normal-case">(wajib untuk akun universal)</span></label>
+              <input id="session-alias" type="text" autoComplete="off" maxLength={80} minLength={2} value={alias} onChange={e => setAlias(e.target.value)} className={inputBase} placeholder="Contoh: Piket pagi - HP Raka" />
             </div>
             <div>
               <label className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide mb-1 text-[var(--text-secondary)]" htmlFor="password">

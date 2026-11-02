@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const { data, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, name, nickname, nisn, no_induk, nik, unit_sekolah, instagram_username, kelas, requested_role, role, photo_url, approved, email_verified, created_at, updated_at')
+      .select('id, email, name, nickname, nisn, no_induk, nik, unit_sekolah, instagram_username, kelas, requested_role, role, photo_url, approved, email_verified, is_universal, created_at, updated_at')
       .eq('id', id)
       .single();
 
@@ -58,6 +58,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       created_at: data.created_at,
       updated_at: data.updated_at,
       email_verified: !!data.email_verified,
+      is_universal: !!data.is_universal,
     };
 
     return NextResponse.json({ success: true, data: result });
@@ -76,7 +77,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id } = await params;
     const body = await request.json();
-    const { name, role, is_active, profile_image, password, username, nickname, nisn, no_induk, nik, unit, unit_sekolah, kelas, instagram_username } = body;
+    const { name, role, is_active, is_universal, profile_image, password, username, nickname, nisn, no_induk, nik, unit, unit_sekolah, kelas, instagram_username } = body;
     if (is_active !== undefined && typeof is_active !== 'boolean') {
       return NextResponse.json({ error: 'Status aktif harus berupa boolean' }, { status: 400 });
     }
@@ -96,6 +97,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const update: any = {};
+    if (is_universal !== undefined) {
+      if (typeof is_universal !== 'boolean') return NextResponse.json({ error: 'Status universal harus berupa boolean' }, { status: 400 });
+      if (session.user.role !== 'super_admin') return NextResponse.json({ error: 'Hanya super admin yang dapat mengubah mode akun universal' }, { status: 403 });
+      if (isOwnProfile) return NextResponse.json({ error: 'Mode universal hanya dapat diubah dari pengelolaan akun oleh super admin lain' }, { status: 403 });
+      update.is_universal = is_universal;
+    }
     if (name !== undefined) update.name = typeof name === 'string' ? name.trim() : name;
     const nextNickname = nickname ?? username;
     if (nextNickname !== undefined) update.nickname = typeof nextNickname === 'string' && nextNickname.trim() ? nextNickname.trim() : null;
@@ -177,7 +184,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       .from('users')
       .update(update)
       .eq('id', id)
-      .select('id, email, name, nickname, nisn, no_induk, nik, unit_sekolah, instagram_username, kelas, requested_role, role, photo_url, approved, email_verified, created_at, updated_at')
+      .select('id, email, name, nickname, nisn, no_induk, nik, unit_sekolah, instagram_username, kelas, requested_role, role, photo_url, approved, email_verified, is_universal, created_at, updated_at')
       .single();
 
     if (error) {

@@ -80,9 +80,9 @@ const applicationMiddleware = async (request: NextRequest) => {
       return NextResponse.next();
     }
 
-    // Guru may access only the Piket review page. Its APIs perform their own
-    // fresh database role checks and do not grant the rest of the admin panel.
-    if (pathname.startsWith('/admin/attendance/piket') && (session.user.role || '').trim().toLowerCase() === 'guru') {
+    // Guru may enter the consolidated attendance page; page/API controls expose
+    // only Piket review and approval to this role.
+    if (pathname.startsWith('/admin/attendance') && (session.user.role || '').trim().toLowerCase() === 'guru') {
       return NextResponse.next();
     }
 

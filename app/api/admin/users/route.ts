@@ -32,7 +32,7 @@ export async function GET() {
 
     const { data, error } = await client
       .from('users')
-      .select('id, email, name, nickname, unit_sekolah, kelas, nik, nisn, no_induk, requested_role, role, photo_url, approved, rejected, rejection_reason, email_verified, created_at, updated_at')
+      .select('id, email, name, nickname, unit_sekolah, kelas, nik, nisn, no_induk, requested_role, role, photo_url, approved, rejected, rejection_reason, email_verified, is_universal, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -55,6 +55,7 @@ export async function GET() {
         requested_role: u.requested_role ?? null,
         role: (u.role || 'osis'),
         is_active: !!u.approved,
+        is_universal: !!u.is_universal,
         rejected: !!u.rejected,
         rejection_reason: u.rejection_reason ?? null,
         email_verified: !!u.email_verified,

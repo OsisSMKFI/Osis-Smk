@@ -15,11 +15,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const reportDate = typeof body?.date === 'string' ? body.date : null;
     if (!isDateKey(reportDate)) return NextResponse.json({ error: 'Tanggal rekap tidak valid' }, { status: 400 });
+    const teacherSignature = typeof body?.teacher_signature === 'string' ? body.teacher_signature : '';
+    if (!/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(teacherSignature) || teacherSignature.length > 180000) {
+      return NextResponse.json({ error: 'Tanda tangan Guru wajib digambar sebelum menyetujui rekap.' }, { status: 400 });
+    }
 
     const { data, error } = await supabaseAdmin.rpc('approve_piket_daily', {
       p_report_date: reportDate,
       p_approved_by: actor.id,
       p_approver_name: actor.name,
+      p_teacher_signature: teacherSignature,
     });
     if (error) {
       if (error.code === '23505') return NextResponse.json({ error: 'Rekap hari ini sudah disetujui.' }, { status: 409 });

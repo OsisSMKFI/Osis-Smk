@@ -22,6 +22,7 @@ interface User {
   requested_role?: string | null;
   role: string;
   is_active: boolean;
+  is_universal?: boolean;
   rejected?: boolean;
   rejection_reason?: string | null;
   email_verified?: boolean;
@@ -129,6 +130,7 @@ export default function UsersPage() {
     role: 'siswa',
     password: '',
     is_active: true,
+    is_universal: false,
     profile_image: '',
     new_password: '' // For edit mode password change
   });
@@ -357,6 +359,7 @@ export default function UsersPage() {
         role: 'siswa',
         password: '',
         is_active: true,
+        is_universal: false,
         profile_image: '',
         new_password: ''
       });
@@ -383,6 +386,7 @@ export default function UsersPage() {
         : (item.role in ROLE_CONFIG ? item.role : 'other'),
       password: '',
       is_active: item.is_active,
+      is_universal: !!item.is_universal,
       profile_image: item.profile_image || '',
       new_password: ''
     });
@@ -450,6 +454,7 @@ export default function UsersPage() {
                 })}
               </div>
             <div className="flex items-center gap-3">
+              {['admin','super_admin'].includes(role) && <a href="/admin/sessions" className="rounded-xl border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-800 dark:border-indigo-800 dark:text-indigo-200">Sesi akun</a>}
               <button
               onClick={() => {
                 setShowForm(true);
@@ -467,6 +472,7 @@ export default function UsersPage() {
                   role: 'siswa',
                   password: '',
                   is_active: true,
+                  is_universal: false,
                   profile_image: '',
                   new_password: ''
                 });
@@ -724,6 +730,10 @@ export default function UsersPage() {
                 </div>
 
                 {/* Active Status */}
+                {editingId && role === 'super_admin' && <label className="flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-indigo-950/30">
+                  <input type="checkbox" checked={!!formData.is_universal} onChange={(e) => setFormData({ ...formData, is_universal: e.target.checked })} className="h-5 w-5" />
+                  <span><strong>Akun universal</strong><br /><span className="text-xs text-gray-600 dark:text-gray-300">Setiap login perangkat memerlukan alias dan perubahan data bersama menunggu approval.</span></span>
+                </label>}
                 <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                   <input
                     type="checkbox"
