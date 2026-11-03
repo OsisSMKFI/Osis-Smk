@@ -113,7 +113,32 @@ const DEFAULTS = {
   about_achievements_label: { content: 'Perjalanan Kami', category: 'about_achievements' },
   about_achievements_title: { content: 'Pencapaian', category: 'about_achievements' },
   about_achievements_title_hl: { content: 'Raveka Sena', category: 'about_achievements' },
-  about_achievements_timeline_1: { content: 'Terbentuknya OSIS', category: 'about_achievements' },
+  about_achievements_timeline: {
+  content: JSON.stringify([
+    {
+      year: '2024',
+      title: 'Terbentuknya OSIS Raveka Sena',
+      description:
+        'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.',
+      icon: '🚀',
+    },
+    {
+      year: '2024',
+      title: 'Peluncuran Website Resmi',
+      description:
+        'Website OSIS dengan fitur modern dan interaktif diluncurkan untuk memudahkan komunikasi dan informasi.',
+      icon: '💻',
+    },
+    {
+      year: '2025',
+      title: 'Program Kerja Inovatif',
+      description:
+        'Meluncurkan berbagai program kerja yang fokus pada pengembangan soft skill dan hard skill siswa.',
+      icon: '🎯',
+    },
+  ]),
+  category: 'about_achievements',
+},
 
   // About values
   about_values_label: { content: 'Nilai-Nilai Kami', category: 'about_values' },
