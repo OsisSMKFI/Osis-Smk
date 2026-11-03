@@ -187,7 +187,10 @@ function AchievementsSection({ db }: { db: Record<string, string> }) {
     { year: '2025', title: t('about.achieve3Title'), description: t('about.achieve3Desc'), icon: '3' },
   ];
 
-  const displayAchievements = loading ? fallback : (achievements.length > 0 ? achievements : fallback);
+  const timelineFromDb = parseAchievementTimeline(db['about_achievements_timeline']);
+  const displayAchievements = timelineFromDb.length > 0
+    ? timelineFromDb
+    : (loading ? fallback : (achievements.length > 0 ? achievements : fallback));
 
   return (
     <section className="relative py-20 md:py-28 overflow-hidden bg-white dark:bg-gray-900">
@@ -375,8 +378,6 @@ export default function AboutPageClient({ initialDb }: { initialDb?: Record<stri
     { icon: '✏️', imageSrc: '/images/Pensil dan pulpen.svg', title: 'Pensil & Pulpen', description: 'Anggota adalah seorang pelajar.', color: '#ef4444', gradient: 'bg-gradient-to-r from-red-500 to-rose-600' },
     { icon: '📸', imageSrc: '/images/kamera.svg', title: 'Kamera', description: 'Menegaskan pelajar yaitu pelajar multimedia.', color: '#a855f7', gradient: 'bg-gradient-to-r from-purple-500 to-violet-600' },
   ]);
-
-  const achievementTimeline = parseAchievementTimeline( db.about_achievements_timeline ?? '');
 
   useEffect(() => {
     setIsClient(true);
