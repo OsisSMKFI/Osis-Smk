@@ -8,10 +8,53 @@ export async function GET() {
     const { data: contentData, error: contentError } = await supabaseAdmin
       .from('page_content')
       .select('*')
-      .like('page_key', 'achievement_%')
+      .or('page_key.eq.about_achievements_timeline,page_key.like.achievement_%')
       .eq('published', true);
 
     if (!contentError && contentData && contentData.length > 0) {
+      // Prefer the timeline JSON saved by the admin dashboard.
+      const timelineItem = contentData.find(
+        (item) => item.page_key === 'about_achievements_timeline'
+      );
+
+      if (timelineItem?.content) {
+        try {
+          const parsedTimeline =
+            typeof timelineItem.content === 'string'
+              ? JSON.parse(timelineItem.content)
+              : timelineItem.content;
+
+          if (Array.isArray(parsedTimeline)) {
+            const achievements = parsedTimeline
+              .filter((item) => item && typeof item === 'object')
+              .map((item) => ({
+                year: String(item.year ?? '2024'),
+                title: String(item.title ?? ''),
+                description: String(item.description ?? item.desc ?? ''),
+                icon: String(item.icon ?? '🎯'),
+              }))
+              .filter((item) => item.title || item.description);
+
+            if (achievements.length > 0) {
+              return NextResponse.json({
+                source: 'database',
+                achievements,
+              });
+            }
+          } else {
+            console.error(
+              '[/api/public/achievements] about_achievements_timeline must be a JSON array.'
+            );
+          }
+        } catch (error) {
+          console.error(
+            '[/api/public/achievements] Failed to parse about_achievements_timeline:',
+            error
+          );
+        }
+      }
+
+      // Backward compatibility: parse the older achievement_N_field keys.
       // Group by achievement number
       const achievementsMap: Record<string, any> = {};
       
