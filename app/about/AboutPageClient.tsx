@@ -10,6 +10,31 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { getPageContentBatch } from '@/lib/pageContent';
 import type { TeamMember } from '@/components/about/types';
 
+type AchievementItem = {
+  year: string;
+  title: string;
+  description: string;
+  icon?: string;
+};
+
+function parseAchievementTimeline(value?: string): AchievementItem[] {
+  if (!value) return [];
+
+  try {
+    const result = JSON.parse(value);
+    if (!Array.isArray(result)) return [];
+
+    return result.filter(
+      (item) =>
+        item &&
+        typeof item.title === 'string' &&
+        typeof item.year === 'string'
+    );
+  } catch {
+    return [];
+  }
+}
+
 const HeroSection3D = dynamic(
   () => import('@/components/about/AboutSections').then(mod => mod.HeroSection3D),
   { ssr: false, loading: () => <HeroFallback /> }
@@ -351,6 +376,8 @@ export default function AboutPageClient({ initialDb }: { initialDb?: Record<stri
     { icon: '📸', imageSrc: '/images/kamera.svg', title: 'Kamera', description: 'Menegaskan pelajar yaitu pelajar multimedia.', color: '#a855f7', gradient: 'bg-gradient-to-r from-purple-500 to-violet-600' },
   ]);
 
+  const achievementTimeline = parseAchievementTimeline( db.about_achievements_timeline ?? '');
+
   useEffect(() => {
     setIsClient(true);
     if (hasInitialDb) return;
@@ -359,7 +386,7 @@ export default function AboutPageClient({ initialDb }: { initialDb?: Record<stri
       'about_visimisi_label', 'about_visimisi_title', 'about_visimisi_title_hl',
       'about_vision_label', 'about_vision_content',
       'about_mission_label', 'about_mission_1', 'about_mission_2', 'about_mission_3', 'about_mission_4',
-      'about_achievements_label', 'about_achievements_title', 'about_achievements_title_hl', 'about_achievements_timeline_1',
+      'about_achievements_label', 'about_achievements_title', 'about_achievements_title_hl', 'about_achievements_timeline',
       'about_story_title1', 'about_story_title2',
       'about_philosophy_title', 'about_philosophy_hl',
       'about_philosophy_part1', 'about_philosophy_name_hl', 'about_philosophy_part2',
