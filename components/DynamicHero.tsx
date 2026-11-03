@@ -14,7 +14,11 @@ function DynamicHeroInternal({ initialContent }: { initialContent?: Record<strin
     description: initialContent?.home_hero_description || '',
   });
   const [bg, setBg] = useState<GlobalBackgroundConfig>({ mode: 'gradient' });
-  const hasInitial = Boolean(initialContent?.home_hero_title);
+  const hasInitial = Boolean(
+  initialContent?.home_hero_title &&
+  initialContent?.home_hero_subtitle &&
+  initialContent?.home_hero_description
+);
 
   useEffect(() => {
     // Background only — never blocks hero paint
