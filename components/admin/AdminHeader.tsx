@@ -406,6 +406,7 @@ export default function AdminHeader() {
                   >
                     My Profile
                   </a>
+                  {String(userRole).toLowerCase() === 'super_admin' && (
                   <a
                     href="/admin/settings"
                     className="block px-4 py-2 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-slate-700"
@@ -413,6 +414,7 @@ export default function AdminHeader() {
                   >
                     Settings
                   </a>
+                  )}
                   <hr className="my-2" style={{ borderColor: 'var(--border-alt)' }} />
                   <button 
                     onClick={handleLogout}

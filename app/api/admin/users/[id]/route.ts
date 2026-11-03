@@ -99,7 +99,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const update: any = {};
     if (is_universal !== undefined) {
       if (typeof is_universal !== 'boolean') return NextResponse.json({ error: 'Status universal harus berupa boolean' }, { status: 400 });
-      if (session.user.role !== 'super_admin') return NextResponse.json({ error: 'Hanya super admin yang dapat mengubah mode akun universal' }, { status: 403 });
+      const universalErr = await requirePermission('users:role_assign');
+      if (universalErr) return universalErr;
       if (isOwnProfile) return NextResponse.json({ error: 'Mode universal hanya dapat diubah dari pengelolaan akun oleh super admin lain' }, { status: 403 });
       update.is_universal = is_universal;
     }

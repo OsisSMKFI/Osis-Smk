@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 import crypto from 'crypto';
 import { setAdminSetting } from '@/lib/adminSettings';
 
 /**
  * POST /api/admin/ops/generate-token
- * Generate a secure admin ops token
+ * Generate a secure admin ops token. Super-admin only because this token can
+ * bypass the normal admin API gate for ops/cron endpoints.
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    const adminRoles = ['super_admin', 'admin'];
-    if (!session?.user?.role || !adminRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authErr = await requirePermission('tools:access');
+    if (authErr) return authErr;
 
     // Generate a secure random token (32 bytes = 256 bits)
     const token = crypto.randomBytes(32).toString('hex');

@@ -1,41 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 import { getMikrotikConnectedDevices, getMikrotikConfig } from '@/lib/mikrotikAPI';
 
 /**
  * GET /api/admin/mikrotik/devices
- * 
- * Fetch connected devices from Mikrotik router
- * ADMIN ONLY
+ *
+ * Fetch connected devices from Mikrotik router. Super-admin only because this
+ * exposes network identities and router configuration.
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    
-    // Check if user is admin
-    const { supabaseAdmin } = await import('@/lib/supabase/server');
-    
-    const { data: profile } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('email', session.user.email)
-      .single();
-    
-    if (!['admin', 'super_admin'].includes(profile?.role || '')) {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-    
-    console.log('[Mikrotik API] Admin requesting connected devices');
+    const authErr = await requirePermission('settings:read');
+    if (authErr) return authErr;
+
+    console.log('[Mikrotik API] Super admin requesting connected devices');
     
     // Get Mikrotik config
     const config = await getMikrotikConfig();

@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
 
     // Permission check
     const currentUserRole = ((session.user as any)?.role || '').toLowerCase();
-    const isAdmin = ['admin', 'super_admin', 'osis'].includes(currentUserRole);
+    // Aktivitas pengguna lain adalah data monitoring, bukan konten OSIS.
+    const isAdmin = ['admin', 'super_admin'].includes(currentUserRole);
     
     // Jika bukan admin dan minta data user lain
     if (userId !== sessionUserId && !isAdmin) {

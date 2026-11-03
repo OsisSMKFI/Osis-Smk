@@ -116,10 +116,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'proker:read', 'proker:create', 'proker:edit', 'proker:delete',
     'announcements:read', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'polls:read', 'polls:create', 'polls:edit', 'polls:delete',
-    // Users
+    // Users (approval only; role assignment & user editing stay super-admin only)
     'users:read', 'users:approve',
-    // System (read-only)
-    'settings:read',
+    // System settings are super-admin only (may contain secrets).
   ],
   
   // Moderator: Full content moderation (create/edit/delete) across posts/events/gallery/announcements/polls,
@@ -175,10 +174,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'proker:read', 'proker:create', 'proker:edit', 'proker:delete',
     'announcements:read', 'announcements:create', 'announcements:edit', 'announcements:delete',
     'polls:read', 'polls:create', 'polls:edit', 'polls:delete',
-    // Users (read and approve)
-    'users:read', 'users:approve',
-    // System (read-only)
-    'settings:read',
+    // Users: OSIS manages content, not accounts or system secrets.
   ],
   
   // Siswa: Read-only everywhere (same as viewer)
@@ -215,8 +211,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'proker:read', 'proker:create', 'proker:edit',
     'announcements:read',
     'polls:read',
-    // User management limited: can view list only
-    'users:read'
+    // No user directory access: guru only reviews Piket via /api/piket/*
   ],
 };
 

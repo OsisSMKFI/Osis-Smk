@@ -110,7 +110,7 @@ export default function AdminSettingsPage() {
   const { data: session, status } = useSession();
   const role = ((session?.user as any)?.role || '').toLowerCase();
   // OSIS tidak boleh akses settings - hanya super_admin dan admin
-  const canAccessAdminPanel = ['super_admin','admin'].includes(role);
+  const canAccessAdminPanel = role === 'super_admin';
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     ai: true,
     admin: false,

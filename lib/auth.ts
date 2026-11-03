@@ -282,7 +282,14 @@ export const authConfig: NextAuthConfig = {
           user_agent: signInUser.sessionUa || null,
           expires_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
         });
-        if (error) (token as any).sessionInvalid = true;
+        // If the session table has not been migrated yet, keep the site usable
+        // instead of logging everyone out. Other insert failures still block the
+        // token so a broken session can never be trusted.
+        if (error && !['PGRST205', '42P01'].includes(error.code || '')) {
+          (token as any).sessionInvalid = true;
+        } else if (error) {
+          console.warn('[NextAuth] app_sessions table is missing; session tracking disabled until migration is applied.');
+        }
       }
 
       const sessionKey = (token as any)?.sessionKey;
@@ -296,16 +303,21 @@ export const authConfig: NextAuthConfig = {
           const { data: storedSession, error } = await sessionDb.from('app_sessions')
             .select('id,last_seen_at,expires_at,revoked_at')
             .eq('session_key', sessionKey).eq('user_id', (token as any).id || token?.sub).maybeSingle();
-          if (error || !storedSession || storedSession.revoked_at ||
-              Date.now() >= new Date(storedSession.expires_at).getTime() ||
-              Date.now() - new Date(storedSession.last_seen_at).getTime() >= 30 * 60 * 1000) {
-            if (storedSession?.id) await sessionDb.from('app_sessions').update({ revoked_at: new Date().toISOString() }).eq('id', storedSession.id);
+          if (error) {
+            // Transient database/PostgREST error: do not punish the user with a
+            // forced logout. The next request will retry the check.
+            console.warn('[NextAuth] session check failed:', error.code || error.message);
+          } else if (!storedSession || storedSession.revoked_at || Date.now() >= new Date(storedSession.expires_at).getTime()) {
+            if (storedSession?.id && !storedSession.revoked_at) {
+              await sessionDb.from('app_sessions').update({ revoked_at: new Date().toISOString() }).eq('id', storedSession.id);
+            }
             (token as any).sessionInvalid = true;
-          } else {
+          } else if (Date.now() - new Date(storedSession.last_seen_at).getTime() >= 5 * 60 * 1000) {
+            // Throttle writes: last_seen_at is audit metadata, not a heartbeat.
             await sessionDb.from('app_sessions').update({ last_seen_at: new Date().toISOString() }).eq('id', storedSession.id);
           }
-        } catch {
-          (token as any).sessionInvalid = true;
+        } catch (error) {
+          console.warn('[NextAuth] session storage unavailable:', error instanceof Error ? error.message : 'unknown error');
         }
       }
 

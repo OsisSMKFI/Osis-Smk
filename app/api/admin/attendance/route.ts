@@ -12,8 +12,9 @@ export async function GET(request: NextRequest) {
 
     const userRole = (session.user.role || '').toLowerCase();
     
-    // Hanya admin, super_admin, osis yang bisa akses
-    if (!['super_admin', 'admin', 'osis'].includes(userRole)) {
+    // Data absensi reguler memuat selfie dan koordinat lokasi, jadi hanya
+    // super admin/admin yang boleh membacanya. OSIS memakai menu Piket.
+    if (!['super_admin', 'admin'].includes(userRole)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -85,7 +86,7 @@ export async function PUT(request: NextRequest) {
 
     const userRole = (session.user.role || '').toLowerCase();
     
-    if (!['super_admin', 'admin', 'osis'].includes(userRole)) {
+    if (!['super_admin', 'admin'].includes(userRole)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

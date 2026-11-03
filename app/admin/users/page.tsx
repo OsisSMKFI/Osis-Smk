@@ -108,7 +108,10 @@ export default function UsersPage() {
   const { data: session, status } = useSession();
   // STRICT: Only super_admin, admin, osis can access admin users panel
   const role = ((session?.user as any)?.role || '').toLowerCase();
-  const canAccessAdminPanel = ['super_admin','admin','osis'].includes(role);
+  const canAccessAdminPanel = ['super_admin','admin'].includes(role);
+  // Creating, editing, dan menghapus akun tetap super admin saja. Admin hanya
+  // membaca daftar dan menyetujui akun pending lewat /admin/users/pending.
+  const canManageUsers = role === 'super_admin';
   const [items, setItems] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [fallbackMode, setFallbackMode] = useState(false);
@@ -454,7 +457,9 @@ export default function UsersPage() {
                 })}
               </div>
             <div className="flex items-center gap-3">
-              {['admin','super_admin'].includes(role) && <a href="/admin/sessions" className="rounded-xl border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-800 dark:border-indigo-800 dark:text-indigo-200">Sesi akun</a>}
+              {role === 'super_admin' && <a href="/admin/sessions" className="rounded-xl border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-800 dark:border-indigo-800 dark:text-indigo-200">Sesi akun</a>}
+              {['super_admin', 'admin'].includes(role) && <a href="/admin/users/pending" className="rounded-xl border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-800 dark:border-indigo-800 dark:text-indigo-200">Persetujuan akun</a>}
+              {canManageUsers && (
               <button
               onClick={() => {
                 setShowForm(true);
@@ -481,6 +486,7 @@ export default function UsersPage() {
             >
               <FaPlus /> Tambah User
               </button>
+              )}
               <button
                 onClick={() => fetchData()}
                 className="px-5 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
@@ -732,7 +738,7 @@ export default function UsersPage() {
                 {/* Active Status */}
                 {editingId && role === 'super_admin' && <label className="flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-indigo-950/30">
                   <input type="checkbox" checked={!!formData.is_universal} onChange={(e) => setFormData({ ...formData, is_universal: e.target.checked })} className="h-5 w-5" />
-                  <span><strong>Akun universal</strong><br /><span className="text-xs text-gray-600 dark:text-gray-300">Setiap login perangkat memerlukan alias dan perubahan data bersama menunggu approval.</span></span>
+                  <span><strong>Akun universal</strong><br /><span className="text-xs text-gray-600 dark:text-gray-300">Setiap login perangkat wajib memakai alias sesi agar aktivitas mudah diaudit.</span></span>
                 </label>}
                 <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                   <input
@@ -787,14 +793,16 @@ export default function UsersPage() {
                   Belum ada users
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Tambahkan user pertama untuk memulai
+                  {canManageUsers ? 'Tambahkan user pertama untuk memulai' : 'Belum ada akun terdaftar.'}
                 </p>
+                {canManageUsers && (
                 <button
                   onClick={() => setShowForm(true)}
                   className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 inline-flex items-center gap-2"
                 >
                   <FaPlus /> Tambah User Pertama
                 </button>
+                )}
               </div>
             </div>
           ) : (
@@ -828,6 +836,7 @@ export default function UsersPage() {
                       >
                         <FaEye size={14} />
                       </button>
+                      {canManageUsers && (
                       <button
                         onClick={() => handleEdit(user)}
                         className="p-2 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-lg shadow-lg hover:scale-110 transition-transform"
@@ -835,6 +844,8 @@ export default function UsersPage() {
                       >
                         <FaEdit size={14} />
                       </button>
+                      )}
+                      {canManageUsers && (
                       <button
                         onClick={() => handleDelete(user.id)}
                         className="p-2 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 rounded-lg shadow-lg hover:scale-110 transition-transform"
@@ -842,6 +853,7 @@ export default function UsersPage() {
                       >
                         <FaTrash size={14} />
                       </button>
+                      )}
                     </div>
                   </div>
 
@@ -1059,6 +1071,7 @@ export default function UsersPage() {
 
                 {/* Actions */}
                 <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                  {canManageUsers && (
                   <button
                     onClick={() => {
                       setDetailUser(null);
@@ -1068,6 +1081,7 @@ export default function UsersPage() {
                   >
                     <FaEdit /> Edit User
                   </button>
+                  )}
                   <button
                     onClick={() => setDetailUser(null)}
                     className="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-xl font-semibold transition-all duration-200"

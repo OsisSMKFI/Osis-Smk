@@ -81,8 +81,9 @@ const applicationMiddleware = async (request: NextRequest) => {
     }
 
     // Guru may enter the consolidated attendance page; page/API controls expose
-    // only Piket review and approval to this role.
-    if (pathname.startsWith('/admin/attendance') && (session.user.role || '').trim().toLowerCase() === 'guru') {
+    // only Piket review and approval to this role. Keep it to the exact path so
+    // guru cannot reach roster/settings subpages.
+    if (pathname === '/admin/attendance' && (session.user.role || '').trim().toLowerCase() === 'guru') {
       return NextResponse.next();
     }
 
@@ -93,6 +94,29 @@ const applicationMiddleware = async (request: NextRequest) => {
     if (!isAdmin) {
       const url = new URL('/dashboard', request.url);
       return NextResponse.redirect(url);
+    }
+
+    // System-level pages are super-admin only. These pages expose secrets,
+    // session/IP data, or destructive maintenance tools.
+    if (
+      pathname.startsWith('/admin/settings') ||
+      pathname.startsWith('/admin/tools') ||
+      pathname.startsWith('/admin/terminal') ||
+      pathname.startsWith('/admin/sessions') ||
+      pathname.startsWith('/admin/design-studio') ||
+      pathname.startsWith('/admin/attendance/mikrotik')
+    ) {
+      if (userRole !== 'super_admin') return NextResponse.redirect(new URL('/admin', request.url));
+    }
+
+    // User management and monitoring are admin-level, not OSIS content work.
+    if (
+      pathname.startsWith('/admin/users') ||
+      pathname.startsWith('/admin/errors') ||
+      pathname.startsWith('/admin/activity') ||
+      pathname.startsWith('/admin/user-activity')
+    ) {
+      if (!['super_admin', 'admin'].includes(userRole)) return NextResponse.redirect(new URL('/admin', request.url));
     }
 
     return NextResponse.next();

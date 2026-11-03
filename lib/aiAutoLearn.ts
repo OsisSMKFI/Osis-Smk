@@ -1060,8 +1060,7 @@ async function buildKnowledgeBase(opts?: { publicOnly?: boolean; fresh?: boolean
     kb.push('• 💡 Spasi 1 baris antar bagian — jangan teks padat berdesakan');
     kb.push('');
     
-    kb.push('🔄 Data website OSIS auto-refresh setiap 3 menit.');
-    kb.push('💎 STATUS: PREMIUM MODE ACTIVE - All features unlocked!');
+    kb.push('🔄 Selalu gunakan data website OSIS yang paling baru tersedia.');
     kb.push('💝 Remember: Kamu TEMAN CERDAS yang bijak, ramah, dan super menyenangkan!');
     kb.push('');
     

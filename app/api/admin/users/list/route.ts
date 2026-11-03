@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     // Check admin permission
     const userRole = ((session.user as any)?.role || '').toLowerCase();
-    if (!['admin', 'super_admin', 'osis'].includes(userRole)) {
+    if (!['admin', 'super_admin'].includes(userRole)) {
       return NextResponse.json({
         success: false,
         error: 'Forbidden: Admin access required'

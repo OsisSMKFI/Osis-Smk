@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     (data || []).forEach((row: any) => {
       const k = row.key as string;
       const v = row.value ?? '';
-      const shouldMask = /KEY|TOKEN|SECRET/i.test(k);
+      const shouldMask = /KEY|TOKEN|SECRET|PASSWORD|PASS|PRIVATE/i.test(k);
       settings[k] = shouldMask ? '***' : v;
     });
 

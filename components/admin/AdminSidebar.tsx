@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import {
   FaHome,
   FaNewspaper,
@@ -44,6 +44,8 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = ((session?.user as any)?.role || '').toLowerCase();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -77,6 +79,9 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
     return () => mq.removeEventListener('change', onChange);
   }, []);
 
+  const isGuru = role === 'guru';
+  const isAdminLevel = ['super_admin', 'admin'].includes(role);
+
   const menuItems: MenuItem[] = [
     { name: 'Dashboard', icon: <FaHome />, href: '/admin' },
     { name: 'Content', icon: <FaEdit />, href: '/admin/content' },
@@ -85,7 +90,11 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
     { name: 'Gallery', icon: <FaImages />, href: '/admin/gallery' },
     { name: 'Anggota (Members)', icon: <FaUserFriends />, href: '/admin/data/members' },
     { name: 'Users', icon: <FaUsers />, href: '/admin/users' },
-  ];
+  ].filter((item) => {
+    if (isGuru) return false;
+    if (item.href === '/admin/users') return isAdminLevel;
+    return true;
+  });
 
   const dataMenuItems: MenuItem[] = [
     { name: 'Sekbid', icon: <FaSitemap />, href: '/admin/data/sekbid' },
@@ -95,14 +104,20 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
     { name: 'Program Kerja', icon: <FaClipboardList />, href: '/admin/proker' },
     { name: 'Announcements', icon: <FaBullhorn />, href: '/admin/announcements' },
     { name: 'Polls', icon: <FaPoll />, href: '/admin/polls' },
-  ];
+  ].filter((item) => {
+    if (isGuru) return item.href === '/admin/attendance';
+    if (item.href === '/admin/re-enrollment') return isAdminLevel;
+    return true;
+  });
 
+  // System settings, tools, terminal, and design studio can change or expose
+  // global data, so they stay super-admin only.
   const settingsItems: MenuItem[] = [
     { name: 'Design Studio', icon: <FaPaintBrush />, href: '/admin/design-studio' },
     { name: 'Settings', icon: <FaCog />, href: '/admin/settings' },
     { name: 'Tools', icon: <FaTools />, href: '/admin/tools' },
     { name: 'Terminal', icon: <FaTerminal />, href: '/admin/terminal' },
-  ];
+  ].filter(() => role === 'super_admin');
 
   const isActive = (href: string) => {
     if (href === '/admin') return pathname === '/admin';

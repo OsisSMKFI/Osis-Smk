@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     // Check role
     const userRole = (session.user.role || '').toLowerCase();
-    if (!['super_admin', 'admin', 'osis'].includes(userRole)) {
+    if (!['super_admin', 'admin'].includes(userRole)) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     // Check role
     const userRole = (session.user.role || '').toLowerCase();
-    if (!['super_admin', 'admin', 'osis'].includes(userRole)) {
+    if (!['super_admin', 'admin'].includes(userRole)) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }
@@ -269,7 +269,7 @@ export async function PUT(request: NextRequest) {
 
     // Check role
     const userRole = (session.user.role || '').toLowerCase();
-    if (!['super_admin', 'admin', 'osis'].includes(userRole)) {
+    if (!['super_admin', 'admin'].includes(userRole)) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { execOnDevServer, isProduction, hasDevServer } from '@/lib/dev-server-client';
@@ -49,15 +49,8 @@ function isRawCommandAllowed(cmd: string): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const role = ((session.user as any)?.role || '').toLowerCase();
-    if (!['super_admin', 'admin'].includes(role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const authErr = await requirePermission('tools:terminal');
+    if (authErr) return authErr;
 
     return NextResponse.json({
       success: true,
@@ -76,15 +69,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    const role = ((session.user as any)?.role || '').toLowerCase();
-    if (!['super_admin', 'admin'].includes(role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const authErr = await requirePermission('tools:terminal');
+    if (authErr) return authErr;
 
     const body = await request.json();
     const { id, raw, command } = body;

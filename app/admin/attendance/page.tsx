@@ -44,10 +44,13 @@ export default function AdminAttendancePage() {
     verified: 0,
   });
   const [activeTab, setActiveTab] = useState<'attendance' | 'piket'>('attendance');
+  const sessionRole = (session?.user?.role || '').toLowerCase();
+  const canSeeAttendanceList = ['super_admin', 'admin'].includes(sessionRole);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'piket') setActiveTab('piket');
-  }, []);
+    if (sessionRole === 'guru' || sessionRole === 'osis') setActiveTab('piket');
+  }, [sessionRole]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -60,7 +63,7 @@ export default function AdminAttendancePage() {
       const userRole = (session.user.role || '').toLowerCase();
       if (!['super_admin', 'admin', 'osis', 'guru'].includes(userRole)) {
         redirect('/dashboard');
-      } else if (userRole !== 'guru' && activeTab === 'attendance') {
+      } else if (['super_admin', 'admin'].includes(userRole) && activeTab === 'attendance') {
         fetchAttendances();
       }
     }
@@ -144,7 +147,7 @@ export default function AdminAttendancePage() {
     toast.success('Data berhasil di-export');
   };
 
-  if (status === 'loading' || (loading && activeTab === 'attendance')) {
+  if (status === 'loading' || (loading && activeTab === 'attendance' && canSeeAttendanceList)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
@@ -155,10 +158,11 @@ export default function AdminAttendancePage() {
     );
   }
 
-  if (activeTab === 'piket' || session?.user?.role?.toLowerCase() === 'guru') {
+  if (activeTab === 'piket' || session?.user?.role?.toLowerCase() === 'guru' || session?.user?.role?.toLowerCase() === 'osis') {
+    const canSeeAttendance = ['super_admin', 'admin'].includes((session?.user?.role || '').toLowerCase());
     return <main className="min-h-screen bg-slate-50 p-4 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl space-y-4">
-        <button onClick={() => setActiveTab('attendance')} className="rounded-lg border px-4 py-2">Kembali ke Absensi</button>
+        {canSeeAttendance && <button onClick={() => setActiveTab('attendance')} className="rounded-lg border px-4 py-2">Kembali ke Absensi</button>}
         <PiketAttendancePanel />
       </div>
     </main>;

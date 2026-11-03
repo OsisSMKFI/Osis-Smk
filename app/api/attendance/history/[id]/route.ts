@@ -16,9 +16,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only admin/super_admin/osis can edit
+    // Only admin/super_admin can edit attendance history
     const userRole = (session.user.role || '').toLowerCase();
-    if (!['super_admin', 'admin', 'osis'].includes(userRole)) {
+    if (!['super_admin', 'admin'].includes(userRole)) {
       return NextResponse.json(
         { error: 'Forbidden - Only admin can edit attendance' },
         { status: 403 }

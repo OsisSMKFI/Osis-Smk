@@ -3,7 +3,7 @@ import path from 'path';
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 
-const ADMIN_DEBUG_ROLES = new Set(['super_admin','admin','osis']);
+const ADMIN_DEBUG_ROLES = new Set(['super_admin']);
 const DEBUG_ENABLED = process.env.DEBUG_ADMIN_ENDPOINTS === '1';
 
 // Enumerate admin pages at runtime. Helps distinguish true 404 vs permission issues in production.

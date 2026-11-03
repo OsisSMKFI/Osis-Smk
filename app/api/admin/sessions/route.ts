@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
-async function adminRole() {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) return { error: NextResponse.json({ error: 'Login diperlukan' }, { status: 401 }) };
-  const { data } = await supabaseAdmin.from('users').select('role,approved,email_verified').eq('id', userId).maybeSingle();
-  if (!data || !data.approved || !data.email_verified || !['admin','super_admin'].includes(data.role)) {
-    return { error: NextResponse.json({ error: 'Akses admin diperlukan' }, { status: 403 }) };
-  }
-  return { userId };
-}
-
+// Session administration exposes IP addresses and can revoke anyone else's
+// login, so it stays super-admin only.
 export async function GET() {
-  const actor = await adminRole();
-  if (actor.error) return actor.error;
+  const authErr = await requirePermission('tools:access');
+  if (authErr) return authErr;
+
   const { data, error } = await supabaseAdmin.from('app_sessions')
     .select('id,user_id,session_key,alias,user_agent,ip_address,created_at,last_seen_at,expires_at,revoked_at')
     .order('last_seen_at', { ascending: false }).limit(500);
@@ -29,8 +21,9 @@ export async function GET() {
 }
 
 export async function DELETE(request: NextRequest) {
-  const actor = await adminRole();
-  if (actor.error) return actor.error;
+  const authErr = await requirePermission('tools:access');
+  if (authErr) return authErr;
+
   const { sessionId } = await request.json().catch(() => ({}));
   if (typeof sessionId !== 'string') return NextResponse.json({ error: 'ID sesi tidak valid.' }, { status: 400 });
   const { error } = await supabaseAdmin.from('app_sessions').update({ revoked_at: new Date().toISOString() })

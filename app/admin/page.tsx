@@ -75,6 +75,9 @@ export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const role = ((session?.user as any)?.role || '').toLowerCase();
   const canAccessAdminPanel = ['super_admin','admin','osis'].includes(role);
+  const isSuperAdmin = role === 'super_admin';
+  // Monitoring (users/errors/activity) is admin-level only; OSIS works on content.
+  const canSeeMonitoring = ['super_admin', 'admin'].includes(role);
 
   const [loading, setLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
@@ -114,7 +117,7 @@ export default function AdminDashboard() {
         const [postsRes, eventsRes, usersRes, membersRes, galleryRes, announcementsRes, prokerRes] = await Promise.all([
           apiFetch('/api/admin/posts').catch(() => null),
           apiFetch('/api/admin/events').catch(() => null),
-          apiFetch('/api/admin/users').catch(() => null),
+          canSeeMonitoring ? apiFetch('/api/admin/users').catch(() => null) : Promise.resolve(null),
           apiFetch('/api/admin/members').catch(() => null),
           apiFetch('/api/admin/gallery').catch(() => null),
           apiFetch('/api/admin/announcements').catch(() => null),
@@ -286,9 +289,10 @@ export default function AdminDashboard() {
     
     if (status === 'authenticated' && canAccessAdminPanel) {
       fetchDashboardData();
-      fetchErrorSummary();
+      if (canSeeMonitoring) fetchErrorSummary();
+      else setLoadingErrors(false);
     }
-  }, [status, canAccessAdminPanel]);
+  }, [status, canAccessAdminPanel, canSeeMonitoring]);
 
   // Helper function to format time ago
   function formatTimeAgo(dateString: string): string {
@@ -364,6 +368,7 @@ export default function AdminDashboard() {
       link: '/admin/announcements',
     },
   ];
+  const visibleStats = canSeeMonitoring ? stats : stats.filter((card) => card.link !== '/admin/users');
 
   // Activity type icons
   const getActivityIcon = (type: string) => {
@@ -414,7 +419,7 @@ export default function AdminDashboard() {
 
       {/* Stats Grid - Real Data */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
-        {stats.map((stat, index) => (
+        {visibleStats.map((stat, index) => (
           <Link
             key={index}
             href={stat.link}
@@ -523,6 +528,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Error Monitoring Section */}
+      {canSeeMonitoring && (
       <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl shadow-lg md:shadow-xl p-4 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
           <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white flex items-center">
@@ -625,6 +631,7 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+      )}
 
       {/* Quick Actions */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6">
@@ -632,6 +639,7 @@ export default function AdminDashboard() {
           Quick Actions
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {isSuperAdmin && (
           <Link
             href="/admin/attendance/mikrotik"
             className="flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all group border-2 border-emerald-300"
@@ -642,7 +650,9 @@ export default function AdminDashboard() {
             <span className="text-sm font-medium">Keamanan</span>
             <span className="text-xs opacity-80 mt-1">Mikrotik</span>
           </Link>
+          )}
 
+          {canSeeMonitoring && (
           <Link
             href="/admin/activity"
             className="flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 text-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all group"
@@ -652,7 +662,9 @@ export default function AdminDashboard() {
             </div>
             <span className="text-sm font-medium">AI Activity</span>
           </Link>
+          )}
 
+          {canSeeMonitoring && (
           <Link
             href="/admin/errors"
             className="flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-br from-red-400 to-red-600 text-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all group"
@@ -662,6 +674,7 @@ export default function AdminDashboard() {
             </div>
             <span className="text-sm font-medium">AI Errors</span>
           </Link>
+          )}
 
           <Link
             href="/admin/attendance"
@@ -713,6 +726,7 @@ export default function AdminDashboard() {
             <span className="text-sm font-medium">Upload Image</span>
           </Link>
 
+          {isSuperAdmin && (
           <Link
             href="/admin/settings"
             className="flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-br from-gray-400 to-gray-600 text-white shadow-lg hover:shadow-2xl hover:scale-105 transition-all group"
@@ -722,6 +736,7 @@ export default function AdminDashboard() {
             </div>
             <span className="text-sm font-medium">Settings</span>
           </Link>
+          )}
         </div>
       </div>
     </div>

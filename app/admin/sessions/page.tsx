@@ -31,7 +31,7 @@ export default function AdminSessionsPage() {
   };
   const role = (session?.user?.role || '').toLowerCase();
   if (status === 'loading') return <main className="p-8">Memuat sesi…</main>;
-  if (!['admin','super_admin'].includes(role)) return <main className="p-8">Akses admin diperlukan.</main>;
+  if (role !== 'super_admin') return <main className="p-8">Akses Super Admin diperlukan.</main>;
   return <main className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
     <h1 className="text-2xl font-bold">Sesi akun</h1>
     <p className="text-sm text-slate-600">IP dan informasi perangkat disimpan paling lama 90 hari untuk audit sesi. Perubahan IP tidak otomatis memutus login.</p>

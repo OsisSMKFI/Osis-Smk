@@ -1,41 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requirePermission } from '@/lib/apiAuth';
 import { getMikrotikConfig } from '@/lib/mikrotikAPI';
 
 /**
  * GET /api/admin/mikrotik/test
- * 
- * Test Mikrotik connection
- * ADMIN ONLY
+ *
+ * Test Mikrotik connection. Super-admin only (uses stored router credentials).
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    
-    // Check if user is admin
-    const { supabaseAdmin } = await import('@/lib/supabase/server');
-    
-    const { data: profile } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('email', session.user.email)
-      .single();
-    
-    if (!['admin', 'super_admin'].includes(profile?.role || '')) {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-    
-    console.log('[Mikrotik Test] Admin testing connection');
+    const authErr = await requirePermission('settings:read');
+    if (authErr) return authErr;
+
+    console.log('[Mikrotik Test] Super admin testing connection');
     
     // Get config
     const config = await getMikrotikConfig();

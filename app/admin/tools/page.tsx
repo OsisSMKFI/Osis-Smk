@@ -10,8 +10,8 @@ import AdminPageShell from '@/components/admin/AdminPageShell';
 export default function ToolsPage() {
   const { data: session, status } = useSession();
   const role = ((session?.user as any)?.role || '').toLowerCase();
-  // OSIS tidak boleh akses tools - hanya super_admin dan admin
-  const canAccessAdminPanel = ['super_admin', 'admin'].includes(role);
+  // Tools are super-admin only: backup/import/export can move or wipe data.
+  const canAccessAdminPanel = role === 'super_admin';
   
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);

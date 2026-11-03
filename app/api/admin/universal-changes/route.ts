@@ -47,15 +47,26 @@ export async function PATCH(request: NextRequest) {
   if (!body || typeof body.id !== 'string' || !['approve','reject'].includes(body.decision)) return NextResponse.json({ error: 'Keputusan perubahan tidak valid.' }, { status: 400 });
   const { data: proposal, error: loadError } = await supabaseAdmin.from('universal_change_proposals').select('*').eq('id', body.id).maybeSingle();
   if (loadError || !proposal || !['pending','conflict'].includes(proposal.status)) return NextResponse.json({ error: 'Pengajuan sudah diproses atau tidak ditemukan.' }, { status: 409 });
+  if (proposal.actor_user_id === reviewer.id) return NextResponse.json({ error: 'Pengajuan sendiri tidak dapat disetujui oleh pembuatnya.' }, { status: 409 });
   if (body.decision === 'reject') {
     await supabaseAdmin.from('universal_change_proposals').update({ status: 'rejected', reviewed_by: reviewer.id, reviewed_at: new Date().toISOString() }).eq('id', proposal.id);
     return NextResponse.json({ success: true, status: 'rejected' });
   }
   const allowed = fields[proposal.entity_type];
   if (!allowed) return NextResponse.json({ error: 'Jenis data belum diizinkan untuk approval otomatis.' }, { status: 409 });
-  const patch = Object.fromEntries(Object.entries(proposal.proposed_data || {}).filter(([key]) => allowed.includes(key)));
+  const proposed = proposal.proposed_data && typeof proposal.proposed_data === 'object' && !Array.isArray(proposal.proposed_data)
+    ? proposal.proposed_data as Record<string, unknown>
+    : null;
+  if (!proposed) return NextResponse.json({ error: 'Data perubahan tidak valid.' }, { status: 400 });
+  const patch = Object.fromEntries(Object.entries(proposed).filter(([key]) => allowed.includes(key)));
   const table = proposal.entity_type === 'users_profile' ? 'users' : proposal.entity_type;
   let applyError: any = null;
+  if (proposal.operation !== 'create' && !proposal.entity_id) {
+    return NextResponse.json({ error: 'Perubahan tidak memiliki target data.' }, { status: 409 });
+  }
+  if (proposal.operation === 'create' && proposal.entity_type === 'users_profile') {
+    return NextResponse.json({ error: 'Pembuatan akun pengguna tidak diizinkan dari antrean ini.' }, { status: 409 });
+  }
   if (proposal.operation === 'delete') {
     if (proposal.entity_type === 'piket_student_roster' || proposal.entity_type === 'members') {
       ({ error: applyError } = await (supabaseAdmin as any).from(table).update({ is_active: false }).eq('id', proposal.entity_id));
@@ -68,6 +79,7 @@ export async function PATCH(request: NextRequest) {
     const result = await (supabaseAdmin as any).from(table).upsert(patch, conflict ? { onConflict: conflict } : undefined);
     applyError = result.error;
   } else {
+    if (!Object.keys(patch).length) return NextResponse.json({ error: 'Data perubahan kosong.' }, { status: 400 });
     const { error } = await (supabaseAdmin as any).from(table).update(patch).eq('id', proposal.entity_id);
     applyError = error;
   }

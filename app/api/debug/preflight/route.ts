@@ -54,7 +54,7 @@ function collectAdminPages(): string[] {
   return collectAdminPagesFs();
 }
 
-const ADMIN_DEBUG_ROLES = new Set(['super_admin','admin','osis']);
+const ADMIN_DEBUG_ROLES = new Set(['super_admin']);
 const DEBUG_ENABLED = process.env.DEBUG_ADMIN_ENDPOINTS === '1';
 
 export async function GET() {

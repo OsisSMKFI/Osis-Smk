@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface PendingUser { 
   id: string; 
@@ -18,6 +19,9 @@ interface PendingUser {
 }
 
 export default function PendingUsersPage() {
+  const { data: session } = useSession();
+  const role = ((session?.user as any)?.role || '').toLowerCase();
+  const canDelete = role === 'super_admin';
   const [pending, setPending] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -174,12 +178,14 @@ export default function PendingUsersPage() {
                 >
                   {approving === u.id ? 'Memproses...' : 'Approve'}
                 </button>
+                {canDelete && (
                 <button
                   onClick={() => remove(u.id)}
                   className="px-3 py-1 rounded text-xs font-semibold bg-red-600 hover:bg-red-700 text-white"
                 >
                   Hapus
                 </button>
+                )}
                 <button
                   onClick={() => rejectUser(u.id)}
                   className="px-3 py-1 rounded text-xs font-semibold bg-yellow-600 hover:bg-yellow-700 text-white"
@@ -209,7 +215,7 @@ export default function PendingUsersPage() {
                 {r.rejection_reason && <div className="italic text-yellow-700 dark:text-yellow-300">Alasan: {r.rejection_reason}</div>}
                 <div className="mt-2 flex gap-2">
                   <button onClick={() => restore(r.id)} className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded">Pulihkan</button>
-                  <button onClick={() => remove(r.id)} className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded">Hapus</button>
+                  {canDelete && <button onClick={() => remove(r.id)} className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded">Hapus</button>}
                 </div>
               </li>
             ))}
