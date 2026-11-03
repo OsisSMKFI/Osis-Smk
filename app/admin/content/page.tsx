@@ -27,6 +27,28 @@ interface SectionConfig {
   fields: { key: string; label: string; type?: 'text' | 'textarea' | 'emoji' | 'color' | 'timeline' }[];
 }
 
+type TimelineAchievement = {
+  year: string;
+  title: string;
+  description: string;
+  icon: string;
+};
+
+function parseTimelineContent(value: string): TimelineAchievement[] {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item: any) => ({
+      year: String(item?.year ?? ''),
+      title: String(item?.title ?? ''),
+      description: String(item?.description ?? ''),
+      icon: String(item?.icon ?? '🎯'),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 const SECTIONS: SectionConfig[] = [
   {
     id: 'hero',
@@ -176,7 +198,7 @@ const SECTIONS: SectionConfig[] = [
       { key: 'about_achievements_label', label: 'Label Section', type: 'text' },
       { key: 'about_achievements_title', label: 'Judul Section', type: 'text' },
       { key: 'about_achievements_title_hl', label: 'Judul Highlight', type: 'text' },
-      { key: 'about_achievements_timeline', label: 'Daftar Pencapaian', type: 'timeline' },
+      { key: 'about_achievements_timeline', label: 'Daftar Timeline', type: 'timeline' },
     ],
   },
   {
@@ -300,27 +322,9 @@ const DEFAULT_CONTENT: Record<string, string> = {
   about_achievements_title: 'Pencapaian',
   about_achievements_title_hl: 'Raveka Sena',
   about_achievements_timeline: JSON.stringify([
-    {
-      year: '2024',
-      title: 'Terbentuknya OSIS Raveka Sena',
-      description:
-        'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.',
-      icon: '🚀',
-    },
-    {
-      year: '2024',
-      title: 'Peluncuran Website Resmi',
-      description:
-        'Website OSIS dengan fitur modern dan interaktif diluncurkan untuk memudahkan komunikasi dan informasi.',
-      icon: '💻',
-    },
-    {
-      year: '2025',
-      title: 'Program Kerja Inovatif',
-      description:
-        'Meluncurkan berbagai program kerja yang fokus pada pengembangan soft skill dan hard skill siswa.',
-      icon: '🎯',
-    },
+    { year: '2024', title: 'Terbentuknya OSIS Raveka Sena', description: 'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.', icon: '🚀' },
+    { year: '2024', title: 'Peluncuran Website Resmi', description: 'Website OSIS dengan fitur modern dan interaktif diluncurkan untuk memudahkan komunikasi dan informasi.', icon: '💻' },
+    { year: '2025', title: 'Program Kerja Inovatif', description: 'Meluncurkan berbagai program kerja yang fokus pada pengembangan soft skill dan hard skill siswa.', icon: '🎯' },
   ]),
   about_logo_title: 'FILOSOFI LOGO OSIS',
   about_logo_subtitle: 'OSIS SMK INFORMATIKA FITHRAH INSANI - Setiap elemen dalam logo memiliki filosofi dan makna yang mendalam',
@@ -351,30 +355,6 @@ const STALE_CONTENT: Record<string, string[]> = {
 };
 
 const SECTION_KEYS = new Set(SECTIONS.flatMap(s => s.fields.map(f => f.key)));
-
-type AchievementItem = {
-  year: string;
-  title: string;
-  description: string;
-  icon: string;
-};
-
-function parseAchievements(value: string): AchievementItem[] {
-  try {
-    const parsed = JSON.parse(value);
-
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.map((item) => ({
-      year: String(item.year ?? ''),
-      title: String(item.title ?? ''),
-      description: String(item.description ?? ''),
-      icon: String(item.icon ?? '🎯'),
-    }));
-  } catch {
-    return [];
-  }
-}
 
 export default function AdminContentPage() {
   const { data: session, status } = useSession();
@@ -477,16 +457,6 @@ export default function AdminContentPage() {
       return next;
     });
   }, []);
-
-  const updateTimeline = (
-    key: string,
-    updater: (items: AchievementItem[]) => AchievementItem[]
-  ) => {
-    const current = parseAchievements(editValues[key] ?? '');
-    const updated = updater(current);
-
-    setFieldValue(key, JSON.stringify(updated));
-  };
 
   const saveSection = async (section: SectionConfig) => {
     setSaving(true);
@@ -784,7 +754,7 @@ export default function AdminContentPage() {
                         const isDefaultPreview = !existing && !isEditing;
 
                         return (
-                          <div key={field.key} className="space-y-1">
+                          <div key={field.key} className={field.type === 'timeline' ? 'space-y-1 md:col-span-2' : 'space-y-1'}>
                             <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                               {field.label}
                               {field.type === 'emoji' && <span className="text-gray-400">(emoji)</span>}
@@ -794,204 +764,87 @@ export default function AdminContentPage() {
                                 <span className="text-gray-400 text-[10px]" title="Contoh default situs — belum disimpan">default</span>
                               ) : null}
                             </label>
-                            {isEditing ? (
-  field.type === 'timeline' ? (
-    <div className="md:col-span-2 space-y-4">
-      {parseAchievements(value).map((item, index) => (
-        <div
-          key={index}
-          className="rounded-xl border border-gray-200 dark:border-gray-600 p-4 space-y-3"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-semibold text-sm text-gray-800 dark:text-white">
-              Pencapaian {index + 1}
-            </span>
-
-            <button
-              type="button"
-              onClick={() =>
-                updateTimeline(field.key, (items) =>
-                  items.filter((_, i) => i !== index)
-                )
-              }
-              className="text-sm text-red-500 hover:text-red-700"
-            >
-              Hapus
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs mb-1 text-gray-500">
-                Tahun
-              </label>
-              <input
-                type="text"
-                value={item.year}
-                onChange={(e) =>
-                  updateTimeline(field.key, (items) =>
-                    items.map((entry, i) =>
-                      i === index
-                        ? { ...entry, year: e.target.value }
-                        : entry
-                    )
-                  )
-                }
-                placeholder="2024"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs mb-1 text-gray-500">
-                Ikon / Emoji
-              </label>
-              <input
-                type="text"
-                value={item.icon}
-                onChange={(e) =>
-                  updateTimeline(field.key, (items) =>
-                    items.map((entry, i) =>
-                      i === index
-                        ? { ...entry, icon: e.target.value }
-                        : entry
-                    )
-                  )
-                }
-                placeholder="🏆"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs mb-1 text-gray-500">
-              Judul Pencapaian
-            </label>
-            <input
-              type="text"
-              value={item.title}
-              onChange={(e) =>
-                updateTimeline(field.key, (items) =>
-                  items.map((entry, i) =>
-                    i === index
-                      ? { ...entry, title: e.target.value }
-                      : entry
-                  )
-                )
-              }
-              placeholder="Masukkan judul pencapaian"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs mb-1 text-gray-500">
-              Deskripsi
-            </label>
-            <textarea
-              value={item.description}
-              onChange={(e) =>
-                updateTimeline(field.key, (items) =>
-                  items.map((entry, i) =>
-                    i === index
-                      ? { ...entry, description: e.target.value }
-                      : entry
-                  )
-                )
-              }
-              rows={3}
-              placeholder="Jelaskan pencapaian ini"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() =>
-                updateTimeline(field.key, (items) => {
-                  const next = [...items];
-                  [next[index - 1], next[index]] = [
-                    next[index],
-                    next[index - 1],
-                  ];
-                  return next;
-                })
-              }
-              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-40"
-            >
-              ↑ Naik
-            </button>
-
-            <button
-              type="button"
-              disabled={index === parseAchievements(value).length - 1}
-              onClick={() =>
-                updateTimeline(field.key, (items) => {
-                  const next = [...items];
-                  [next[index], next[index + 1]] = [
-                    next[index + 1],
-                    next[index],
-                  ];
-                  return next;
-                })
-              }
-              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-40"
-            >
-              ↓ Turun
-            </button>
-          </div>
-        </div>
-      ))}
-
-      <button
-        type="button"
-        onClick={() =>
-          updateTimeline(field.key, (items) => [
-            ...items,
-            {
-              year: new Date().getFullYear().toString(),
-              title: '',
-              description: '',
-              icon: '🎯',
-            },
-          ])
-        }
-        className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:border-yellow-500 hover:text-yellow-600"
-      >
-        + Tambah Pencapaian
-      </button>
-    </div>
-  ) : field.type === 'textarea' ? (
-    <textarea
-      value={value}
-      onChange={(e) => setFieldValue(field.key, e.target.value)}
-      rows={2}
-      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-    />
-  ) : (
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => setFieldValue(field.key, e.target.value)}
-      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-    />
-  )
-) : (
-  <div
-    className={`px-3 py-1.5 rounded-lg text-sm min-h-[30px] ${
-      isDefaultPreview
-        ? 'bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 italic'
-        : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300'
-    }`}
-  >
-    {field.type === 'timeline'
-      ? `${parseAchievements(value).length} pencapaian`
-      : value || <span className="italic text-gray-400">Belum diisi</span>}
-  </div>
-)}
+                            {field.type === 'timeline' ? (
+                              isEditing ? (
+                                <div className="space-y-3">
+                                  {parseTimelineContent(value).map((item, index, items) => {
+                                    const updateItem = (patch: Partial<TimelineAchievement>) => {
+                                      const next = [...items];
+                                      next[index] = { ...item, ...patch };
+                                      setFieldValue(field.key, JSON.stringify(next));
+                                    };
+                                    const moveItem = (direction: -1 | 1) => {
+                                      const target = index + direction;
+                                      if (target < 0 || target >= items.length) return;
+                                      const next = [...items];
+                                      [next[index], next[target]] = [next[target], next[index]];
+                                      setFieldValue(field.key, JSON.stringify(next));
+                                    };
+                                    return (
+                                      <div key={`${index}-${item.title}`} className="rounded-xl border border-gray-200 dark:border-gray-600 p-4 space-y-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <strong className="text-sm">Pencapaian {index + 1}</strong>
+                                          <div className="flex flex-wrap gap-2">
+                                            <button type="button" onClick={() => moveItem(-1)} disabled={index === 0} className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 disabled:opacity-40">↑ Naik</button>
+                                            <button type="button" onClick={() => moveItem(1)} disabled={index === items.length - 1} className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 disabled:opacity-40">↓ Turun</button>
+                                            <button type="button" onClick={() => setFieldValue(field.key, JSON.stringify(items.filter((_, i) => i !== index)))} className="px-2 py-1 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Hapus</button>
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                          <label className="text-xs space-y-1">Tahun
+                                            <input value={item.year} onChange={e => updateItem({ year: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" />
+                                          </label>
+                                          <label className="text-xs space-y-1">Ikon
+                                            <input value={item.icon} onChange={e => updateItem({ icon: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" />
+                                          </label>
+                                          <label className="text-xs space-y-1">Judul
+                                            <input value={item.title} onChange={e => updateItem({ title: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" />
+                                          </label>
+                                        </div>
+                                        <label className="block text-xs space-y-1">Deskripsi
+                                          <textarea value={item.description} onChange={e => updateItem({ description: e.target.value })} rows={2} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" />
+                                        </label>
+                                      </div>
+                                    );
+                                  })}
+                                  <button
+                                    type="button"
+                                    onClick={() => setFieldValue(field.key, JSON.stringify([...parseTimelineContent(value), { year: new Date().getFullYear().toString(), title: '', description: '', icon: '🎯' }]))}
+                                    className="px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-semibold hover:bg-yellow-300"
+                                  >+ Tambah Pencapaian</button>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {parseTimelineContent(value).map((item, index) => (
+                                    <div key={`${index}-${item.title}`} className="rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2 text-sm">
+                                      <strong>{item.icon} {item.year} — {item.title || 'Tanpa judul'}</strong>
+                                      <p className="text-gray-600 dark:text-gray-400 mt-1">{item.description}</p>
+                                    </div>
+                                  ))}
+                                  {parseTimelineContent(value).length === 0 && <span className="text-gray-400 italic">Belum ada pencapaian</span>}
+                                </div>
+                              )
+                            ) : isEditing ? (
+                              field.type === 'textarea' ? (
+                                <textarea
+                                  value={value}
+                                  onChange={(e) => setFieldValue(field.key, e.target.value)}
+                                  rows={2}
+                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={value}
+                                  onChange={(e) => setFieldValue(field.key, e.target.value)}
+                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                                />
+                              )
+                            ) : (
+                              <div className={`px-3 py-1.5 rounded-lg text-sm min-h-[30px] ${isDefaultPreview ? 'bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 italic' : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
+                                {value || <span className="italic text-gray-400">Belum diisi</span>}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
