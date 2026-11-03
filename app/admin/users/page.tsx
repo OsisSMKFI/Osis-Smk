@@ -291,6 +291,7 @@ export default function UsersPage() {
         // Pending accounts must go through the approval endpoint so their
         // requested role is promoted together with the approval state.
         is_active: shouldApprovePending ? false : formData.is_active,
+        is_universal: formData.is_universal,
         profile_image: formData.profile_image,
         password: formData.new_password || undefined,
       } : formData;
@@ -736,7 +737,7 @@ export default function UsersPage() {
                 </div>
 
                 {/* Active Status */}
-                {editingId && role === 'super_admin' && <label className="flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-indigo-950/30">
+                {editingId && ['super_admin','admin'].includes(role) && <label className="flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm dark:border-indigo-800 dark:bg-indigo-950/30">
                   <input type="checkbox" checked={!!formData.is_universal} onChange={(e) => setFormData({ ...formData, is_universal: e.target.checked })} className="h-5 w-5" />
                   <span><strong>Akun universal</strong><br /><span className="text-xs text-gray-600 dark:text-gray-300">Setiap login perangkat wajib memakai alias sesi agar aktivitas mudah diaudit.</span></span>
                 </label>}

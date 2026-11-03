@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -43,9 +43,6 @@ export default function PiketAttendancePage() {
   const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
-  const signatureCanvas = useRef<HTMLCanvasElement>(null);
-  const drawingSignature = useRef(false);
-  const [hasTeacherSignature, setHasTeacherSignature] = useState(false);
   const role = (session?.user?.role || '').toLowerCase();
   const canView = ['osis', 'guru', 'admin', 'super_admin'].includes(role);
   const canGenerate = ['osis', 'admin', 'super_admin'].includes(role);
@@ -95,13 +92,11 @@ export default function PiketAttendancePage() {
   };
 
   const approveDay = async () => {
-    const teacherSignature = signatureCanvas.current?.toDataURL('image/png');
-    if (!hasTeacherSignature || !teacherSignature) { toast.error('Gambar tanda tangan Guru terlebih dahulu.'); return; }
     if (!window.confirm(`Setujui seluruh ${reports.length} laporan tanggal ${date}? Setelah disetujui, laporan baru untuk tanggal itu ditutup.`)) return;
     setWorking(true);
     try {
       const response = await fetch('/api/piket/approve', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, teacher_signature: teacherSignature }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || 'Persetujuan gagal');
@@ -220,12 +215,8 @@ export default function PiketAttendancePage() {
             <input aria-label="Cari nama siswa" value={searchName} onChange={(event) => setSearchName(event.target.value)} placeholder="Cari nama siswa" className="rounded-md border px-3 py-2 dark:bg-slate-800" />
             <button onClick={exportCsv} disabled={!reports.length} className="rounded-md border px-3 py-2 disabled:opacity-50">Simpan CSV</button>
             {!allDates && role === 'guru' && !approval && <div className="w-full space-y-2 rounded-lg border border-emerald-200 p-3">
-              <label htmlFor="guru-signature" className="block text-sm font-medium">Tanda tangan Guru</label>
-              <canvas id="guru-signature" ref={signatureCanvas} width={640} height={160} className="h-32 w-full touch-none rounded border bg-white"
-                onPointerDown={(event) => { const canvas = signatureCanvas.current; if (!canvas) return; canvas.setPointerCapture(event.pointerId); drawingSignature.current = true; const rect = canvas.getBoundingClientRect(); const ctx = canvas.getContext('2d'); if (!ctx) return; ctx.strokeStyle = '#111827'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo((event.clientX-rect.left)*canvas.width/rect.width,(event.clientY-rect.top)*canvas.height/rect.height); }}
-                onPointerMove={(event) => { const canvas = signatureCanvas.current; if (!canvas || !drawingSignature.current) return; const rect = canvas.getBoundingClientRect(); const ctx = canvas.getContext('2d'); if (!ctx) return; ctx.lineTo((event.clientX-rect.left)*canvas.width/rect.width,(event.clientY-rect.top)*canvas.height/rect.height); ctx.stroke(); setHasTeacherSignature(true); }}
-                onPointerUp={() => { drawingSignature.current = false; }} onPointerCancel={() => { drawingSignature.current = false; }} />
-              <div className="flex gap-2"><button type="button" onClick={() => { const canvas = signatureCanvas.current; canvas?.getContext('2d')?.clearRect(0,0,canvas.width,canvas.height); setHasTeacherSignature(false); }} className="rounded border px-3 py-2 text-sm">Hapus tanda tangan</button><button onClick={approveDay} disabled={working || !reports.length || !!searchName || !hasTeacherSignature} className="rounded-md bg-emerald-700 px-3 py-2 font-semibold text-white disabled:opacity-50">Setujui rekap hari</button></div>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Persetujuan dilakukan dengan klik tombol. Tidak diperlukan tanda tangan gambar.</p>
+              <button onClick={approveDay} disabled={working || !reports.length || !!searchName} className="rounded-md bg-emerald-700 px-3 py-2 font-semibold text-white disabled:opacity-50">Setujui rekap hari</button>
             </div>}
           </div>
         </div>

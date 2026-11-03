@@ -85,21 +85,31 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Check if user is editing their own profile
     const isOwnProfile = session.user.id === id;
 
-    if (isOwnProfile && ['name', 'nickname', 'username', 'nisn', 'no_induk', 'nik', 'unit', 'unit_sekolah', 'kelas', 'instagram_username'].some((field) => body[field] !== undefined)) {
+    const profileFields = ['name', 'nickname', 'username', 'nisn', 'no_induk', 'nik', 'unit', 'unit_sekolah', 'kelas', 'instagram_username', 'profile_image', 'password'];
+    const hasProfileEdit = profileFields.some((field) => body[field] !== undefined);
+
+    // Non-own profile edits of identity fields require users:edit. Toggling
+    // approval/universal state is a separate, less sensitive action.
+    if (!isOwnProfile && hasProfileEdit) {
       const identityEditErr = await requirePermission('users:edit');
       if (identityEditErr) return identityEditErr;
     }
-    
-    // If not own profile, require admin permission
-    if (!isOwnProfile) {
-      const authErr = await requirePermission('users:edit');
+
+    if (isOwnProfile && profileFields.some((field) => body[field] !== undefined)) {
+      const identityEditErr = await requirePermission('users:edit');
+      if (identityEditErr) return identityEditErr;
+    }
+
+    // If not own profile, require at least account-level permission
+    if (!isOwnProfile && !hasProfileEdit && !('is_universal' in body) && !('is_active' in body) && !('role' in body)) {
+      const authErr = await requirePermission('users:read');
       if (authErr) return authErr;
     }
 
     const update: any = {};
     if (is_universal !== undefined) {
       if (typeof is_universal !== 'boolean') return NextResponse.json({ error: 'Status universal harus berupa boolean' }, { status: 400 });
-      const universalErr = await requirePermission('users:role_assign');
+      const universalErr = await requirePermission('users:approve');
       if (universalErr) return universalErr;
       if (isOwnProfile) return NextResponse.json({ error: 'Mode universal hanya dapat diubah dari pengelolaan akun oleh super admin lain' }, { status: 403 });
       update.is_universal = is_universal;
@@ -215,6 +225,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updated_at: data.updated_at,
       last_login: null as string | null,
       email_verified: !!data.email_verified,
+      is_universal: !!data.is_universal,
     };
 
     return NextResponse.json({ success: true, data: result });

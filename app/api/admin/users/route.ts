@@ -84,9 +84,12 @@ export async function POST(request: NextRequest) {
     if (authErr) return authErr;
 
     const body = await request.json();
-    const { email, name, role, password, is_active, profile_image, reject, rejection_reason, nickname, unit_sekolah, kelas, nik, nisn, no_induk, instagram_username } = body;
+    const { email, name, role, password, is_active, is_universal, profile_image, reject, rejection_reason, nickname, unit_sekolah, kelas, nik, nisn, no_induk, instagram_username } = body;
     if (is_active !== undefined && typeof is_active !== 'boolean') {
       return NextResponse.json({ error: 'Status aktif harus berupa boolean' }, { status: 400 });
+    }
+    if (is_universal !== undefined && typeof is_universal !== 'boolean') {
+      return NextResponse.json({ error: 'Status universal harus berupa boolean' }, { status: 400 });
     }
     if (reject !== undefined && typeof reject !== 'boolean') {
       return NextResponse.json({ error: 'Status penolakan tidak valid' }, { status: 400 });
@@ -142,6 +145,7 @@ export async function POST(request: NextRequest) {
         rejected: !!reject,
         rejection_reason: reject ? (rejection_reason || 'Ditolak tanpa alasan tertulis') : null,
         photo_url: profile_image ?? null,
+        is_universal: !!is_universal,
       })
       .select('id, email, name, nickname, unit_sekolah, kelas, nik, nisn, no_induk, role, photo_url, approved, rejected, rejection_reason, created_at')
       .single();
