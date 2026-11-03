@@ -176,6 +176,7 @@ const SECTIONS: SectionConfig[] = [
       { key: 'about_achievements_label', label: 'Label Section', type: 'text' },
       { key: 'about_achievements_title', label: 'Judul Section', type: 'text' },
       { key: 'about_achievements_title_hl', label: 'Judul Highlight', type: 'text' },
+      { key: 'about_achievements_timeline_1', label: 'Timeline 1', type: 'text'},
     ],
   },
   {
