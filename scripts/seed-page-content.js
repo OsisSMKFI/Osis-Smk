@@ -113,6 +113,7 @@ const DEFAULTS = {
   about_achievements_label: { content: 'Perjalanan Kami', category: 'about_achievements' },
   about_achievements_title: { content: 'Pencapaian', category: 'about_achievements' },
   about_achievements_title_hl: { content: 'Raveka Sena', category: 'about_achievements' },
+  about_achievements_timeline_1: { content: 'Terbentuknya OSIS', category: 'about_achievements' },
 
   // About values
   about_values_label: { content: 'Nilai-Nilai Kami', category: 'about_values' },
