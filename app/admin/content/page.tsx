@@ -1,12 +1,25 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import AdminPageShell from '@/components/admin/AdminPageShell';
 import { invalidatePageContentCache } from '@/lib/pageContent';
-import { FaSave, FaTimes, FaSearch, FaChevronDown, FaChevronRight, FaBroom } from 'react-icons/fa';
+import {
+  FaSave,
+  FaTimes,
+  FaSearch,
+  FaChevronDown,
+  FaChevronRight,
+  FaBroom,
+} from 'react-icons/fa';
 import ImageUploadField from '@/components/ImageUploadField';
 
 interface ContentItem {
@@ -28,7 +41,13 @@ interface SectionConfig {
   fields: {
     key: string;
     label: string;
-    type?: 'text' | 'textarea' | 'emoji' | 'color' | 'timeline' | 'image';
+    type?:
+      | 'text'
+      | 'textarea'
+      | 'emoji'
+      | 'color'
+      | 'timeline'
+      | 'image';
   }[];
 }
 
@@ -42,7 +61,9 @@ type TimelineAchievement = {
 function parseTimelineContent(value: string): TimelineAchievement[] {
   try {
     const parsed: unknown = JSON.parse(value);
+
     if (!Array.isArray(parsed)) return [];
+
     return parsed.map((item: any) => ({
       year: String(item?.year ?? ''),
       title: String(item?.title ?? ''),
@@ -61,10 +82,26 @@ const SECTIONS: SectionConfig[] = [
     description: 'Judul, subtitle, deskripsi di halaman utama',
     icon: '🏠',
     fields: [
-      { key: 'home_hero_title', label: 'Judul Hero', type: 'text' },
-      { key: 'home_hero_subtitle', label: 'Subtitle Hero', type: 'text' },
-      { key: 'home_hero_description', label: 'Deskripsi Hero', type: 'textarea' },
-      { key: 'home_hero_background', label: 'Background Hero Homepage', type: 'image' },
+      {
+        key: 'home_hero_title',
+        label: 'Judul Hero',
+        type: 'text',
+      },
+      {
+        key: 'home_hero_subtitle',
+        label: 'Subtitle Hero',
+        type: 'text',
+      },
+      {
+        key: 'home_hero_description',
+        label: 'Deskripsi Hero',
+        type: 'textarea',
+      },
+      {
+        key: 'home_hero_background',
+        label: 'Background Hero Homepage',
+        type: 'image',
+      },
     ],
   },
   {
@@ -73,12 +110,36 @@ const SECTIONS: SectionConfig[] = [
     description: 'Teks visi yang ditampilkan di homepage',
     icon: '👁️',
     fields: [
-      { key: 'site_vision_text', label: 'Teks Visi (awal)', type: 'textarea' },
-      { key: 'site_vision_hl1', label: 'Highlight 1', type: 'text' },
-      { key: 'site_vision_part2', label: 'Teks Visi (tengah)', type: 'text' },
-      { key: 'site_vision_hl2', label: 'Highlight 2', type: 'text' },
-      { key: 'site_vision_part3', label: 'Teks Visi (akhir)', type: 'text' },
-      { key: 'site_vision_hl3', label: 'Highlight 3', type: 'text' },
+      {
+        key: 'site_vision_text',
+        label: 'Teks Visi (awal)',
+        type: 'textarea',
+      },
+      {
+        key: 'site_vision_hl1',
+        label: 'Highlight 1',
+        type: 'text',
+      },
+      {
+        key: 'site_vision_part2',
+        label: 'Teks Visi (tengah)',
+        type: 'text',
+      },
+      {
+        key: 'site_vision_hl2',
+        label: 'Highlight 2',
+        type: 'text',
+      },
+      {
+        key: 'site_vision_part3',
+        label: 'Teks Visi (akhir)',
+        type: 'text',
+      },
+      {
+        key: 'site_vision_hl3',
+        label: 'Highlight 3',
+        type: 'text',
+      },
     ],
   },
   {
@@ -87,22 +148,86 @@ const SECTIONS: SectionConfig[] = [
     description: '6 tujuan OSIS yang ditampilkan di homepage',
     icon: '🎯',
     fields: [
-      { key: 'home_goals_title', label: 'Judul Section', type: 'text' },
-      { key: 'home_goals_desc', label: 'Deskripsi Section', type: 'textarea' },
-      { key: 'home_goal1_title', label: 'Goal 1 - Judul', type: 'text' },
-      { key: 'home_goal1_desc', label: 'Goal 1 - Deskripsi', type: 'textarea' },
-      { key: 'home_goal2_title', label: 'Goal 2 - Judul', type: 'text' },
-      { key: 'home_goal2_desc', label: 'Goal 2 - Deskripsi', type: 'textarea' },
-      { key: 'home_goal3_title', label: 'Goal 3 - Judul', type: 'text' },
-      { key: 'home_goal3_desc', label: 'Goal 3 - Deskripsi', type: 'textarea' },
-      { key: 'home_goal4_title', label: 'Goal 4 - Judul', type: 'text' },
-      { key: 'home_goal4_desc', label: 'Goal 4 - Deskripsi', type: 'textarea' },
-      { key: 'home_goal5_title', label: 'Goal 5 - Judul', type: 'text' },
-      { key: 'home_goal5_desc', label: 'Goal 5 - Deskripsi', type: 'textarea' },
-      { key: 'home_goal6_title', label: 'Goal 6 - Judul', type: 'text' },
-      { key: 'home_goal6_desc', label: 'Goal 6 - Deskripsi', type: 'textarea' },
-      { key: 'home_goals_cta_title', label: 'CTA - Judul', type: 'text' },
-      { key: 'home_goals_cta_desc', label: 'CTA - Deskripsi', type: 'textarea' },
+      {
+        key: 'home_goals_title',
+        label: 'Judul Section',
+        type: 'text',
+      },
+      {
+        key: 'home_goals_desc',
+        label: 'Deskripsi Section',
+        type: 'textarea',
+      },
+      {
+        key: 'home_goal1_title',
+        label: 'Goal 1 - Judul',
+        type: 'text',
+      },
+      {
+        key: 'home_goal1_desc',
+        label: 'Goal 1 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'home_goal2_title',
+        label: 'Goal 2 - Judul',
+        type: 'text',
+      },
+      {
+        key: 'home_goal2_desc',
+        label: 'Goal 2 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'home_goal3_title',
+        label: 'Goal 3 - Judul',
+        type: 'text',
+      },
+      {
+        key: 'home_goal3_desc',
+        label: 'Goal 3 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'home_goal4_title',
+        label: 'Goal 4 - Judul',
+        type: 'text',
+      },
+      {
+        key: 'home_goal4_desc',
+        label: 'Goal 4 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'home_goal5_title',
+        label: 'Goal 5 - Judul',
+        type: 'text',
+      },
+      {
+        key: 'home_goal5_desc',
+        label: 'Goal 5 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'home_goal6_title',
+        label: 'Goal 6 - Judul',
+        type: 'text',
+      },
+      {
+        key: 'home_goal6_desc',
+        label: 'Goal 6 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'home_goals_cta_title',
+        label: 'CTA - Judul',
+        type: 'text',
+      },
+      {
+        key: 'home_goals_cta_desc',
+        label: 'CTA - Deskripsi',
+        type: 'textarea',
+      },
     ],
   },
   {
@@ -111,11 +236,31 @@ const SECTIONS: SectionConfig[] = [
     description: 'Judul dan subtitle di halaman Tentang',
     icon: '📖',
     fields: [
-      { key: 'about_hero_title1', label: 'Judul 1', type: 'text' },
-      { key: 'about_hero_title2', label: 'Judul 2 (Highlight)', type: 'text' },
-      { key: 'about_hero_subtitle1', label: 'Subtitle 1', type: 'text' },
-      { key: 'about_hero_subtitle2', label: 'Subtitle 2', type: 'text' },
-      { key: 'about_hero_scroll', label: 'Teks Scroll', type: 'text' },
+      {
+        key: 'about_hero_title1',
+        label: 'Judul 1',
+        type: 'text',
+      },
+      {
+        key: 'about_hero_title2',
+        label: 'Judul 2 (Highlight)',
+        type: 'text',
+      },
+      {
+        key: 'about_hero_subtitle1',
+        label: 'Subtitle 1',
+        type: 'text',
+      },
+      {
+        key: 'about_hero_subtitle2',
+        label: 'Subtitle 2',
+        type: 'text',
+      },
+      {
+        key: 'about_hero_scroll',
+        label: 'Teks Scroll',
+        type: 'text',
+      },
     ],
   },
   {
@@ -124,17 +269,61 @@ const SECTIONS: SectionConfig[] = [
     description: 'Cerita sejarah dan filosofi nama OSIS',
     icon: '📜',
     fields: [
-      { key: 'about_story_title1', label: 'Judul Cerita', type: 'text' },
-      { key: 'about_story_title2', label: 'Judul Cerita (Highlight)', type: 'text' },
-      { key: 'about_philosophy_title', label: 'Judul Filosofi', type: 'text' },
-      { key: 'about_philosophy_hl', label: 'Filosofi Highlight', type: 'text' },
-      { key: 'about_philosophy_part1', label: 'Filosofi - Kalimat 1', type: 'text' },
-      { key: 'about_philosophy_name_hl', label: 'Filosofi - Nama Highlight', type: 'text' },
-      { key: 'about_philosophy_part2', label: 'Filosofi - Kalimat 2', type: 'text' },
-      { key: 'about_philosophy_sky_hl', label: 'Filosofi - Highlight Langit', type: 'text' },
-      { key: 'about_philosophy_part3', label: 'Filosofi - Kalimat 3', type: 'textarea' },
-      { key: 'about_philosophy_desc1', label: 'Deskripsi Filosofi 1', type: 'textarea' },
-      { key: 'about_philosophy_desc2', label: 'Deskripsi Filosofi 2', type: 'textarea' },
+      {
+        key: 'about_story_title1',
+        label: 'Judul Cerita',
+        type: 'text',
+      },
+      {
+        key: 'about_story_title2',
+        label: 'Judul Cerita (Highlight)',
+        type: 'text',
+      },
+      {
+        key: 'about_philosophy_title',
+        label: 'Judul Filosofi',
+        type: 'text',
+      },
+      {
+        key: 'about_philosophy_hl',
+        label: 'Filosofi Highlight',
+        type: 'text',
+      },
+      {
+        key: 'about_philosophy_part1',
+        label: 'Filosofi - Kalimat 1',
+        type: 'text',
+      },
+      {
+        key: 'about_philosophy_name_hl',
+        label: 'Filosofi - Nama Highlight',
+        type: 'text',
+      },
+      {
+        key: 'about_philosophy_part2',
+        label: 'Filosofi - Kalimat 2',
+        type: 'text',
+      },
+      {
+        key: 'about_philosophy_sky_hl',
+        label: 'Filosofi - Highlight Langit',
+        type: 'text',
+      },
+      {
+        key: 'about_philosophy_part3',
+        label: 'Filosofi - Kalimat 3',
+        type: 'textarea',
+      },
+      {
+        key: 'about_philosophy_desc1',
+        label: 'Deskripsi Filosofi 1',
+        type: 'textarea',
+      },
+      {
+        key: 'about_philosophy_desc2',
+        label: 'Deskripsi Filosofi 2',
+        type: 'textarea',
+      },
     ],
   },
   {
@@ -143,16 +332,56 @@ const SECTIONS: SectionConfig[] = [
     description: 'Visi dan misi di halaman Tentang',
     icon: '🌟',
     fields: [
-      { key: 'about_visimisi_label', label: 'Label Section', type: 'text' },
-      { key: 'about_visimisi_title', label: 'Judul Section', type: 'text' },
-      { key: 'about_visimisi_title_hl', label: 'Judul Highlight', type: 'text' },
-      { key: 'about_vision_label', label: 'Label Visi', type: 'text' },
-      { key: 'about_vision_content', label: 'Isi Visi', type: 'textarea' },
-      { key: 'about_mission_label', label: 'Label Misi', type: 'text' },
-      { key: 'about_mission_1', label: 'Misi 1', type: 'textarea' },
-      { key: 'about_mission_2', label: 'Misi 2', type: 'textarea' },
-      { key: 'about_mission_3', label: 'Misi 3', type: 'textarea' },
-      { key: 'about_mission_4', label: 'Misi 4', type: 'textarea' },
+      {
+        key: 'about_visimisi_label',
+        label: 'Label Section',
+        type: 'text',
+      },
+      {
+        key: 'about_visimisi_title',
+        label: 'Judul Section',
+        type: 'text',
+      },
+      {
+        key: 'about_visimisi_title_hl',
+        label: 'Judul Highlight',
+        type: 'text',
+      },
+      {
+        key: 'about_vision_label',
+        label: 'Label Visi',
+        type: 'text',
+      },
+      {
+        key: 'about_vision_content',
+        label: 'Isi Visi',
+        type: 'textarea',
+      },
+      {
+        key: 'about_mission_label',
+        label: 'Label Misi',
+        type: 'text',
+      },
+      {
+        key: 'about_mission_1',
+        label: 'Misi 1',
+        type: 'textarea',
+      },
+      {
+        key: 'about_mission_2',
+        label: 'Misi 2',
+        type: 'textarea',
+      },
+      {
+        key: 'about_mission_3',
+        label: 'Misi 3',
+        type: 'textarea',
+      },
+      {
+        key: 'about_mission_4',
+        label: 'Misi 4',
+        type: 'textarea',
+      },
     ],
   },
   {
@@ -161,25 +390,101 @@ const SECTIONS: SectionConfig[] = [
     description: '4 nilai utama OSIS di halaman Tentang',
     icon: '💎',
     fields: [
-      { key: 'about_values_label', label: 'Label Section', type: 'text' },
-      { key: 'about_values_title', label: 'Judul Section', type: 'text' },
-      { key: 'about_values_title_hl', label: 'Judul Highlight', type: 'text' },
-      { key: 'about_value1_icon', label: 'Nilai 1 - Icon', type: 'emoji' },
-      { key: 'about_value1_name', label: 'Nilai 1 - Nama', type: 'text' },
-      { key: 'about_value1_desc', label: 'Nilai 1 - Deskripsi', type: 'textarea' },
-      { key: 'about_value1_color', label: 'Nilai 1 - Gradient (CSS)', type: 'text' },
-      { key: 'about_value2_icon', label: 'Nilai 2 - Icon', type: 'emoji' },
-      { key: 'about_value2_name', label: 'Nilai 2 - Nama', type: 'text' },
-      { key: 'about_value2_desc', label: 'Nilai 2 - Deskripsi', type: 'textarea' },
-      { key: 'about_value2_color', label: 'Nilai 2 - Gradient (CSS)', type: 'text' },
-      { key: 'about_value3_icon', label: 'Nilai 3 - Icon', type: 'emoji' },
-      { key: 'about_value3_name', label: 'Nilai 3 - Nama', type: 'text' },
-      { key: 'about_value3_desc', label: 'Nilai 3 - Deskripsi', type: 'textarea' },
-      { key: 'about_value3_color', label: 'Nilai 3 - Gradient (CSS)', type: 'text' },
-      { key: 'about_value4_icon', label: 'Nilai 4 - Icon', type: 'emoji' },
-      { key: 'about_value4_name', label: 'Nilai 4 - Nama', type: 'text' },
-      { key: 'about_value4_desc', label: 'Nilai 4 - Deskripsi', type: 'textarea' },
-      { key: 'about_value4_color', label: 'Nilai 4 - Gradient (CSS)', type: 'text' },
+      {
+        key: 'about_values_label',
+        label: 'Label Section',
+        type: 'text',
+      },
+      {
+        key: 'about_values_title',
+        label: 'Judul Section',
+        type: 'text',
+      },
+      {
+        key: 'about_values_title_hl',
+        label: 'Judul Highlight',
+        type: 'text',
+      },
+      {
+        key: 'about_value1_icon',
+        label: 'Nilai 1 - Icon',
+        type: 'emoji',
+      },
+      {
+        key: 'about_value1_name',
+        label: 'Nilai 1 - Nama',
+        type: 'text',
+      },
+      {
+        key: 'about_value1_desc',
+        label: 'Nilai 1 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'about_value1_color',
+        label: 'Nilai 1 - Gradient (CSS)',
+        type: 'text',
+      },
+      {
+        key: 'about_value2_icon',
+        label: 'Nilai 2 - Icon',
+        type: 'emoji',
+      },
+      {
+        key: 'about_value2_name',
+        label: 'Nilai 2 - Nama',
+        type: 'text',
+      },
+      {
+        key: 'about_value2_desc',
+        label: 'Nilai 2 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'about_value2_color',
+        label: 'Nilai 2 - Gradient (CSS)',
+        type: 'text',
+      },
+      {
+        key: 'about_value3_icon',
+        label: 'Nilai 3 - Icon',
+        type: 'emoji',
+      },
+      {
+        key: 'about_value3_name',
+        label: 'Nilai 3 - Nama',
+        type: 'text',
+      },
+      {
+        key: 'about_value3_desc',
+        label: 'Nilai 3 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'about_value3_color',
+        label: 'Nilai 3 - Gradient (CSS)',
+        type: 'text',
+      },
+      {
+        key: 'about_value4_icon',
+        label: 'Nilai 4 - Icon',
+        type: 'emoji',
+      },
+      {
+        key: 'about_value4_name',
+        label: 'Nilai 4 - Nama',
+        type: 'text',
+      },
+      {
+        key: 'about_value4_desc',
+        label: 'Nilai 4 - Deskripsi',
+        type: 'textarea',
+      },
+      {
+        key: 'about_value4_color',
+        label: 'Nilai 4 - Gradient (CSS)',
+        type: 'text',
+      },
     ],
   },
   {
@@ -188,11 +493,31 @@ const SECTIONS: SectionConfig[] = [
     description: 'Call to action di akhir halaman Tentang',
     icon: '📢',
     fields: [
-      { key: 'about_cta_title', label: 'Judul CTA', type: 'text' },
-      { key: 'about_cta_title_hl', label: 'Judul CTA (Highlight)', type: 'text' },
-      { key: 'about_cta_desc', label: 'Deskripsi CTA', type: 'textarea' },
-      { key: 'about_cta_button', label: 'Tombol Utama', type: 'text' },
-      { key: 'about_cta_button2', label: 'Tombol Kedua', type: 'text' },
+      {
+        key: 'about_cta_title',
+        label: 'Judul CTA',
+        type: 'text',
+      },
+      {
+        key: 'about_cta_title_hl',
+        label: 'Judul CTA (Highlight)',
+        type: 'text',
+      },
+      {
+        key: 'about_cta_desc',
+        label: 'Deskripsi CTA',
+        type: 'textarea',
+      },
+      {
+        key: 'about_cta_button',
+        label: 'Tombol Utama',
+        type: 'text',
+      },
+      {
+        key: 'about_cta_button2',
+        label: 'Tombol Kedua',
+        type: 'text',
+      },
     ],
   },
   {
@@ -201,10 +526,26 @@ const SECTIONS: SectionConfig[] = [
     description: 'Judul section pencapaian di halaman Tentang',
     icon: '🏆',
     fields: [
-      { key: 'about_achievements_label', label: 'Label Section', type: 'text' },
-      { key: 'about_achievements_title', label: 'Judul Section', type: 'text' },
-      { key: 'about_achievements_title_hl', label: 'Judul Highlight', type: 'text' },
-      { key: 'about_achievements_timeline', label: 'Daftar Timeline', type: 'timeline' },
+      {
+        key: 'about_achievements_label',
+        label: 'Label Section',
+        type: 'text',
+      },
+      {
+        key: 'about_achievements_title',
+        label: 'Judul Section',
+        type: 'text',
+      },
+      {
+        key: 'about_achievements_title_hl',
+        label: 'Judul Highlight',
+        type: 'text',
+      },
+      {
+        key: 'about_achievements_timeline',
+        label: 'Daftar Timeline',
+        type: 'timeline',
+      },
     ],
   },
   {
@@ -213,9 +554,21 @@ const SECTIONS: SectionConfig[] = [
     description: 'Judul dan subtitle section filosofi logo',
     icon: '🎨',
     fields: [
-      { key: 'about_logo_title', label: 'Judul Section', type: 'text' },
-      { key: 'about_logo_subtitle', label: 'Subtitle Section', type: 'text' },
-      { key: 'about_logo_alt', label: 'Alt Logo', type: 'text' },
+      {
+        key: 'about_logo_title',
+        label: 'Judul Section',
+        type: 'text',
+      },
+      {
+        key: 'about_logo_subtitle',
+        label: 'Subtitle Section',
+        type: 'text',
+      },
+      {
+        key: 'about_logo_alt',
+        label: 'Alt Logo',
+        type: 'text',
+      },
     ],
   },
   {
@@ -224,12 +577,36 @@ const SECTIONS: SectionConfig[] = [
     description: 'Judul section tim inti dan koordinator',
     icon: '👥',
     fields: [
-      { key: 'about_core_title1', label: 'Judul Tim Inti', type: 'text' },
-      { key: 'about_core_title2', label: 'Judul Tim Inti (Highlight)', type: 'text' },
-      { key: 'about_core_subtitle', label: 'Subtitle Tim Inti', type: 'text' },
-      { key: 'about_sekbid_title1', label: 'Judul Sekbid', type: 'text' },
-      { key: 'about_sekbid_title2', label: 'Judul Sekbid (Highlight)', type: 'text' },
-      { key: 'about_sekbid_subtitle', label: 'Subtitle Sekbid', type: 'text' },
+      {
+        key: 'about_core_title1',
+        label: 'Judul Tim Inti',
+        type: 'text',
+      },
+      {
+        key: 'about_core_title2',
+        label: 'Judul Tim Inti (Highlight)',
+        type: 'text',
+      },
+      {
+        key: 'about_core_subtitle',
+        label: 'Subtitle Tim Inti',
+        type: 'text',
+      },
+      {
+        key: 'about_sekbid_title1',
+        label: 'Judul Sekbid',
+        type: 'text',
+      },
+      {
+        key: 'about_sekbid_title2',
+        label: 'Judul Sekbid (Highlight)',
+        type: 'text',
+      },
+      {
+        key: 'about_sekbid_subtitle',
+        label: 'Subtitle Sekbid',
+        type: 'text',
+      },
     ],
   },
   {
@@ -238,11 +615,31 @@ const SECTIONS: SectionConfig[] = [
     description: 'Nama sekolah, alamat, telepon, email, copyright',
     icon: '📍',
     fields: [
-      { key: 'site_school_name', label: 'Nama Sekolah', type: 'text' },
-      { key: 'site_address', label: 'Alamat', type: 'textarea' },
-      { key: 'site_phone', label: 'Telepon', type: 'text' },
-      { key: 'site_email', label: 'Email', type: 'text' },
-      { key: 'site_copyright', label: 'Copyright', type: 'text' },
+      {
+        key: 'site_school_name',
+        label: 'Nama Sekolah',
+        type: 'text',
+      },
+      {
+        key: 'site_address',
+        label: 'Alamat',
+        type: 'textarea',
+      },
+      {
+        key: 'site_phone',
+        label: 'Telepon',
+        type: 'text',
+      },
+      {
+        key: 'site_email',
+        label: 'Email',
+        type: 'text',
+      },
+      {
+        key: 'site_copyright',
+        label: 'Copyright',
+        type: 'text',
+      },
     ],
   },
 ];
@@ -251,98 +648,167 @@ const SECTIONS: SectionConfig[] = [
 const DEFAULT_CONTENT: Record<string, string> = {
   home_hero_title: 'OSIS SMK Informatika',
   home_hero_subtitle: 'Raveka Sena 2025-2026',
-  home_hero_description: 'Bersama Raveka Sena, kita menjadi pasukan sinar terang yang membawa perubahan positif dan inovasi untuk masa depan gemilang.',
+  home_hero_description:
+    'Bersama Raveka Sena, kita menjadi pasukan sinar terang yang membawa perubahan positif dan inovasi untuk masa depan gemilang.',
+
   site_vision_text: 'Menjadi organisasi yang',
   site_vision_hl1: 'membersamai terbentuknya',
   site_vision_part2: 'karakter siswa yang',
   site_vision_hl2: 'KAMIL dan Inovatif',
   site_vision_part3: '',
   site_vision_hl3: '',
+
   home_goals_title: 'Forum OSIS Kabupaten Bandung Barat',
-  home_goals_desc: 'Kami berkomitmen untuk membentuk generasi yang berakhlak mulia, cerdas, dan mandiri. Melalui kegiatan pendidikan dan pembinaan karakter, kami ingin menciptakan lingkungan belajar yang inspiratif dan produktif bagi seluruh siswa.',
+  home_goals_desc:
+    'Kami berkomitmen untuk membentuk generasi yang berakhlak mulia, cerdas, dan mandiri. Melalui kegiatan pendidikan dan pembinaan karakter, kami ingin menciptakan lingkungan belajar yang inspiratif dan produktif bagi seluruh siswa.',
+
   home_goal1_title: 'Prestasi Akademik',
-  home_goal1_desc: 'Meningkatkan prestasi akademik siswa melalui program bimbingan dan kompetisi',
+  home_goal1_desc:
+    'Meningkatkan prestasi akademik siswa melalui program bimbingan dan kompetisi',
+
   home_goal2_title: 'Karakter Islami',
-  home_goal2_desc: 'Membentuk karakter siswa yang berakhlak mulia berdasarkan nilai-nilai Islam',
+  home_goal2_desc:
+    'Membentuk karakter siswa yang berakhlak mulia berdasarkan nilai-nilai Islam',
+
   home_goal3_title: 'Kepemimpinan',
-  home_goal3_desc: 'Mengembangkan jiwa kepemimpinan dan kerjasama dalam organisasi',
+  home_goal3_desc:
+    'Mengembangkan jiwa kepemimpinan dan kerjasama dalam organisasi',
+
   home_goal4_title: 'Inovasi & Kreativitas',
-  home_goal4_desc: 'Mendorong inovasi dan kreativitas dalam setiap kegiatan dan program',
+  home_goal4_desc:
+    'Mendorong inovasi dan kreativitas dalam setiap kegiatan dan program',
+
   home_goal5_title: 'Keunggulan Sekolah',
-  home_goal5_desc: 'Menjadikan SMK Informatika Fithrah Insani sebagai sekolah unggulan di Kabupaten Bandung Barat',
+  home_goal5_desc:
+    'Menjadikan SMK Informatika Fithrah Insani sebagai sekolah unggulan di Kabupaten Bandung Barat',
+
   home_goal6_title: 'Visi 2030',
-  home_goal6_desc: 'Mewujudkan visi sekolah menjadi lembaga pendidikan Islam terdepan',
+  home_goal6_desc:
+    'Mewujudkan visi sekolah menjadi lembaga pendidikan Islam terdepan',
+
   home_goals_cta_title: 'Mari Bergabung Bersama Kami',
-  home_goals_cta_desc: 'Wujudkan impian dan cita-cita bersama OSIS SMK Informatika Fithrah Insani',
+  home_goals_cta_desc:
+    'Wujudkan impian dan cita-cita bersama OSIS SMK Informatika Fithrah Insani',
+
   about_hero_title1: 'Tentang',
   about_hero_title2: 'RAVEKA SENA 2025-2026',
   about_hero_subtitle1: 'Mengenal lebih dekat',
   about_hero_subtitle2: 'OSIS SMK Informatika - Raveka Sena',
   about_hero_scroll: 'Scroll untuk menjelajahi',
+
   about_story_title1: 'Cerita',
   about_story_title2: 'Raveka Sena',
+
   about_philosophy_title: 'Filosofi Nama OSIS',
   about_philosophy_hl: 'Raveka Sena',
   about_philosophy_part1: 'Nama',
   about_philosophy_name_hl: 'RAVEKA SENA',
   about_philosophy_part2: 'terdiri dari dua kata:',
   about_philosophy_sky_hl: '"Raveka" (sinar terang) dan "Sena" (pasukan)',
-  about_philosophy_part3: ', yang berarti "pasukan yang menjadi sinar terang".',
-  about_philosophy_desc1: 'Filosofi ini mencerminkan semangat OSIS untuk menjadi pasukan yang membawa cahaya perubahan, inovasi, dan inspirasi bagi seluruh siswa SMK Informatika Fithrah Insani. Nama ini juga mencerminkan semangat',
+  about_philosophy_part3:
+    ', yang berarti "pasukan yang menjadi sinar terang".',
+  about_philosophy_desc1:
+    'Filosofi ini mencerminkan semangat OSIS untuk menjadi pasukan yang membawa cahaya perubahan, inovasi, dan inspirasi bagi seluruh siswa SMK Informatika Fithrah Insani. Nama ini juga mencerminkan semangat',
   about_philosophy_desc2: 'untuk seluruh warga sekolah.',
+
   about_visimisi_label: 'Visi & Misi',
   about_visimisi_title: 'Arah',
   about_visimisi_title_hl: 'Langkah Kami',
   about_vision_label: 'Visi',
-  about_vision_content: 'Menjadi organisasi siswa yang unggul, inovatif, dan berkarakter islami dalam membentuk generasi pemimpin masa depan yang berwawasan teknologi dan berjiwa kepemimpinan.',
+  about_vision_content:
+    'Menjadi organisasi siswa yang unggul, inovatif, dan berkarakter islami dalam membentuk generasi pemimpin masa depan yang berwawasan teknologi dan berjiwa kepemimpinan.',
+
   about_mission_label: 'Misi',
-  about_mission_1: 'Mengembangkan potensi kepemimpinan siswa melalui berbagai kegiatan organisasi',
-  about_mission_2: 'Menumbuhkan kreativitas dan inovasi dalam setiap program kerja',
-  about_mission_3: 'Menanamkan nilai-nilai keislaman dalam setiap aktivitas',
-  about_mission_4: 'Membangun kerjasama yang solid antar anggota dan stakeholder',
+  about_mission_1:
+    'Mengembangkan potensi kepemimpinan siswa melalui berbagai kegiatan organisasi',
+  about_mission_2:
+    'Menumbuhkan kreativitas dan inovasi dalam setiap program kerja',
+  about_mission_3:
+    'Menanamkan nilai-nilai keislaman dalam setiap aktivitas',
+  about_mission_4:
+    'Membangun kerjasama yang solid antar anggota dan stakeholder',
+
   about_values_label: 'Nilai-Nilai Kami',
   about_values_title: 'Prinsip',
   about_values_title_hl: 'yang Kami Pegang',
+
   about_value1_icon: '💡',
   about_value1_name: 'Inovasi',
-  about_value1_desc: 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
+  about_value1_desc:
+    'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
   about_value1_color: 'from-yellow-400 to-orange-500',
+
   about_value2_icon: '🤝',
   about_value2_name: 'Integritas',
-  about_value2_desc: 'Menjunjung tinggi kejujuran dan tanggung jawab',
+  about_value2_desc:
+    'Menjunjung tinggi kejujuran dan tanggung jawab',
   about_value2_color: 'from-blue-400 to-indigo-500',
+
   about_value3_icon: '🌟',
   about_value3_name: 'Keunggulan',
-  about_value3_desc: 'Berusaha memberikan yang terbaik dalam setiap aspek',
+  about_value3_desc:
+    'Berusaha memberikan yang terbaik dalam setiap aspek',
   about_value3_color: 'from-purple-400 to-pink-500',
+
   about_value4_icon: '🕌',
   about_value4_name: 'Islami',
-  about_value4_desc: 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
+  about_value4_desc:
+    'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
   about_value4_color: 'from-green-400 to-emerald-500',
+
   about_cta_title: 'Bergabung',
   about_cta_title_hl: 'Bersama Kami',
-  about_cta_desc: 'Mari bersama-sama membangun organisasi yang lebih baik dan menciptakan dampak positif bagi sekolah dan masyarakat.',
+  about_cta_desc:
+    'Mari bersama-sama membangun organisasi yang lebih baik dan menciptakan dampak positif bagi sekolah dan masyarakat.',
   about_cta_button: 'Daftar Sekarang',
   about_cta_button2: 'Lihat Info Terkini',
+
   about_achievements_label: 'Perjalanan Kami',
   about_achievements_title: 'Pencapaian',
   about_achievements_title_hl: 'Raveka Sena',
+
   about_achievements_timeline: JSON.stringify([
-    { year: '2024', title: 'Terbentuknya OSIS Raveka Sena', description: 'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.', icon: '🚀' },
-    { year: '2024', title: 'Peluncuran Website Resmi', description: 'Website OSIS dengan fitur modern dan interaktif diluncurkan untuk memudahkan komunikasi dan informasi.', icon: '💻' },
-    { year: '2025', title: 'Program Kerja Inovatif', description: 'Meluncurkan berbagai program kerja yang fokus pada pengembangan soft skill dan hard skill siswa.', icon: '🎯' },
+    {
+      year: '2024',
+      title: 'Terbentuknya OSIS Raveka Sena',
+      description:
+        'OSIS SMK Informatika resmi terbentuk dengan nama Raveka Sena, membawa semangat baru sebagai pasukan sinar terang.',
+      icon: '🚀',
+    },
+    {
+      year: '2024',
+      title: 'Peluncuran Website Resmi',
+      description:
+        'Website OSIS dengan fitur modern dan interaktif diluncurkan untuk memudahkan komunikasi dan informasi.',
+      icon: '💻',
+    },
+    {
+      year: '2025',
+      title: 'Program Kerja Inovatif',
+      description:
+        'Meluncurkan berbagai program kerja yang fokus pada pengembangan soft skill dan hard skill siswa.',
+      icon: '🎯',
+    },
   ]),
+
   about_logo_title: 'FILOSOFI LOGO OSIS',
-  about_logo_subtitle: 'OSIS SMK INFORMATIKA FITHRAH INSANI - Setiap elemen dalam logo memiliki filosofi dan makna yang mendalam',
+  about_logo_subtitle:
+    'OSIS SMK INFORMATIKA FITHRAH INSANI - Setiap elemen dalam logo memiliki filosofi dan makna yang mendalam',
   about_logo_alt: 'Logo OSIS SMK Informatika Fithrah Insani',
+
   about_core_title1: 'Pengurus',
   about_core_title2: 'Inti',
-  about_core_subtitle: 'Para siswa berdedikasi yang memimpin dan menginspirasi OSIS SMK Informatika',
+  about_core_subtitle:
+    'Para siswa berdedikasi yang memimpin dan menginspirasi OSIS SMK Informatika',
+
   about_sekbid_title1: 'Ketua',
   about_sekbid_title2: 'Koordinator',
-  about_sekbid_subtitle: 'Pemimpin bidang yang menggerakkan program kerja OSIS',
+  about_sekbid_subtitle:
+    'Pemimpin bidang yang menggerakkan program kerja OSIS',
+
   site_school_name: 'SMK Informatika Fithrah Insani',
-  site_address: 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
+  site_address:
+    'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
   site_phone: '(022) 87805564',
   site_email: 'osissmkinformatika2.fi@gmail.com',
   site_copyright: 'OSIS SMK Fithrah Insani - Raveka Sena',
@@ -353,97 +819,182 @@ const STALE_CONTENT: Record<string, string[]> = {
   about_story_title2: ['Dirgantara', 'DIRGANTARA', 'DIRGANTARA 2025'],
   about_philosophy_hl: ['Dirgantara', 'DIRGANTARA'],
   about_philosophy_name_hl: ['"Dirgantara"', 'Dirgantara'],
-  about_philosophy_part2: ['diambil dari kata dalam bahasa Indonesia yang berarti'],
+  about_philosophy_part2: [
+    'diambil dari kata dalam bahasa Indonesia yang berarti',
+  ],
   about_philosophy_sky_hl: ['"angkasa" atau "langit"'],
-  about_philosophy_part3: ['. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.'],
+  about_philosophy_part3: [
+    '. Nama ini mencerminkan visi kami yang tinggi dan luas seperti langit.',
+  ],
   about_hero_title2: ['DIRGANTARA 2025', 'Dirgantara 2025'],
   about_hero_subtitle2: ['OSIS SMK Informatika - Dirgantara'],
 };
 
-const SECTION_KEYS = new Set(SECTIONS.flatMap(s => s.fields.map(f => f.key)));
+const SECTION_KEYS = new Set(
+  SECTIONS.flatMap(section => section.fields.map(field => field.key))
+);
 
 export default function AdminContentPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+
   const role = ((session?.user as any)?.role || '').toLowerCase();
   const canAccess = ['super_admin', 'admin', 'osis'].includes(role);
 
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
-  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(() => new Set());
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(
+    () => new Set()
+  );
+
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set()
+  );
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'filled' | 'empty'>('all');
+  const [filterStatus, setFilterStatus] = useState<
+    'all' | 'filled' | 'empty'
+  >('all');
+
   const [repairing, setRepairing] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const msgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showMessage = useCallback((type: 'success' | 'error', text: string) => {
-    setMessage({ type, text });
-    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
-    msgTimerRef.current = setTimeout(() => setMessage(null), 4000);
-  }, []);
+  const showMessage = useCallback(
+    (type: 'success' | 'error', text: string) => {
+      setMessage({ type, text });
 
-  useEffect(() => () => {
-    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
-  }, []);
-
-  const fetchContents = useCallback(async (opts?: { initial?: boolean }) => {
-    try {
-      // Only show full-page spinner on first load — never remount after save
-      if (opts?.initial) setLoading(true);
-      const res = await apiFetch('/api/admin/content');
-      if (res.ok) {
-        const data = await safeJson(res, { url: '/api/admin/content', method: 'GET' });
-        const rows: ContentItem[] = (Array.isArray(data) ? data : []).filter((c: ContentItem) => {
-          const key = c.key || c.page_key || '';
-          const cat = c.category || '';
-          if (!SECTION_KEYS.has(key)) return false;
-          if (cat === 'design' || cat === 'ai_progress' || cat === 'ai_logs') return false;
-          if (key.startsWith('ai_') || key.startsWith('design_override_')) return false;
-          return true;
-        });
-        setContents(rows);
+      if (msgTimerRef.current) {
+        clearTimeout(msgTimerRef.current);
       }
-    } catch {
-      showMessage('error', 'Gagal memuat konten');
-    } finally {
-      setLoading(false);
-    }
-  }, [showMessage]);
+
+      msgTimerRef.current = setTimeout(() => {
+        setMessage(null);
+      }, 4000);
+    },
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      if (msgTimerRef.current) {
+        clearTimeout(msgTimerRef.current);
+      }
+    };
+  }, []);
+
+  const fetchContents = useCallback(
+    async (opts?: { initial?: boolean }) => {
+      try {
+        // Only show full-page spinner on first load.
+        if (opts?.initial) {
+          setLoading(true);
+        }
+
+        const res = await apiFetch('/api/admin/content');
+
+        if (res.ok) {
+          const data = await safeJson(res, {
+            url: '/api/admin/content',
+            method: 'GET',
+          });
+
+          const rows: ContentItem[] = (
+            Array.isArray(data) ? data : []
+          ).filter((c: ContentItem) => {
+            const key = c.key || c.page_key || '';
+            const cat = c.category || '';
+
+            if (!SECTION_KEYS.has(key)) return false;
+
+            if (
+              cat === 'design' ||
+              cat === 'ai_progress' ||
+              cat === 'ai_logs'
+            ) {
+              return false;
+            }
+
+            if (
+              key.startsWith('ai_') ||
+              key.startsWith('design_override_')
+            ) {
+              return false;
+            }
+
+            return true;
+          });
+
+          setContents(rows);
+        }
+      } catch {
+        showMessage('error', 'Gagal memuat konten');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showMessage]
+  );
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/admin/login');
       return;
     }
-    if (status === 'authenticated') fetchContents({ initial: true });
+
+    if (status === 'authenticated') {
+      fetchContents({ initial: true });
+    }
   }, [status, router, fetchContents]);
 
   const contentMap = useMemo(
-    () => new Map(contents.map(c => [c.key || c.page_key, c])),
+    () =>
+      new Map(
+        contents.map(content => [
+          content.key || content.page_key,
+          content,
+        ])
+      ),
     [contents]
   );
 
   const toggleSection = (id: string) => {
     setExpandedSections(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
       return next;
     });
   };
 
   const startEdit = (section: SectionConfig) => {
     const values: Record<string, string> = {};
-    section.fields.forEach(f => {
-      const item = contentMap.get(f.key);
-      // DB first (empty string stays empty); preview default only when row missing
-      values[f.key] = item ? (item.content ?? '') : (DEFAULT_CONTENT[f.key] ?? '');
+
+    section.fields.forEach(field => {
+      const item = contentMap.get(field.key);
+
+      // DB first (empty string stays empty).
+      // Preview default only when row is missing.
+      values[field.key] = item
+        ? item.content ?? ''
+        : DEFAULT_CONTENT[field.key] ?? '';
     });
+
     setEditValues(values);
     setDirtyKeys(new Set());
     setEditingSection(section.id);
@@ -455,29 +1006,50 @@ export default function AdminContentPage() {
     setDirtyKeys(new Set());
   };
 
-  const setFieldValue = useCallback((key: string, value: string) => {
-    setEditValues(prev => ({ ...prev, [key]: value }));
-    setDirtyKeys(prev => {
-      const next = new Set(prev);
-      next.add(key);
-      return next;
-    });
-  }, []);
+  const setFieldValue = useCallback(
+    (key: string, value: string) => {
+      setEditValues(prev => ({
+        ...prev,
+        [key]: value,
+      }));
+
+      setDirtyKeys(prev => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+    },
+    []
+  );
 
   const saveSection = async (section: SectionConfig) => {
     setSaving(true);
+
     try {
-      const items: Array<{ id?: string; page_key: string; title?: string; content: string; category?: string }> = [];
+      const items: Array<{
+        id?: string;
+        page_key: string;
+        title?: string;
+        content: string;
+        category?: string;
+      }> = [];
 
       for (const field of section.fields) {
-        // Only persist fields the admin actually touched — never seed DEFAULT_CONTENT
+        // Only persist fields the admin actually touched.
+        // Never seed DEFAULT_CONTENT automatically.
         if (!dirtyKeys.has(field.key)) continue;
+
         const existing = contentMap.get(field.key);
         const value = editValues[field.key] ?? '';
 
         if (existing) {
           if ((existing.content || '') === value) continue;
-          items.push({ id: existing.id, page_key: field.key, content: value });
+
+          items.push({
+            id: existing.id,
+            page_key: field.key,
+            content: value,
+          });
         } else if (value !== '') {
           items.push({
             page_key: field.key,
@@ -489,7 +1061,11 @@ export default function AdminContentPage() {
       }
 
       if (items.length === 0) {
-        showMessage('success', 'Tidak ada perubahan untuk disimpan.');
+        showMessage(
+          'success',
+          'Tidak ada perubahan untuk disimpan.'
+        );
+
         setEditingSection(null);
         setEditValues({});
         setDirtyKeys(new Set());
@@ -497,89 +1073,155 @@ export default function AdminContentPage() {
         return;
       }
 
-      // ONE request for the whole section (was N requests = N auth+DB)
+      // ONE request for the whole section.
       const res = await apiFetch('/api/admin/content', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ items }),
       });
 
       if (!res.ok) {
         let detail = '';
+
         try {
           const j = await res.json();
           detail = j?.error || '';
-        } catch { /* ignore */ }
+        } catch {
+          // Ignore JSON parsing error.
+        }
+
         throw new Error(detail || `HTTP ${res.status}`);
       }
 
       invalidatePageContentCache();
-      showMessage('success', `${section.title} berhasil disimpan!`);
+
+      showMessage(
+        'success',
+        `${section.title} berhasil disimpan!`
+      );
+
       setEditingSection(null);
       setEditValues({});
       setDirtyKeys(new Set());
-      // Silent refresh — does NOT flip full-page loading spinner
+
+      // Silent refresh — does not flip full-page loading spinner.
       fetchContents();
     } catch (e: any) {
-      showMessage('error', e?.message || 'Gagal menyimpan');
+      showMessage(
+        'error',
+        e?.message || 'Gagal menyimpan'
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  /** Replace exact stale "Dirgantara" hardcode still stored in DB with current Raveka Sena copy. */
+  /** Replace exact stale "Dirgantara" hardcode still stored in DB. */
   const repairStale = async () => {
     setRepairing(true);
+
     try {
-      const items: Array<{ id: string; page_key: string; content: string }> = [];
+      const items: Array<{
+        id: string;
+        page_key: string;
+        content: string;
+      }> = [];
+
       for (const [key, staleList] of Object.entries(STALE_CONTENT)) {
         const row = contentMap.get(key);
+
         if (!row) continue;
+
         const current = row.content || '';
+
         if (!staleList.includes(current)) continue;
+
         const fixed = DEFAULT_CONTENT[key];
+
         if (fixed === undefined || fixed === current) continue;
-        items.push({ id: row.id, page_key: key, content: fixed });
+
+        items.push({
+          id: row.id,
+          page_key: key,
+          content: fixed,
+        });
       }
 
-      // Also fix achievement_* rows still using old Dirgantara copy
+      // Also fix achievement_* rows still using old Dirgantara copy.
       try {
         const res = await apiFetch('/api/admin/content');
+
         if (res.ok) {
-          const all = await safeJson(res, { url: '/api/admin/content', method: 'GET' });
+          const all = await safeJson(res, {
+            url: '/api/admin/content',
+            method: 'GET',
+          });
+
           if (Array.isArray(all)) {
             for (const row of all) {
               const key = row.key || row.page_key || '';
               const content = row.content || '';
+
               if (!key.startsWith('achievement_')) continue;
-              if (content.includes('Dirgantara') || content.includes('DIRGANTARA')) {
+
+              if (
+                content.includes('Dirgantara') ||
+                content.includes('DIRGANTARA')
+              ) {
                 const fixed = content
                   .replace(/Dirgantara/g, 'Raveka Sena')
                   .replace(/DIRGANTARA/g, 'RAVEKA SENA');
+
                 if (fixed !== content && row.id) {
-                  items.push({ id: row.id, page_key: key, content: fixed });
+                  items.push({
+                    id: row.id,
+                    page_key: key,
+                    content: fixed,
+                  });
                 }
               }
             }
           }
         }
-      } catch { /* section-only repair still applies */ }
+      } catch {
+        // Section-only repair still applies.
+      }
 
       if (items.length === 0) {
-        showMessage('success', 'Tidak ada data hardcode lama yang perlu diperbaiki.');
+        showMessage(
+          'success',
+          'Tidak ada data hardcode lama yang perlu diperbaiki.'
+        );
         return;
       }
+
       const res = await apiFetch('/api/admin/content', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ items }),
       });
-      if (!res.ok) throw new Error('Gagal memperbaiki data lama');
+
+      if (!res.ok) {
+        throw new Error('Gagal memperbaiki data lama');
+      }
+
       invalidatePageContentCache();
-      showMessage('success', `${items.length} field hardcode lama diganti dengan data Raveka Sena.`);
+
+      showMessage(
+        'success',
+        `${items.length} field hardcode lama diganti dengan data Raveka Sena.`
+      );
+
       await fetchContents();
     } catch (e: any) {
-      showMessage('error', e?.message || 'Gagal memperbaiki data lama');
+      showMessage(
+        'error',
+        e?.message || 'Gagal memperbaiki data lama'
+      );
     } finally {
       setRepairing(false);
     }
@@ -587,22 +1229,43 @@ export default function AdminContentPage() {
 
   const filteredSections = useMemo(() => {
     if (!searchTerm) return SECTIONS;
+
     const q = searchTerm.toLowerCase();
-    return SECTIONS.filter(s =>
-      s.title.toLowerCase().includes(q) ||
-      s.description.toLowerCase().includes(q) ||
-      s.fields.some(f => f.label.toLowerCase().includes(q) || f.key.toLowerCase().includes(q))
+
+    return SECTIONS.filter(section =>
+      section.title.toLowerCase().includes(q) ||
+      section.description.toLowerCase().includes(q) ||
+      section.fields.some(
+        field =>
+          field.label.toLowerCase().includes(q) ||
+          field.key.toLowerCase().includes(q)
+      )
     );
   }, [searchTerm]);
 
-  const filledCounts = useMemo(() => SECTIONS.map(s => ({
-    id: s.id,
-    filled: s.fields.filter(f => contentMap.has(f.key) && (contentMap.get(f.key)?.content || '') !== '').length,
-    total: s.fields.length,
-  })), [contentMap]);
+  const filledCounts = useMemo(
+    () =>
+      SECTIONS.map(section => ({
+        id: section.id,
+        filled: section.fields.filter(
+          field =>
+            contentMap.has(field.key) &&
+            (contentMap.get(field.key)?.content || '') !== ''
+        ).length,
+        total: section.fields.length,
+      })),
+    [contentMap]
+  );
 
-  const totalFields = useMemo(() => SECTIONS.reduce((a, s) => a + s.fields.length, 0), []);
-  const totalFilled = useMemo(() => filledCounts.reduce((a, c) => a + c.filled, 0), [filledCounts]);
+  const totalFields = useMemo(
+    () => SECTIONS.reduce((total, section) => total + section.fields.length, 0),
+    []
+  );
+
+  const totalFilled = useMemo(
+    () => filledCounts.reduce((total, section) => total + section.filled, 0),
+    [filledCounts]
+  );
 
   if (status === 'loading' || loading) {
     return (
@@ -618,7 +1281,9 @@ export default function AdminContentPage() {
     return (
       <AdminPageShell title="Content Management">
         <div className="text-center py-12">
-          <p className="text-red-500">Anda tidak memiliki akses ke halaman ini</p>
+          <p className="text-red-500">
+            Anda tidak memiliki akses ke halaman ini
+          </p>
         </div>
       </AdminPageShell>
     );
@@ -630,15 +1295,21 @@ export default function AdminContentPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Kelola Konten Halaman</h2>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+              Kelola Konten Halaman
+            </h2>
+
             <p className="text-gray-600 dark:text-gray-400">
-              Klik bagian untuk mengedit. {totalFilled}/{totalFields} kolom sudah terisi.
+              Klik bagian untuk mengedit. {totalFilled}/{totalFields} kolom
+              sudah terisi.
             </p>
           </div>
+
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <div className="text-sm text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg">
               {totalFilled}/{totalFields} kolom di database
             </div>
+
             <button
               type="button"
               onClick={repairStale}
@@ -654,9 +1325,22 @@ export default function AdminContentPage() {
 
         {/* Message */}
         {message && (
-          <div className={`p-4 rounded-lg flex items-center justify-between ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div
+            className={`p-4 rounded-lg flex items-center justify-between ${
+              message.type === 'success'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-red-100 text-red-800'
+            }`}
+          >
             <span>{message.text}</span>
-            <button onClick={() => setMessage(null)} className="text-lg leading-none">&times;</button>
+
+            <button
+              type="button"
+              onClick={() => setMessage(null)}
+              className="text-lg leading-none"
+            >
+              &times;
+            </button>
           </div>
         )}
 
@@ -664,17 +1348,21 @@ export default function AdminContentPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+
             <input
               type="text"
               placeholder="Cari bagian..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
             />
           </div>
+
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
+            onChange={e =>
+              setFilterStatus(e.target.value as 'all' | 'filled' | 'empty')
+            }
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
           >
             <option value="all">Semua Bagian</option>
@@ -685,15 +1373,23 @@ export default function AdminContentPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {SECTIONS.slice(0, 8).map(s => {
-            const fc = filledCounts.find(f => f.id === s.id)!;
+          {SECTIONS.slice(0, 8).map(section => {
+            const fc = filledCounts.find(
+              item => item.id === section.id
+            )!;
+
             const pct = Math.round((fc.filled / fc.total) * 100);
+
             return (
               <button
-                key={s.id}
+                key={section.id}
+                type="button"
                 onClick={() => {
-                  toggleSection(s.id);
-                  if (editingSection !== s.id) startEdit(s);
+                  toggleSection(section.id);
+
+                  if (editingSection !== section.id) {
+                    startEdit(section);
+                  }
                 }}
                 className={`p-3 rounded-xl border text-left transition-all ${
                   pct === 100
@@ -703,10 +1399,19 @@ export default function AdminContentPage() {
                     : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                 } hover:shadow-md`}
               >
-                <div className="text-lg mb-1">{s.icon}</div>
-                <div className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{s.title}</div>
+                <div className="text-lg mb-1">{section.icon}</div>
+
+                <div className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+                  {section.title}
+                </div>
+
                 <div className="mt-1.5 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${pct}%` }} />
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      pct === 100 ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}
+                    style={{ width: `${pct}%` }}
+                  />
                 </div>
               </button>
             );
@@ -716,34 +1421,69 @@ export default function AdminContentPage() {
         {/* Sections */}
         <div className="space-y-3">
           {filteredSections.map(section => {
-            const fc = filledCounts.find(f => f.id === section.id)!;
+            const fc = filledCounts.find(
+              item => item.id === section.id
+            )!;
+
             const isExpanded = expandedSections.has(section.id);
             const isEditing = editingSection === section.id;
             const pct = Math.round((fc.filled / fc.total) * 100);
 
-            if (filterStatus === 'empty' && pct === 100) return null;
-            if (filterStatus === 'filled' && pct === 0) return null;
+            if (filterStatus === 'empty' && pct === 100) {
+              return null;
+            }
+
+            if (filterStatus === 'filled' && pct === 0) {
+              return null;
+            }
 
             return (
-              <div key={section.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div
+                key={section.id}
+                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+              >
                 {/* Section Header */}
                 <button
+                  type="button"
                   onClick={() => {
                     toggleSection(section.id);
-                    if (!isEditing) startEdit(section);
+
+                    if (!isEditing) {
+                      startEdit(section);
+                    }
                   }}
                   className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
                 >
                   <span className="text-xl">{section.icon}</span>
+
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 dark:text-white text-sm">{section.title}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{section.description}</div>
+                    <div className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {section.title}
+                    </div>
+
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {section.description}
+                    </div>
                   </div>
+
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${pct === 100 ? 'bg-green-100 text-green-700' : pct > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        pct === 100
+                          ? 'bg-green-100 text-green-700'
+                          : pct > 0
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
                       {fc.filled}/{fc.total}
                     </span>
-                    {isExpanded ? <FaChevronDown className="text-gray-400 text-xs" /> : <FaChevronRight className="text-gray-400 text-xs" />}
+
+                    {isExpanded ? (
+                      <FaChevronDown className="text-gray-400 text-xs" />
+                    ) : (
+                      <FaChevronRight className="text-gray-400 text-xs" />
+                    )}
                   </div>
                 </button>
 
@@ -753,114 +1493,417 @@ export default function AdminContentPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                       {section.fields.map(field => {
                         const existing = contentMap.get(field.key);
-                        const fromDb = existing ? (existing.content ?? '') : null;
+                        const fromDb = existing
+                          ? existing.content ?? ''
+                          : null;
+
                         const value = isEditing
-                          ? (editValues[field.key] ?? '')
-                          : (fromDb ?? DEFAULT_CONTENT[field.key] ?? '');
-                        const isDefaultPreview = !existing && !isEditing;
+                          ? editValues[field.key] ?? ''
+                          : fromDb ?? DEFAULT_CONTENT[field.key] ?? '';
+
+                        const isDefaultPreview =
+                          !existing && !isEditing;
 
                         return (
-                          <div key={field.key} className={field.type === 'timeline' ? 'space-y-1 md:col-span-2' : 'space-y-1'}>
+                          <div
+                            key={field.key}
+                            className={
+                              field.type === 'timeline' ||
+                              field.type === 'image'
+                                ? 'space-y-1 md:col-span-2'
+                                : 'space-y-1'
+                            }
+                          >
                             <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                               {field.label}
-                              {field.type === 'emoji' && <span className="text-gray-400">(emoji)</span>}
+
+                              {field.type === 'emoji' && (
+                                <span className="text-gray-400">
+                                  (emoji)
+                                </span>
+                              )}
+
                               {existing ? (
-                                <span className="text-green-500 text-[10px]" title="Tersimpan di database">✓ DB</span>
+                                <span
+                                  className="text-green-500 text-[10px]"
+                                  title="Tersimpan di database"
+                                >
+                                  ✓ DB
+                                </span>
                               ) : isDefaultPreview ? (
-                                <span className="text-gray-400 text-[10px]" title="Contoh default situs — belum disimpan">default</span>
+                                <span
+                                  className="text-gray-400 text-[10px]"
+                                  title="Contoh default situs — belum disimpan"
+                                >
+                                  default
+                                </span>
                               ) : null}
                             </label>
+
+                            {/* Timeline */}
                             {field.type === 'timeline' ? (
                               isEditing ? (
                                 <div className="space-y-3">
-                                  {parseTimelineContent(value).map((item, index, items) => {
-                                    const updateItem = (patch: Partial<TimelineAchievement>) => {
-                                      const next = [...items];
-                                      next[index] = { ...item, ...patch };
-                                      setFieldValue(field.key, JSON.stringify(next));
-                                    };
-                                    const moveItem = (direction: -1 | 1) => {
-                                      const target = index + direction;
-                                      if (target < 0 || target >= items.length) return;
-                                      const next = [...items];
-                                      [next[index], next[target]] = [next[target], next[index]];
-                                      setFieldValue(field.key, JSON.stringify(next));
-                                    };
-                                    return (
-                                      <div key={`${index}-${item.title}`} className="rounded-xl border border-gray-200 dark:border-gray-600 p-4 space-y-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                          <strong className="text-sm">Pencapaian {index + 1}</strong>
-                                          <div className="flex flex-wrap gap-2">
-                                            <button type="button" onClick={() => moveItem(-1)} disabled={index === 0} className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 disabled:opacity-40">↑ Naik</button>
-                                            <button type="button" onClick={() => moveItem(1)} disabled={index === items.length - 1} className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 disabled:opacity-40">↓ Turun</button>
-                                            <button type="button" onClick={() => setFieldValue(field.key, JSON.stringify(items.filter((_, i) => i !== index)))} className="px-2 py-1 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Hapus</button>
+                                  {parseTimelineContent(value).map(
+                                    (item, index, items) => {
+                                      const updateItem = (
+                                        patch: Partial<TimelineAchievement>
+                                      ) => {
+                                        const next = [...items];
+
+                                        next[index] = {
+                                          ...item,
+                                          ...patch,
+                                        };
+
+                                        setFieldValue(
+                                          field.key,
+                                          JSON.stringify(next)
+                                        );
+                                      };
+
+                                      const moveItem = (
+                                        direction: -1 | 1
+                                      ) => {
+                                        const target = index + direction;
+
+                                        if (
+                                          target < 0 ||
+                                          target >= items.length
+                                        ) {
+                                          return;
+                                        }
+
+                                        const next = [...items];
+
+                                        [next[index], next[target]] = [
+                                          next[target],
+                                          next[index],
+                                        ];
+
+                                        setFieldValue(
+                                          field.key,
+                                          JSON.stringify(next)
+                                        );
+                                      };
+
+                                      return (
+                                        <div
+                                          key={`${index}-${item.title}`}
+                                          className="rounded-xl border border-gray-200 dark:border-gray-600 p-4 space-y-3"
+                                        >
+                                          <div className="flex items-center justify-between gap-2">
+                                            <strong className="text-sm">
+                                              Pencapaian {index + 1}
+                                            </strong>
+
+                                            <div className="flex flex-wrap gap-2">
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  moveItem(-1)
+                                                }
+                                                disabled={index === 0}
+                                                className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 disabled:opacity-40"
+                                              >
+                                                ↑ Naik
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  moveItem(1)
+                                                }
+                                                disabled={
+                                                  index ===
+                                                  items.length - 1
+                                                }
+                                                className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 disabled:opacity-40"
+                                              >
+                                                ↓ Turun
+                                              </button>
+
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setFieldValue(
+                                                    field.key,
+                                                    JSON.stringify(
+                                                      items.filter(
+                                                        (_, i) =>
+                                                          i !== index
+                                                      )
+                                                    )
+                                                  )
+                                                }
+                                                className="px-2 py-1 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                                              >
+                                                Hapus
+                                              </button>
+                                            </div>
                                           </div>
+
+                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            <label className="text-xs space-y-1">
+                                              Tahun
+                                              <input
+                                                value={item.year}
+                                                onChange={e =>
+                                                  updateItem({
+                                                    year: e.target.value,
+                                                  })
+                                                }
+                                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                                              />
+                                            </label>
+
+                                            <label className="text-xs space-y-1">
+                                              Ikon
+                                              <input
+                                                value={item.icon}
+                                                onChange={e =>
+                                                  updateItem({
+                                                    icon: e.target.value,
+                                                  })
+                                                }
+                                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                                              />
+                                            </label>
+
+                                            <label className="text-xs space-y-1">
+                                              Judul
+                                              <input
+                                                value={item.title}
+                                                onChange={e =>
+                                                  updateItem({
+                                                    title: e.target.value,
+                                                  })
+                                                }
+                                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                                              />
+                                            </label>
+                                          </div>
+
+                                          <label className="block text-xs space-y-1">
+                                            Deskripsi
+                                            <textarea
+                                              value={item.description}
+                                              onChange={e =>
+                                                updateItem({
+                                                  description:
+                                                    e.target.value,
+                                                })
+                                              }
+                                              rows={2}
+                                              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                                            />
+                                          </label>
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                          <label className="text-xs space-y-1">Tahun
-                                            <input value={item.year} onChange={e => updateItem({ year: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" />
-                                          </label>
-                                          <label className="text-xs space-y-1">Ikon
-                                            <input value={item.icon} onChange={e => updateItem({ icon: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" />
-                                          </label>
-                                          <label className="text-xs space-y-1">Judul
-                                            <input value={item.title} onChange={e => updateItem({ title: e.target.value })} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" />
-                                          </label>
-                                        </div>
-                                        <label className="block text-xs space-y-1">Deskripsi
-                                          <textarea value={item.description} onChange={e => updateItem({ description: e.target.value })} rows={2} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" />
-                                        </label>
-                                      </div>
-                                    );
-                                  })}
+                                      );
+                                    }
+                                  )}
+
                                   <button
                                     type="button"
-                                    onClick={() => setFieldValue(field.key, JSON.stringify([...parseTimelineContent(value), { year: new Date().getFullYear().toString(), title: '', description: '', icon: '🎯' }]))}
+                                    onClick={() =>
+                                      setFieldValue(
+                                        field.key,
+                                        JSON.stringify([
+                                          ...parseTimelineContent(value),
+                                          {
+                                            year: new Date()
+                                              .getFullYear()
+                                              .toString(),
+                                            title: '',
+                                            description: '',
+                                            icon: '🎯',
+                                          },
+                                        ])
+                                      )
+                                    }
                                     className="px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 text-sm font-semibold hover:bg-yellow-300"
-                                  >+ Tambah Pencapaian</button>
+                                  >
+                                    + Tambah Pencapaian
+                                  </button>
                                 </div>
                               ) : (
                                 <div className="space-y-2">
-                                  {parseTimelineContent(value).map((item, index) => (
-                                    <div key={`${index}-${item.title}`} className="rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2 text-sm">
-                                      <strong>{item.icon} {item.year} — {item.title || 'Tanpa judul'}</strong>
-                                      <p className="text-gray-600 dark:text-gray-400 mt-1">{item.description}</p>
-                                    </div>
-                                  ))}
-                                  {parseTimelineContent(value).length === 0 && <span className="text-gray-400 italic">Belum ada pencapaian</span>}
+                                  {parseTimelineContent(value).map(
+                                    (item, index) => (
+                                      <div
+                                        key={`${index}-${item.title}`}
+                                        className="rounded-lg bg-gray-50 dark:bg-gray-900 px-3 py-2 text-sm"
+                                      >
+                                        <strong>
+                                          {item.icon} {item.year} —{' '}
+                                          {item.title || 'Tanpa judul'}
+                                        </strong>
+
+                                        <p className="text-gray-600 dark:text-gray-400 mt-1">
+                                          {item.description}
+                                        </p>
+                                      </div>
+                                    )
+                                  )}
+
+                                  {parseTimelineContent(value).length ===
+                                    0 && (
+                                    <span className="text-gray-400 italic">
+                                      Belum ada pencapaian
+                                    </span>
+                                  )}
                                 </div>
                               )
                             ) : isEditing ? (
-  field.type === 'image' ? (
-    <ImageUploadField
-      label={field.label}
-      currentImage={value || undefined}
-      aspectRatio={16 / 9}
-      onImageChange={(previewUrl, file) => {
-        // Upload file asli akan ditangani pada langkah berikutnya.
-        console.log('File gambar dipilih:', file.name);
-        console.log('Preview:', previewUrl);
-      }}
-      onImageRemove={() => setFieldValue(field.key, '')}
-    />
-  ) : field.type === 'textarea' ? (
-    <textarea
-      value={value}
-      onChange={(e) => setFieldValue(field.key, e.target.value)}
-      rows={2}
-      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-    />
-  ) : (
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => setFieldValue(field.key, e.target.value)}
-      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-    />
-  )
+                              /* Image Upload */
+                              field.type === 'image' ? (
+                                <div className="space-y-2">
+                                  <ImageUploadField
+                                    label={field.label}
+                                    currentImage={value || undefined}
+                                    aspectRatio={16 / 9}
+                                    onImageChange={async (
+                                      _previewUrl,
+                                      file
+                                    ) => {
+                                      if (
+                                        !file.type.startsWith('image/')
+                                      ) {
+                                        showMessage(
+                                          'error',
+                                          'Background Hero hanya menerima file gambar.'
+                                        );
+                                        return;
+                                      }
+
+                                      setUploadingImage(true);
+
+                                      try {
+                                        const formData = new FormData();
+
+                                        formData.append('file', file);
+                                        formData.append(
+                                          'bucket',
+                                          'backgrounds'
+                                        );
+                                        formData.append('folder', 'hero');
+
+                                        const response = await fetch(
+                                          '/api/upload',
+                                          {
+                                            method: 'POST',
+                                            body: formData,
+                                          }
+                                        );
+
+                                        const result =
+                                          await response.json();
+
+                                        if (!response.ok) {
+                                          throw new Error(
+                                            result.error ||
+                                              'Upload gambar gagal'
+                                          );
+                                        }
+
+                                        const imageUrl =
+                                          result.publicUrl || result.url;
+
+                                        if (!imageUrl) {
+                                          throw new Error(
+                                            'URL gambar tidak ditemukan'
+                                          );
+                                        }
+
+                                        // Simpan URL publik, bukan preview URL.
+                                        setFieldValue(
+                                          field.key,
+                                          imageUrl
+                                        );
+
+                                        showMessage(
+                                          'success',
+                                          'Gambar berhasil di-upload. Jangan lupa klik Simpan.'
+                                        );
+                                      } catch (error) {
+                                        console.error(
+                                          '[Hero Background Upload]',
+                                          error
+                                        );
+
+                                        showMessage(
+                                          'error',
+                                          error instanceof Error
+                                            ? error.message
+                                            : 'Upload gambar gagal'
+                                        );
+                                      } finally {
+                                        setUploadingImage(false);
+                                      }
+                                    }}
+                                    onImageRemove={() =>
+                                      setFieldValue(field.key, '')
+                                    }
+                                  />
+
+                                  {uploadingImage && (
+                                    <p className="text-xs text-amber-600 font-medium">
+                                      Mengupload gambar...
+                                    </p>
+                                  )}
+                                </div>
+                              ) : field.type === 'textarea' ? (
+                                <textarea
+                                  value={value}
+                                  onChange={e =>
+                                    setFieldValue(
+                                      field.key,
+                                      e.target.value
+                                    )
+                                  }
+                                  rows={2}
+                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={value}
+                                  onChange={e =>
+                                    setFieldValue(
+                                      field.key,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                                />
+                              )
+                            ) : field.type === 'image' && value ? (
+                              /* Image Preview */
+                              <div className="space-y-2">
+                                <img
+                                  src={value}
+                                  alt="Background Hero Homepage"
+                                  className="w-full max-h-56 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                                />
+
+                                <p className="text-xs text-gray-500 break-all">
+                                  {value}
+                                </p>
+                              </div>
                             ) : (
-                              <div className={`px-3 py-1.5 rounded-lg text-sm min-h-[30px] ${isDefaultPreview ? 'bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 italic' : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
-                                {value || <span className="italic text-gray-400">Belum diisi</span>}
+                              /* Text Preview */
+                              <div
+                                className={`px-3 py-1.5 rounded-lg text-sm min-h-[30px] ${
+                                  isDefaultPreview
+                                    ? 'bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 italic'
+                                    : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300'
+                                }`}
+                              >
+                                {value || (
+                                  <span className="italic text-gray-400">
+                                    Belum diisi
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -868,20 +1911,30 @@ export default function AdminContentPage() {
                       })}
                     </div>
 
+                    {/* Action Buttons */}
                     {isEditing && (
                       <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <button
+                          type="button"
                           onClick={cancelEdit}
-                          className="px-4 py-1.5 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1"
+                          disabled={saving || uploadingImage}
+                          className="px-4 py-1.5 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1 disabled:opacity-50"
                         >
                           <FaTimes /> Batal
                         </button>
+
                         <button
+                          type="button"
                           onClick={() => saveSection(section)}
-                          disabled={saving}
+                          disabled={saving || uploadingImage}
                           className="px-4 py-1.5 text-sm bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg disabled:opacity-50 flex items-center gap-1 font-medium"
                         >
-                          <FaSave /> {saving ? 'Menyimpan...' : 'Simpan'}
+                          <FaSave />
+                          {saving
+                            ? 'Menyimpan...'
+                            : uploadingImage
+                            ? 'Mengupload gambar...'
+                            : 'Simpan'}
                         </button>
                       </div>
                     )}
