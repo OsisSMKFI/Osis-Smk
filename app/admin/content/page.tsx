@@ -387,7 +387,7 @@ const SECTIONS: SectionConfig[] = [
   {
     id: 'about_values',
     title: 'Nilai-Nilai (About)',
-    description: '4 nilai utama OSIS di halaman Tentang',
+    description: '5 nilai utama OSIS di halaman Tentang',
     icon: '💎',
     fields: [
       {
@@ -485,6 +485,26 @@ const SECTIONS: SectionConfig[] = [
         label: 'Nilai 4 - Gradient (CSS)',
         type: 'text',
       },
+{
+  key: 'about_value5_icon',
+  label: 'Nilai 5 - Icon',
+  type: 'emoji',
+},
+{
+  key: 'about_value5_name',
+  label: 'Nilai 5 - Nama',
+  type: 'text',
+},
+{
+  key: 'about_value5_desc',
+  label: 'Nilai 5 - Deskripsi',
+  type: 'textarea',
+},
+{
+  key: 'about_value5_color',
+  label: 'Nilai 5 - Gradient (CSS)',
+  type: 'text',
+},
     ],
   },
   {
@@ -774,6 +794,11 @@ const DEFAULT_CONTENT: Record<string, string> = {
   about_value4_desc:
     'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
   about_value4_color: 'from-green-400 to-emerald-500',
+
+  about_value5_icon: '⭐',
+  about_value5_name: 'Integrity',
+  about_value5_desc: 'Menjunjung tinggi integritas, kejujuran, dan amanah dalam menjalankan tanggung jawab.',
+  about_value5_color: 'from-amber-400 to-yellow-500',
 
   about_cta_title: 'Bergabung',
   about_cta_title_hl: 'Bersama Kami',
