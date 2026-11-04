@@ -24,7 +24,11 @@ interface SectionConfig {
   title: string;
   description: string;
   icon: string;
-  fields: { key: string; label: string; type?: 'text' | 'textarea' | 'emoji' | 'color' | 'timeline' }[];
+  fields: {
+    key: string;
+    label: string;
+    type?: 'text' | 'textarea' | 'emoji' | 'color' | 'timeline' | 'image';
+  }[];
 }
 
 type TimelineAchievement = {
@@ -59,6 +63,7 @@ const SECTIONS: SectionConfig[] = [
       { key: 'home_hero_title', label: 'Judul Hero', type: 'text' },
       { key: 'home_hero_subtitle', label: 'Subtitle Hero', type: 'text' },
       { key: 'home_hero_description', label: 'Deskripsi Hero', type: 'textarea' },
+      { key: 'home_hero_background', label: 'Background Hero Homepage', type: 'image' },
     ],
   },
   {
