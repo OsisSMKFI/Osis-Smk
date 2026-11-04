@@ -28,10 +28,11 @@ export const PUBLIC_CONTENT_DEFAULTS = {
     'Membangun kerjasama yang solid antar anggota dan stakeholder',
   ],
   values: [
-    { name: 'Inovasi', desc: 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan' },
-    { name: 'Integritas', desc: 'Menjunjung tinggi kejujuran dan tanggung jawab' },
-    { name: 'Keunggulan', desc: 'Berusaha memberikan yang terbaik dalam setiap aspek' },
-    { name: 'Islami', desc: 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan' },
+    { name: 'Inovasi', desc: 'Berlandaskan aqidahyang benar, berakhlak islami, menjadikan Allah sebagai pusat kehidupan' },
+    { name: 'Integritas', desc: 'Unggul dalam keilmuan, komitmen, mutu, inovasi, dan standar tinggi dalam setiap aspek' },
+    { name: 'Keunggulan', desc: 'Peduli kepada sesama, peka terhadap lingkungan, adab islami dalam interaksi sosial' },
+    { name: 'Islami', desc: 'Mandiri, berjiwa kepemimpinan, bersemangat kewirausahaan, dan adaptif terhadapt perubahan' },
+    { name: 'Youthfull', desc: 'Penuh semangat, terbuka terhadap pertumbuhan, menginspirasi dan berenergi positif.' },
   ],
   school: {
     name: 'SMK Informatika Fithrah Insani',
