@@ -242,6 +242,7 @@ function AchievementsSection({ db }: { db: Record<string, string> }) {
   );
 }
 
+
 function ValuesSection({ db }: { db: Record<string, string> }) {
   const { t } = useTranslation();
 
@@ -270,6 +271,12 @@ function ValuesSection({ db }: { db: Record<string, string> }) {
       description: db['about_value4_desc'] || t('about.valueIslamicDesc') || 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
       color: db['about_value4_color'] || 'from-green-400 to-emerald-500',
     },
+    {
+      icon: db['about_value5_icon'] || '⭐',
+      title: db['about_value5_name'] || 'Nilai Kelima',
+      description: db['about_value5_desc'] || 'Nilai tambahan organisasi',
+      color: db['about_value5_color'] || 'from-rose-400 to-pink-500',
+    },
   ];
 
   return (
@@ -284,13 +291,16 @@ function ValuesSection({ db }: { db: Record<string, string> }) {
           <span className="inline-flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm font-medium tracking-widest uppercase mb-4">
             ✨ {db['about_values_label'] || t('about.valuesLabel') || 'Nilai-Nilai Kami'}
           </span>
+
           <h2 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white">
             {db['about_values_title'] || t('about.valuesTitle') || 'Prinsip'}{' '}
-            <span className="text-yellow-500">{db['about_values_title_hl'] || t('about.valuesTitleHighlight') || 'yang Kami Pegang'}</span>
+            <span className="text-yellow-500">
+              {db['about_values_title_hl'] || t('about.valuesTitleHighlight') || 'yang Kami Pegang'}
+            </span>
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {values.map((value, index) => (
             <motion.div
               key={index}
@@ -301,12 +311,19 @@ function ValuesSection({ db }: { db: Record<string, string> }) {
               transition={{ delay: index * 0.1 }}
             >
               <div className={`absolute -inset-0.5 bg-gradient-to-r ${value.color} rounded-2xl blur opacity-0 group-hover:opacity-30 transition duration-500`} />
+
               <div className="relative bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 h-full transition-all duration-300 group-hover:-translate-y-1">
                 <div className={`w-14 h-14 bg-gradient-to-r ${value.color} rounded-xl flex items-center justify-center text-2xl mb-4 shadow-lg`}>
                   {value.icon}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{value.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{value.description}</p>
+
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  {value.title}
+                </h3>
+
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                  {value.description}
+                </p>
               </div>
             </motion.div>
           ))}
@@ -315,6 +332,7 @@ function ValuesSection({ db }: { db: Record<string, string> }) {
     </section>
   );
 }
+
 
 function FooterCTASection({ db }: { db: Record<string, string> }) {
   const { t } = useTranslation();
@@ -398,6 +416,7 @@ export default function AboutPageClient({ initialDb }: { initialDb?: Record<stri
       'about_value2_icon', 'about_value2_name', 'about_value2_desc', 'about_value2_color',
       'about_value3_icon', 'about_value3_name', 'about_value3_desc', 'about_value3_color',
       'about_value4_icon', 'about_value4_name', 'about_value4_desc', 'about_value4_color',
+      'about_value5_icon', 'about_value5_name', 'about_value5_desc', 'about_value5_color',
       'about_cta_title', 'about_cta_title_hl', 'about_cta_desc', 'about_cta_button', 'about_cta_button2',
       'about_logo_title', 'about_logo_subtitle', 'about_logo_alt',
       'about_core_title1', 'about_core_title2', 'about_core_subtitle',
