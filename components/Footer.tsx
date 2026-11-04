@@ -24,14 +24,26 @@ const Footer: React.FC = () => {
     const load = () => {
       if (cancelled) return;
       getPageContentBatch(
-        ['site_school_name', 'site_address', 'site_phone', 'site_email', 'site_copyright'],
+        [
+  'site_footer_brand',
+  'site_footer_period',
+  'site_footer_description',
+  'site_school_name',
+  'site_address',
+  'site_phone',
+  'site_email',
+  'site_copyright',
+],
         {
-          site_school_name: 'SMK Informatika Fithrah Insani',
-          site_address: 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
-          site_phone: '(022) 87805564',
-          site_email: 'osissmkinformatika2.fi@gmail.com',
-          site_copyright: 'OSIS SMK Fithrah Insani - Raveka Sena',
-        }
+  site_footer_brand: 'OSIS SMK Informatika - Raveka Sena',
+  site_footer_period: 'Raveka Sena 2025-2026',
+  site_footer_description: '"Bermanfaat bersama, bersinar selamanya" - Membangun generasi yang berakhlak mulia, cerdas, dan mandiri berdasarkan nilai-nilai Al-Qur\'an dan Hadits.',
+  site_school_name: 'SMK Informatika Fithrah Insani',
+  site_address: 'Jl. H. Gofur No. 10 Tanimulya, Ngamprah, Kab. Bandung Barat',
+  site_phone: '(022) 87805564',
+  site_email: 'osissmkinformatika2.fi@gmail.com',
+  site_copyright: 'OSIS SMK Fithrah Insani - Raveka Sena',
+}
       ).then((data) => {
         if (!cancelled) setSiteContent(data);
       });
@@ -132,14 +144,15 @@ const Footer: React.FC = () => {
                 />
                 <div>
                   <h3 className="heading-secondary text-xl sm:text-2xl text-gray-800 dark:text-white">
-                    {t('navbar.brandName')}
+                    {siteContent.site_footer_brand || 'OSIS SMK Informatika - Raveka Sena'}
                   </h3>
-                  <p className="text-yellow-600 dark:text-yellow-400 font-medium text-sm sm:text-base">{t('home.subtitle')}</p>
+                  <p className="text-yellow-600 dark:text-yellow-400 font-medium text-sm sm:text-base">{siteContent.site_footer_period || 'Raveka Sena 2025-2026'}</p>
                 </div>
               </div>
               
               <p className="text-gray-600 dark:text-gray-400 mb-4 sm:mb-6 max-w-md leading-relaxed text-sm sm:text-base">
-                {t('footer.aboutDesc')}
+                {siteContent.site_footer_description ||
+  '"Bermanfaat bersama, bersinar selamanya" - Membangun generasi yang berakhlak mulia, cerdas, dan mandiri berdasarkan nilai-nilai Al-Qur\'an dan Hadits.'}
               </p>
 
               {/* Social Media */}
