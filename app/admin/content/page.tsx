@@ -7,6 +7,7 @@ import { apiFetch, safeJson } from '@/lib/safeFetch';
 import AdminPageShell from '@/components/admin/AdminPageShell';
 import { invalidatePageContentCache } from '@/lib/pageContent';
 import { FaSave, FaTimes, FaSearch, FaChevronDown, FaChevronRight, FaBroom } from 'react-icons/fa';
+import ImageUploadField from '@/components/ImageUploadField';
 
 interface ContentItem {
   id: string;
@@ -830,21 +831,33 @@ export default function AdminContentPage() {
                                 </div>
                               )
                             ) : isEditing ? (
-                              field.type === 'textarea' ? (
-                                <textarea
-                                  value={value}
-                                  onChange={(e) => setFieldValue(field.key, e.target.value)}
-                                  rows={2}
-                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                                />
-                              ) : (
-                                <input
-                                  type="text"
-                                  value={value}
-                                  onChange={(e) => setFieldValue(field.key, e.target.value)}
-                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                                />
-                              )
+  field.type === 'image' ? (
+    <ImageUploadField
+      label={field.label}
+      currentImage={value || undefined}
+      aspectRatio={16 / 9}
+      onImageChange={(previewUrl, file) => {
+        // Upload file asli akan ditangani pada langkah berikutnya.
+        console.log('File gambar dipilih:', file.name);
+        console.log('Preview:', previewUrl);
+      }}
+      onImageRemove={() => setFieldValue(field.key, '')}
+    />
+  ) : field.type === 'textarea' ? (
+    <textarea
+      value={value}
+      onChange={(e) => setFieldValue(field.key, e.target.value)}
+      rows={2}
+      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+    />
+  ) : (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => setFieldValue(field.key, e.target.value)}
+      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+    />
+  )
                             ) : (
                               <div className={`px-3 py-1.5 rounded-lg text-sm min-h-[30px] ${isDefaultPreview ? 'bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 italic' : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300'}`}>
                                 {value || <span className="italic text-gray-400">Belum diisi</span>}
