@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef, memo } from 'react';
@@ -8,20 +9,24 @@ import { fetchGlobalBackground, type GlobalBackgroundConfig } from '@/lib/adminS
 
 function DynamicHeroInternal({ initialContent }: { initialContent?: Record<string, string> }) {
   const { t, language } = useTranslation();
+
   const [content, setContent] = useState<Record<string, string>>({
     title: initialContent?.home_hero_title || '',
     subtitle: initialContent?.home_hero_subtitle || '',
     description: initialContent?.home_hero_description || '',
+    heroBackground: initialContent?.home_hero_background || '',
   });
+
   const [bg, setBg] = useState<GlobalBackgroundConfig>({ mode: 'gradient' });
+
   const hasInitial = Boolean(
-  initialContent?.home_hero_title &&
-  initialContent?.home_hero_subtitle &&
-  initialContent?.home_hero_description
-);
+    initialContent?.home_hero_title &&
+    initialContent?.home_hero_subtitle &&
+    initialContent?.home_hero_description
+  );
 
   useEffect(() => {
-    // Background only — never blocks hero paint
+    // Ambil konfigurasi background global sebagai fallback.
     fetchGlobalBackground()
       .then((bgData) => {
         if (bgData && bgData.mode) setBg(bgData);
@@ -34,6 +39,7 @@ function DynamicHeroInternal({ initialContent }: { initialContent?: Record<strin
       'home_hero_title',
       'home_hero_subtitle',
       'home_hero_description',
+      'home_hero_background',
     ])
       .then((pageData) => {
         setContent((prev) => ({
@@ -41,21 +47,34 @@ function DynamicHeroInternal({ initialContent }: { initialContent?: Record<strin
           title: pageData.home_hero_title || prev.title,
           subtitle: pageData.home_hero_subtitle || prev.subtitle,
           description: pageData.home_hero_description || prev.description,
+          heroBackground: pageData.home_hero_background || prev.heroBackground,
         }));
       })
       .catch(() => {});
   }, [hasInitial]);
 
+  // Background khusus Hero memiliki prioritas.
+  // Jika kosong, gunakan background global seperti sebelumnya.
+  const effectiveBg: GlobalBackgroundConfig = {
+    ...bg,
+    imageUrl: content.heroBackground || bg.imageUrl,
+  };
+
   const backgroundStyle = (() => {
-    if (bg.imageUrl) return undefined;
-    if (bg.mode === 'color' && bg.color) return { background: bg.color };
-    if (bg.mode === 'gradient' && bg.gradient) return { background: bg.gradient };
+    if (effectiveBg.imageUrl) return undefined;
+    if (effectiveBg.mode === 'color' && effectiveBg.color) {
+      return { background: effectiveBg.color };
+    }
+    if (effectiveBg.mode === 'gradient' && effectiveBg.gradient) {
+      return { background: effectiveBg.gradient };
+    }
     return { background: 'var(--gradient-bg)' };
   })();
 
   const displayTitle = language === 'id' ? (content.title || t('home.osisName')) : t('home.osisName');
   const displaySubtitle = language === 'id' ? (content.subtitle || t('home.subtitle')) : t('home.subtitle');
   const displayDescription = language === 'id' ? (content.description || t('home.description')) : t('home.description');
+
   const labelAbout = language === 'id' ? 'Tentang Kami' : 'About Us';
   const labelGallery = language === 'id' ? 'Lihat Galeri' : 'View Gallery';
   const labelRegister = language === 'id' ? 'Daftar Akun' : 'Create Account';
@@ -63,34 +82,42 @@ function DynamicHeroInternal({ initialContent }: { initialContent?: Record<strin
   return (
     <section
       data-component="hero"
-      className={"hero-section relative min-h-screen flex items-center justify-center pb-16 sm:pb-20 lg:pb-24 " + (bg.imageStyle === 'cover' || !bg.imageUrl ? 'overflow-hidden' : 'overflow-visible')}
+      className={
+        "hero-section relative min-h-screen flex items-center justify-center pb-16 sm:pb-20 lg:pb-24 " +
+        (effectiveBg.imageStyle === 'cover' || !effectiveBg.imageUrl
+          ? 'overflow-hidden'
+          : 'overflow-visible')
+      }
       style={{
         ...backgroundStyle,
-        paddingTop: 'max(var(--nav-offset, 80px), env(safe-area-inset-top))'
+        paddingTop: 'max(var(--nav-offset, 80px), env(safe-area-inset-top))',
       }}
     >
-      {bg.imageUrl && (
-        bg.imageStyle === 'contain' ? (
-          <ContainBackground bg={bg} />
-        ) : bg.imageStyle === 'smart-fit' ? (
-          <SmartFitBackground bg={bg} />
+      {effectiveBg.imageUrl && (
+        effectiveBg.imageStyle === 'contain' ? (
+          <ContainBackground bg={effectiveBg} />
+        ) : effectiveBg.imageStyle === 'smart-fit' ? (
+          <SmartFitBackground bg={effectiveBg} />
         ) : (
           <>
             <div
               className="absolute inset-0 pointer-events-none z-0"
               style={{
-                backgroundImage: `url(${bg.imageUrl})`,
+                backgroundImage: `url(${effectiveBg.imageUrl})`,
                 backgroundSize: 'cover',
                 backgroundRepeat: 'no-repeat',
-                backgroundPosition: bg.imagePosition || 'center',
-                backgroundAttachment: bg.fixed ? 'fixed' : 'scroll'
+                backgroundPosition: effectiveBg.imagePosition || 'center',
+                backgroundAttachment: effectiveBg.fixed ? 'fixed' : 'scroll',
               }}
             />
             <div
               className="absolute inset-0 pointer-events-none z-0"
               style={{
-                backgroundColor: bg.imageOverlayColor || 'rgba(0,0,0,0.55)',
-                opacity: typeof bg.imageOverlayOpacity === 'number' ? bg.imageOverlayOpacity : 0.55
+                backgroundColor: effectiveBg.imageOverlayColor || 'rgba(0,0,0,0.55)',
+                opacity:
+                  typeof effectiveBg.imageOverlayOpacity === 'number'
+                    ? effectiveBg.imageOverlayOpacity
+                    : 0.55,
               }}
             />
           </>
@@ -140,12 +167,14 @@ function DynamicHeroInternal({ initialContent }: { initialContent?: Record<strin
             >
               {labelRegister}
             </a>
+
             <a
               href="/about"
               className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-white/15 hover:bg-white/25 dark:bg-gray-700/50 dark:hover:bg-gray-600/50 backdrop-blur-md text-white dark:text-gray-100 font-bold rounded-full border-2 border-white/40 dark:border-gray-600/50 transition-colors duration-200 shadow-lg text-sm sm:text-base text-center min-h-[44px] flex items-center justify-center"
             >
               {labelAbout}
             </a>
+
             <a
               href="/gallery"
               className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-white/15 hover:bg-white/25 dark:bg-gray-700/50 dark:hover:bg-gray-600/50 backdrop-blur-md text-white dark:text-gray-100 font-bold rounded-full border-2 border-white/40 dark:border-gray-600/50 transition-colors duration-200 shadow-lg text-sm sm:text-base text-center min-h-[44px] flex items-center justify-center"
@@ -174,24 +203,32 @@ function DynamicHeroInternal({ initialContent }: { initialContent?: Record<strin
 const DynamicHero = memo(DynamicHeroInternal);
 export default DynamicHero;
 
-interface BgProps { bg: GlobalBackgroundConfig }
+interface BgProps {
+  bg: GlobalBackgroundConfig;
+}
 
 function ContainBackground({ bg }: BgProps) {
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const [dims, setDims] = useState<{w:number;h:number}|null>(null);
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+
   const measure = () => {
     if (imgRef.current) {
       const r = imgRef.current.getBoundingClientRect();
       setDims({ w: r.width, h: r.height });
     }
   };
+
   useEffect(() => {
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0" style={{ height: 'calc(100vh - 5rem - 3rem)' }}>
+    <div
+      className="absolute inset-0 flex items-center justify-center pointer-events-none z-0"
+      style={{ height: 'calc(100vh - 5rem - 3rem)' }}
+    >
       <div className="relative flex items-center justify-center max-h-full">
         <img
           ref={imgRef}
@@ -201,15 +238,20 @@ function ContainBackground({ bg }: BgProps) {
           style={{ objectPosition: bg.imagePosition || 'center' }}
           onLoad={measure}
         />
+
         {bg.imageOverlayScope !== 'image' && (
           <div
             className="absolute inset-0"
             style={{
               backgroundColor: bg.imageOverlayColor || 'rgba(0,0,0,0.3)',
-              opacity: typeof bg.imageOverlayOpacity === 'number' ? bg.imageOverlayOpacity : 0.3
+              opacity:
+                typeof bg.imageOverlayOpacity === 'number'
+                  ? bg.imageOverlayOpacity
+                  : 0.3,
             }}
           />
         )}
+
         {bg.imageOverlayScope === 'image' && dims && (
           <div
             className="absolute"
@@ -220,7 +262,10 @@ function ContainBackground({ bg }: BgProps) {
               top: '50%',
               transform: 'translate(-50%, -50%)',
               backgroundColor: bg.imageOverlayColor || 'rgba(0,0,0,0.3)',
-              opacity: typeof bg.imageOverlayOpacity === 'number' ? bg.imageOverlayOpacity : 0.3
+              opacity:
+                typeof bg.imageOverlayOpacity === 'number'
+                  ? bg.imageOverlayOpacity
+                  : 0.3,
             }}
           />
         )}
@@ -231,29 +276,36 @@ function ContainBackground({ bg }: BgProps) {
 
 function SmartFitBackground({ bg }: BgProps) {
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const [dims, setDims] = useState<{w:number;h:number}|null>(null);
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+
   const measure = () => {
     if (imgRef.current) {
       const r = imgRef.current.getBoundingClientRect();
       setDims({ w: r.width, h: r.height });
     }
   };
+
   useEffect(() => {
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0" style={{ height: 'calc(100vh - 5rem - 3rem)' }}>
+    <div
+      className="absolute inset-0 flex items-center justify-center pointer-events-none z-0"
+      style={{ height: 'calc(100vh - 5rem - 3rem)' }}
+    >
       <div
         className="absolute inset-0 scale-110 blur-2xl opacity-40"
         style={{
           backgroundImage: `url(${bg.imageUrl})`,
           backgroundSize: 'cover',
           backgroundRepeat: 'no-repeat',
-          backgroundPosition: bg.imagePosition || 'center'
+          backgroundPosition: bg.imagePosition || 'center',
         }}
       />
+
       <div className="relative flex items-center justify-center">
         <img
           ref={imgRef}
@@ -263,15 +315,20 @@ function SmartFitBackground({ bg }: BgProps) {
           style={{ objectPosition: bg.imagePosition || 'center' }}
           onLoad={measure}
         />
+
         {bg.imageOverlayScope !== 'image' && (
           <div
             className="absolute inset-0"
             style={{
               backgroundColor: bg.imageOverlayColor || 'rgba(0,0,0,0.3)',
-              opacity: typeof bg.imageOverlayOpacity === 'number' ? bg.imageOverlayOpacity : 0.3
+              opacity:
+                typeof bg.imageOverlayOpacity === 'number'
+                  ? bg.imageOverlayOpacity
+                  : 0.3,
             }}
           />
         )}
+
         {bg.imageOverlayScope === 'image' && dims && (
           <div
             className="absolute"
@@ -282,7 +339,10 @@ function SmartFitBackground({ bg }: BgProps) {
               top: '50%',
               transform: 'translate(-50%, -50%)',
               backgroundColor: bg.imageOverlayColor || 'rgba(0,0,0,0.3)',
-              opacity: typeof bg.imageOverlayOpacity === 'number' ? bg.imageOverlayOpacity : 0.3
+              opacity:
+                typeof bg.imageOverlayOpacity === 'number'
+                  ? bg.imageOverlayOpacity
+                  : 0.3,
             }}
           />
         )}
