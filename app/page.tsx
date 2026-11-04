@@ -16,7 +16,13 @@ import {
 export const metadata = STATIC_METADATA.home;
 export const revalidate = 5;
 
-const HERO_KEYS = ['home_hero_title', 'home_hero_subtitle', 'home_hero_description'] as const;
+const HERO_KEYS = [
+  'home_hero_title',
+  'home_hero_subtitle',
+  'home_hero_description',
+  'home_hero_background',
+] as const;
+
 const VISION_KEYS = [
   'site_vision_text',
   'site_vision_hl1',
