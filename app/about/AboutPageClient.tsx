@@ -250,31 +250,31 @@ function ValuesSection({ db }: { db: Record<string, string> }) {
     {
       icon: db['about_value1_icon'] || '💡',
       title: db['about_value1_name'] || t('about.valueInnovation') || 'Inovasi',
-      description: db['about_value1_desc'] || t('about.valueInnovationDesc') || 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
+      description: db['about_value1_desc'] || t('about.valueInnovationDesc') || 'Berlandaskan aqidahyang benar, berakhlak islami, menjadikan Allah sebagai pusat kehidupan',
       color: db['about_value1_color'] || 'from-yellow-400 to-orange-500',
     },
     {
       icon: db['about_value2_icon'] || '🤝',
       title: db['about_value2_name'] || t('about.valueIntegrity') || 'Integritas',
-      description: db['about_value2_desc'] || t('about.valueIntegrityDesc') || 'Menjunjung tinggi kejujuran dan tanggung jawab',
+      description: db['about_value2_desc'] || t('about.valueIntegrityDesc') || 'Unggul dalam keilmuan, komitmen, mutu, inovasi, dan standar tinggi dalam setiap aspek',
       color: db['about_value2_color'] || 'from-blue-400 to-indigo-500',
     },
     {
       icon: db['about_value3_icon'] || '🌟',
       title: db['about_value3_name'] || t('about.valueExcellence') || 'Keunggulan',
-      description: db['about_value3_desc'] || t('about.valueExcellenceDesc') || 'Berusaha memberikan yang terbaik dalam setiap aspek',
+      description: db['about_value3_desc'] || t('about.valueExcellenceDesc') || 'Peduli kepada sesama, peka terhadap lingkungan, adab islami dalam interaksi sosial',
       color: db['about_value3_color'] || 'from-purple-400 to-pink-500',
     },
     {
       icon: db['about_value4_icon'] || '🕌',
       title: db['about_value4_name'] || t('about.valueIslamic') || 'Islami',
-      description: db['about_value4_desc'] || t('about.valueIslamicDesc') || 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
+      description: db['about_value4_desc'] || t('about.valueIslamicDesc') || 'Mandiri, berjiwa kepemimpinan, bersemangat kewirausahaan, dan adaptif terhadapt perubahan',
       color: db['about_value4_color'] || 'from-green-400 to-emerald-500',
     },
     {
       icon: db['about_value5_icon'] || '⭐',
-      title: db['about_value5_name'] || 'Nilai Kelima',
-      description: db['about_value5_desc'] || 'Nilai tambahan organisasi',
+      title: db['about_value5_name'] || t('about.valueYouthfull') || 'Nilai Kelima',
+      description: db['about_value5_desc'] || t('about.valueYouthfullDesc') || 'Penuh semangat, terbuka terhadap pertumbuhan, menginspirasi dan berenergi positif.',
       color: db['about_value5_color'] || 'from-rose-400 to-pink-500',
     },
   ];
