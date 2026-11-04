@@ -774,30 +774,30 @@ const DEFAULT_CONTENT: Record<string, string> = {
   about_value1_icon: '💡',
   about_value1_name: 'Inovasi',
   about_value1_desc:
-    'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
+    'Berlandaskan aqidahyang benar, berakhlak islami, menjadikan Allah sebagai pusat kehidupan',
   about_value1_color: 'from-yellow-400 to-orange-500',
 
   about_value2_icon: '🤝',
   about_value2_name: 'Integritas',
   about_value2_desc:
-    'Menjunjung tinggi kejujuran dan tanggung jawab',
+    'Unggul dalam keilmuan, komitmen, mutu, inovasi, dan standar tinggi dalam setiap aspek',
   about_value2_color: 'from-blue-400 to-indigo-500',
 
   about_value3_icon: '🌟',
   about_value3_name: 'Keunggulan',
   about_value3_desc:
-    'Berusaha memberikan yang terbaik dalam setiap aspek',
+    'Peduli kepada sesama, peka terhadap lingkungan, adab islami dalam interaksi sosial',
   about_value3_color: 'from-purple-400 to-pink-500',
 
   about_value4_icon: '🕌',
   about_value4_name: 'Islami',
   about_value4_desc:
-    'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
+    'Mandiri, berjiwa kepemimpinan, bersemangat kewirausahaan, dan adaptif terhadapt perubahan',
   about_value4_color: 'from-green-400 to-emerald-500',
 
   about_value5_icon: '⭐',
   about_value5_name: 'Integrity',
-  about_value5_desc: 'Menjunjung tinggi integritas, kejujuran, dan amanah dalam menjalankan tanggung jawab.',
+  about_value5_desc: 'Penuh semangat, terbuka terhadap pertumbuhan, menginspirasi dan berenergi positif.',
   about_value5_color: 'from-amber-400 to-yellow-500',
 
   about_cta_title: 'Bergabung',
