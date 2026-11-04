@@ -438,25 +438,30 @@ export const translations = {
     valuesLabel: { id: 'Nilai-Nilai Kami', en: 'Our Values' },
     valuesTitle: { id: 'Prinsip', en: 'Principles' },
     valuesTitleHighlight: { id: 'yang Kami Pegang', en: 'We Hold' },
-    valueInnovation: { id: 'Inovasi', en: 'Innovation' },
+    valueInnovation: { id: 'Religious', en: 'Religious' },
     valueInnovationDesc: { 
-      id: 'Selalu mencari cara baru dan kreatif dalam setiap kegiatan',
-      en: 'Always looking for new and creative ways in every activity'
+      id: 'Berlandaskan aqidahyang benar, berakhlak islami, menjadikan Allah sebagai pusat kehidupan',
+      en: 'Based on true aqidah, Islamic morals, making Allah the center of life'
     },
-    valueIntegrity: { id: 'Integritas', en: 'Integrity' },
+    valueIntegrity: { id: 'Excellent', en: 'Excellent' },
     valueIntegrityDesc: { 
-      id: 'Menjunjung tinggi kejujuran dan tanggung jawab',
-      en: 'Upholding honesty and responsibility'
+      id: 'Unggul dalam keilmuan, komitmen, mutu, inovasi, dan standar tinggi dalam setiap aspek',
+      en: 'Excellence in scholarship, commitment, quality, innovation, and high standards in every aspect'
     },
-    valueExcellence: { id: 'Keunggulan', en: 'Excellence' },
+    valueExcellence: { id: 'Aware', en: 'Aware' },
     valueExcellenceDesc: { 
-      id: 'Berusaha memberikan yang terbaik dalam setiap aspek',
-      en: 'Striving to give the best in every aspect'
+      id: 'Peduli kepada sesama, peka terhadap lingkungan, adab islami dalam interaksi sosial',
+      en: 'Care for others, sensitivity toward the environment, and Islamic etiquette in social interactions'
     },
-    valueIslamic: { id: 'Islami', en: 'Islamic' },
+    valueIslamic: { id: 'Dynamic', en: 'Dynamic' },
     valueIslamicDesc: { 
-      id: 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan',
-      en: 'Based on Islamic values in every action'
+      id: 'Mandiri, berjiwa kepemimpinan, bersemangat kewirausahaan, dan adaptif terhadap perubahan',
+      en: 'Independent, possessing leadership qualities, an entrepreneurial spirit, and adaptability to change'
+    },
+    valueYouthfull: { id: 'Youthfull', en: 'Youthfull' },
+    valueYouthfullDesc: { 
+      id: 'Penuh semangat, terbuka terhadap pertumbuhan, menginspirasi dan berenergi positif.',
+      en: 'Full of enthusiasm, open to growth, inspiring, and possessing positive energy.'
     },
     
     // Stats Section
