@@ -160,6 +160,13 @@ const DEFAULTS = {
   about_value4_name: { content: 'Islami', category: 'about_values' },
   about_value4_desc: { content: 'Berlandaskan nilai-nilai keislaman dalam setiap tindakan', category: 'about_values' },
   about_value4_color: { content: 'from-green-400 to-emerald-500', category: 'about_values' },
+  about_value5_icon: { content: '🎯', category: 'about_values' },
+  about_value5_name: { content: 'Kolaborasi', category: 'about_values' },
+  about_value5_desc: {
+    content: 'Membangun kerja sama dan saling mendukung untuk mencapai tujuan bersama',
+    category: 'about_values',
+  },
+  about_value5_color: { content: 'from-cyan-400 to-blue-500', category: 'about_values' },
 
   // About CTA
   about_cta_title: { content: 'Bergabung', category: 'about_cta' },
