@@ -610,38 +610,53 @@ const SECTIONS: SectionConfig[] = [
     ],
   },
   {
-    id: 'footer',
-    title: 'Info Kontak (Footer)',
-    description: 'Nama sekolah, alamat, telepon, email, copyright',
-    icon: '📍',
-    fields: [
-      {
-        key: 'site_school_name',
-        label: 'Nama Sekolah',
-        type: 'text',
-      },
-      {
-        key: 'site_address',
-        label: 'Alamat',
-        type: 'textarea',
-      },
-      {
-        key: 'site_phone',
-        label: 'Telepon',
-        type: 'text',
-      },
-      {
-        key: 'site_email',
-        label: 'Email',
-        type: 'text',
-      },
-      {
-        key: 'site_copyright',
-        label: 'Copyright',
-        type: 'text',
-      },
-    ],
-  },
+  id: 'footer',
+  title: 'Footer',
+  description: 'Informasi organisasi, deskripsi, dan kontak pada bagian footer website',
+  icon: '📌',
+  fields: [
+    {
+      key: 'site_footer_brand',
+      label: 'Nama Organisasi',
+      type: 'text',
+    },
+    {
+      key: 'site_footer_period',
+      label: 'Periode Kepengurusan',
+      type: 'text',
+    },
+    {
+      key: 'site_footer_description',
+      label: 'Deskripsi Footer',
+      type: 'textarea',
+    },
+    {
+      key: 'site_school_name',
+      label: 'Nama Sekolah',
+      type: 'text',
+    },
+    {
+      key: 'site_address',
+      label: 'Alamat',
+      type: 'textarea',
+    },
+    {
+      key: 'site_phone',
+      label: 'Nomor Telepon',
+      type: 'text',
+    },
+    {
+      key: 'site_email',
+      label: 'Email',
+      type: 'text',
+    },
+    {
+      key: 'site_copyright',
+      label: 'Copyright',
+      type: 'text',
+    },
+  ],
+},
 ];
 
 /** Preview only — mirrors current site translations (id). NEVER auto-saved unless the admin edits the field. */
@@ -657,6 +672,10 @@ const DEFAULT_CONTENT: Record<string, string> = {
   site_vision_hl2: 'KAMIL dan Inovatif',
   site_vision_part3: '',
   site_vision_hl3: '',
+
+  site_footer_brand: 'OSIS SMK Informatika - Raveka Sena',
+  site_footer_period: 'Raveka Sena 2025-2026',
+  site_footer_description: '"Bermanfaat bersama, bersinar selamanya" - Membangun generasi yang berakhlak mulia, cerdas, dan mandiri berdasarkan nilai-nilai Al-Qur\'an dan Hadits.',
 
   home_goals_title: 'Forum OSIS Kabupaten Bandung Barat',
   home_goals_desc:
