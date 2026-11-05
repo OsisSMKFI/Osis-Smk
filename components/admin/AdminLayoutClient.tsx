@@ -1,4 +1,5 @@
 "use client";
+
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { usePathname } from 'next/navigation';
@@ -14,13 +15,14 @@ function RoleStatusBanner() {
   }, []);
 
   // Only enable in production when explicitly configured
-  const shouldShow = mounted && 
-    process.env.NODE_ENV === 'production' && 
+  const shouldShow =
+    mounted &&
+    process.env.NODE_ENV === 'production' &&
     process.env.NEXT_PUBLIC_DEBUG_ADMIN_ENDPOINTS === '1';
 
   useEffect(() => {
     if (!shouldShow) return;
-    
+
     let active = true;
     async function load() {
       try {
@@ -33,8 +35,11 @@ function RoleStatusBanner() {
       }
     }
     load();
-    const interval = setInterval(load, 120000); // every 2 min (was 30s - too frequent)
-    return () => { active = false; clearInterval(interval); };
+    const interval = setInterval(load, 120000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, [shouldShow]);
 
   if (!shouldShow || !data || !data.ok) return null;
@@ -47,12 +52,24 @@ function RoleStatusBanner() {
     <div className="mb-4 p-4 rounded-xl border-2 text-sm bg-yellow-50 border-yellow-300 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-200">
       <div className="font-semibold mb-1">Status Admin Panel</div>
       {mismatch && (
-        <p>Peran session (<code>{data.session_role}</code>) berbeda dengan peran database (<code>{data.db_role}</code>). Refresh halaman atau logout/login ulang untuk sinkron.</p>
+        <p>
+          Peran session (<code>{data.session_role}</code>) berbeda dengan peran
+          database (<code>{data.db_role}</code>). Refresh halaman atau
+          logout/login ulang untuk sinkron.
+        </p>
       )}
       {missing.length > 0 && (
-        <p className="mt-1">Halaman canonical belum terdeteksi: {missing.map(m => <code key={m}>{m}</code>)}. Alias sudah disiapkan; lakukan redeploy jika tetap hilang.</p>
+        <p className="mt-1">
+          Halaman canonical belum terdeteksi:{' '}
+          {missing.map((m) => (
+            <code key={m}>{m}</code>
+          ))}
+          . Alias sudah disiapkan; lakukan redeploy jika tetap hilang.
+        </p>
       )}
-      <p className="mt-1 text-xs opacity-70">Terakhir cek: {new Date(data.timestamp).toLocaleTimeString('id-ID')}</p>
+      <p className="mt-1 text-xs opacity-70">
+        Terakhir cek: {new Date(data.timestamp).toLocaleTimeString('id-ID')}
+      </p>
     </div>
   );
 }
@@ -67,35 +84,49 @@ export default function AdminLayoutClient({
   const pathname = usePathname();
   const isLogin = pathname?.startsWith('/admin/login');
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900" suppressHydrationWarning>
-      {/* Sidebar */}
-      {!isLogin && session?.user && <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />}
+      {!isLogin && session?.user && (
+        <AdminSidebar
+          collapsed={collapsed}
+          setCollapsed={setCollapsed}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+        />
+      )}
 
-      {/* Main Content - z-index lower than sidebar */}
-      <div 
-        className={isLogin || !session?.user ? '' : `${collapsed ? 'lg:pl-20' : 'lg:pl-72'} transition-all duration-300`} 
+      <div
+        className={
+          isLogin || !session?.user
+            ? ''
+            : `${collapsed ? 'lg:pl-20' : 'lg:pl-72'} transition-all duration-300`
+        }
         style={{ position: 'relative', zIndex: 1 }}
         suppressHydrationWarning
       >
-        {/* Header */}
-        {!isLogin && session?.user && <AdminHeader />}
+        {!isLogin && session?.user && (
+          <AdminHeader
+            mobileOpen={mobileOpen}
+            onMenuClick={() => setMobileOpen((prev) => !prev)}
+          />
+        )}
 
-        {/* Page Content */}
         <main className="p-3 sm:p-4 md:p-6">
           <div className="max-w-7xl mx-auto w-full" suppressHydrationWarning>
-            {/* Role / route diagnostics banner (production + flag only) */}
             {session?.user && <RoleStatusBanner />}
             {children}
           </div>
         </main>
 
-        {/* Footer */}
         {!isLogin && session?.user && (
           <footer className="mt-6 md:mt-8 py-4 md:py-6 px-3 sm:px-4 md:px-6 border-t border-gray-200 dark:border-slate-700">
             <div className="max-w-7xl mx-auto text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              <p>© 2025-2026 OSIS SMK Informatika - Raveka Sena. Built by Raveka Sena Team.</p>
+              <p>
+                © 2025-2026 OSIS SMK Informatika - Raveka Sena. Built by Raveka
+                Sena Team.
+              </p>
             </div>
           </footer>
         )}
