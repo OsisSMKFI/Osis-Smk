@@ -221,8 +221,7 @@ body {
 /* ===== PERFORMANCE OPTIMIZATIONS ===== */
 /* Hardware acceleration for animated elements */
 .transform-gpu,
-[class*="animate-"],
-[class*="transition-"] {
+[class*="animate-"] {
   transform: translateZ(0);
   backface-visibility: hidden;
   will-change: transform, opacity;
