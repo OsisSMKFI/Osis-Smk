@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut, useSession } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import {
   FaHome,
   FaNewspaper,
@@ -17,7 +17,6 @@ import {
   FaSignOutAlt,
   FaChevronLeft,
   FaChevronRight,
-  FaBars,
   FaEdit,
   FaDatabase,
   FaSitemap,
@@ -40,17 +39,21 @@ interface MenuItem {
 interface AdminSidebarProps {
   collapsed: boolean;
   setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  mobileOpen: boolean;
+  setMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
+export default function AdminSidebar({
+  collapsed,
+  setCollapsed,
+  mobileOpen,
+  setMobileOpen,
+}: AdminSidebarProps) {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const role = ((session?.user as any)?.role || '').toLowerCase();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     setMobileOpen(false);
-  }, [pathname]);
+  }, [pathname, setMobileOpen]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -68,7 +71,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mobileOpen]);
+  }, [mobileOpen, setMobileOpen]);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -77,10 +80,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
     };
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
-  }, []);
-
-  const isGuru = role === 'guru';
-  const isAdminLevel = ['super_admin', 'admin'].includes(role);
+  }, [setMobileOpen]);
 
   const menuItems: MenuItem[] = [
     { name: 'Dashboard', icon: <FaHome />, href: '/admin' },
@@ -90,11 +90,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
     { name: 'Gallery', icon: <FaImages />, href: '/admin/gallery' },
     { name: 'Anggota (Members)', icon: <FaUserFriends />, href: '/admin/data/members' },
     { name: 'Users', icon: <FaUsers />, href: '/admin/users' },
-  ].filter((item) => {
-    if (isGuru) return false;
-    if (item.href === '/admin/users') return isAdminLevel;
-    return true;
-  });
+  ];
 
   const dataMenuItems: MenuItem[] = [
     { name: 'Sekbid', icon: <FaSitemap />, href: '/admin/data/sekbid' },
@@ -104,20 +100,14 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
     { name: 'Program Kerja', icon: <FaClipboardList />, href: '/admin/proker' },
     { name: 'Announcements', icon: <FaBullhorn />, href: '/admin/announcements' },
     { name: 'Polls', icon: <FaPoll />, href: '/admin/polls' },
-  ].filter((item) => {
-    if (isGuru) return item.href === '/admin/attendance';
-    if (item.href === '/admin/re-enrollment') return isAdminLevel;
-    return true;
-  });
+  ];
 
-  // System settings, tools, terminal, and design studio can change or expose
-  // global data, so they stay super-admin only.
   const settingsItems: MenuItem[] = [
     { name: 'Design Studio', icon: <FaPaintBrush />, href: '/admin/design-studio' },
     { name: 'Settings', icon: <FaCog />, href: '/admin/settings' },
     { name: 'Tools', icon: <FaTools />, href: '/admin/tools' },
     { name: 'Terminal', icon: <FaTerminal />, href: '/admin/terminal' },
-  ].filter(() => role === 'super_admin');
+  ];
 
   const isActive = (href: string) => {
     if (href === '/admin') return pathname === '/admin';
@@ -126,58 +116,36 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
 
   return (
     <>
-      {/* Mobile Menu Button - Toggle between hamburger and X */}
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="lg:hidden fixed top-4 left-4 p-3 bg-amber-400 text-slate-900 rounded-xl shadow-lg hover:bg-amber-500 hover:shadow-xl transition-all"
-        style={{ zIndex: 100, pointerEvents: 'auto' }}
-        aria-label={mobileOpen ? "Close menu" : "Open menu"}
-      >
-        {mobileOpen ? (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <FaBars className="text-xl" />
-        )}
-      </button>
-
-      {/* Mobile Overlay */}
       {mobileOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm"
-          style={{ zIndex: 90 }}
+          style={{ zIndex: 50 }}
           onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
       <aside
+        id="admin-sidebar"
         className={[
           'fixed top-0 left-0 h-dvh bg-slate-900',
           'text-white shadow-2xl transition-transform duration-300 ease-in-out',
-          collapsed ? 'w-20' : 'w-72',
-          // Desktop: always visible  
+          'w-72 lg:max-w-none',
+          collapsed ? 'lg:w-20' : 'lg:w-72',
           'lg:translate-x-0 lg:pointer-events-auto',
-          // Mobile: slide in/out with proper width
-          mobileOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none lg:translate-x-0 lg:pointer-events-auto',
-          // Mobile max-width to prevent overflow
-          'max-w-[85vw] lg:max-w-none'
+          mobileOpen
+            ? 'translate-x-0 pointer-events-auto'
+            : '-translate-x-full pointer-events-none lg:translate-x-0 lg:pointer-events-auto',
+          'max-w-[85vw]',
         ].join(' ')}
-        style={{ 
-          zIndex: 95,
-          isolation: 'isolate'
-        }}
+        style={{ zIndex: 60, isolation: 'isolate' }}
         suppressHydrationWarning
       >
-        {/* Header */}
         <div className="relative h-20 flex items-center justify-between px-4 sm:px-6 bg-amber-400 shadow-xl">
           {!collapsed && (
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-2xl font-bold text-amber-600">
-                  O
-                </span>
+                <span className="text-2xl font-bold text-amber-600">O</span>
               </div>
               <div>
                 <h1 className="text-lg font-bold text-slate-900">OSIS Admin</h1>
@@ -185,9 +153,8 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
               </div>
             </div>
           )}
-          
+
           <div className="flex items-center gap-2">
-            {/* Close Button - Mobile Only */}
             <button
               onClick={() => setMobileOpen(false)}
               className="lg:hidden w-8 h-8 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all text-slate-900"
@@ -198,29 +165,26 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
               </svg>
             </button>
 
-            {/* Collapse Button - Desktop Only */}
             <button
               onClick={() => setCollapsed(!collapsed)}
               className="hidden lg:flex w-8 h-8 items-center justify-center bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all text-slate-900"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {collapsed ? <FaChevronRight className="text-sm" /> : <FaChevronLeft className="text-sm" />}
             </button>
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100dvh-160px)] custom-scrollbar">
-          {/* Back to Website Button */}
           <Link
             href="/dashboard"
             prefetch={false}
             target="_blank"
+            onClick={() => setMobileOpen(false)}
             className="group relative flex items-center space-x-3 px-4 py-3 rounded-xl bg-slate-700 text-white hover:bg-slate-600 shadow transition-all duration-200 mb-4"
           >
             <FaGlobe className={`text-xl ${collapsed ? 'mx-auto' : ''}`} />
-            {!collapsed && (
-              <span className="flex-1 font-medium">View Public Website</span>
-            )}
+            {!collapsed && <span className="flex-1 font-medium">View Public Website</span>}
             {collapsed && (
               <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                 View Public Website
@@ -228,10 +192,8 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
             )}
           </Link>
 
-          {/* Divider */}
-          <div className="border-t border-slate-700 my-3"></div>
+          <div className="border-t border-slate-700 my-3" />
 
-          {/* Main Menu */}
           {menuItems.map((item) => {
             const active = isActive(item.href);
             return (
@@ -240,31 +202,17 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                 href={item.href}
                 prefetch={false}
                 onClick={() => setMobileOpen(false)}
-                className={`
-                  group relative flex items-center space-x-3 px-4 py-3 rounded-xl
-                  transition-all duration-200 overflow-hidden
-                  ${active
+                className={`group relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 overflow-hidden ${
+                  active
                     ? 'bg-amber-400 text-slate-900'
                     : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
-                  }
-                `}
+                }`}
               >
-                {/* Active Indicator */}
-                {active && (
-                  <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />
-                )}
-
-                {/* Icon */}
-                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>
-                  {item.icon}
-                </div>
-
-                {/* Label */}
+                {active && <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />}
+                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>{item.icon}</div>
                 {!collapsed && (
                   <>
                     <span className="flex-1 font-medium">{item.name}</span>
-                    
-                    {/* Badge */}
                     {item.badge && (
                       <span className="px-2 py-1 text-xs font-bold bg-red-500 text-white rounded-full">
                         {item.badge}
@@ -272,23 +220,15 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                     )}
                   </>
                 )}
-
-                {/* Tooltip for collapsed state */}
                 {collapsed && (
                   <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                     {item.name}
-                    {item.badge && (
-                      <span className="ml-2 px-2 py-0.5 text-xs bg-red-500 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
                   </div>
                 )}
               </Link>
             );
           })}
 
-          {/* Data Management Section */}
           {!collapsed && (
             <div className="pt-4 pb-2">
               <div className="flex items-center gap-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -297,7 +237,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
               </div>
             </div>
           )}
-          
+
           {dataMenuItems.map((item) => {
             const active = isActive(item.href);
             return (
@@ -306,21 +246,14 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                 href={item.href}
                 prefetch={false}
                 onClick={() => setMobileOpen(false)}
-                className={`
-                  group relative flex items-center space-x-3 px-4 py-3 rounded-xl
-                  transition-all duration-200 overflow-hidden
-                  ${active
+                className={`group relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 overflow-hidden ${
+                  active
                     ? 'bg-amber-400 text-slate-900'
                     : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
-                  }
-                `}
+                }`}
               >
-                {active && (
-                  <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />
-                )}
-                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>
-                  {item.icon}
-                </div>
+                {active && <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />}
+                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>{item.icon}</div>
                 {!collapsed && (
                   <>
                     <span className="flex-1 font-medium">{item.name}</span>
@@ -340,7 +273,6 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
             );
           })}
 
-          {/* Settings Section */}
           {!collapsed && (
             <div className="pt-4 pb-2">
               <div className="flex items-center gap-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -349,7 +281,7 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
               </div>
             </div>
           )}
-          
+
           {settingsItems.map((item) => {
             const active = isActive(item.href);
             return (
@@ -358,24 +290,15 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
                 href={item.href}
                 prefetch={false}
                 onClick={() => setMobileOpen(false)}
-                className={`
-                  group relative flex items-center space-x-3 px-4 py-3 rounded-xl
-                  transition-all duration-200 overflow-hidden
-                  ${active
+                className={`group relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 overflow-hidden ${
+                  active
                     ? 'bg-amber-400 text-slate-900'
                     : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
-                  }
-                `}
+                }`}
               >
-                {active && (
-                  <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />
-                )}
-                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>
-                  {item.icon}
-                </div>
-                {!collapsed && (
-                  <span className="flex-1 font-medium">{item.name}</span>
-                )}
+                {active && <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />}
+                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>{item.icon}</div>
+                {!collapsed && <span className="flex-1 font-medium">{item.name}</span>}
                 {collapsed && (
                   <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                     {item.name}
@@ -386,23 +309,16 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
           })}
         </nav>
 
-        {/* Footer */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-800/50 backdrop-blur-sm border-t border-slate-700">
           <button
-            onClick={() => {
-              signOut({ callbackUrl: '/', redirect: true });
-            }}
-            className={`
-              group w-full flex items-center space-x-3 px-4 py-3 rounded-xl
-              bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white
-              transition-all duration-200
-              ${collapsed ? 'justify-center' : ''}
-            `}
+            onClick={() => signOut({ callbackUrl: '/', redirect: true })}
+            className={`group w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-all duration-200 ${
+              collapsed ? 'justify-center' : ''
+            }`}
             suppressHydrationWarning
           >
             <FaSignOutAlt className="text-xl" />
             {!collapsed && <span className="font-medium">Logout</span>}
-            
             {collapsed && (
               <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                 Logout
@@ -412,7 +328,6 @@ export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarPr
         </div>
       </aside>
 
-      {/* Custom Scrollbar Styles */}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
