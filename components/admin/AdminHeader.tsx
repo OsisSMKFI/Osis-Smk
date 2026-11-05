@@ -4,8 +4,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { apiFetch, safeJson } from '@/lib/safeFetch';
 import {
-  FaBars,
-  FaTimes,
   FaBell,
   FaUser,
   FaChevronDown,
@@ -29,11 +27,6 @@ import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-interface AdminHeaderProps {
-  mobileOpen: boolean;
-  onMenuClick: () => void;
-}
-
 interface Notification {
   id: string;
   type: string;
@@ -55,10 +48,7 @@ interface Notification {
   created_at: string;
 }
 
-export default function AdminHeader({
-  mobileOpen,
-  onMenuClick,
-}: AdminHeaderProps) {
+export default function AdminHeader() {
   const { data: session } = useSession();
   const { theme } = useTheme();
   const { language } = useLanguage();
@@ -215,19 +205,7 @@ export default function AdminHeader({
   return (
     <>
       <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 shadow-md border-b border-gray-200 dark:border-slate-700" suppressHydrationWarning>
-        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4 gap-3">
-          {/* Mobile Sidebar Toggle */}
-          <button
-            type="button"
-            onClick={onMenuClick}
-            className="lg:hidden flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-amber-400 text-slate-900 shadow-md hover:bg-amber-500 transition-colors"
-            aria-label={mobileOpen ? 'Close sidebar' : 'Open sidebar'}
-            aria-expanded={mobileOpen}
-            aria-controls="admin-sidebar"
-          >
-            {mobileOpen ? <FaTimes className="text-xl" /> : <FaBars className="text-xl" />}
-          </button>
-
+        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4 ml-14 lg:ml-0 gap-3">
           <div className="hidden sm:block flex-1 max-w-xs md:max-w-md lg:max-w-xl">
             <div className="relative">
               <FaSearch className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
