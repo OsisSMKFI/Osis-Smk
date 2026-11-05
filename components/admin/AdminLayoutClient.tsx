@@ -106,12 +106,7 @@ export default function AdminLayoutClient({
         style={{ position: 'relative', zIndex: 1 }}
         suppressHydrationWarning
       >
-        {!isLogin && session?.user && (
-          <AdminHeader
-            mobileOpen={mobileOpen}
-            onMenuClick={() => setMobileOpen((prev) => !prev)}
-          />
-        )}
+        {!isLogin && session?.user && <AdminHeader />}
 
         <main className="p-3 sm:p-4 md:p-6">
           <div className="max-w-7xl mx-auto w-full" suppressHydrationWarning>
