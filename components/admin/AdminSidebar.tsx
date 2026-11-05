@@ -1,31 +1,15 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
-  FaHome,
-  FaNewspaper,
-  FaCalendarAlt,
-  FaImages,
-  FaUsers,
-  FaClipboardList,
-  FaBullhorn,
-  FaPoll,
-  FaCog,
-  FaSignOutAlt,
-  FaChevronLeft,
-  FaChevronRight,
-  FaEdit,
-  FaDatabase,
-  FaSitemap,
-  FaUserFriends,
-  FaGlobe,
-  FaTools,
-  FaTerminal,
-  FaClipboardCheck,
-  FaPaintBrush,
+  FaHome, FaNewspaper, FaCalendarAlt, FaImages, FaUsers,
+  FaClipboardList, FaBullhorn, FaPoll, FaCog, FaSignOutAlt,
+  FaChevronLeft, FaChevronRight, FaBars, FaEdit, FaDatabase,
+  FaSitemap, FaUserFriends, FaGlobe, FaTools, FaTerminal,
+  FaClipboardCheck, FaPaintBrush, FaTimes,
 } from 'react-icons/fa';
 import { Shield } from 'lucide-react';
 
@@ -39,48 +23,40 @@ interface MenuItem {
 interface AdminSidebarProps {
   collapsed: boolean;
   setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
-  mobileOpen: boolean;
-  setMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function AdminSidebar({
-  collapsed,
-  setCollapsed,
-  mobileOpen,
-  setMobileOpen,
-}: AdminSidebarProps) {
+export default function AdminSidebar({ collapsed, setCollapsed }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     setMobileOpen(false);
-  }, [pathname, setMobileOpen]);
+  }, [pathname]);
 
   useEffect(() => {
     if (!mobileOpen) return;
-    const previous = document.body.style.overflow;
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = previous;
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [mobileOpen]);
 
   useEffect(() => {
-    if (!mobileOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileOpen(false);
+    const media = window.matchMedia('(min-width: 1024px)');
+    const handleChange = () => {
+      if (media.matches) setMobileOpen(false);
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [mobileOpen, setMobileOpen]);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)');
-    const onChange = () => {
-      if (mq.matches) setMobileOpen(false);
-    };
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, [setMobileOpen]);
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
 
   const menuItems: MenuItem[] = [
     { name: 'Dashboard', icon: <FaHome />, href: '/admin' },
@@ -114,224 +90,152 @@ export default function AdminSidebar({
     return pathname?.startsWith(href);
   };
 
+  const renderItems = (items: MenuItem[]) => items.map((item) => {
+    const active = isActive(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        prefetch={false}
+        onClick={() => setMobileOpen(false)}
+        className={`group relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 overflow-hidden ${
+          active
+            ? 'bg-amber-400 text-slate-900'
+            : 'text-gray-300 hover:bg-slate-700/50 hover:text-white'
+        }`}
+      >
+        {active && <span className="absolute left-0 top-0 h-full w-1 bg-slate-900" />}
+        <span className={`text-xl shrink-0 ${collapsed ? 'lg:mx-auto' : ''}`}>{item.icon}</span>
+        <span className="flex-1 font-medium">{item.name}</span>
+        {item.badge ? (
+          <span className="px-2 py-1 text-xs font-bold bg-red-500 text-white rounded-full">
+            {item.badge}
+          </span>
+        ) : null}
+      </Link>
+    );
+  });
+
   return (
     <>
+      {/* Tombol buka menu: selalu di atas konten pada layar ponsel */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-[120] flex h-12 w-12 items-center justify-center rounded-xl bg-amber-400 text-slate-950 shadow-xl border-2 border-white"
+        aria-label="Buka menu navigasi"
+        aria-expanded={mobileOpen}
+      >
+        <FaBars className="text-xl" />
+      </button>
+
+      {/* Overlay di belakang sidebar */}
       {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm"
-          style={{ zIndex: 50 }}
+        <button
+          type="button"
+          aria-label="Tutup menu navigasi"
+          className="lg:hidden fixed inset-0 z-[130] bg-black/60 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
-          aria-hidden="true"
         />
       )}
 
+      {/* Sidebar */}
       <aside
-        id="admin-sidebar"
         className={[
-          'fixed top-0 left-0 h-dvh bg-slate-900',
-          'text-white shadow-2xl transition-transform duration-300 ease-in-out',
-          'w-72 lg:max-w-none',
+          'fixed inset-y-0 left-0 z-[140] flex flex-col',
+          'bg-slate-900 text-white shadow-2xl',
+          'transition-transform duration-300 ease-in-out',
+          'w-[min(18rem,85vw)]',
+          'lg:w-auto',
           collapsed ? 'lg:w-20' : 'lg:w-72',
-          'lg:translate-x-0 lg:pointer-events-auto',
-          mobileOpen
-            ? 'translate-x-0 pointer-events-auto'
-            : '-translate-x-full pointer-events-none lg:translate-x-0 lg:pointer-events-auto',
-          'max-w-[85vw]',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+          'lg:translate-x-0',
         ].join(' ')}
-        style={{ zIndex: 60, isolation: 'isolate' }}
-        suppressHydrationWarning
+        style={{ isolation: 'isolate' }}
       >
-        <div className="relative h-20 flex items-center justify-between px-4 sm:px-6 bg-amber-400 shadow-xl">
-          {!collapsed && (
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-2xl font-bold text-amber-600">O</span>
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-slate-900">OSIS Admin</h1>
-                <p className="text-xs text-slate-700">Dashboard</p>
-              </div>
+        {/* Header */}
+        <div className="relative h-20 min-h-20 flex items-center justify-between px-4 sm:px-6 bg-amber-400 shadow-xl">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-2xl font-bold text-amber-600">O</span>
             </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="lg:hidden w-8 h-8 flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all text-slate-900"
-              aria-label="Close menu"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="hidden lg:flex w-8 h-8 items-center justify-center bg-white/20 backdrop-blur-sm rounded-lg hover:bg-white/30 transition-all text-slate-900"
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {collapsed ? <FaChevronRight className="text-sm" /> : <FaChevronLeft className="text-sm" />}
-            </button>
+            <div className="lg:hidden">
+              <h1 className="text-lg font-bold text-slate-900">OSIS Admin</h1>
+              <p className="text-xs text-slate-700">Dashboard</p>
+            </div>
+            <div className="hidden lg:block">
+              {!collapsed && (
+                <>
+                  <h1 className="text-lg font-bold text-slate-900">OSIS Admin</h1>
+                  <p className="text-xs text-slate-700">Dashboard</p>
+                </>
+              )}
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="lg:hidden relative z-[160] flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg border-2 border-white"
+            aria-label="Tutup sidebar"
+            title="Tutup menu"
+          >
+            <FaTimes className="text-xl" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCollapsed(!collapsed)}
+            className="hidden lg:flex w-8 h-8 items-center justify-center bg-white/20 rounded-lg hover:bg-white/30 text-slate-900"
+            aria-label={collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'}
+          >
+            {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
+          </button>
         </div>
 
-        <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100dvh-160px)] custom-scrollbar">
+        {/* Navigation */}
+        <nav className="flex-1 min-h-0 p-4 space-y-2 overflow-y-auto custom-scrollbar">
           <Link
             href="/dashboard"
             prefetch={false}
             target="_blank"
-            onClick={() => setMobileOpen(false)}
-            className="group relative flex items-center space-x-3 px-4 py-3 rounded-xl bg-slate-700 text-white hover:bg-slate-600 shadow transition-all duration-200 mb-4"
+            className="flex items-center gap-3 px-4 py-3 mb-4 rounded-xl bg-slate-700 text-white hover:bg-slate-600 shadow"
           >
-            <FaGlobe className={`text-xl ${collapsed ? 'mx-auto' : ''}`} />
-            {!collapsed && <span className="flex-1 font-medium">View Public Website</span>}
-            {collapsed && (
-              <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                View Public Website
-              </div>
-            )}
+            <FaGlobe className="text-xl shrink-0" />
+            <span className="font-medium">View Public Website</span>
           </Link>
 
           <div className="border-t border-slate-700 my-3" />
+          {renderItems(menuItems)}
 
-          {menuItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch={false}
-                onClick={() => setMobileOpen(false)}
-                className={`group relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 overflow-hidden ${
-                  active
-                    ? 'bg-amber-400 text-slate-900'
-                    : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
-                }`}
-              >
-                {active && <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />}
-                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>{item.icon}</div>
-                {!collapsed && (
-                  <>
-                    <span className="flex-1 font-medium">{item.name}</span>
-                    {item.badge && (
-                      <span className="px-2 py-1 text-xs font-bold bg-red-500 text-white rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-                {collapsed && (
-                  <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                    {item.name}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
+          <div className="pt-4 pb-2 flex items-center gap-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <FaDatabase />
+            <span>Data Management</span>
+          </div>
+          {renderItems(dataMenuItems)}
 
-          {!collapsed && (
-            <div className="pt-4 pb-2">
-              <div className="flex items-center gap-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <FaDatabase className="text-sm" />
-                <span>Data Management</span>
-              </div>
-            </div>
-          )}
-
-          {dataMenuItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch={false}
-                onClick={() => setMobileOpen(false)}
-                className={`group relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 overflow-hidden ${
-                  active
-                    ? 'bg-amber-400 text-slate-900'
-                    : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
-                }`}
-              >
-                {active && <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />}
-                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>{item.icon}</div>
-                {!collapsed && (
-                  <>
-                    <span className="flex-1 font-medium">{item.name}</span>
-                    {item.badge && (
-                      <span className="px-2 py-1 text-xs font-bold bg-red-500 text-white rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-                {collapsed && (
-                  <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                    {item.name}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-
-          {!collapsed && (
-            <div className="pt-4 pb-2">
-              <div className="flex items-center gap-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <FaCog className="text-sm" />
-                <span>System</span>
-              </div>
-            </div>
-          )}
-
-          {settingsItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch={false}
-                onClick={() => setMobileOpen(false)}
-                className={`group relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 overflow-hidden ${
-                  active
-                    ? 'bg-amber-400 text-slate-900'
-                    : 'hover:bg-slate-700/50 text-gray-300 hover:text-white'
-                }`}
-              >
-                {active && <div className="absolute left-0 top-0 h-full w-1 bg-slate-900" />}
-                <div className={`text-xl ${collapsed ? 'mx-auto' : ''}`}>{item.icon}</div>
-                {!collapsed && <span className="flex-1 font-medium">{item.name}</span>}
-                {collapsed && (
-                  <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                    {item.name}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
+          <div className="pt-4 pb-2 flex items-center gap-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <FaCog />
+            <span>System</span>
+          </div>
+          {renderItems(settingsItems)}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-800/50 backdrop-blur-sm border-t border-slate-700">
+        {/* Footer */}
+        <div className="shrink-0 p-4 bg-slate-800/80 border-t border-slate-700">
           <button
+            type="button"
             onClick={() => signOut({ callbackUrl: '/', redirect: true })}
-            className={`group w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-all duration-200 ${
-              collapsed ? 'justify-center' : ''
-            }`}
-            suppressHydrationWarning
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all"
           >
             <FaSignOutAlt className="text-xl" />
-            {!collapsed && <span className="font-medium">Logout</span>}
-            {collapsed && (
-              <div className="absolute left-full ml-2 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                Logout
-              </div>
-            )}
+            <span className="font-medium">Logout</span>
           </button>
         </div>
       </aside>
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: rgba(0, 0, 0, 0.1);
           border-radius: 10px;
@@ -339,9 +243,6 @@ export default function AdminSidebar({
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: rgba(250, 204, 21, 0.3);
           border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(250, 204, 21, 0.5);
         }
       `}</style>
     </>
