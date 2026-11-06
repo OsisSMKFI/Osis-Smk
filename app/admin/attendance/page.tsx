@@ -27,9 +27,34 @@ interface AttendanceRecord {
   created_at: string;
 }
 
+
+type PiketReport = {
+  id: string;
+  report_date: string;
+  student_name: string;
+  student_unit: string | null;
+  student_class: string;
+  student_no_induk: string | null;
+  reason: string;
+  applicant_signature: string | null;
+  submitted_at: string;
+  edited_at: string | null;
+  late_count: number;
+};
+
+function formatPiketReportTime(value: string) {
+  return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+
 export default function AdminAttendancePage() {
   const { data: session, status } = useSession();
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
+  const [piketReports, setPiketReports] = useState<PiketReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({
     role: 'all',
@@ -44,13 +69,10 @@ export default function AdminAttendancePage() {
     verified: 0,
   });
   const [activeTab, setActiveTab] = useState<'attendance' | 'piket'>('attendance');
-  const sessionRole = (session?.user?.role || '').toLowerCase();
-  const canSeeAttendanceList = ['super_admin', 'admin'].includes(sessionRole);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'piket') setActiveTab('piket');
-    if (sessionRole === 'guru' || sessionRole === 'osis') setActiveTab('piket');
-  }, [sessionRole]);
+  }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -63,33 +85,111 @@ export default function AdminAttendancePage() {
       const userRole = (session.user.role || '').toLowerCase();
       if (!['super_admin', 'admin', 'osis', 'guru'].includes(userRole)) {
         redirect('/dashboard');
-      } else if (['super_admin', 'admin'].includes(userRole) && activeTab === 'attendance') {
+      } else if (userRole !== 'guru' && activeTab === 'attendance') {
         fetchAttendances();
       }
     }
   }, [session, filter, activeTab]);
 
-  const fetchAttendances = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filter.role !== 'all') params.append('role', filter.role);
-      if (filter.status !== 'all') params.append('status', filter.status);
-      if (filter.date) params.append('date', filter.date);
+  
+const fetchAttendances = async () => {
+  setLoading(true);
 
-      const response = await fetch(`/api/admin/attendance?${params.toString()}`);
-      const data = await response.json();
+  try {
+    const params = new URLSearchParams();
 
-      if (data.success) {
-        setAttendances(data.data);
-        calculateStats(data.data);
-      }
-    } catch (error) {
-      toast.error('Gagal memuat data absensi');
-    } finally {
-      setLoading(false);
+    if (filter.role !== 'all') {
+      params.append('role', filter.role);
     }
-  };
+
+    if (filter.status !== 'all') {
+      params.append('status', filter.status);
+    }
+
+    if (filter.date) {
+      params.append('date', filter.date);
+    }
+
+    // Laporan Piket hanya berisi siswa yang terlambat.
+    const shouldLoadPiket =
+      filter.role !== 'guru' &&
+      (filter.status === 'all' || filter.status === 'late');
+
+    // Jika tanggal kosong, tampilkan semua tanggal,
+    // mengikuti perilaku filter absensi reguler.
+    const piketParams = new URLSearchParams();
+    piketParams.set('date', filter.date || 'all');
+
+    const [attendanceResponse, piketResponse] = await Promise.all([
+      fetch(`/api/admin/attendance?${params.toString()}`),
+
+      shouldLoadPiket
+        ? fetch(`/api/piket/reports?${piketParams.toString()}`, {
+            cache: 'no-store',
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const attendanceData = await attendanceResponse.json();
+
+    if (!attendanceResponse.ok || !attendanceData.success) {
+      throw new Error(
+        attendanceData.error || 'Gagal memuat data absensi'
+      );
+    }
+
+    const attendanceRows: AttendanceRecord[] =
+      Array.isArray(attendanceData.data)
+        ? attendanceData.data
+        : [];
+
+    setAttendances(attendanceRows);
+    calculateStats(attendanceRows);
+
+    // Ambil data laporan Piket.
+    if (piketResponse) {
+      try {
+        const piketData = await piketResponse.json();
+
+        if (!piketResponse.ok) {
+          throw new Error(
+            piketData.error || 'Gagal memuat laporan Piket'
+          );
+        }
+
+        setPiketReports(
+          Array.isArray(piketData.reports)
+            ? piketData.reports
+            : []
+        );
+      } catch (piketError) {
+        setPiketReports([]);
+
+        console.error('Gagal memuat laporan Piket:', piketError);
+
+        toast.error(
+          piketError instanceof Error
+            ? piketError.message
+            : 'Gagal memuat laporan Piket'
+        );
+      }
+    } else {
+      setPiketReports([]);
+    }
+  } catch (error) {
+    setAttendances([]);
+    setPiketReports([]);
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : 'Gagal memuat data absensi'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const calculateStats = (data: AttendanceRecord[]) => {
     setStats({
@@ -147,7 +247,7 @@ export default function AdminAttendancePage() {
     toast.success('Data berhasil di-export');
   };
 
-  if (status === 'loading' || (loading && activeTab === 'attendance' && canSeeAttendanceList)) {
+  if (status === 'loading' || (loading && activeTab === 'attendance')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
@@ -158,11 +258,10 @@ export default function AdminAttendancePage() {
     );
   }
 
-  if (activeTab === 'piket' || session?.user?.role?.toLowerCase() === 'guru' || session?.user?.role?.toLowerCase() === 'osis') {
-    const canSeeAttendance = ['super_admin', 'admin'].includes((session?.user?.role || '').toLowerCase());
+  if (activeTab === 'piket' || session?.user?.role?.toLowerCase() === 'guru') {
     return <main className="min-h-screen bg-slate-50 p-4 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl space-y-4">
-        {canSeeAttendance && <button onClick={() => setActiveTab('attendance')} className="rounded-lg border px-4 py-2">Kembali ke Absensi</button>}
+        <button onClick={() => setActiveTab('attendance')} className="rounded-lg border px-4 py-2">Kembali ke Absensi</button>
         <PiketAttendancePanel />
       </div>
     </main>;
@@ -284,70 +383,205 @@ export default function AdminAttendancePage() {
                   <th className="px-3 md:px-6 py-3 md:py-4 text-center text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {attendances.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 md:px-6 py-8 md:py-12 text-center">
-                      <FaClock className="mx-auto text-4xl md:text-5xl text-gray-300 dark:text-gray-600 mb-3 md:mb-4" />
-                      <p className="text-gray-500 dark:text-gray-400 font-medium text-sm md:text-base">Tidak ada data absensi</p>
-                    </td>
-                  </tr>
-                ) : (
-                  attendances.map((attendance) => (
-                    <tr key={attendance.id} className="hover:bg-blue-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                      <td className="px-3 md:px-6 py-3 md:py-4">
-                        <div className="font-semibold text-gray-900 dark:text-white text-xs md:text-sm">{attendance.user_name}</div>
-                        <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">{attendance.wifi_ssid}</div>
-                      </td>
-                      <td className="px-3 md:px-6 py-3 md:py-4 hidden sm:table-cell">
-                        <span className={`inline-flex items-center px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold ${
-                          attendance.user_role === 'siswa'
-                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                            : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-                        }`}>
-                          {attendance.user_role === 'siswa' ? <FaUserGraduate className="mr-1" /> : <FaChalkboardTeacher className="mr-1" />}
-                          <span className="hidden md:inline">{attendance.user_role === 'siswa' ? 'Siswa' : 'Guru'}</span>
-                        </span>
-                      </td>
-                      <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300">
-                        {formatAttendanceTime(attendance.check_in_time)}
-                      </td>
-                      <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300 hidden md:table-cell">
-                        {attendance.check_out_time ? formatAttendanceTime(attendance.check_out_time) : (
-                          <span className="text-orange-600 font-semibold text-xs">Belum checkout</span>
-                        )}
-                      </td>
-                      <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300 font-semibold hidden lg:table-cell">
-                        {calculateDuration(attendance.check_in_time, attendance.check_out_time)}
-                      </td>
-                      <td className="px-3 md:px-6 py-3 md:py-4">
-                        <span className={`inline-flex items-center px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold bg-${getStatusColor(attendance.status)}-100 text-${getStatusColor(attendance.status)}-700 dark:bg-${getStatusColor(attendance.status)}-900/30 dark:text-${getStatusColor(attendance.status)}-300`}>
-                          {attendance.is_verified ? <FaCheck className="mr-0.5 md:mr-1" /> : <FaClock className="mr-0.5 md:mr-1" />}
-                          <span className="hidden md:inline">{attendance.is_verified ? 'Verified' : 'Pending'}</span>
-                        </span>
-                      </td>
-                      <td className="px-3 md:px-6 py-3 md:py-4 text-center">
-                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 justify-center">
-                          <button
-                            onClick={() => setSelectedAttendance(attendance)}
-                            className="inline-flex items-center justify-center px-2 md:px-3 py-1 md:py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all text-[10px] md:text-xs font-semibold"
-                          >
-                            <FaEye className="mr-0.5 md:mr-1" /> <span className="hidden xs:inline">Detail</span>
-                          </button>
-                          {!attendance.is_verified && (
-                            <button
-                              onClick={() => handleVerify(attendance.id, true)}
-                              className="inline-flex items-center justify-center px-2 md:px-3 py-1 md:py-1.5 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-all text-[10px] md:text-xs font-semibold"
-                            >
-                              <FaCheck className="mr-0.5 md:mr-1" /> <span className="hidden xs:inline">Verify</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
+              
+<tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+  {attendances.length === 0 && piketReports.length === 0 ? (
+    <tr>
+      <td colSpan={7} className="px-4 md:px-6 py-8 md:py-12 text-center">
+        <FaClock className="mx-auto text-4xl md:text-5xl text-gray-300 dark:text-gray-600 mb-3 md:mb-4" />
+        <p className="text-gray-500 dark:text-gray-400 font-medium text-sm md:text-base">
+          Tidak ada absensi maupun laporan Piket pada filter ini.
+        </p>
+      </td>
+    </tr>
+  ) : (
+    <>
+      {/* ABSENSI REGULER */}
+      {attendances.map((attendance) => (
+        <tr
+          key={`attendance-${attendance.id}`}
+          className="hover:bg-blue-50/50 dark:hover:bg-gray-700/50 transition-colors"
+        >
+          <td className="px-3 md:px-6 py-3 md:py-4">
+            <div className="font-semibold text-gray-900 dark:text-white text-xs md:text-sm">
+              {attendance.user_name}
+            </div>
+            <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
+              {attendance.wifi_ssid}
+            </div>
+          </td>
+
+          <td className="px-3 md:px-6 py-3 md:py-4 hidden sm:table-cell">
+            <span className={`inline-flex items-center px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold ${
+              attendance.user_role === 'siswa'
+                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+            }`}>
+              {attendance.user_role === 'siswa'
+                ? <FaUserGraduate className="mr-1" />
+                : <FaChalkboardTeacher className="mr-1" />}
+              <span className="hidden md:inline">
+                {attendance.user_role === 'siswa' ? 'Siswa' : 'Guru'}
+              </span>
+            </span>
+          </td>
+
+          <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300">
+            {formatAttendanceTime(attendance.check_in_time)}
+          </td>
+
+          <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300 hidden md:table-cell">
+            {attendance.check_out_time
+              ? formatAttendanceTime(attendance.check_out_time)
+              : <span className="text-orange-600 font-semibold text-xs">Belum checkout</span>}
+          </td>
+
+          <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300 font-semibold hidden lg:table-cell">
+            {calculateDuration(attendance.check_in_time, attendance.check_out_time)}
+          </td>
+
+          <td className="px-3 md:px-6 py-3 md:py-4">
+            <span className={`inline-flex items-center px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold bg-${getStatusColor(attendance.status)}-100 text-${getStatusColor(attendance.status)}-700 dark:bg-${getStatusColor(attendance.status)}-900/30 dark:text-${getStatusColor(attendance.status)}-300`}>
+              {attendance.is_verified
+                ? <FaCheck className="mr-0.5 md:mr-1" />
+                : <FaClock className="mr-0.5 md:mr-1" />}
+              <span className="hidden md:inline">
+                {attendance.is_verified ? 'Verified' : 'Pending'}
+              </span>
+            </span>
+          </td>
+
+          <td className="px-3 md:px-6 py-3 md:py-4 text-center">
+            <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 justify-center">
+              <button
+                onClick={() => setSelectedAttendance(attendance)}
+                className="inline-flex items-center justify-center px-2 md:px-3 py-1 md:py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all text-[10px] md:text-xs font-semibold"
+              >
+                <FaEye className="mr-0.5 md:mr-1" />
+                <span className="hidden xs:inline">Detail</span>
+              </button>
+
+              {!attendance.is_verified && (
+                <button
+                  onClick={() => handleVerify(attendance.id, true)}
+                  className="inline-flex items-center justify-center px-2 md:px-3 py-1 md:py-1.5 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-all text-[10px] md:text-xs font-semibold"
+                >
+                  <FaCheck className="mr-0.5 md:mr-1" />
+                  <span className="hidden xs:inline">Verify</span>
+                </button>
+              )}
+            </div>
+          </td>
+        </tr>
+      ))}
+
+      {/* PEMISAH LAPORAN PIKET */}
+      {piketReports.length > 0 && (
+        <tr>
+          <td
+            colSpan={7}
+            className="px-4 md:px-6 py-3 bg-emerald-50 dark:bg-emerald-950/30 border-y border-emerald-200 dark:border-emerald-900"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-bold text-emerald-800 dark:text-emerald-300 text-xs md:text-sm">
+                Laporan Piket Pagi
+              </span>
+              <span className="rounded-full bg-emerald-100 dark:bg-emerald-900 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                {piketReports.length} laporan
+              </span>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {/* DATA LAPORAN PIKET DARI QR */}
+      {piketReports.map((report) => (
+        <tr
+          key={`piket-${report.id}`}
+          className="bg-emerald-50/40 dark:bg-emerald-950/10 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
+        >
+          {/* Nama dan identitas */}
+          <td className="px-3 md:px-6 py-3 md:py-4">
+            <div className="font-semibold text-gray-900 dark:text-white text-xs md:text-sm">
+              {report.student_name}
+            </div>
+            <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
+              No Induk: {report.student_no_induk || '—'}
+            </div>
+            <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
+              {report.student_unit || '—'} · {report.student_class}
+            </div>
+            <div className="text-[10px] text-gray-400 mt-1">
+              Tanggal: {report.report_date}
+            </div>
+          </td>
+
+          {/* Jenis laporan */}
+          <td className="px-3 md:px-6 py-3 md:py-4 hidden sm:table-cell">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <FaUserGraduate />
+              Piket Pagi
+            </span>
+          </td>
+
+          {/* Waktu pengiriman */}
+          <td className="px-3 md:px-6 py-3 md:py-4 text-[10px] md:text-sm text-gray-900 dark:text-gray-300">
+            {formatPiketReportTime(report.submitted_at)}
+            <div className="text-[10px] text-emerald-700 dark:text-emerald-400">
+              Waktu laporan QR
+            </div>
+            {report.edited_at && (
+              <div className="text-[10px] text-amber-600">
+                Diedit: {formatPiketReportTime(report.edited_at)}
+              </div>
+            )}
+          </td>
+
+          {/* Check-out tidak digunakan dalam laporan QR */}
+          <td className="px-3 md:px-6 py-3 md:py-4 text-center text-gray-400 hidden md:table-cell">
+            —
+          </td>
+
+          {/* Hitungan terlambat */}
+          <td className="px-3 md:px-6 py-3 md:py-4 hidden lg:table-cell">
+            <span className="font-bold text-orange-600 dark:text-orange-400 text-xs">
+              Telat ke-{report.late_count}
+            </span>
+          </td>
+
+          {/* Status dan alasan */}
+          <td className="px-3 md:px-6 py-3 md:py-4">
+            <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-[10px] md:text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+              Laporan diterima
+            </span>
+            <p className="mt-2 max-w-xs text-[10px] md:text-xs text-gray-600 dark:text-gray-300 break-words">
+              {report.reason}
+            </p>
+          </td>
+
+          {/* Tanda tangan pemohon */}
+          <td className="px-3 md:px-6 py-3 md:py-4 text-center">
+            {report.applicant_signature ? (
+              <details className="text-left">
+                <summary className="cursor-pointer text-blue-700 dark:text-blue-300 underline text-xs font-semibold">
+                  Lihat TTD
+                </summary>
+                <img
+                  src={report.applicant_signature}
+                  alt={`Tanda tangan ${report.student_name}`}
+                  className="mt-2 w-40 rounded-lg border border-gray-300 bg-white p-2"
+                />
+              </details>
+            ) : (
+              <span className="text-gray-400 text-xs">—</span>
+            )}
+          </td>
+        </tr>
+      ))}
+    </>
+  )}
+</tbody>
+
             </table>
           </div>
         </div>
